@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { db, requirePlatformAuth } from '../middleware/auth.js';
 import { BCRYPT_ROUNDS, PLATFORM_FEE_PERCENT, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES, RESET_TOKEN_HOURS } from '../config.js';
-import { sendMail, currentProvider } from '../lib/mailer.js';
+import { sendMail, mailerStatus } from '../lib/mailer.js';
 import {
   getMaskedPlatformStripeConfig,
   getEffectivePlatformStripeConfig,
@@ -41,11 +41,15 @@ const platformForgotLimiter = rateLimit({
 });
 
 function publicPlatformAccount(admin = getPlatformAdmin()) {
+  const mail = mailerStatus();
   return {
     owner_email: admin?.owner_email || null,
     has_owner_email: !!admin?.owner_email,
     has_password: !!admin?.password_hash,
-    mail_provider: currentProvider(),
+    mail_provider: mail.provider,
+    mail_from: mail.from,
+    mail_has_custom_from: mail.has_custom_from,
+    mail_using_resend_test_sender: mail.using_resend_test_sender,
   };
 }
 
@@ -134,7 +138,7 @@ router.post('/forgot-password', platformForgotLimiter, async (req, res) => {
     if (admin?.owner_email) {
       const token = createPlatformResetToken();
       const resetLink = `${process.env.BASE_URL || 'http://localhost:3000'}/platform/reset-password.html?token=${encodeURIComponent(token)}`;
-      await sendMail({
+      const result = await sendMail({
         to: admin.owner_email,
         subject: 'Reset your Trennen platform password',
         text: `Reset your Trennen platform password using this link. It expires in ${RESET_TOKEN_HOURS} hour(s):\n\n${resetLink}\n\nIf you did not request this, you can ignore this email.`,
@@ -144,6 +148,7 @@ router.post('/forgot-password', platformForgotLimiter, async (req, res) => {
           <p>This link expires in ${RESET_TOKEN_HOURS} hour(s). If you did not request this, you can ignore this email.</p>
         `,
       });
+      console.log(`Platform reset email queued via ${result.provider} for ${admin.owner_email}`);
     }
     res.json({ ok: true, message });
   } catch (err) {

@@ -209,6 +209,7 @@
             <div><strong>Owner email:</strong> <span id="ownerEmailStatus">—</span></div>
             <div><strong>Password source:</strong> <span id="ownerPasswordStatus">—</span></div>
             <div><strong>Email provider:</strong> <span id="mailProviderStatus">—</span></div>
+            <div><strong>From address:</strong> <span id="mailFromStatus">—</span></div>
           </div>
         </div>
         <div style="background:rgba(122,158,126,0.06);border:1px solid var(--sage-light);border-radius:var(--radius);padding:16px;font-size:13px;color:var(--sage-dark);line-height:1.7">
@@ -401,6 +402,10 @@
         : '<span class="badge badge-warm">Using .env bootstrap password</span>';
       document.getElementById('mailProviderStatus').textContent =
         data.mail_provider === 'dev' ? 'Dev preview' : data.mail_provider.toUpperCase();
+      document.getElementById('mailFromStatus').textContent = data.mail_from || 'Not configured';
+      if (data.mail_using_resend_test_sender) {
+        document.getElementById('mailFromStatus').textContent += ' (Resend test sender)';
+      }
     } catch (err) {
       console.error('Platform account error:', err);
     }

@@ -33,6 +33,25 @@ export function currentProvider() {
   return 'dev';
 }
 
+function defaultFromForProvider(provider) {
+  if (process.env.EMAIL_FROM) return process.env.EMAIL_FROM;
+  if (process.env.SMTP_FROM)  return process.env.SMTP_FROM;
+  if (provider === 'smtp' && process.env.SMTP_USER) return process.env.SMTP_USER;
+  if (provider === 'resend') return 'Trennen <onboarding@resend.dev>';
+  return 'Trennen <noreply@example.com>';
+}
+
+export function mailerStatus() {
+  const provider = currentProvider();
+  const from = defaultFromForProvider(provider);
+  return {
+    provider,
+    from,
+    has_custom_from: !!(process.env.EMAIL_FROM || process.env.SMTP_FROM),
+    using_resend_test_sender: provider === 'resend' && !process.env.EMAIL_FROM && !process.env.SMTP_FROM,
+  };
+}
+
 // ── Resend HTTP API ─────────────────────────────────────────
 async function sendViaResend(msg) {
   const body = {
@@ -147,15 +166,10 @@ export async function sendMail(opts) {
   if (!opts || !opts.to || !opts.subject) {
     throw new Error('sendMail requires at least { to, subject }');
   }
-  const from =
-    opts.from
-    || process.env.EMAIL_FROM
-    || process.env.SMTP_FROM
-    || process.env.SMTP_USER
-    || 'noreply@example.com';
+  const provider = currentProvider();
+  const from = opts.from || defaultFromForProvider(provider);
   const msg = { ...opts, from };
 
-  const provider = currentProvider();
   if (provider === 'resend') return sendViaResend(msg);
   if (provider === 'smtp')   return sendViaSmtp(msg);
   return sendViaDev(msg);
