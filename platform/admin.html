@@ -114,9 +114,22 @@
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
+    .platform-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 20px;
+    }
     @media (max-width: 700px) {
       .platform-stats { grid-template-columns: 1fr 1fr; }
       .shop-form { grid-template-columns: 1fr; }
+      .platform-form { grid-template-columns: 1fr; }
+      .config-grid { grid-template-columns: 1fr; }
       .platform-nav { padding: 0 20px; }
       .platform-content { padding: 24px 20px 60px; }
     }
@@ -158,6 +171,52 @@
     <div class="stat-card">
       <div class="stat-label">Month platform fees</div>
       <div class="stat-value" id="statFees">—</div>
+    </div>
+  </div>
+
+  <div class="section-card" style="margin-bottom:32px">
+    <div class="section-card-header">
+      <h2 class="section-card-title">Platform payments</h2>
+    </div>
+    <div class="section-card-body">
+      <div id="paymentsError" style="display:none;color:#C0392B;font-size:13px;margin-bottom:16px"></div>
+      <div class="success-box" id="paymentsSuccess" style="margin-top:0;margin-bottom:16px">Payments config saved.</div>
+      <div class="platform-form">
+        <div class="form-group">
+          <label class="form-label" for="platformPublishableKey">Publishable key</label>
+          <input class="form-input" type="text" id="platformPublishableKey" placeholder="pk_live_...">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="platformClientId">Connect client ID</label>
+          <input class="form-input" type="text" id="platformClientId" placeholder="ca_...">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="platformSecretKey">Secret key</label>
+          <input class="form-input" type="password" id="platformSecretKey" placeholder="sk_live_...">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="platformFeePercent">Platform fee percent</label>
+          <input class="form-input" type="number" min="0" max="100" step="0.01" id="platformFeePercent" placeholder="5.00">
+        </div>
+      </div>
+      <div style="margin-top:20px">
+        <button class="btn btn-primary" type="button" id="savePaymentsBtn">Save payments config</button>
+      </div>
+      <div class="config-grid">
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px">Active Stripe config</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+            <div><strong>Publishable key:</strong> <span id="platformMaskedPk">—</span></div>
+            <div><strong>Secret key:</strong> <span id="platformMaskedSk">—</span></div>
+            <div><strong>Client ID:</strong> <span id="platformMaskedClientId">—</span></div>
+            <div><strong>Webhook secret:</strong> <span id="platformWebhookStatus">—</span></div>
+            <div><strong>Cards enabled:</strong> <span id="platformCardsStatus">—</span></div>
+          </div>
+        </div>
+        <div style="background:rgba(122,158,126,0.06);border:1px solid var(--sage-light);border-radius:var(--radius);padding:16px;font-size:13px;color:var(--sage-dark);line-height:1.7">
+          These are the master Stripe keys for Trennen. Shops connect their own Stripe Express account for payouts, but they never manage or see the platform secret key.
+        </div>
+      </div>
     </div>
   </div>
 
@@ -260,6 +319,7 @@
       const r = await fetch('/api/platform/me');
       if (!r.ok) { window.location.href = '/platform/login.html'; return; }
       loadStats();
+      loadPayments();
       loadShops();
     } catch { window.location.href = '/platform/login.html'; }
   })();
@@ -280,6 +340,25 @@
       document.getElementById('statFees').textContent = '$' + Number(s.monthFees).toFixed(2);
     } catch (err) {
       console.error('Stats error:', err);
+    }
+  }
+
+  async function loadPayments() {
+    try {
+      const r = await fetch('/api/platform/payments');
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed to load platform payments');
+
+      document.getElementById('platformFeePercent').value = Number(data.platform_fee_percent || 0).toFixed(2);
+      document.getElementById('platformMaskedPk').textContent = data.publishable_key_masked || '—';
+      document.getElementById('platformMaskedSk').textContent = data.secret_key_masked || '—';
+      document.getElementById('platformMaskedClientId').textContent = data.client_id_masked || '—';
+      document.getElementById('platformWebhookStatus').textContent = data.webhook_configured ? 'Configured' : 'Missing from .env';
+      document.getElementById('platformCardsStatus').innerHTML = data.can_accept_cards
+        ? '<span class="badge badge-sage">Enabled</span>'
+        : '<span class="badge badge-warm">Not ready</span>';
+    } catch (err) {
+      console.error('Platform payments error:', err);
     }
   }
 
@@ -308,11 +387,7 @@
           <td style="font-size:12px">${esc(s.email)}</td>
           <td>${s.order_count}</td>
           <td>$${Number(s.revenue).toFixed(2)}</td>
-          <td>
-            ${s.stripe_account_id
-              ? '<span class="badge badge-sage">Connected</span>'
-              : '<span style="color:var(--muted)">—</span>'}
-          </td>
+          <td>${stripeBadge(s)}</td>
           <td style="font-size:12px;color:var(--muted)">${s.created_at.split(' ')[0]}</td>
           <td>
             <button class="table-action" onclick="impersonate(${s.id})">Impersonate</button>
@@ -325,6 +400,14 @@
     } catch (err) {
       console.error('Load shops error:', err);
     }
+  }
+
+  function stripeBadge(shop) {
+    if (!shop.stripe_account_id) return '<span style="color:var(--muted)">Not connected</span>';
+    if (shop.stripe_charges_enabled && shop.stripe_payouts_enabled && shop.stripe_details_submitted) {
+      return '<span class="badge badge-sage">Ready</span>';
+    }
+    return '<span class="badge badge-warm">Action needed</span>';
   }
 
   function esc(str) {
@@ -465,6 +548,51 @@
       btn.textContent = 'Copied!';
       setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
     });
+  });
+
+  document.getElementById('savePaymentsBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('savePaymentsBtn');
+    const errEl = document.getElementById('paymentsError');
+    const okEl = document.getElementById('paymentsSuccess');
+    errEl.style.display = 'none';
+    okEl.classList.remove('visible');
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      const payload = {
+        platform_fee_percent: document.getElementById('platformFeePercent').value.trim(),
+      };
+      const publishableKey = document.getElementById('platformPublishableKey').value.trim();
+      const secretKey = document.getElementById('platformSecretKey').value.trim();
+      const clientId = document.getElementById('platformClientId').value.trim();
+      if (publishableKey) payload.publishable_key = publishableKey;
+      if (secretKey) payload.secret_key = secretKey;
+      if (clientId) payload.client_id = clientId;
+
+      const r = await fetch('/api/platform/payments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed to save payments config');
+
+      document.getElementById('platformPublishableKey').value = '';
+      document.getElementById('platformSecretKey').value = '';
+      document.getElementById('platformClientId').value = '';
+      okEl.classList.add('visible');
+      loadPayments();
+      loadStats();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save payments config';
+    }
   });
 </script>
 </body>

@@ -183,7 +183,7 @@
           </svg>
         </div>
         <h1 class="callback-heading">Stripe connected!</h1>
-        <p class="callback-body">Your account is linked. Redirecting to pricing setup…</p>
+        <p class="callback-body">Your account is linked. Redirecting to payments setup…</p>
         <div class="redirect-bar" aria-hidden="true">
           <div class="redirect-fill" id="redirectFill"></div>
         </div>
@@ -206,50 +206,6 @@
     </div>
   </div>
 
-  <script>
-    function showState(id) {
-      document.querySelectorAll('.state').forEach(el => el.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-    }
-
-    function showError(msg) {
-      document.getElementById('errorMessage').textContent = msg || 'An unexpected error occurred.';
-      showState('stateError');
-    }
-
-    function showSuccess() {
-      showState('stateSuccess');
-      // Trigger the redirect bar animation then navigate
-      setTimeout(() => {
-        window.location.href = 'onboarding.html?step=2';
-      }, 2000);
-    }
-
-    // ── Main logic ──
-    const params = new URLSearchParams(window.location.search);
-    const code   = params.get('code');
-    const error  = params.get('error');
-
-    if (error) {
-      showError(params.get('error_description') || 'Connection was denied.');
-    } else if (code) {
-      fetch('/api/stripe/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (data.success) {
-            showSuccess();
-          } else {
-            showError(data.error || 'Connection failed. Please try again.');
-          }
-        })
-        .catch(() => showError('Network error. Please try again.'));
-    } else {
-      showError('No authorisation code received.');
-    }
-  </script>
+  <script src="assets/stripe-callback.js" defer></script>
 </body>
 </html>

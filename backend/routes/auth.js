@@ -94,13 +94,20 @@ router.post('/logout', (req, res) => {
 
 // GET /api/auth/me
 router.get('/me', requireShopAuth, (req, res) => {
-  const { id, name, slug, email, plan, is_temp_password, stripe_account_id, created_at } = req.shop;
+  const {
+    id, name, slug, email, plan, is_temp_password, stripe_account_id,
+    stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted,
+    created_at
+  } = req.shop;
   // Pull branding so admin pages can render the shop's tagline/logo
   const s = db.prepare(
     'SELECT tagline, logo_url, phone, address FROM store_settings WHERE shop_id = ?'
   ).get(id) || {};
   res.json({
     id, name, slug, email, plan, is_temp_password, stripe_account_id, created_at,
+    stripe_charges_enabled: !!stripe_charges_enabled,
+    stripe_payouts_enabled: !!stripe_payouts_enabled,
+    stripe_details_submitted: !!stripe_details_submitted,
     tagline:  s.tagline  || null,
     logo_url: s.logo_url || null,
     phone:    s.phone    || null,

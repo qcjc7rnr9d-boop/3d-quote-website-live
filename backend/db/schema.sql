@@ -17,7 +17,21 @@ CREATE TABLE IF NOT EXISTS shops (
   stripe_publishable_key TEXT,
   stripe_secret_key  TEXT,
   stripe_client_id   TEXT,
+  stripe_charges_enabled INTEGER NOT NULL DEFAULT 0,
+  stripe_payouts_enabled INTEGER NOT NULL DEFAULT 0,
+  stripe_details_submitted INTEGER NOT NULL DEFAULT 0,
+  updated_at         TEXT    NOT NULL DEFAULT (datetime('now')),
   created_at         TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS platform_settings (
+  id                   INTEGER PRIMARY KEY CHECK (id = 1),
+  stripe_publishable_key TEXT,
+  stripe_secret_key    TEXT,
+  stripe_client_id     TEXT,
+  platform_fee_percent REAL    NOT NULL DEFAULT 5,
+  updated_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+  created_at           TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
 -- ── Materials ──────────────────────────────────────────────

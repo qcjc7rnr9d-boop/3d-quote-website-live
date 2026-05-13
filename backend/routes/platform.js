@@ -2,6 +2,11 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { db, requirePlatformAuth } from '../middleware/auth.js';
 import { BCRYPT_ROUNDS, PLATFORM_FEE_PERCENT } from '../config.js';
+import {
+  getMaskedPlatformStripeConfig,
+  getEffectivePlatformStripeConfig,
+  updatePlatformStripeConfig,
+} from '../lib/platform-payments.js';
 
 const router = Router();
 
@@ -34,9 +39,10 @@ router.get('/stats', requirePlatformAuth, (req, res) => {
     const monthRevenue = db.prepare(
       "SELECT COALESCE(SUM(total),0) as s FROM orders WHERE payment_status='paid' AND created_at >= datetime('now','start of month')"
     ).get().s;
-    const monthFees = monthRevenue * PLATFORM_FEE_PERCENT / 100;
+    const feePercent = getEffectivePlatformStripeConfig().feePercent || PLATFORM_FEE_PERCENT;
+    const monthFees = monthRevenue * feePercent / 100;
 
-    res.json({ shopCount, orderCount, monthRevenue, monthFees });
+    res.json({ shopCount, orderCount, monthRevenue, monthFees, feePercent });
   } catch (err) {
     console.error('Platform stats error:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -49,7 +55,8 @@ router.get('/shops', requirePlatformAuth, (req, res) => {
     const shops = db.prepare(`
       SELECT
         s.id, s.name, s.slug, s.email, s.plan,
-        s.stripe_account_id, s.created_at,
+        s.stripe_account_id, s.stripe_charges_enabled, s.stripe_payouts_enabled,
+        s.stripe_details_submitted, s.created_at,
         (SELECT COUNT(*) FROM orders o WHERE o.shop_id = s.id) as order_count,
         (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.shop_id = s.id AND payment_status='paid') as revenue
       FROM shops s
@@ -59,6 +66,46 @@ router.get('/shops', requirePlatformAuth, (req, res) => {
   } catch (err) {
     console.error('Platform shops error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/payments', requirePlatformAuth, (req, res) => {
+  try {
+    res.json(getMaskedPlatformStripeConfig());
+  } catch (err) {
+    console.error('Platform payments config error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.put('/payments', requirePlatformAuth, (req, res) => {
+  try {
+    const { publishable_key, secret_key, client_id, platform_fee_percent } = req.body;
+
+    if (publishable_key !== undefined && publishable_key && !publishable_key.startsWith('pk_')) {
+      return res.status(400).json({ error: 'Publishable key must start with pk_live_ or pk_test_' });
+    }
+    if (secret_key !== undefined && secret_key && !secret_key.startsWith('sk_')) {
+      return res.status(400).json({ error: 'Secret key must start with sk_live_ or sk_test_' });
+    }
+    if (client_id !== undefined && client_id && !client_id.startsWith('ca_')) {
+      return res.status(400).json({ error: 'Client ID must start with ca_' });
+    }
+    if (platform_fee_percent !== undefined && platform_fee_percent !== '' && (Number(platform_fee_percent) < 0 || Number(platform_fee_percent) > 100)) {
+      return res.status(400).json({ error: 'Platform fee percent must be between 0 and 100' });
+    }
+
+    const result = updatePlatformStripeConfig({
+      publishableKey: publishable_key,
+      secretKey: secret_key,
+      clientId: client_id,
+      platformFeePercent: platform_fee_percent,
+    });
+
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('Save platform payments config error:', err);
+    res.status(500).json({ error: 'Failed to save payments config' });
   }
 });
 

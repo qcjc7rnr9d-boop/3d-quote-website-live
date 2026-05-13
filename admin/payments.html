@@ -11,14 +11,7 @@
   <link rel="stylesheet" href="../assets/shared.css">
   <link rel="stylesheet" href="../assets/admin.css">
   <style>
-    .stripe-logo {
-      font-family: 'Courier New', monospace;
-      font-weight: 700;
-      font-size: 28px;
-      color: #635BFF;
-      letter-spacing: -0.02em;
-    }
-    .connect-center {
+    .status-center {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -26,42 +19,37 @@
       padding: 48px 24px;
       gap: 16px;
     }
-    .connect-center h2 {
+    .status-center h2 {
       font-family: var(--font-brand);
       font-size: 26px;
       font-weight: 400;
       color: var(--ink);
     }
-    .connect-center p {
+    .status-center p {
       font-size: 14px;
-      font-weight: 400;
       color: var(--muted);
-      max-width: 400px;
+      max-width: 460px;
       line-height: 1.7;
     }
-    .connect-checklist {
+    .status-list {
       list-style: none;
       display: flex;
       flex-direction: column;
       gap: 8px;
       text-align: left;
     }
-    .connect-checklist li {
+    .status-list li {
       font-size: 13px;
       color: var(--muted);
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .connect-checklist li::before {
-      content: '✓';
+    .status-list li::before {
+      content: '•';
       color: var(--sage-dark);
-      font-weight: 500;
+      font-weight: 700;
       flex-shrink: 0;
-    }
-    .connect-note {
-      font-size: 12px;
-      color: var(--muted);
     }
     .connected-card {
       display: flex;
@@ -75,6 +63,7 @@
       padding: 14px 0;
       border-bottom: 1px solid var(--stone);
       font-size: 13px;
+      gap: 16px;
     }
     .connected-row:last-child { border-bottom: none; }
     .connected-row .label { color: var(--muted); font-weight: 400; }
@@ -88,6 +77,15 @@
       color: var(--sage-dark);
       margin-top: 20px;
     }
+    .warn-note {
+      background: rgba(200, 150, 40, 0.08);
+      border: 1px solid rgba(200, 150, 40, 0.3);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #8a6518;
+      margin-top: 20px;
+    }
     .payout-status-paid { color: #1a7a3a; font-weight: 500; }
     .payout-status-pending { color: var(--muted); }
     .payout-status-failed { color: #C0392B; }
@@ -97,8 +95,6 @@
 <body class="admin-body">
 
 <div class="admin-layout">
-
-  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-brand">
       <div class="sidebar-logo">R</div>
@@ -159,161 +155,77 @@
     </div>
   </aside>
 
-  <!-- Main -->
   <main class="admin-main">
     <div class="admin-header">
       <div class="admin-title-block">
         <h1 class="admin-title">Payments</h1>
-        <p class="admin-subtitle">Stripe Connect and payout settings</p>
+        <p class="admin-subtitle">Stripe connection and payout readiness</p>
       </div>
     </div>
 
     <div class="admin-content">
-
-      <!-- Stripe Connect status -->
       <div class="section-card" id="stripeCard">
         <div class="section-card-header">
           <h2 class="section-card-title">Stripe Connect</h2>
           <span id="connectedBadge" class="badge badge-sage" style="display:none">Connected</span>
         </div>
         <div class="section-card-body">
-
-          <!-- Step 1: Enter API keys -->
-          <div id="keysState" style="display:none">
-            <div style="max-width:520px">
-              <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">
-                Enter your Stripe API keys below. You can find them in your
-                <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color:var(--sage-dark)">Stripe dashboard</a>.
-                Publishable + secret keys enable Stripe card payments. Client ID is only needed for Stripe Connect payouts.
-              </div>
-
-              <div id="keysError" class="inline-error" style="margin-bottom:14px"></div>
-              <div id="keysSuccess" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#166534;margin-bottom:14px"></div>
-
-              <div class="form-group">
-                <label class="form-label" for="inputPublishableKey">
-                  Publishable key
-                  <span style="font-weight:400;color:var(--muted)"> - starts with pk_live_ or pk_test_</span>
-                </label>
-                <input class="form-input" type="text" id="inputPublishableKey" placeholder="pk_live_..." autocomplete="off">
-                <p style="font-size:11px;color:var(--muted);margin-top:4px">
-                  Used by checkout to securely initialise Stripe Elements.
-                </p>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="inputSecretKey">
-                  Secret key
-                  <span style="font-weight:400;color:var(--muted)"> - starts with sk_live_ or sk_test_</span>
-                </label>
-                <div style="position:relative">
-                  <input class="form-input" type="password" id="inputSecretKey" placeholder="sk_live_..." autocomplete="off">
-                  <button type="button" id="toggleSecretKey" tabindex="-1"
-                    style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px">
-                    Show
-                  </button>
-                </div>
-                <p style="font-size:11px;color:var(--muted);margin-top:4px">
-                  From <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color:var(--sage-dark)">Stripe Dashboard → Developers → API keys</a>
-                </p>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="inputClientId">
-                  Connect Client ID
-                  <span style="font-weight:400;color:var(--muted)"> - optional, starts with ca_</span>
-                </label>
-                <input class="form-input" type="text" id="inputClientId" placeholder="ca_..." autocomplete="off">
-                <p style="font-size:11px;color:var(--muted);margin-top:4px">
-                  Needed only if shops will connect their own Stripe accounts for payouts.
-                </p>
-              </div>
-
-              <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
-                <button class="btn btn-primary" id="saveKeysBtn">Save keys</button>
-                <div id="keysSaved" style="display:none;font-size:13px;color:var(--sage-dark)">✓ Saved</div>
-              </div>
-
-              <!-- Masked keys display (shown after saving) -->
-              <div id="savedKeysDisplay" style="display:none;margin-top:20px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
-                <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px">Saved keys</div>
-                <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-family:monospace">
-                  <div><span style="color:var(--muted);font-family:var(--font-ui);min-width:120px;display:inline-block">Publishable key</span> <span id="maskedPublishableKey" style="color:var(--ink)"></span></div>
-                  <div><span style="color:var(--muted);font-family:var(--font-ui);min-width:100px;display:inline-block">Secret key</span> <span id="maskedSecretKey" style="color:var(--ink)"></span></div>
-                  <div><span style="color:var(--muted);font-family:var(--font-ui);min-width:100px;display:inline-block">Client ID</span> <span id="maskedClientId" style="color:var(--ink)"></span></div>
-                </div>
-                <button class="btn btn-outline" id="updateKeysBtn" style="margin-top:12px;font-size:12px;height:30px;padding:0 12px">Update keys</button>
-              </div>
-
-              <div id="proceedToConnectWrap" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
-                <p style="font-size:13px;color:var(--sage-dark);margin-bottom:12px">Stripe card payments are enabled. Connect Stripe only if you want connected-account payouts.</p>
-                <button class="btn btn-primary" id="connectStripeBtn">
-                  Connect with Stripe →
-                </button>
-              </div>
-            </div>
+          <div id="platformRequiredState" class="status-center" style="display:none">
+            <h2>Platform setup required</h2>
+            <p>The Trennen platform has not finished configuring Stripe yet. Card checkout will stay off until the platform operator adds the master Stripe keys.</p>
           </div>
 
-          <!-- Step 2: Already has keys, not yet connected — show Connect button directly -->
-          <div id="notConnectedState" class="connect-center" style="display:none">
-            <div class="stripe-logo">stripe</div>
-            <h2>Stripe card payments enabled</h2>
-            <p>Customers can pay by card at checkout. Connect Stripe if you want payouts routed to a connected account.</p>
-            <ul class="connect-checklist">
-              <li>Card payments available at checkout</li>
-              <li>No card data stored on our servers</li>
-              <li>Optional connected-account payouts</li>
+          <div id="connectState" class="status-center" style="display:none">
+            <h2>Connect your Stripe account</h2>
+            <p>Customers will pay through Trennen checkout. Stripe will send your store payout to your own bank account after taking the platform fee.</p>
+            <ul class="status-list">
+              <li>Customers pay once at checkout</li>
+              <li>Your payout goes to your connected Stripe account</li>
+              <li>No card numbers are stored in this portal</li>
             </ul>
-            <button class="btn btn-primary" id="connectStripeBtn2" style="margin-top:8px">
-              Connect with Stripe
-            </button>
-            <p class="connect-note">You'll be redirected to Stripe to authorise the connection.</p>
-            <button type="button" style="margin-top:8px;background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline" id="editKeysBtn">
-              Update API keys
-            </button>
+            <button class="btn btn-primary" id="connectStripeBtn">Connect with Stripe</button>
+            <p class="connect-note">Stripe hosts the onboarding and banking setup.</p>
           </div>
 
-          <!-- Connected state -->
           <div id="connectedState" style="display:none">
             <div class="connected-card">
               <div class="connected-row">
-                <span class="label">Account ID</span>
+                <span class="label">Connected account</span>
                 <span class="value" id="accountId">—</span>
               </div>
               <div class="connected-row">
-                <span class="label">Account type</span>
-                <span class="value" style="font-family: var(--font-ui)">Express</span>
+                <span class="label">Charges enabled</span>
+                <span id="chargesEnabled">—</span>
               </div>
               <div class="connected-row">
                 <span class="label">Payouts enabled</span>
                 <span id="payoutsEnabled">—</span>
               </div>
               <div class="connected-row">
-                <span class="label">Charges enabled</span>
-                <span id="chargesEnabled">—</span>
+                <span class="label">Details submitted</span>
+                <span id="detailsSubmitted">—</span>
+              </div>
+              <div class="connected-row">
+                <span class="label">Status</span>
+                <span id="statusSummary">—</span>
               </div>
             </div>
 
-            <div class="fee-note">
-              RF DEWI takes a 5% platform fee from each transaction, applied automatically at checkout.
-            </div>
+            <div class="fee-note" id="feeNote">Trennen takes a platform fee from each transaction, applied automatically at checkout.</div>
+            <div class="warn-note" id="requirementsBox" style="display:none"></div>
 
-            <div style="margin-top:24px">
-              <button class="btn btn-outline" id="disconnectBtn" style="color:#C0392B;border-color:rgba(192,57,43,0.4)">
-                Disconnect Stripe
-              </button>
+            <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
+              <button class="btn btn-primary" id="resumeOnboardingBtn">Resume Stripe setup</button>
+              <button class="btn btn-outline" id="disconnectBtn" style="color:#C0392B;border-color:rgba(192,57,43,0.4)">Disconnect Stripe</button>
             </div>
           </div>
 
-          <!-- Loading state -->
-          <div id="loadingState" class="connect-center">
+          <div id="loadingState" class="status-center">
             <p style="color:var(--muted)">Loading…</p>
           </div>
-
         </div>
       </div>
 
-      <!-- Recent payouts (shown only when connected) -->
       <div class="section-card" id="payoutsCard" style="display:none">
         <div class="section-card-header">
           <h2 class="section-card-title">Recent payouts</h2>
@@ -335,16 +247,14 @@
           </table>
         </div>
       </div>
-
     </div>
   </main>
 </div>
 
-<!-- Disconnect confirmation modal -->
 <div class="modal-overlay hidden" id="disconnectModal" role="dialog" aria-modal="true" aria-labelledby="disconnectTitle">
   <div class="modal">
     <h2 class="modal-title" id="disconnectTitle">Disconnect Stripe?</h2>
-    <p class="modal-body">Customers will no longer be able to pay online. You can reconnect at any time.</p>
+    <p class="modal-body">Card checkout will switch off for this store until Stripe is connected again.</p>
     <div class="modal-actions">
       <button class="btn btn-outline" id="cancelDisconnect">Cancel</button>
       <button class="btn btn-danger" id="confirmDisconnect">Disconnect</button>
@@ -353,191 +263,90 @@
 </div>
 
 <script>
-  let shopData   = null;
-  let keysStatus = null;
+  let shopData = null;
+  let stripeStatus = null;
 
-  // ── Auth guard ────────────────────────────────────────────────
-  (async () => {
-    try {
-      const r = await fetch('/api/auth/me');
-      if (!r.ok) { window.location.href = 'login.html'; return; }
-      shopData = await r.json();
-      document.getElementById('sidebarStoreName').textContent = shopData.name;
-      document.getElementById('sidebarPlan').textContent =
-        shopData.plan.charAt(0).toUpperCase() + shopData.plan.slice(1);
-      if (shopData.is_temp_password) { window.location.href = 'change-password.html'; return; }
-      await loadAndRender();
-    } catch { window.location.href = 'login.html'; }
-  })();
+  function boolBadge(on) {
+    return on
+      ? '<span class="badge badge-sage">Yes</span>'
+      : '<span class="badge badge-warm">No</span>';
+  }
 
-  document.getElementById('signoutBtn').addEventListener('click', async e => {
-    e.preventDefault();
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = 'login.html';
-  });
+  function showOnly(id) {
+    ['platformRequiredState', 'connectState', 'connectedState', 'loadingState'].forEach(key => {
+      document.getElementById(key).style.display = key === id ? '' : 'none';
+    });
+  }
 
-  // ── Main render ───────────────────────────────────────────────
-  async function loadAndRender() {
-    // Fetch key status
-    try {
-      const kr = await fetch('/api/stripe/keys-status');
-      keysStatus = await kr.json();
-    } catch { keysStatus = { has_secret_key: false, has_client_id: false }; }
+  async function loadStatus() {
+    const r = await fetch('/api/stripe/keys-status');
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed to load payment status');
+    stripeStatus = data;
+  }
 
+  function renderStatus() {
     document.getElementById('loadingState').style.display = 'none';
 
-    if (shopData.stripe_account_id) {
-      // Fully connected
-      document.getElementById('connectedBadge').style.display = '';
-      document.getElementById('connectedState').style.display = '';
-      document.getElementById('accountId').textContent = shopData.stripe_account_id;
-      document.getElementById('payoutsEnabled').innerHTML = '<span class="badge badge-sage">Yes</span>';
-      document.getElementById('chargesEnabled').innerHTML = '<span class="badge badge-sage">Yes</span>';
-      document.getElementById('payoutsCard').style.display = '';
-      loadPayouts();
-    } else if (keysStatus.can_accept_cards) {
-      // Card payment keys saved; Connect remains optional.
-      document.getElementById('notConnectedState').style.display = '';
-    } else {
-      // Need to enter keys first
-      document.getElementById('keysState').style.display = '';
-      if (keysStatus.has_publishable_key || keysStatus.has_secret_key || keysStatus.has_client_id) {
-        // Partially saved — show what we have
-        renderSavedKeys();
-      }
-    }
-  }
-
-  function renderSavedKeys() {
-    if (keysStatus.publishable_key_masked || keysStatus.secret_key_masked || keysStatus.client_id_masked) {
-      document.getElementById('savedKeysDisplay').style.display = '';
-      document.getElementById('maskedPublishableKey').textContent = keysStatus.publishable_key_masked || '—';
-      document.getElementById('maskedSecretKey').textContent      = keysStatus.secret_key_masked || '—';
-      document.getElementById('maskedClientId').textContent       = keysStatus.client_id_masked  || '—';
-    }
-    if (keysStatus.can_accept_cards) {
-      document.getElementById('proceedToConnectWrap').style.display = '';
-    }
-  }
-
-  // ── Show/hide password ────────────────────────────────────────
-  document.getElementById('toggleSecretKey').addEventListener('click', () => {
-    const inp = document.getElementById('inputSecretKey');
-    const btn = document.getElementById('toggleSecretKey');
-    if (inp.type === 'password') { inp.type = 'text';     btn.textContent = 'Hide'; }
-    else                         { inp.type = 'password'; btn.textContent = 'Show'; }
-  });
-
-  // ── Save keys ─────────────────────────────────────────────────
-  document.getElementById('saveKeysBtn').addEventListener('click', async () => {
-    const btn       = document.getElementById('saveKeysBtn');
-    const errEl     = document.getElementById('keysError');
-    const successEl = document.getElementById('keysSuccess');
-    errEl.classList.remove('visible');
-    successEl.style.display = 'none';
-
-    const publishableKey = document.getElementById('inputPublishableKey').value.trim();
-    const secretKey      = document.getElementById('inputSecretKey').value.trim();
-    const clientId       = document.getElementById('inputClientId').value.trim();
-
-    if (!publishableKey && !secretKey && !clientId) {
-      errEl.textContent = 'Enter at least one key to save.';
-      errEl.classList.add('visible');
+    if (!stripeStatus.can_accept_cards) {
+      showOnly('platformRequiredState');
+      document.getElementById('payoutsCard').style.display = 'none';
       return;
     }
 
-    btn.disabled = true;
-    btn.textContent = 'Saving…';
-    try {
-      const body = {};
-      if (publishableKey) body.publishable_key = publishableKey;
-      if (secretKey)      body.secret_key      = secretKey;
-      if (clientId)       body.client_id       = clientId;
-
-      const r = await fetch('/api/stripe/keys', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Save failed');
-
-      keysStatus = data;
-      document.getElementById('inputPublishableKey').value = '';
-      document.getElementById('inputSecretKey').value = '';
-      document.getElementById('inputClientId').value  = '';
-
-      successEl.textContent = data.can_accept_cards
-        ? '✓ Stripe card payments are enabled.'
-        : '✓ Keys saved securely.';
-      successEl.style.display = '';
-      document.getElementById('keysSaved').style.display = '';
-
-      renderSavedKeys();
-
-      // If card keys are set, show the enabled state after a short delay.
-      if (data.can_accept_cards) {
-        setTimeout(() => {
-          document.getElementById('keysState').style.display = 'none';
-          document.getElementById('notConnectedState').style.display = '';
-        }, 1200);
-      }
-    } catch (err) {
-      errEl.textContent = err.message;
-      errEl.classList.add('visible');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Save keys';
+    if (!stripeStatus.connected_account_id) {
+      showOnly('connectState');
+      document.getElementById('payoutsCard').style.display = 'none';
+      return;
     }
-  });
 
-  // ── Update keys (clear inputs, re-show form) ──────────────────
-  document.getElementById('updateKeysBtn').addEventListener('click', () => {
-    document.getElementById('savedKeysDisplay').style.display = 'none';
-    document.getElementById('proceedToConnectWrap').style.display = 'none';
-    document.getElementById('inputPublishableKey').focus();
-  });
+    showOnly('connectedState');
+    document.getElementById('connectedBadge').style.display = '';
+    document.getElementById('accountId').textContent = stripeStatus.connected_account_id;
+    document.getElementById('chargesEnabled').innerHTML = boolBadge(stripeStatus.charges_enabled);
+    document.getElementById('payoutsEnabled').innerHTML = boolBadge(stripeStatus.payouts_enabled);
+    document.getElementById('detailsSubmitted').innerHTML = boolBadge(stripeStatus.details_submitted);
+    document.getElementById('statusSummary').innerHTML = stripeStatus.onboarding_complete
+      ? '<span class="badge badge-sage">Ready for live payments</span>'
+      : '<span class="badge badge-warm">More Stripe setup needed</span>';
+    document.getElementById('feeNote').textContent =
+      `Trennen takes a ${Number(stripeStatus.platform_fee_percent || 0).toFixed(2)}% platform fee from each paid order.`;
 
-  // "Edit keys" link from notConnectedState
-  document.getElementById('editKeysBtn').addEventListener('click', () => {
-    document.getElementById('notConnectedState').style.display = 'none';
-    document.getElementById('keysState').style.display = '';
-    renderSavedKeys();
-  });
+    const requirementsBox = document.getElementById('requirementsBox');
+    if (stripeStatus.requirements_due && stripeStatus.requirements_due.length) {
+      requirementsBox.style.display = '';
+      requirementsBox.textContent = `Stripe still needs: ${stripeStatus.requirements_due.join(', ')}`;
+    } else {
+      requirementsBox.style.display = 'none';
+      requirementsBox.textContent = '';
+    }
 
-  // ── Connect with Stripe (both buttons) ───────────────────────
-  async function doStripeConnect(btn) {
+    document.getElementById('payoutsCard').style.display = stripeStatus.connected_account_id ? '' : 'none';
+    loadPayouts();
+  }
+
+  async function startConnect(btn) {
     btn.disabled = true;
     btn.textContent = 'Redirecting…';
     try {
       const r = await fetch('/api/stripe/connect-url');
       const data = await r.json();
-      if (!r.ok) {
-        if (data.setup_required) {
-          document.getElementById('notConnectedState').style.display = 'none';
-          document.getElementById('keysState').style.display = '';
-          return;
-        }
-        throw new Error(data.error || 'Failed to get connect URL');
-      }
+      if (!r.ok) throw new Error(data.error || 'Failed to start Stripe connection');
       window.location.href = data.url;
     } catch (err) {
+      alert(err.message || 'Failed to start Stripe connection');
       btn.disabled = false;
-      btn.textContent = btn.id === 'connectStripeBtn2' ? 'Connect with Stripe' : 'Connect with Stripe →';
-      alert(err.message || 'Failed to start Stripe connection. Please try again.');
+      btn.textContent = 'Connect with Stripe';
     }
   }
 
-  document.getElementById('connectStripeBtn').addEventListener('click',  e => doStripeConnect(e.currentTarget));
-  document.getElementById('connectStripeBtn2').addEventListener('click', e => doStripeConnect(e.currentTarget));
-
-  // ── Payouts ───────────────────────────────────────────────────
   async function loadPayouts() {
     try {
       const r = await fetch('/api/stripe/payouts');
-      const { payouts } = await r.json();
+      const data = await r.json();
+      const payouts = data.payouts || [];
       const tbody = document.getElementById('payoutsTbody');
-      if (!payouts || payouts.length === 0) {
+      if (!payouts.length) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--muted)">No payouts yet</td></tr>';
         return;
       }
@@ -550,10 +359,35 @@
           <td style="font-family:'Courier New',monospace;font-size:11px;color:var(--muted)">${p.id}</td>
         </tr>
       `).join('');
-    } catch (err) { console.error('Payouts error:', err); }
+    } catch (err) {
+      console.error('Payouts error:', err);
+    }
   }
 
-  // ── Disconnect ────────────────────────────────────────────────
+  (async () => {
+    try {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location.href = 'login.html'; return; }
+      shopData = await r.json();
+      document.getElementById('sidebarStoreName').textContent = shopData.name;
+      document.getElementById('sidebarPlan').textContent = shopData.plan.charAt(0).toUpperCase() + shopData.plan.slice(1);
+      if (shopData.is_temp_password) { window.location.href = 'change-password.html'; return; }
+      await loadStatus();
+      renderStatus();
+    } catch {
+      window.location.href = 'login.html';
+    }
+  })();
+
+  document.getElementById('signoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  document.getElementById('connectStripeBtn').addEventListener('click', e => startConnect(e.currentTarget));
+  document.getElementById('resumeOnboardingBtn').addEventListener('click', e => startConnect(e.currentTarget));
+
   document.getElementById('disconnectBtn').addEventListener('click', () => {
     document.getElementById('disconnectModal').classList.remove('hidden');
   });
@@ -563,6 +397,7 @@
   document.getElementById('disconnectModal').addEventListener('click', e => {
     if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
   });
+
   document.getElementById('confirmDisconnect').addEventListener('click', async () => {
     const btn = document.getElementById('confirmDisconnect');
     btn.disabled = true;
@@ -575,7 +410,7 @@
       btn.disabled = false;
       btn.textContent = 'Disconnect';
       document.getElementById('disconnectModal').classList.add('hidden');
-      alert('Failed to disconnect. Please try again.');
+      alert('Failed to disconnect Stripe. Please try again.');
     }
   });
 </script>

@@ -1,50 +1,63 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { db, requireShopAuth } from '../middleware/auth.js';
-import { PLATFORM_FEE_PERCENT } from '../config.js';
+import {
+  getEffectivePlatformStripeConfig,
+  getMaskedPlatformStripeConfig,
+  updateShopStripeReadiness,
+} from '../lib/platform-payments.js';
 
 const router = Router();
 
-// ── Helper: get Stripe instance for a shop (DB keys → env fallback) ──
-function getStripe(shop) {
-  const key = (shop && shop.stripe_secret_key) || process.env.STRIPE_SECRET_KEY || '';
-  return new Stripe(key);
+function getPlatformStripe() {
+  const { secretKey } = getEffectivePlatformStripeConfig();
+  return secretKey ? new Stripe(secretKey) : null;
 }
 
-// Helper: get client_id for a shop
-function getClientId(shop) {
-  return (shop && shop.stripe_client_id) || process.env.STRIPE_CLIENT_ID || null;
+function ensurePlatformStripe() {
+  const stripe = getPlatformStripe();
+  if (!stripe) throw new Error('Stripe is not configured on this server.');
+  return stripe;
 }
 
-// Helper: mask a key — shows prefix + last 4 chars, rest as *
-function maskKey(key) {
-  if (!key) return null;
-  // e.g. sk_live_AbcDef1234 → sk_live_****1234
-  const prefix = key.startsWith('sk_live_') ? 'sk_live_' : key.startsWith('sk_test_') ? 'sk_test_' : key.slice(0, 3) + '_';
-  const last4  = key.slice(-4);
-  return `${prefix}${'*'.repeat(8)}${last4}`;
-}
-function maskPublishableKey(key) {
-  if (!key) return null;
-  const prefix = key.startsWith('pk_live_') ? 'pk_live_' : key.startsWith('pk_test_') ? 'pk_test_' : key.slice(0, 3) + '_';
-  const last4 = key.slice(-4);
-  return `${prefix}${'*'.repeat(8)}${last4}`;
-}
-function maskClientId(id) {
-  if (!id) return null;
-  const last4 = id.slice(-4);
-  return `ca_${'*'.repeat(8)}${last4}`;
+async function syncShopStripeAccount(shop) {
+  if (!shop?.stripe_account_id) return null;
+
+  const stripe = getPlatformStripe();
+  if (!stripe) return null;
+
+  const account = await stripe.accounts.retrieve(shop.stripe_account_id);
+  updateShopStripeReadiness(shop.id, account);
+  return account;
 }
 
-// ── Webhook handler (exported — uses env var key for signature verification) ──
+function onboardingComplete(account) {
+  return !!(account?.details_submitted && account?.charges_enabled && account?.payouts_enabled);
+}
+
+function shopReadinessPayload(shop, account = null) {
+  const chargesEnabled = account ? !!account.charges_enabled : !!shop?.stripe_charges_enabled;
+  const payoutsEnabled = account ? !!account.payouts_enabled : !!shop?.stripe_payouts_enabled;
+  const detailsSubmitted = account ? !!account.details_submitted : !!shop?.stripe_details_submitted;
+  const requirementsDue = account?.requirements?.currently_due || [];
+
+  return {
+    connected_account_id: shop?.stripe_account_id || null,
+    charges_enabled: chargesEnabled,
+    payouts_enabled: payoutsEnabled,
+    details_submitted: detailsSubmitted,
+    onboarding_complete: chargesEnabled && payoutsEnabled && detailsSubmitted,
+    requirements_due: requirementsDue,
+  };
+}
+
 export function stripeWebhookHandler(req, res) {
   const sig = req.headers['stripe-signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const { secretKey, webhookSecret } = getEffectivePlatformStripeConfig();
   let event;
 
   try {
-    // Use platform env key for webhook verification
-    const platformStripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+    const platformStripe = new Stripe(secretKey || '');
     event = platformStripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err.message);
@@ -56,9 +69,16 @@ export function stripeWebhookHandler(req, res) {
       db.prepare("UPDATE orders SET payment_status = 'paid' WHERE stripe_payment_id = ?")
         .run(event.data.object.id);
     }
+
     if (event.type === 'payment_intent.payment_failed') {
       db.prepare("UPDATE orders SET payment_status = 'failed' WHERE stripe_payment_id = ?")
         .run(event.data.object.id);
+    }
+
+    if (event.type === 'account.updated') {
+      const account = event.data.object;
+      const shop = db.prepare('SELECT id FROM shops WHERE stripe_account_id = ?').get(account.id);
+      if (shop) updateShopStripeReadiness(shop.id, account);
     }
   } catch (err) {
     console.error('Webhook processing error:', err);
@@ -67,104 +87,66 @@ export function stripeWebhookHandler(req, res) {
   res.json({ received: true });
 }
 
-// ── GET /api/stripe/keys-status (requireShopAuth) ──────────────────────────
-router.get('/keys-status', requireShopAuth, (req, res) => {
-  const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
-  const publishableKey = shop.stripe_publishable_key || process.env.STRIPE_PUBLISHABLE_KEY || null;
-  const secretKey      = shop.stripe_secret_key      || process.env.STRIPE_SECRET_KEY      || null;
-  const clientId       = shop.stripe_client_id       || process.env.STRIPE_CLIENT_ID       || null;
-  res.json({
-    has_publishable_key: !!publishableKey,
-    has_secret_key:      !!secretKey,
-    has_client_id:       !!clientId,
-    can_accept_cards:    !!(publishableKey && secretKey),
-    publishable_key_masked: maskPublishableKey(publishableKey),
-    secret_key_masked:      maskKey(secretKey),
-    client_id_masked:       maskClientId(clientId),
-    // True if keys come from DB (can be updated via UI), false if env-only
-    from_db: !!(shop.stripe_publishable_key || shop.stripe_secret_key || shop.stripe_client_id),
-  });
-});
-
-// ── PUT /api/stripe/keys (requireShopAuth) ─────────────────────────────────
-router.put('/keys', requireShopAuth, (req, res) => {
+router.get('/keys-status', requireShopAuth, async (req, res) => {
   try {
-    const { publishable_key, secret_key, client_id } = req.body;
-
-    if (publishable_key !== undefined) {
-      if (publishable_key && !publishable_key.startsWith('pk_')) {
-        return res.status(400).json({ error: 'Publishable key must start with pk_live_ or pk_test_' });
-      }
-      db.prepare('UPDATE shops SET stripe_publishable_key = ? WHERE id = ?')
-        .run(publishable_key || null, req.shop.id);
-    }
-
-    if (secret_key !== undefined) {
-      if (secret_key && !secret_key.startsWith('sk_')) {
-        return res.status(400).json({ error: 'Secret key must start with sk_live_ or sk_test_' });
-      }
-      db.prepare('UPDATE shops SET stripe_secret_key = ? WHERE id = ?')
-        .run(secret_key || null, req.shop.id);
-    }
-
-    if (client_id !== undefined) {
-      if (client_id && !client_id.startsWith('ca_')) {
-        return res.status(400).json({ error: 'Client ID must start with ca_' });
-      }
-      db.prepare('UPDATE shops SET stripe_client_id = ? WHERE id = ?')
-        .run(client_id || null, req.shop.id);
-    }
-
-    const updated = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
-    const publishableKey = updated.stripe_publishable_key || process.env.STRIPE_PUBLISHABLE_KEY || null;
-    const secretKey      = updated.stripe_secret_key      || process.env.STRIPE_SECRET_KEY      || null;
-    const clientIdVal    = updated.stripe_client_id       || process.env.STRIPE_CLIENT_ID       || null;
+    const platform = getMaskedPlatformStripeConfig();
+    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
+    const account = await syncShopStripeAccount(shop);
 
     res.json({
-      ok: true,
-      has_publishable_key: !!publishableKey,
-      has_secret_key:      !!secretKey,
-      has_client_id:       !!clientIdVal,
-      can_accept_cards:    !!(publishableKey && secretKey),
-      publishable_key_masked: maskPublishableKey(publishableKey),
-      secret_key_masked:      maskKey(secretKey),
-      client_id_masked:       maskClientId(clientIdVal),
+      ...platform,
+      ...shopReadinessPayload(shop, account),
     });
   } catch (err) {
-    console.error('Save Stripe keys error:', err);
-    res.status(500).json({ error: 'Failed to save keys' });
+    console.error('Stripe status error:', err);
+    res.status(500).json({ error: 'Failed to load Stripe status' });
   }
 });
 
-// ── GET /api/stripe/public-key?shop=slug  (public — used by checkout.html) ────
-// Returns the publishable key the front-end should initialise Stripe.js with.
-// Publishable keys are safe to expose (they only let you tokenise card details,
-// not move money). Falls back to the platform's pk if the shop hasn't set one.
+router.put('/keys', requireShopAuth, (req, res) => {
+  res.status(403).json({ error: 'Stripe keys are managed from the platform portal.' });
+});
+
 router.get('/public-key', (req, res) => {
   const slug = req.query.shop;
   if (!slug) return res.status(400).json({ error: 'shop required' });
+
   const shop = db.prepare(
-    "SELECT id, stripe_account_id, stripe_publishable_key, stripe_secret_key FROM shops WHERE slug = ? AND plan != 'suspended'"
+    `SELECT id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted
+     FROM shops WHERE slug = ? AND plan != 'suspended'`
   ).get(slug);
+
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
-  const pk = shop.stripe_publishable_key || process.env.STRIPE_PUBLISHABLE_KEY || '';
-  const sk = shop.stripe_secret_key || process.env.STRIPE_SECRET_KEY || '';
-  if (!pk) {
+
+  const { publishableKey, secretKey } = getEffectivePlatformStripeConfig();
+  if (!publishableKey) {
     return res.status(503).json({
-      error: 'Stripe is not configured — set a publishable key in admin payments or STRIPE_PUBLISHABLE_KEY in .env',
-      code:  'NO_PUBLIC_KEY',
+      error: 'Stripe is not configured - add a publishable key in the platform portal.',
+      code: 'NO_PUBLIC_KEY',
     });
   }
-  if (!sk) {
+  if (!secretKey) {
     return res.status(503).json({
-      error: 'Stripe is not configured — set a secret key in admin payments or STRIPE_SECRET_KEY in .env',
-      code:  'NO_SECRET_KEY',
+      error: 'Stripe is not configured - add a secret key in the platform portal.',
+      code: 'NO_SECRET_KEY',
     });
   }
-  res.json({ publishable_key: pk, has_connect: !!shop.stripe_account_id });
+  if (!shop.stripe_account_id) {
+    return res.status(503).json({
+      error: 'This store has not connected Stripe yet.',
+      code: 'NO_CONNECTED_ACCOUNT',
+    });
+  }
+  if (!shop.stripe_charges_enabled || !shop.stripe_payouts_enabled || !shop.stripe_details_submitted) {
+    return res.status(503).json({
+      error: 'This store still needs to finish Stripe onboarding before it can accept live payments.',
+      code: 'ONBOARDING_INCOMPLETE',
+    });
+  }
+
+  res.json({ publishable_key: publishableKey, has_connect: true });
 });
 
-// ── POST /api/stripe/create-payment-intent (public — customer checkout) ──────
 router.post('/create-payment-intent', async (req, res) => {
   try {
     const { paymentMethodId, shopSlug, amount, currency, customerEmail, customerName, orderData } = req.body;
@@ -175,45 +157,40 @@ router.post('/create-payment-intent', async (req, res) => {
 
     const shop = db.prepare('SELECT * FROM shops WHERE slug = ?').get(shopSlug);
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
-
-    const stripe = getStripe(shop);
-    if (!stripe?.apiKey) {
-      return res.status(503).json({ error: 'Stripe is not configured on this server.' });
+    if (!shop.stripe_account_id) {
+      return res.status(503).json({ error: 'This store has not connected Stripe yet.' });
+    }
+    if (!shop.stripe_charges_enabled || !shop.stripe_payouts_enabled || !shop.stripe_details_submitted) {
+      return res.status(503).json({ error: 'This store is not ready to accept Stripe payments yet.' });
     }
 
-    const amountCents = Math.round(amount * 100);
-    // If the shop has connected its own Stripe → split with application fee.
-    // Otherwise (dev mode) → take payment straight to the platform account,
-    // no transfer / no app fee. The shop owner can connect Stripe later
-    // via admin/payments.html to switch into Connect mode automatically.
-    const useConnect = !!shop.stripe_account_id;
-    const feeCents   = useConnect ? Math.round(amountCents * PLATFORM_FEE_PERCENT / 100) : 0;
+    const stripe = ensurePlatformStripe();
+    const { feePercent } = getEffectivePlatformStripeConfig();
+    const amountCents = Math.round(Number(amount) * 100);
+    const feeCents = Math.round(amountCents * feePercent / 100);
 
-    const intentConfig = {
+    const intent = await stripe.paymentIntents.create({
       amount: amountCents,
       currency: (currency || 'nzd').toLowerCase(),
       payment_method: paymentMethodId,
       confirm: true,
       return_url: `${process.env.BASE_URL || 'http://localhost:3000'}/confirmation.html`,
+      application_fee_amount: feeCents,
+      transfer_data: { destination: shop.stripe_account_id },
+      on_behalf_of: shop.stripe_account_id,
       metadata: {
         shopId: String(shop.id),
+        shopSlug: shop.slug,
         customerEmail: customerEmail || '',
-        customerName:  customerName  || '',
+        customerName: customerName || '',
       },
-    };
-    if (useConnect) {
-      intentConfig.application_fee_amount = feeCents;
-      intentConfig.transfer_data = { destination: shop.stripe_account_id };
-    }
-    const intent = await stripe.paymentIntents.create(intentConfig);
+    });
 
-    // Upsert customer
     db.prepare(`
       INSERT INTO customers (shop_id, email, name) VALUES (?, ?, ?)
       ON CONFLICT(shop_id, email) DO UPDATE SET name = excluded.name
     `).run(shop.id, (customerEmail || '').toLowerCase(), customerName || null);
 
-    // Create order record
     const order = db.prepare(`
       INSERT INTO orders
         (shop_id, customer_email, customer_name, file_name, material_id,
@@ -235,56 +212,88 @@ router.post('/create-payment-intent', async (req, res) => {
   }
 });
 
-// ── GET /api/stripe/connect-url (requireShopAuth) ──────────────────────────
-router.get('/connect-url', requireShopAuth, (req, res) => {
-  const shop     = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
-  const clientId = getClientId(shop);
-  const secretKey = (shop && shop.stripe_secret_key) || process.env.STRIPE_SECRET_KEY || null;
+router.get('/connect-url', requireShopAuth, async (req, res) => {
+  try {
+    const stripe = ensurePlatformStripe();
+    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
 
-  if (!secretKey || !clientId) {
-    return res.status(503).json({
-      error: 'Stripe keys not configured.',
-      setup_required: true,
-      missing: { secret_key: !secretKey, client_id: !clientId },
+    let accountId = shop.stripe_account_id;
+    let account = null;
+
+    if (accountId) {
+      account = await stripe.accounts.retrieve(accountId);
+      updateShopStripeReadiness(shop.id, account);
+    } else {
+      account = await stripe.accounts.create({
+        type: 'express',
+        country: 'NZ',
+        email: shop.email,
+        metadata: {
+          shopId: String(shop.id),
+          shopSlug: shop.slug,
+        },
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        business_profile: {
+          name: shop.name,
+        },
+      });
+      accountId = account.id;
+      db.prepare('UPDATE shops SET stripe_account_id = ?, updated_at = datetime(\'now\') WHERE id = ?')
+        .run(accountId, shop.id);
+      updateShopStripeReadiness(shop.id, account);
+    }
+
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${baseUrl}/stripe-callback.html?refresh=1`,
+      return_url: `${baseUrl}/stripe-callback.html`,
+      type: 'account_onboarding',
     });
+
+    res.json({ url: accountLink.url });
+  } catch (err) {
+    console.error('Stripe connect-url error:', err);
+    res.status(500).json({ error: err.message || 'Failed to start Stripe onboarding' });
   }
-  const baseUrl     = process.env.BASE_URL || 'http://localhost:3000';
-  const redirectUri = encodeURIComponent(`${baseUrl}/stripe-callback.html`);
-  const url = `https://connect.stripe.com/oauth/authorize?response_type=code&client_id=${clientId}&scope=read_write&redirect_uri=${redirectUri}`;
-  res.json({ url });
 });
 
-// ── POST /api/stripe/connect (requireShopAuth) ─────────────────────────────
 router.post('/connect', requireShopAuth, async (req, res) => {
   try {
-    const { code } = req.body;
-    if (!code) return res.status(400).json({ error: 'Authorization code required' });
+    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
+    if (!shop?.stripe_account_id) {
+      return res.status(400).json({ error: 'No Stripe account exists for this shop yet.' });
+    }
 
-    const shop   = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
-    const stripe = getStripe(shop);
-    const response = await stripe.oauth.token({ grant_type: 'authorization_code', code });
+    const account = await syncShopStripeAccount(shop);
+    const payload = shopReadinessPayload(shop, account);
 
-    db.prepare('UPDATE shops SET stripe_account_id = ? WHERE id = ?')
-      .run(response.stripe_user_id, req.shop.id);
-
-    res.json({ ok: true, stripe_user_id: response.stripe_user_id });
+    res.json({ success: true, ...payload });
   } catch (err) {
-    console.error('Stripe connect error:', err);
-    res.status(500).json({ error: err.message || 'Failed to connect Stripe' });
+    console.error('Stripe connect completion error:', err);
+    res.status(500).json({ error: err.message || 'Failed to complete Stripe connection' });
   }
 });
 
-// ── POST /api/stripe/disconnect (requireShopAuth) ──────────────────────────
-router.post('/disconnect', requireShopAuth, async (req, res) => {
+router.post('/disconnect', requireShopAuth, (req, res) => {
   try {
-    if (!req.shop.stripe_account_id) return res.status(400).json({ error: 'No Stripe account connected' });
+    if (!req.shop.stripe_account_id) {
+      return res.status(400).json({ error: 'No Stripe account connected' });
+    }
 
-    const shop     = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
-    const stripe   = getStripe(shop);
-    const clientId = getClientId(shop);
+    db.prepare(`
+      UPDATE shops
+      SET stripe_account_id = NULL,
+          stripe_charges_enabled = 0,
+          stripe_payouts_enabled = 0,
+          stripe_details_submitted = 0,
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).run(req.shop.id);
 
-    await stripe.oauth.deauthorize({ client_id: clientId, stripe_user_id: req.shop.stripe_account_id });
-    db.prepare('UPDATE shops SET stripe_account_id = NULL WHERE id = ?').run(req.shop.id);
     res.json({ ok: true });
   } catch (err) {
     console.error('Stripe disconnect error:', err);
@@ -292,22 +301,20 @@ router.post('/disconnect', requireShopAuth, async (req, res) => {
   }
 });
 
-// ── GET /api/stripe/payouts (requireShopAuth) ──────────────────────────────
 router.get('/payouts', requireShopAuth, async (req, res) => {
   try {
     if (!req.shop.stripe_account_id) return res.json({ payouts: [] });
 
-    const shop   = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
-    const stripe = getStripe(shop);
-    const list   = await stripe.payouts.list({ limit: 20 }, { stripeAccount: req.shop.stripe_account_id });
+    const stripe = ensurePlatformStripe();
+    const list = await stripe.payouts.list({ limit: 20 }, { stripeAccount: req.shop.stripe_account_id });
 
     const payouts = list.data.map(p => ({
-      id:           p.id,
-      amount:       p.amount / 100,
-      currency:     p.currency.toUpperCase(),
-      status:       p.status,
+      id: p.id,
+      amount: p.amount / 100,
+      currency: p.currency.toUpperCase(),
+      status: p.status,
       arrival_date: new Date(p.arrival_date * 1000).toISOString().split('T')[0],
-      created:      new Date(p.created * 1000).toISOString().split('T')[0],
+      created: new Date(p.created * 1000).toISOString().split('T')[0],
     }));
 
     res.json({ payouts });
