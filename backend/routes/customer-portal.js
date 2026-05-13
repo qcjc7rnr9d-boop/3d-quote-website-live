@@ -18,6 +18,79 @@ function requireCustomerAuth(req, res, next) {
   next();
 }
 
+function safeJson(value, fallback) {
+  try { return JSON.parse(value || ''); } catch { return fallback; }
+}
+
+function cleanTextArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(v => String(v || '').trim()).filter(Boolean);
+}
+
+function normalizeColour(c, index = 0) {
+  if (typeof c === 'string') {
+    return { id: `colour_${index}`, name: c, hex: '#cccccc', textureUrl: null, enabled: true, sortOrder: index };
+  }
+  return {
+    id: String(c?.id || `colour_${index}`),
+    name: String(c?.name || c?.hex || `Colour ${index + 1}`).trim(),
+    hex: String(c?.hex || '#cccccc').trim(),
+    textureUrl: c?.textureUrl || c?.texture_url || c?.imageUrl || null,
+    enabled: c?.enabled !== false,
+    sortOrder: Number.isFinite(Number(c?.sortOrder)) ? Number(c.sortOrder) : index,
+  };
+}
+
+function normalizeFinish(f, index = 0) {
+  if (typeof f === 'string') {
+    return {
+      id: `finish_${index}`,
+      name: f,
+      layerHeight: '',
+      description: '',
+      priceMultiplier: 1,
+      previewType: index === 0 ? 'standard' : 'fine',
+      previewImageUrl: null,
+      enabled: true,
+      default: index === 0,
+      sortOrder: index,
+    };
+  }
+  return {
+    id: String(f?.id || `finish_${index}`),
+    name: String(f?.name || `Finish ${index + 1}`).trim(),
+    layerHeight: String(f?.layerHeight || f?.layer_height || '').trim(),
+    description: String(f?.description || '').trim(),
+    priceMultiplier: Number.isFinite(Number(f?.priceMultiplier ?? f?.price_multiplier))
+      ? Number(f?.priceMultiplier ?? f?.price_multiplier)
+      : 1,
+    previewType: String(f?.previewType || f?.preview_type || (index === 0 ? 'standard' : 'fine')),
+    previewImageUrl: f?.previewImageUrl || f?.preview_image_url || null,
+    enabled: f?.enabled !== false,
+    default: !!f?.default,
+    sortOrder: Number.isFinite(Number(f?.sortOrder)) ? Number(f.sortOrder) : index,
+  };
+}
+
+function normalizeProperties(properties = {}) {
+  const p = properties && typeof properties === 'object' ? { ...properties } : {};
+  const rating = v => {
+    if (v == null || v === '') return 3;
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 3;
+    return Math.max(1, Math.min(5, n > 5 ? Math.round(n / 20) : Math.round(n)));
+  };
+  const r = p.ratings && typeof p.ratings === 'object' ? p.ratings : {};
+  p.ratings = {
+    strength: rating(r.strength ?? p.strength),
+    flexibility: rating(r.flexibility ?? p.flexibility),
+    heatResistance: rating(r.heatResistance ?? r.heat ?? p.heat),
+    detail: rating(r.detail ?? p.detail),
+    outdoorUse: rating(r.outdoorUse ?? p.outdoor_use),
+  };
+  return p;
+}
+
 // ── GET /api/customer/shop-info?slug=X  (public) ─────────────
 router.get('/shop-info', (req, res) => {
   // Accept ?slug=mahi3d  OR  ?shop=mahi3d (both used across customer pages)
@@ -91,8 +164,12 @@ router.get('/catalog', (req, res) => {
     "SELECT id FROM shops WHERE slug = ? AND plan != 'suspended'"
   ).get(slug);
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
+  const settingsRow = db.prepare(
+    'SELECT material_page_settings FROM store_settings WHERE shop_id = ?'
+  ).get(shop.id) || {};
   const rows = db.prepare(
     `SELECT id, name, category, description_short, description_long,
+            image_url, image_alt, price_unit, recommended, tags, best_for, specs,
             colours, finishes, stock_status, sort_order, properties,
             production_days_min, production_days_max,
             min_x_mm, min_y_mm, min_z_mm,
@@ -101,12 +178,43 @@ router.get('/catalog', (req, res) => {
      WHERE shop_id = ? AND active = 1
      ORDER BY sort_order, name`
   ).all(shop.id);
-  res.json(rows.map(r => ({
-    ...r,
-    colours:    JSON.parse(r.colours    || '[]'),
-    finishes:   JSON.parse(r.finishes   || '[]'),
-    properties: JSON.parse(r.properties || '{}'),
-  })));
+  const materials = rows.map(r => {
+    const colours = safeJson(r.colours, [])
+      .map(normalizeColour)
+      .filter(c => c.enabled !== false)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    let finishes = safeJson(r.finishes, [])
+      .map(normalizeFinish)
+      .filter(f => f.enabled !== false)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    if (finishes.length && !finishes.some(f => f.default)) {
+      finishes = finishes.map((f, i) => ({ ...f, default: i === 0 }));
+    }
+    return {
+      ...r,
+      recommended: !!r.recommended,
+      tags: cleanTextArray(safeJson(r.tags, [])),
+      best_for: cleanTextArray(safeJson(r.best_for, [])),
+      specs: safeJson(r.specs, []),
+      colours,
+      finishes,
+      properties: normalizeProperties(safeJson(r.properties, {})),
+    };
+  });
+  const filters = [...new Set(materials.flatMap(m => m.tags || []))];
+  res.json({
+    settings: {
+      heading: 'Choose your material',
+      subtitle: 'Pick based on how your part will be used. You can view detailed specs if needed.',
+      helperTitle: 'Not sure what to choose?',
+      helperText: 'Start with the recommended material, or filter by what matters most.',
+      continueLabel: 'Continue to Quote',
+      emptyState: 'No materials are available right now.',
+      ...(safeJson(settingsRow.material_page_settings, {}) || {}),
+    },
+    filters,
+    materials,
+  });
 });
 
 // ── POST /api/customer/register ───────────────────────────────

@@ -3,885 +3,991 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>mahi3d — Choose Material</title>
+  <title>Choose Material</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <style>
-    /* ── Design Tokens ─────────────────────────────────────────── */
     :root {
-      --font-brand:  'Space Grotesk', system-ui, sans-serif;
-      --font-ui:     'Inter', system-ui, sans-serif;
-      --white:      #FFFFFF;
-      --off-white:  #F7F6F3;
-      --sage:       #7A9E7E;
-      --sage-light: #B5CEB8;
-      --sage-dark:  #4A7050;
-      --stone:      #E8E4DC;
-      --ink:        #111317;
-      --muted:      #6B7280;
-      --border:     #D1D5DB;
-      --radius:     6px;
-      --shadow:     0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --font-brand: 'Space Grotesk', system-ui, sans-serif;
+      --font-ui: 'Inter', system-ui, sans-serif;
+      --white: #fff;
+      --off-white: #f7f6f3;
+      --ink: #101216;
+      --muted: #6f747c;
+      --muted-2: #8a9099;
+      --line: #e4e0d8;
+      --border: #d7d2ca;
+      --sage: #2f7d43;
+      --sage-dark: #1f6b35;
+      --sage-soft: #ecf5ed;
+      --sage-line: #bad8bf;
+      --shadow: 0 18px 45px rgba(31, 37, 31, 0.07), 0 1px 2px rgba(31, 37, 31, 0.06);
+      --radius: 18px;
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+    *, *::before, *::after { box-sizing: border-box; }
     body {
+      margin: 0;
       font-family: var(--font-ui);
-      font-weight: 400;
-      background: var(--off-white);
+      background: radial-gradient(circle at 50% 0%, rgba(122,158,126,0.07), transparent 340px), var(--off-white);
       color: var(--ink);
-      line-height: 1.6;
       -webkit-font-smoothing: antialiased;
     }
+    button, select { font: inherit; }
+    a { color: inherit; }
 
-    /* ── Nav ───────────────────────────────────────────────────── */
-    nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      height: 60px;
-      background: var(--white);
-      border-bottom: 1px solid var(--stone);
-      display: flex;
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: 68px;
+      display: grid;
+      grid-template-columns: 180px 1fr 180px;
       align-items: center;
-      justify-content: space-between;
-      padding: 0 48px;
+      gap: 24px;
+      padding: 0 36px;
+      background: rgba(255,255,255,0.82);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(18px);
     }
-    .nav-wordmark {
+    .brand {
       font-family: var(--font-brand);
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--ink);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
       text-decoration: none;
-      letter-spacing: 0.06em;
       text-transform: uppercase;
     }
-    .nav-links { display: flex; gap: 36px; list-style: none; }
-    .nav-links a {
+    .progress {
+      justify-self: center;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-width: min(520px, 100%);
+    }
+    .progress-step {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
       font-size: 13px;
-      color: var(--muted);
-      text-decoration: none;
-      transition: color 200ms ease-out;
-    }
-    .nav-links a:hover { color: var(--ink); }
-    .nav-toggle {
-      display: none;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 4px;
+      font-weight: 700;
       color: var(--ink);
     }
-
-    /* ── Page layout ───────────────────────────────────────────── */
-    .page {
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 120px 48px 80px;
-    }
-
-    /* ── Page header ───────────────────────────────────────────── */
-    .page-header {
-      margin-bottom: 52px;
-    }
-    .page-header h2 {
-      font-family: var(--font-brand);
-      font-weight: 600;
-      font-size: clamp(32px, 4vw, 40px);
-      color: var(--ink);
-      line-height: 1.15;
-      margin-bottom: 8px;
-      letter-spacing: -0.01em;
-    }
-    .page-header p {
-      font-size: 15px;
-      font-weight: 400;
-      color: var(--muted);
-    }
-
-    /* ── Material grid ─────────────────────────────────────────── */
-    .material-grid {
+    .progress-step span:first-child {
+      width: 30px;
+      height: 30px;
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-bottom: 48px;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--white);
+      font-weight: 700;
+    }
+    .progress-step.active { color: var(--sage-dark); }
+    .progress-step.active span:first-child {
+      background: var(--sage-dark);
+      border-color: var(--sage-dark);
+      color: var(--white);
+    }
+    .progress-line {
+      height: 1px;
+      flex: 1;
+      min-width: 42px;
+      background: var(--border);
+    }
+    .nav-actions {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 22px;
+    }
+    .nav-actions a {
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .menu-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--white);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .menu-btn svg { width: 20px; height: 20px; }
+
+    .page {
+      width: min(1440px, calc(100% - 72px));
+      margin: 0 auto;
+      padding: 28px 0 120px;
+    }
+    .hero-row {
+      display: grid;
+      grid-template-columns: 1fr minmax(300px, 430px);
+      gap: 36px;
+      align-items: start;
+      margin: 0 0 22px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-family: var(--font-brand);
+      font-size: clamp(38px, 5vw, 58px);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0;
+      max-width: 680px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .helper {
+      display: flex;
+      gap: 14px;
+      padding: 20px 22px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.68);
+      box-shadow: 0 16px 38px rgba(31,37,31,0.04);
+    }
+    .helper-icon {
+      width: 26px;
+      height: 26px;
+      flex: 0 0 auto;
+      color: var(--sage-dark);
+    }
+    .helper strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+    .helper p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
     }
 
-    /* ── Material card ─────────────────────────────────────────── */
-    .mat-card {
-      background: var(--white);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin: 20px 0 18px;
+    }
+    .chip {
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 18px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.72);
+      color: var(--ink);
       cursor: pointer;
-      transition: border-color 200ms ease-out, background 200ms ease-out;
-      overflow: hidden;
+      font-size: 13px;
+      font-weight: 700;
+      transition: border-color 160ms, background 160ms, color 160ms;
+    }
+    .chip.active {
+      border-color: var(--sage-dark);
+      background: var(--sage-soft);
+      color: var(--sage-dark);
+    }
+
+    .materials-list {
       display: flex;
       flex-direction: column;
+      gap: 10px;
     }
-    .mat-card:hover { border-color: var(--sage-light); }
-    .mat-card.selected {
-      border: 2px solid var(--sage-dark);
-      background: rgba(122, 158, 126, 0.04);
+    .material-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: 176px minmax(190px, 1.1fr) minmax(190px, 0.88fr) minmax(220px, 1fr) minmax(250px, 1.15fr) 150px;
+      gap: 22px;
+      align-items: stretch;
+      padding: 20px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 9px 24px rgba(31,37,31,0.045);
+      transition: border-color 160ms, background 160ms, box-shadow 160ms;
     }
-    .mat-card:focus-visible {
-      outline: 2px solid var(--sage);
-      outline-offset: 2px;
+    .material-card.selected {
+      border-color: var(--sage);
+      background: linear-gradient(0deg, rgba(236,245,237,0.78), rgba(255,255,255,0.92));
+      box-shadow: 0 18px 48px rgba(31,107,53,0.10);
     }
-
-    .mat-card-body { padding: 24px 24px 0; flex: 1; }
-
-    .mat-name {
+    .recommended {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 2;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: var(--sage-soft);
+      color: var(--sage-dark);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .material-image {
+      min-height: 142px;
+      border-radius: 14px;
+      background: linear-gradient(140deg, #f9faf8, #e9ece6);
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+    }
+    .material-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .image-placeholder {
+      width: 78px;
+      height: 78px;
+      color: rgba(31,107,53,0.42);
+    }
+    .material-main {
+      padding-top: 3px;
+      min-width: 0;
+    }
+    .material-name {
+      margin: 0 0 6px;
       font-family: var(--font-brand);
-      font-size: 26px;
-      font-weight: 600;
-      color: var(--ink);
-      line-height: 1.1;
-      margin-bottom: 6px;
-      letter-spacing: -0.01em;
+      font-size: 27px;
+      line-height: 1.05;
+      letter-spacing: 0;
     }
-    .mat-desc {
-      font-size: 13px;
-      font-weight: 400;
+    .material-desc {
+      margin: 0 0 12px;
       color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .best-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 13px;
+    }
+    .mini-label {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--ink);
+    }
+    .pill {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--sage-soft);
+      color: var(--sage-dark);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .price {
+      font-size: 13px;
+      color: var(--sage-dark);
+      font-weight: 800;
+    }
+    .column {
+      border-left: 1px solid var(--line);
+      padding-left: 22px;
+    }
+    .column-title {
+      margin: 0 0 12px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--ink);
+    }
+    .ratings {
+      display: grid;
+      gap: 8px;
+    }
+    .rating-row {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .dots {
+      display: flex;
+      gap: 8px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid #bac1ba;
+      background: transparent;
+    }
+    .dot.on {
+      border-color: var(--sage-dark);
+      background: var(--sage-dark);
+    }
+    .swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 11px;
+      margin-bottom: 18px;
+    }
+    .swatch-btn {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.16);
+      background: var(--c);
+      cursor: pointer;
+      position: relative;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.8);
+    }
+    .swatch-btn.selected::after {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border: 1.5px solid var(--sage-dark);
+      border-radius: 50%;
+    }
+    .finish-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .finish-pill {
+      height: 28px;
+      padding: 0 18px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--white);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .finish-pill.selected {
+      border-color: var(--sage);
+      background: var(--sage-soft);
+      color: var(--sage-dark);
+    }
+    .quality-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(118px, 1fr));
+      gap: 10px;
+    }
+    .quality-card {
+      min-height: 112px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: rgba(255,255,255,0.76);
+      padding: 12px;
+      cursor: pointer;
+      text-align: left;
+      position: relative;
+    }
+    .quality-card.selected {
+      border-color: var(--sage);
+      background: var(--sage-soft);
+    }
+    .quality-card strong {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+    .quality-card .layer {
+      display: block;
+      font-size: 11px;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+    .quality-card p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .finish-preview {
+      height: 34px;
+      border-radius: 4px;
+      overflow: hidden;
+      background: repeating-linear-gradient(0deg, #bfc0bb 0 4px, #e1e0da 4px 8px);
+    }
+    .finish-preview.fine {
+      background: repeating-linear-gradient(0deg, #c8c9c4 0 2px, #e8e7e1 2px 5px);
+    }
+    .finish-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .card-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 18px;
+      padding-left: 6px;
+    }
+    .selected-badge {
+      align-self: flex-end;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 28px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: var(--sage-soft);
+      color: var(--sage-dark);
+      font-size: 12px;
+      font-weight: 800;
+      opacity: 0;
+    }
+    .material-card.selected .selected-badge { opacity: 1; }
+    .specs-btn {
+      align-self: flex-end;
+      border: 0;
+      background: none;
+      color: var(--sage-dark);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .select-btn {
+      height: 42px;
+      border: 1px solid var(--sage);
+      border-radius: 8px;
+      background: var(--white);
+      color: var(--sage-dark);
+      cursor: pointer;
+      font-weight: 800;
+    }
+    .material-card.selected .select-btn {
+      background: var(--sage-dark);
+      color: var(--white);
+    }
+    .specs-panel {
+      grid-column: 1 / -1;
+      display: none;
+      border-top: 1px solid var(--line);
+      padding-top: 16px;
+      color: var(--muted);
+      font-size: 13px;
       line-height: 1.55;
-      margin-bottom: 16px;
+    }
+    .specs-panel.open { display: block; }
+    .specs-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .spec-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.62);
+      padding: 10px 12px;
+    }
+    .spec-item strong {
+      display: block;
+      color: var(--ink);
+      font-size: 12px;
+      margin-bottom: 2px;
     }
 
-    /* Colour swatches preview */
-    .mat-swatches {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 14px;
+    .empty {
+      padding: 48px 24px;
+      text-align: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.72);
+      color: var(--muted);
     }
-    .swatch-dot {
+
+    .summary-bar {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      z-index: 60;
+      width: min(1460px, calc(100% - 72px));
+      transform: translateX(-50%);
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.25fr minmax(240px, 380px);
+      gap: 0;
+      align-items: center;
+      min-height: 74px;
+      padding: 12px;
+      background: rgba(255,255,255,0.94);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 18px 44px rgba(31,37,31,0.14);
+      backdrop-filter: blur(16px);
+    }
+    .summary-item {
+      padding: 0 24px;
+      border-right: 1px solid var(--border);
+      min-width: 0;
+    }
+    .summary-label {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .summary-value {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 18px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .summary-swatch {
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      border: 1px solid rgba(0,0,0,0.10);
-      flex-shrink: 0;
+      background: var(--c, #ccc);
+      border: 1px solid rgba(0,0,0,0.14);
+      flex: 0 0 auto;
     }
-
-    .mat-price {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--sage);
-      margin-bottom: 16px;
-    }
-
-    /* ── Learn more toggle ─────────────────────────────────────── */
-    .learn-more-btn {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-family: var(--font-ui);
-      font-size: 13px;
-      font-weight: 400;
-      color: var(--muted);
-      padding: 0 24px 18px;
-      transition: color 200ms ease-out;
-    }
-    .learn-more-btn:hover { color: var(--ink); }
-
-    .learn-more-arrow {
-      display: inline-block;
-      transition: transform 200ms ease-out;
-      font-size: 11px;
-    }
-    .learn-more-btn.open .learn-more-arrow { transform: rotate(180deg); }
-
-    /* ── Drawer ────────────────────────────────────────────────── */
-    .drawer {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 300ms ease-out;
-    }
-    .drawer.open { max-height: 360px; }
-
-    .drawer-inner {
-      padding: 18px 24px 22px;
-      border-top: 1px solid var(--stone);
-      background: var(--off-white);
-    }
-
-    /* Property bars */
-    .properties { margin-bottom: 16px; display: flex; flex-direction: column; gap: 9px; }
-
-    .prop-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .prop-label {
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--muted);
-      letter-spacing: 0.04em;
-      width: 110px;
-      flex-shrink: 0;
-    }
-    .prop-track {
-      flex: 1;
-      height: 3px;
-      background: var(--stone);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .prop-fill {
-      height: 100%;
-      background: var(--sage);
-      border-radius: 2px;
-      transition: width 400ms ease-out;
-    }
-    .prop-value {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      line-height: 1.1;
-      min-width: 92px;
-      flex-shrink: 0;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--ink);
-      letter-spacing: 0.01em;
-    }
-    .prop-value small {
-      font-size: 10px;
-      font-weight: 400;
-      color: var(--muted);
-      margin-top: 1px;
-      letter-spacing: 0.02em;
-    }
-    .drawer-prop-legend {
-      font-size: 11px;
-      line-height: 1.5;
-      color: var(--muted);
-      margin: 4px 0 12px;
-      padding: 8px 10px;
-      background: rgba(0,0,0,0.02);
-      border-radius: 6px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .drawer-prop-legend span { color: var(--ink); font-size: 11px; }
-
-    .drawer-section-label {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 6px;
-      margin-top: 14px;
-    }
-    .drawer-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-    .drawer-list li {
-      font-size: 13px;
-      font-weight: 400;
-      color: var(--muted);
-      padding-left: 12px;
-      position: relative;
-    }
-    .drawer-list li::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 9px;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: var(--sage-light);
-    }
-    .drawer-list.not-for li::before { background: var(--border); }
-    .drawer-learn-more {
-      font-size: 12.5px;
-      line-height: 1.55;
-      color: var(--muted-2, var(--muted));
-      margin: 8px 0 4px;
-      white-space: pre-line;
-    }
-    .drawer-prod-time {
-      display: flex;
-      align-items: center;
-      gap: 2px;
-      padding: 8px 10px;
-      margin-bottom: 12px;
-      background: rgba(90,138,94,0.06);
-      border: 1px solid rgba(90,138,94,0.18);
-      border-radius: 6px;
-      font-size: 12px;
-      color: var(--ink);
-    }
-    .drawer-prod-time strong {
-      font-weight: 600;
-      color: var(--ink);
-    }
-
-    /* ── Colour & finish selector ──────────────────────────────── */
-    .selector-section {
-      display: none;
-      background: var(--white);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 28px 28px 24px;
-      margin-bottom: 40px;
-      animation: fadeUp 250ms ease-out;
-    }
-    .selector-section.visible { display: block; }
-
-    .selector-label {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.10em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 14px;
-    }
-
-    .colour-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 28px;
-    }
-
-    .colour-btn {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      cursor: pointer;
-      position: relative;
-      transition: transform 200ms ease-out, box-shadow 200ms ease-out;
-      padding: 0;
-      background: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .colour-btn::before {
-      content: '';
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: var(--c);
-      border: 1px solid rgba(0,0,0,0.12);
-      display: block;
-      transition: transform 200ms ease-out;
-    }
-    .colour-btn:hover { transform: scale(1.1); }
-    .colour-btn.selected {
-      border-color: var(--sage-dark);
-    }
-    .colour-btn.selected::after {
-      content: '';
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--sage-dark);
-      opacity: 0.8;
-    }
-
-    /* Finish toggle */
-    .finish-row { display: flex; gap: 8px; }
-
-    .finish-btn {
-      padding: 8px 22px;
-      background: var(--white);
-      border: 1.5px solid var(--border);
-      border-radius: 20px;
-      font-family: var(--font-ui);
-      font-size: 13px;
-      font-weight: 400;
-      color: var(--muted);
-      cursor: pointer;
-      transition: background 200ms ease-out, border-color 200ms ease-out, color 200ms ease-out;
-    }
-    .finish-btn:hover { border-color: var(--sage-light); color: var(--ink); }
-    .finish-btn.selected {
-      background: var(--sage);
-      border-color: var(--sage);
-      color: var(--white);
-      font-weight: 500;
-    }
-
-    /* ── CTA row ───────────────────────────────────────────────── */
-    .cta-row {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .btn-primary {
+    .continue-btn {
+      height: 54px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      height: 48px;
-      padding: 0 32px;
-      background: var(--sage);
+      gap: 12px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--sage-dark);
       color: var(--white);
-      border: none;
-      border-radius: var(--radius);
-      font-family: var(--font-ui);
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
       text-decoration: none;
-      transition: background 200ms ease-out, opacity 200ms ease-out;
-      letter-spacing: 0.01em;
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
     }
-    .btn-primary:hover { background: var(--sage-dark); }
-    .btn-primary[aria-disabled="true"] {
-      opacity: 0.4;
+    .continue-btn[aria-disabled="true"] {
+      opacity: 0.46;
       pointer-events: none;
     }
 
-    .cta-note {
-      font-size: 12px;
-      font-weight: 400;
-      color: var(--muted);
-    }
-
-    /* ── Animations ────────────────────────────────────────────── */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ── Responsive ────────────────────────────────────────────── */
-    @media (max-width: 900px) {
-      .material-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (max-width: 640px) {
-      nav { padding: 0 20px; }
-      .nav-links {
-        display: none;
-        position: fixed;
-        top: 60px; left: 0; right: 0;
-        background: var(--white);
-        border-bottom: 1px solid var(--stone);
-        flex-direction: column;
-        padding: 28px 24px;
-        gap: 24px;
-        z-index: 99;
+    @media (max-width: 1320px) {
+      .topbar { grid-template-columns: auto 1fr auto; padding: 0 20px; }
+      .nav-actions a { display: none; }
+      .material-card {
+        grid-template-columns: 150px 1fr 1fr;
       }
-      .nav-links.open { display: flex; }
-      .nav-toggle { display: block; }
-
-      .page { padding: 90px 20px 60px; }
-      .material-grid { grid-template-columns: 1fr; }
-      .cta-row { flex-direction: column; align-items: stretch; }
-      .cta-row .btn-primary { width: 100%; justify-content: center; }
+      .column { border-left: 0; padding-left: 0; }
+      .card-actions { grid-column: 1 / -1; flex-direction: row; align-items: center; }
+      .summary-bar { grid-template-columns: 1fr 1fr; row-gap: 12px; }
+      .continue-btn { grid-column: 1 / -1; }
+    }
+    @media (max-width: 760px) {
+      .topbar {
+        height: auto;
+        min-height: 68px;
+        grid-template-columns: 1fr auto;
+        padding: 12px 18px;
+      }
+      .progress {
+        grid-column: 1 / -1;
+        order: 3;
+        width: 100%;
+        gap: 8px;
+      }
+      .progress-step { font-size: 12px; gap: 6px; }
+      .progress-step span:first-child { width: 28px; height: 28px; }
+      .progress-line { min-width: 20px; }
+      .page { width: min(100% - 32px, 560px); padding-bottom: 190px; }
+      .hero-row { grid-template-columns: 1fr; gap: 18px; }
+      .material-card { grid-template-columns: 1fr; }
+      .material-image { min-height: 210px; }
+      .quality-grid, .specs-list { grid-template-columns: 1fr; }
+      .card-actions { flex-direction: column; align-items: stretch; }
+      .specs-btn, .selected-badge { align-self: flex-start; }
+      .summary-bar {
+        width: calc(100% - 24px);
+        bottom: 12px;
+        grid-template-columns: 1fr;
+        padding: 10px;
+      }
+      .summary-item {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 8px 10px;
+      }
     }
   </style>
   <script src="assets/brand.js" defer></script>
 </head>
 <body>
+  <header class="topbar">
+    <a class="brand" href="index.html">mahi3d</a>
+    <div class="progress" aria-label="Quote progress">
+      <div class="progress-step"><span>1</span>Upload</div>
+      <div class="progress-line" aria-hidden="true"></div>
+      <div class="progress-step active"><span>2</span>Material</div>
+      <div class="progress-line" aria-hidden="true"></div>
+      <div class="progress-step"><span>3</span>Quote</div>
+    </div>
+    <nav class="nav-actions" aria-label="Main navigation">
+      <a href="materials.html">Materials</a>
+      <a href="quote.html">Quote</a>
+      <button class="menu-btn" type="button" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </nav>
+  </header>
 
-<!-- ── Nav ── -->
-<nav role="navigation" aria-label="Main navigation">
-  <a href="index.html" class="nav-wordmark">mahi3d</a>
-  <ul class="nav-links" id="navLinks">
-    <li><a href="materials.html">Materials</a></li>
-    <li><a href="quote.html">Quote</a></li>
-  </ul>
-  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <rect x="2" y="5"    width="18" height="1.5" rx="0.75" fill="currentColor"/>
-      <rect x="2" y="10.25" width="18" height="1.5" rx="0.75" fill="currentColor"/>
-      <rect x="2" y="15.5" width="18" height="1.5" rx="0.75" fill="currentColor"/>
-    </svg>
-  </button>
-</nav>
-
-<main>
-  <div class="page">
-
-    <header class="page-header">
-      <h2>Choose your material</h2>
-      <p>Not sure? Start with PLA — it's our most popular.</p>
-    </header>
-
-    <!-- Material cards injected by JS -->
-    <div class="material-grid" id="materialGrid" role="list" aria-label="Available materials"></div>
-
-    <!-- Colour & finish selector (shown after material is chosen) -->
-    <section class="selector-section" id="selectorSection" aria-label="Colour and finish options">
-      <div class="selector-label">Select a colour</div>
-      <div class="colour-row" id="colourRow" role="group" aria-label="Colour options"></div>
-
-      <div class="selector-label">Finish</div>
-      <div class="finish-row" role="group" aria-label="Finish options">
-        <button class="finish-btn selected" data-finish="standard" aria-pressed="true">Standard</button>
-        <button class="finish-btn" data-finish="fine" aria-pressed="false">Fine</button>
+  <main class="page">
+    <section class="hero-row">
+      <div>
+        <h1 id="pageHeading">Choose your material</h1>
+        <p class="subtitle" id="pageSubtitle">Pick based on how your part will be used. You can view detailed specs if needed.</p>
       </div>
+      <aside class="helper">
+        <svg class="helper-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3l-2 5-5 2 5 2 2 5 2-5 5-2-5-2-2-5z"/><path d="M5 16l-1 3-3 1 3 1 1 3 1-3 3-1-3-1-1-3z"/></svg>
+        <div>
+          <strong id="helperTitle">Not sure what to choose?</strong>
+          <p id="helperText">Start with the recommended material, or filter by what matters most.</p>
+        </div>
+      </aside>
     </section>
 
-    <!-- CTA -->
-    <div class="cta-row">
-      <span class="cta-note" id="ctaNote">Select a material above</span>
-      <a href="quote.html" class="btn-primary" id="ctaBtn" aria-disabled="true"
-         aria-label="Get your quote">
-        Get Your Quote
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5"
-                stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </a>
+    <div class="filters" id="filters" role="tablist" aria-label="Material filters"></div>
+    <section class="materials-list" id="materialsList" aria-label="Available materials">
+      <div class="empty">Loading materials...</div>
+    </section>
+  </main>
+
+  <aside class="summary-bar" aria-label="Current selection">
+    <div class="summary-item">
+      <span class="summary-label">Material</span>
+      <span class="summary-value" id="summaryMaterial">Select a material</span>
     </div>
+    <div class="summary-item">
+      <span class="summary-label">Colour</span>
+      <span class="summary-value"><span class="summary-swatch" id="summarySwatch"></span><span id="summaryColour">-</span></span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Finish</span>
+      <span class="summary-value" id="summaryFinish">-</span>
+    </div>
+    <a class="continue-btn" id="continueBtn" href="quote.html" aria-disabled="true">Continue to Quote <span aria-hidden="true">→</span></a>
+  </aside>
 
-  </div>
-</main>
+  <script>
+    const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'mahi3d';
+    const listEl = document.getElementById('materialsList');
+    const filtersEl = document.getElementById('filters');
+    const continueBtn = document.getElementById('continueBtn');
+    let materials = [];
+    let settings = {};
+    let activeFilter = 'all';
+    let selection = { materialId: null, colourId: null, finishId: null };
 
-<script>
-  // ── Static fallback data (descriptions, properties for drawer UI) ──
-  const STATIC_DATA = {
-    'PLA':   { strength:62, flexibility:20, heat:30,
-               idealFor:['Prototypes & concept models','Display pieces & figurines','Everyday household objects'],
-               notFor:['Outdoor UV exposure','High-heat environments (>55 °C)'] },
-    'PETG':  { strength:75, flexibility:45, heat:55,
-               idealFor:['Mechanical & structural parts','Water-resistant containers','Brackets and clips'],
-               notFor:['Very high-precision detail','Temperatures above 80 °C'] },
-    'Nylon': { strength:90, flexibility:60, heat:75,
-               idealFor:['Gears, bearings & bushings','Snap-fit assemblies','Functional prototypes'],
-               notFor:['High-moisture environments','Fine decorative surface detail'] },
-    'TPU':   { strength:50, flexibility:95, heat:40,
-               idealFor:['Phone & device cases','Gaskets and seals','Grip handles & soft-touch parts'],
-               notFor:['Rigid structural components','Fine surface detail'] },
-    'ASA':   { strength:70, flexibility:35, heat:80,
-               idealFor:['Outdoor enclosures & housings','Automotive external parts','Garden fixtures'],
-               notFor:['Food contact applications','Ultra-fine miniature detail'] },
-  };
+    const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    const money = n => Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  // MATERIALS will be populated from the API — not hardcoded
-  let MATERIALS = [];
-
-  // Drawer text is admin-editable, so escape it before inserting as HTML.
-  function escDrawer(s) {
-    return String(s ?? '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-
-  // Map a 0–100 perceptual value to a qualitative tier + approx real-world units.
-  // Keeps the bars meaningful without dumping technical jargon on the customer.
-  function propTier(prop, value) {
-    if (value == null) return { label: '', unit: '' };
-    const v = Number(value);
-    if (prop === 'strength') {
-      if (v < 30) return { label: 'Weak',       unit: '<20 MPa tensile' };
-      if (v < 55) return { label: 'Light-duty', unit: '20–40 MPa' };
-      if (v < 70) return { label: 'Standard',   unit: '40–60 MPa' };
-      if (v < 85) return { label: 'Strong',     unit: '60–80 MPa' };
-      return                 { label: 'Industrial', unit: '80+ MPa' };
-    }
-    if (prop === 'flexibility') {
-      if (v < 30) return { label: 'Rigid',         unit: '<10% elongation' };
-      if (v < 55) return { label: 'Stiff',         unit: '10–30%' };
-      if (v < 75) return { label: 'Bendy',         unit: '30–100%' };
-      return                 { label: 'Elastomeric',   unit: '100%+ stretch' };
-    }
-    if (prop === 'heat') {
-      if (v < 30) return { label: 'Low',       unit: 'up to ~55 °C' };
-      if (v < 55) return { label: 'Moderate',  unit: '55–75 °C' };
-      if (v < 75) return { label: 'Good',      unit: '75–100 °C' };
-      if (v < 90) return { label: 'High',      unit: '100–150 °C' };
-      return                 { label: 'Extreme',   unit: '150 °C+' };
-    }
-    return { label: '', unit: '' };
-  }
-
-  // ── State ───────────────────────────────────────────────────────
-  const SHOP_SLUG    = new URLSearchParams(window.location.search).get('shop') || 'mahi3d';
-  let selectedMat    = null;
-  let selectedColor  = 0;
-  let selectedFinish = 'standard';
-  const grid = document.getElementById('materialGrid');
-
-  // ── Build card HTML ─────────────────────────────────────────────
-  function buildCard(mat, idx) {
-    // Merge: API-configured properties win; STATIC_DATA is the fallback.
-    const p = mat.properties || {};
-    const fallback = STATIC_DATA[mat.name] || {};
-    const s = {
-      strength:    p.strength    ?? fallback.strength,
-      flexibility: p.flexibility ?? fallback.flexibility,
-      heat:        p.heat        ?? fallback.heat,
-      idealFor:    (p.ideal_for && p.ideal_for.length) ? p.ideal_for : (fallback.idealFor || []),
-      notFor:      (p.not_for   && p.not_for.length)   ? p.not_for   : (fallback.notFor   || []),
-      learnMore:   p.learn_more  || '',
-    };
-    const hasProps = s.strength != null;
-
-    const card = document.createElement('div');
-    card.className = 'mat-card';
-    card.setAttribute('role', 'listitem');
-    card.setAttribute('tabindex', '0');
-    card.setAttribute('aria-label', `${mat.name} — ${mat.desc}`);
-    card.dataset.id = mat.id;
-
-    // Production time string (e.g. "2–3 business days" or "Next business day")
-    const minD = mat.prodDaysMin, maxD = mat.prodDaysMax;
-    let prodTimeHtml = '';
-    if (minD != null && maxD != null) {
-      let label;
-      if (minD === maxD) label = minD === 1 ? 'Next business day' : `${minD} business days`;
-      else               label = `${minD}–${maxD} business days`;
-      prodTimeHtml = `
-        <div class="drawer-prod-time">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"
-               style="vertical-align:-2px;margin-right:5px;opacity:0.7;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-          <span><strong>Production time:</strong> ${label}</span>
-        </div>`;
+    function iconCube() {
+      return `<svg class="image-placeholder" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M32 6l23 13v26L32 58 9 45V19L32 6z"/><path d="M9 19l23 13 23-13M32 32v26"/></svg>`;
     }
 
-    const tS = propTier('strength',    s.strength);
-    const tF = propTier('flexibility', s.flexibility);
-    const tH = propTier('heat',        s.heat);
+    function ratingDots(value) {
+      const v = Math.max(1, Math.min(5, Number(value) || 3));
+      return `<span class="dots">${[1,2,3,4,5].map(i => `<span class="dot ${i <= v ? 'on' : ''}"></span>`).join('')}</span>`;
+    }
 
-    const propsHtml = hasProps ? `
-      <p class="drawer-prop-legend">
-        Bars compare materials on a 0–100 scale.
-        <span>Strength → tensile resistance (MPa)</span>
-        <span>Flexibility → bend without breaking (% elongation)</span>
-        <span>Heat → continuous-use temperature (°C)</span>
-      </p>
-      <div class="properties">
-        <div class="prop-row">
-          <span class="prop-label">Strength</span>
-          <div class="prop-track" role="progressbar" aria-valuenow="${s.strength}" aria-valuemin="0" aria-valuemax="100"
-               aria-valuetext="${tS.label}, approximately ${escDrawer(tS.unit)}">
-            <div class="prop-fill" style="width:${s.strength}%"></div>
-          </div>
-          <span class="prop-value">${escDrawer(tS.label)}<small>${escDrawer(tS.unit)}</small></span>
-        </div>
-        <div class="prop-row">
-          <span class="prop-label">Flexibility</span>
-          <div class="prop-track" role="progressbar" aria-valuenow="${s.flexibility}" aria-valuemin="0" aria-valuemax="100"
-               aria-valuetext="${tF.label}, approximately ${escDrawer(tF.unit)}">
-            <div class="prop-fill" style="width:${s.flexibility}%"></div>
-          </div>
-          <span class="prop-value">${escDrawer(tF.label)}<small>${escDrawer(tF.unit)}</small></span>
-        </div>
-        <div class="prop-row">
-          <span class="prop-label">Heat resistance</span>
-          <div class="prop-track" role="progressbar" aria-valuenow="${s.heat}" aria-valuemin="0" aria-valuemax="100"
-               aria-valuetext="${tH.label}, approximately ${escDrawer(tH.unit)}">
-            <div class="prop-fill" style="width:${s.heat}%"></div>
-          </div>
-          <span class="prop-value">${escDrawer(tH.label)}<small>${escDrawer(tH.unit)}</small></span>
-        </div>
-      </div>
-      <div class="drawer-section-label">Ideal for</div>
-      <ul class="drawer-list">${(s.idealFor||[]).map(i=>`<li>${escDrawer(i)}</li>`).join('')}</ul>
-      <div class="drawer-section-label">Not for</div>
-      <ul class="drawer-list not-for">${(s.notFor||[]).map(i=>`<li>${escDrawer(i)}</li>`).join('')}</ul>
-      ${s.learnMore ? `
-      <div class="drawer-section-label">More info</div>
-      <p class="drawer-learn-more">${escDrawer(s.learnMore).replace(/\n/g,'<br>')}</p>
-      ` : ''}
-    ` : '';
+    function finishPreview(finish) {
+      if (finish.previewImageUrl) return `<img src="${esc(finish.previewImageUrl)}" alt="">`;
+      return `<div class="finish-preview ${String(finish.previewType || '').toLowerCase().includes('fine') ? 'fine' : ''}"></div>`;
+    }
 
-    card.innerHTML = `
-      <div class="mat-card-body">
-        <div class="mat-name">${mat.name}</div>
-        <div class="mat-desc">${mat.desc || ''}</div>
-        <div class="mat-swatches" aria-hidden="true">
-          ${mat.colors.map(c => `<div class="swatch-dot" style="background:${c.hex}" title="${c.name}"></div>`).join('')}
-        </div>
-        <div class="mat-price">From $${mat.minCharge.toFixed(2)}</div>
-      </div>
-      ${(hasProps || prodTimeHtml || s.learnMore || mat.desc) ? `
-      <button class="learn-more-btn" data-idx="${idx}" aria-expanded="false"
-              aria-controls="drawer-${mat.id}">
-        Learn more <span class="learn-more-arrow" aria-hidden="true">▾</span>
-      </button>
-      <div class="drawer" id="drawer-${mat.id}" role="region" aria-label="${mat.name} details">
-        <div class="drawer-inner">${prodTimeHtml}${propsHtml}</div>
-      </div>` : ''}
-    `;
-
-    card.addEventListener('click', (e) => {
-      if (e.target.closest('.learn-more-btn')) return;
-      selectMaterial(mat.id);
-    });
-    card.addEventListener('keydown', (e) => {
-      if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.learn-more-btn')) {
-        e.preventDefault();
-        selectMaterial(mat.id);
-      }
-    });
-    return card;
-  }
-
-  // ── Render all cards ────────────────────────────────────────────
-  function renderCards() {
-    grid.innerHTML = '';
-    MATERIALS.forEach((mat, idx) => grid.appendChild(buildCard(mat, idx)));
-
-    // Learn more toggle (event delegation)
-    grid.addEventListener('click', (e) => {
-      const btn = e.target.closest('.learn-more-btn');
-      if (!btn) return;
-      e.stopPropagation();
-      const idx = parseInt(btn.dataset.idx);
-      const mat = MATERIALS[idx];
-      const drawer = document.getElementById(`drawer-${mat.id}`);
-      const isOpen = drawer.classList.toggle('open');
-      btn.classList.toggle('open', isOpen);
-      btn.setAttribute('aria-expanded', isOpen);
-    });
-  }
-
-  // ── Select material ─────────────────────────────────────────────
-  function selectMaterial(id) {
-    selectedMat   = MATERIALS.find(m => m.id === id);
-    selectedColor = 0;
-    document.querySelectorAll('.mat-card').forEach(c =>
-      c.classList.toggle('selected', c.dataset.id == id)
-    );
-    renderColours(selectedMat);
-    document.getElementById('selectorSection').classList.add('visible');
-    document.getElementById('ctaBtn').removeAttribute('aria-disabled');
-    document.getElementById('ctaNote').textContent = `${selectedMat.name} selected`;
-    saveSelection();
-  }
-
-  // ── Render colour buttons ───────────────────────────────────────
-  function renderColours(mat) {
-    const row = document.getElementById('colourRow');
-    row.innerHTML = '';
-    mat.colors.forEach((c, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'colour-btn' + (i === selectedColor ? ' selected' : '');
-      btn.style.setProperty('--c', c.hex);
-      btn.setAttribute('aria-label', c.name);
-      btn.setAttribute('aria-pressed', i === selectedColor);
-      btn.addEventListener('click', () => {
-        selectedColor = i;
-        row.querySelectorAll('.colour-btn').forEach((b, j) => {
-          b.classList.toggle('selected', j === i);
-          b.setAttribute('aria-pressed', j === i);
-        });
-        saveSelection();
-      });
-      row.appendChild(btn);
-    });
-  }
-
-  // ── Finish toggle ───────────────────────────────────────────────
-  document.querySelectorAll('.finish-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      selectedFinish = btn.dataset.finish;
-      document.querySelectorAll('.finish-btn').forEach(b => {
-        b.classList.toggle('selected', b.dataset.finish === selectedFinish);
-        b.setAttribute('aria-pressed', b.dataset.finish === selectedFinish);
-      });
-      saveSelection();
-    });
-  });
-
-  // ── Persist selection (includes live rates for quote page) ──────
-  function saveSelection() {
-    if (!selectedMat) return;
-    const color = selectedMat.colors[selectedColor];
-    localStorage.setItem('form_selection', JSON.stringify({
-      materialId:   selectedMat.id,
-      materialName: selectedMat.name,
-      ratePerCm3:   selectedMat.ratePerCm3,
-      minCharge:    selectedMat.minCharge,
-      colorIndex:   selectedColor,
-      colorHex:     color.hex,
-      colorName:    color.name,
-      finish:       selectedFinish,
-      shopSlug:     SHOP_SLUG,
-    }));
-  }
-
-  // ── Load materials + pricing from API ───────────────────────────
-  (async () => {
-    grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--muted);font-size:14px">Loading materials…</div>`;
-    try {
-      const [pricingRes, catalogRes] = await Promise.all([
-        fetch(`/api/customer/pricing?shop=${encodeURIComponent(SHOP_SLUG)}`),
-        fetch(`/api/customer/catalog?shop=${encodeURIComponent(SHOP_SLUG)}`),
-      ]);
-      if (!pricingRes.ok || !catalogRes.ok) throw new Error('Failed');
-
-      const pricing = await pricingRes.json();
-      const catalog = await catalogRes.json();
-
-      // Build MATERIALS from DB data, merged with pricing
-      const pricingMap = Object.fromEntries(pricing.materials.map(m => [m.id, m]));
-
-      MATERIALS = catalog.map(cat => {
-        const p     = pricingMap[cat.id] || {};
-        const props = cat.properties || {};
+    function normaliseCatalogPayload(payload, pricing) {
+      const rows = Array.isArray(payload) ? payload : (payload.materials || []);
+      const pMap = Object.fromEntries((pricing.materials || []).map(m => [m.id, m]));
+      settings = Array.isArray(payload) ? {} : (payload.settings || {});
+      return rows.map(m => {
+        const pm = pMap[m.id] || {};
+        const colours = Array.isArray(m.colours) ? m.colours.filter(c => c.enabled !== false) : [];
+        let finishes = Array.isArray(m.finishes) ? m.finishes.filter(f => f.enabled !== false) : [];
+        if (finishes.length && !finishes.some(f => f.default)) finishes = finishes.map((f, i) => ({ ...f, default: i === 0 }));
         return {
-          id:         cat.id,
-          name:       cat.name,
-          desc:       cat.description_short || '',
-          ratePerCm3: p.base_price  || 0.18,
-          minCharge:  p.min_charge  || 4.50,
-          colors:     cat.colours   || [],
-          finishes:   cat.finishes  || [],
-          properties: props,        // { strength, flexibility, heat, ideal_for, not_for, learn_more }
-          prodDaysMin: cat.production_days_min ?? null,
-          prodDaysMax: cat.production_days_max ?? null,
+          ...m,
+          ratePerCm3: pm.base_price ?? m.base_price ?? 0,
+          minCharge: pm.min_charge ?? m.min_charge ?? 0,
+          priceUnit: m.price_unit || 'per cm³',
+          colours,
+          finishes,
+          ratings: m.properties?.ratings || {},
+          tags: Array.isArray(m.tags) ? m.tags : [],
+          bestFor: Array.isArray(m.best_for) ? m.best_for : [],
+          specs: Array.isArray(m.specs) ? m.specs : [],
         };
-      }).filter(m => m.colors.length > 0 || true); // show all active
+      });
+    }
 
-      if (!MATERIALS.length) {
-        grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--muted);font-size:14px">No materials available.</div>`;
+    function applyCopy() {
+      document.getElementById('pageHeading').textContent = settings.heading || 'Choose your material';
+      document.getElementById('pageSubtitle').textContent = settings.subtitle || 'Pick based on how your part will be used. You can view detailed specs if needed.';
+      document.getElementById('helperTitle').textContent = settings.helperTitle || 'Not sure what to choose?';
+      document.getElementById('helperText').textContent = settings.helperText || 'Start with the recommended material, or filter by what matters most.';
+      continueBtn.firstChild.textContent = `${settings.continueLabel || 'Continue to Quote'} `;
+    }
+
+    function renderFilters() {
+      const tags = [...new Set(materials.flatMap(m => m.tags || []))];
+      const chips = [
+        { id: 'all', label: 'All' },
+        { id: 'recommended', label: 'Recommended' },
+        ...tags.map(t => ({ id: `tag:${t}`, label: t })),
+      ];
+      filtersEl.innerHTML = chips.map(c => `
+        <button class="chip ${activeFilter === c.id ? 'active' : ''}" type="button" data-filter="${esc(c.id)}" role="tab" aria-selected="${activeFilter === c.id}">
+          ${esc(c.label)}
+        </button>
+      `).join('');
+      filtersEl.querySelectorAll('.chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeFilter = btn.dataset.filter;
+          renderFilters();
+          renderMaterials();
+        });
+      });
+    }
+
+    function filteredMaterials() {
+      if (activeFilter === 'recommended') return materials.filter(m => m.recommended);
+      if (activeFilter.startsWith('tag:')) {
+        const tag = activeFilter.slice(4);
+        return materials.filter(m => (m.tags || []).includes(tag));
+      }
+      return materials;
+    }
+
+    function renderMaterials() {
+      const rows = filteredMaterials();
+      if (!rows.length) {
+        listEl.innerHTML = `<div class="empty">${esc(settings.emptyState || 'No materials are available right now.')}</div>`;
+        updateSummary();
         return;
       }
-
-      renderCards();
-
-      // Restore previous selection if still valid
-      const saved = JSON.parse(localStorage.getItem('form_selection') || 'null');
-      if (saved) {
-        const match = MATERIALS.find(m => m.id == saved.materialId || m.name === saved.materialName);
-        if (match) {
-          selectMaterial(match.id);
-          selectedColor  = saved.colorIndex || 0;
-          selectedFinish = saved.finish || 'standard';
-          renderColours(selectedMat);
-          document.querySelectorAll('.finish-btn').forEach(b => {
-            b.classList.toggle('selected', b.dataset.finish === selectedFinish);
-            b.setAttribute('aria-pressed', b.dataset.finish === selectedFinish);
-          });
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--muted);font-size:14px">Could not load materials. Please try again.</div>`;
+      listEl.innerHTML = rows.map(materialCard).join('');
+      bindCardEvents();
+      updateSummary();
     }
-  })();
 
-  // ── Nav toggle ──────────────────────────────────────────────────
-  const navToggle = document.getElementById('navToggle');
-  const navLinks  = document.getElementById('navLinks');
-  navToggle.addEventListener('click', () => {
-    const open = navLinks.classList.toggle('open');
-    navToggle.setAttribute('aria-expanded', open);
-  });
-</script>
+    function materialCard(mat) {
+      const selected = String(selection.materialId) === String(mat.id);
+      const colour = currentColour(mat);
+      const finish = currentFinish(mat);
+      const specs = mat.specs.length
+        ? `<div class="specs-list">${mat.specs.map(s => `<div class="spec-item"><strong>${esc(s.label || s.name || 'Spec')}</strong>${esc(s.value || s.text || '')}</div>`).join('')}</div>`
+        : '';
+      return `
+        <article class="material-card ${selected ? 'selected' : ''}" data-material-id="${esc(mat.id)}">
+          ${mat.recommended ? '<span class="recommended">Recommended</span>' : ''}
+          <div class="material-image">
+            ${mat.image_url ? `<img src="${esc(mat.image_url)}" alt="${esc(mat.image_alt || mat.name)}">` : iconCube()}
+          </div>
+          <div class="material-main">
+            <h2 class="material-name">${esc(mat.name)}</h2>
+            <p class="material-desc">${esc(mat.description_short || '')}</p>
+            ${mat.bestFor.length ? `<div class="best-row"><span class="mini-label">Best for:</span>${mat.bestFor.slice(0, 4).map(t => `<span class="pill">${esc(t)}</span>`).join('')}</div>` : ''}
+            <div class="price">From $${money(mat.minCharge)} ${esc(mat.priceUnit)}</div>
+          </div>
+          <div class="column">
+            <p class="column-title">Performance</p>
+            <div class="ratings">
+              <div class="rating-row"><span>Strength</span>${ratingDots(mat.ratings.strength)}</div>
+              <div class="rating-row"><span>Flexibility</span>${ratingDots(mat.ratings.flexibility)}</div>
+              <div class="rating-row"><span>Heat resistance</span>${ratingDots(mat.ratings.heatResistance)}</div>
+              <div class="rating-row"><span>Detail</span>${ratingDots(mat.ratings.detail)}</div>
+              <div class="rating-row"><span>Outdoor use</span>${ratingDots(mat.ratings.outdoorUse)}</div>
+            </div>
+          </div>
+          <div class="column">
+            <p class="column-title">Available colours</p>
+            <div class="swatches">
+              ${mat.colours.map((c, i) => `<button class="swatch-btn ${colour && String(colour.id) === String(c.id) ? 'selected' : ''}" type="button" style="--c:${esc(c.hex)}" data-colour-id="${esc(c.id)}" title="${esc(c.name)}" aria-label="${esc(c.name)}"></button>`).join('') || '<span class="material-desc">No colours configured</span>'}
+            </div>
+            <p class="column-title">Finish</p>
+            <div class="finish-buttons">
+              ${mat.finishes.map(f => `<button class="finish-pill ${finish && String(finish.id) === String(f.id) ? 'selected' : ''}" type="button" data-finish-id="${esc(f.id)}">${esc(f.name)}</button>`).join('') || '<span class="material-desc">No finishes configured</span>'}
+            </div>
+          </div>
+          <div class="column">
+            <p class="column-title">Print quality</p>
+            <div class="quality-grid">
+              ${mat.finishes.map(f => `
+                <button class="quality-card ${finish && String(finish.id) === String(f.id) ? 'selected' : ''}" type="button" data-finish-id="${esc(f.id)}">
+                  <strong>${esc(f.name)}</strong>
+                  <span class="layer">${esc(f.layerHeight || '')}</span>
+                  <p>${esc(f.description || '')}</p>
+                  ${finishPreview(f)}
+                </button>
+              `).join('') || '<span class="material-desc">Add finish presets in the admin portal.</span>'}
+            </div>
+          </div>
+          <div class="card-actions">
+            <span class="selected-badge">Selected ✓</span>
+            <button class="specs-btn" type="button" data-specs="${esc(mat.id)}">View specs⌄</button>
+            <button class="select-btn" type="button">${selected ? 'Selected' : 'Select'}</button>
+          </div>
+          <div class="specs-panel" id="specs-${esc(mat.id)}">
+            ${mat.description_long ? `<p>${esc(mat.description_long)}</p>` : ''}
+            ${specs || '<p>No detailed specs configured for this material yet.</p>'}
+          </div>
+        </article>
+      `;
+    }
+
+    function currentMaterial() {
+      return materials.find(m => String(m.id) === String(selection.materialId)) || null;
+    }
+
+    function currentColour(mat = currentMaterial()) {
+      if (!mat) return null;
+      return mat.colours.find(c => String(c.id) === String(selection.colourId)) || mat.colours[0] || null;
+    }
+
+    function currentFinish(mat = currentMaterial()) {
+      if (!mat) return null;
+      return mat.finishes.find(f => String(f.id) === String(selection.finishId))
+        || mat.finishes.find(f => f.default)
+        || mat.finishes[0]
+        || null;
+    }
+
+    function selectMaterial(id) {
+      const mat = materials.find(m => String(m.id) === String(id));
+      if (!mat) return;
+      selection.materialId = mat.id;
+      selection.colourId = currentColour(mat)?.id || null;
+      selection.finishId = currentFinish(mat)?.id || null;
+      saveSelection();
+      renderMaterials();
+    }
+
+    function setColour(materialId, colourId) {
+      if (String(selection.materialId) !== String(materialId)) selectMaterial(materialId);
+      selection.colourId = colourId;
+      saveSelection();
+      renderMaterials();
+    }
+
+    function setFinish(materialId, finishId) {
+      if (String(selection.materialId) !== String(materialId)) selectMaterial(materialId);
+      selection.finishId = finishId;
+      saveSelection();
+      renderMaterials();
+    }
+
+    function bindCardEvents() {
+      listEl.querySelectorAll('.material-card').forEach(card => {
+        const materialId = card.dataset.materialId;
+        card.querySelector('.select-btn')?.addEventListener('click', () => selectMaterial(materialId));
+        card.querySelectorAll('[data-colour-id]').forEach(btn => btn.addEventListener('click', e => {
+          e.stopPropagation();
+          setColour(materialId, btn.dataset.colourId);
+        }));
+        card.querySelectorAll('[data-finish-id]').forEach(btn => btn.addEventListener('click', e => {
+          e.stopPropagation();
+          setFinish(materialId, btn.dataset.finishId);
+        }));
+        card.querySelector('.specs-btn')?.addEventListener('click', e => {
+          e.stopPropagation();
+          const panel = document.getElementById(`specs-${materialId}`);
+          panel?.classList.toggle('open');
+        });
+      });
+    }
+
+    function saveSelection() {
+      const mat = currentMaterial();
+      if (!mat) return;
+      const colour = currentColour(mat);
+      const finish = currentFinish(mat);
+      const payload = {
+        materialId: mat.id,
+        materialName: mat.name,
+        ratePerCm3: mat.ratePerCm3,
+        minCharge: mat.minCharge,
+        colorId: colour?.id || null,
+        colorIndex: Math.max(0, mat.colours.findIndex(c => String(c.id) === String(colour?.id))),
+        colorHex: colour?.hex || null,
+        colorName: colour?.name || '',
+        finish: finish?.id || null,
+        finishId: finish?.id || null,
+        finishLabel: finish?.name || '',
+        finishLayerHeight: finish?.layerHeight || '',
+        finishMultiplier: Number(finish?.priceMultiplier) || 1,
+        shopSlug: SHOP_SLUG,
+      };
+      localStorage.setItem('form_selection', JSON.stringify(payload));
+    }
+
+    function restoreSelection() {
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem('form_selection') || 'null'); } catch {}
+      const mat = saved && materials.find(m => String(m.id) === String(saved.materialId) || m.name === saved.materialName);
+      const selected = mat || materials.find(m => m.recommended) || materials[0];
+      if (!selected) return;
+      selection.materialId = selected.id;
+      selection.colourId = selected.colours.find(c => String(c.id) === String(saved?.colorId))?.id
+        || selected.colours.find(c => c.name === saved?.colorName)?.id
+        || selected.colours[0]?.id
+        || null;
+      selection.finishId = selected.finishes.find(f => String(f.id) === String(saved?.finishId || saved?.finish))?.id
+        || selected.finishes.find(f => f.name === saved?.finishLabel)?.id
+        || selected.finishes.find(f => f.default)?.id
+        || selected.finishes[0]?.id
+        || null;
+      saveSelection();
+    }
+
+    function updateSummary() {
+      const mat = currentMaterial();
+      const colour = currentColour(mat);
+      const finish = currentFinish(mat);
+      document.getElementById('summaryMaterial').textContent = mat ? mat.name : 'Select a material';
+      document.getElementById('summaryColour').textContent = colour ? colour.name : '-';
+      document.getElementById('summarySwatch').style.setProperty('--c', colour?.hex || '#cccccc');
+      const finishParts = [finish?.name, finish?.layerHeight].filter(Boolean);
+      document.getElementById('summaryFinish').textContent = finishParts.length ? finishParts.join(' — ') : '-';
+      continueBtn.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+      continueBtn.setAttribute('aria-disabled', mat ? 'false' : 'true');
+    }
+
+    async function init() {
+      try {
+        const [pricingRes, catalogRes] = await Promise.all([
+          fetch(`/api/customer/pricing?shop=${encodeURIComponent(SHOP_SLUG)}`),
+          fetch(`/api/customer/catalog?shop=${encodeURIComponent(SHOP_SLUG)}`),
+        ]);
+        if (!catalogRes.ok) throw new Error('Catalog unavailable');
+        const pricing = pricingRes.ok ? await pricingRes.json() : { materials: [] };
+        const catalog = await catalogRes.json();
+        materials = normaliseCatalogPayload(catalog, pricing);
+        applyCopy();
+        restoreSelection();
+        renderFilters();
+        renderMaterials();
+      } catch (err) {
+        console.error(err);
+        listEl.innerHTML = `<div class="empty">Could not load materials. Please try again.</div>`;
+      }
+    }
+
+    init();
+  </script>
 </body>
 </html>

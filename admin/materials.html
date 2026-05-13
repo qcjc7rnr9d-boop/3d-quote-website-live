@@ -181,6 +181,33 @@
     }
     .tier-remove:hover { color: #C0392B; }
 
+    .asset-preview {
+      width: 100%;
+      min-height: 132px;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      background: var(--off-white);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .asset-preview img {
+      max-width: 100%;
+      max-height: 180px;
+      object-fit: contain;
+      display: block;
+    }
+    .json-input {
+      min-height: 118px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
     /* Confirm-delete modal */
     .confirm-modal .modal { max-width: 380px; }
 
@@ -298,6 +325,42 @@
     </div>
 
     <div class="admin-content fade-in">
+
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Customer material page</span>
+          <button class="btn btn-outline" id="savePageSettingsBtn" type="button">Save copy</button>
+        </div>
+        <div style="padding:20px 24px 24px;">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="pageHeading">Page heading</label>
+              <input class="form-input" id="pageHeading" placeholder="Choose your material">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pageContinueLabel">Continue button label</label>
+              <input class="form-input" id="pageContinueLabel" placeholder="Continue to Quote">
+            </div>
+            <div class="form-group col-span-2">
+              <label class="form-label" for="pageSubtitle">Subtitle</label>
+              <input class="form-input" id="pageSubtitle" placeholder="Pick based on how your part will be used.">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pageHelperTitle">Helper title</label>
+              <input class="form-input" id="pageHelperTitle" placeholder="Not sure what to choose?">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pageHelperText">Helper text</label>
+              <input class="form-input" id="pageHelperText" placeholder="Start with the recommended material, or filter by what matters most.">
+            </div>
+            <div class="form-group col-span-2" style="margin-bottom:0;">
+              <label class="form-label" for="pageEmptyState">Empty state</label>
+              <input class="form-input" id="pageEmptyState" placeholder="No materials are available right now.">
+            </div>
+          </div>
+          <div id="pageSettingsStatus" class="inline-error" style="margin-top:14px;"></div>
+        </div>
+      </div>
 
       <!-- Materials table card -->
       <div class="section-card">
@@ -417,6 +480,43 @@
         <input class="form-input" type="text" id="mDescription" name="description" placeholder="e.g. Cost-effective for prototypes and display models">
       </div>
 
+      <div class="form-group col-span-2">
+        <label class="form-label" for="mLongDescription">Long technical description</label>
+        <textarea class="form-input" id="mLongDescription" rows="4" style="resize:vertical;min-height:88px;font-family:var(--font-ui);line-height:1.55;" placeholder="Detailed specs or guidance shown inside View specs."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="mPriceUnit">Pricing unit label</label>
+        <input class="form-input" type="text" id="mPriceUnit" placeholder="per cm³">
+      </div>
+
+      <div class="form-group" style="justify-content:flex-start;flex-direction:row;align-items:center;gap:12px">
+        <label class="form-label" style="margin:0">Recommended/default</label>
+        <label class="toggle">
+          <input type="checkbox" id="mRecommended">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="form-group col-span-2">
+        <label class="form-label" for="mImageFile">Material image</label>
+        <input class="form-input" type="file" id="mImageFile" accept="image/*">
+        <input class="form-input" type="url" id="mImageUrl" placeholder="/uploads/material-assets/..." style="margin-top:8px;">
+        <input class="form-input" type="text" id="mImageAlt" placeholder="Image alt text" style="margin-top:8px;">
+        <div class="asset-preview" id="mImagePreview">Recommended: clear object photo, wide card-friendly crop.</div>
+      </div>
+
+      <div class="form-group col-span-2">
+        <label class="form-label" for="mTags">Filter tags/categories</label>
+        <input class="form-input" type="text" id="mTags" placeholder="Recommended, Low cost, Strong, Engineering">
+        <p style="font-size:11px;color:var(--muted);margin-top:4px;">Comma-separated. These generate the customer-facing filter chips.</p>
+      </div>
+
+      <div class="form-group col-span-2">
+        <label class="form-label" for="mBestFor">Best-for labels</label>
+        <input class="form-input" type="text" id="mBestFor" placeholder="Functional parts, Brackets & clips">
+      </div>
+
       <div class="form-group col-span-2" style="justify-content:flex-start;flex-direction:row;align-items:center;gap:12px">
         <label class="form-label" style="margin:0">Active</label>
         <label class="toggle">
@@ -435,12 +535,29 @@
       <p style="font-size:11px;color:var(--muted);margin-top:4px">Format: #RRGGBB Name (e.g. <code>#FFFFFF White</code>)</p>
     </div>
 
+    <div class="form-group">
+      <label class="form-label" for="mColoursJson">Advanced colour data</label>
+      <textarea class="form-input json-input" id="mColoursJson" spellcheck="false"></textarea>
+      <p style="font-size:11px;color:var(--muted);margin-top:4px;">JSON array. Supports id, name, hex, textureUrl, enabled, sortOrder.</p>
+    </div>
+
     <!-- Finishes -->
     <span class="panel-section-label">Finishes</span>
     <div class="form-group">
       <div class="tag-input-wrapper" id="finishesWrapper" role="group" aria-label="Finishes">
         <input class="tag-text-input" id="finishInput" placeholder="e.g. Matte, Gloss — press Enter to add" aria-label="Add finish">
       </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="mFinishesJson">Print quality / finish presets</label>
+      <textarea class="form-input json-input" id="mFinishesJson" spellcheck="false"></textarea>
+      <p style="font-size:11px;color:var(--muted);margin-top:4px;">JSON array. Supports id, name, layerHeight, description, priceMultiplier, previewType, previewImageUrl, enabled, default, sortOrder.</p>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="mSpecsJson">Technical specs</label>
+      <textarea class="form-input json-input" id="mSpecsJson" spellcheck="false" placeholder='[{"label":"Tolerance","value":"Configured by your store"}]'></textarea>
     </div>
 
     <!-- ── "Learn more" drawer content ──────────────────────────── -->
@@ -508,6 +625,14 @@
           </span>
         </label>
         <input type="range" id="mHeat" min="0" max="100" value="30" step="1" class="prop-slider">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="mDetail">Detail rating (1-5)</label>
+        <input type="number" class="form-input" id="mDetail" min="1" max="5" step="1" value="3">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="mOutdoorUse">Outdoor use rating (1-5)</label>
+        <input type="number" class="form-input" id="mOutdoorUse" min="1" max="5" step="1" value="3">
       </div>
     </div>
 
@@ -605,6 +730,88 @@
   function categoryBadge(cat) {
     return `<span class="badge badge-stone">${escHtml(cat)}</span>`;
   }
+
+  function csvToArray(value) {
+    return String(value || '').split(',').map(v => v.trim()).filter(Boolean);
+  }
+
+  function arrayToCsv(value) {
+    return Array.isArray(value) ? value.join(', ') : '';
+  }
+
+  function parseJsonField(id, fallback) {
+    const raw = document.getElementById(id).value.trim();
+    if (!raw) return fallback;
+    try { return JSON.parse(raw); }
+    catch { throw new Error(`${document.querySelector(`label[for="${id}"]`)?.textContent || id} must be valid JSON.`); }
+  }
+
+  function setImagePreview(url) {
+    const preview = document.getElementById('mImagePreview');
+    if (!url) {
+      preview.innerHTML = 'Recommended: clear object photo, wide card-friendly crop.';
+      return;
+    }
+    preview.innerHTML = `<img src="${escHtml(url)}" alt="">`;
+  }
+
+  async function uploadAsset(file) {
+    const fd = new FormData();
+    fd.append('asset', file);
+    const r = await fetch('/api/materials/assets', { method: 'POST', body: fd });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'Image upload failed.');
+    return data.url;
+  }
+
+  function pageSettingPayload() {
+    return {
+      heading: document.getElementById('pageHeading').value.trim(),
+      subtitle: document.getElementById('pageSubtitle').value.trim(),
+      helperTitle: document.getElementById('pageHelperTitle').value.trim(),
+      helperText: document.getElementById('pageHelperText').value.trim(),
+      continueLabel: document.getElementById('pageContinueLabel').value.trim(),
+      emptyState: document.getElementById('pageEmptyState').value.trim(),
+    };
+  }
+
+  async function loadPageSettings() {
+    try {
+      const r = await fetch('/api/materials/page-settings');
+      if (!r.ok) return;
+      const s = await r.json();
+      document.getElementById('pageHeading').value = s.heading || '';
+      document.getElementById('pageSubtitle').value = s.subtitle || '';
+      document.getElementById('pageHelperTitle').value = s.helperTitle || '';
+      document.getElementById('pageHelperText').value = s.helperText || '';
+      document.getElementById('pageContinueLabel').value = s.continueLabel || '';
+      document.getElementById('pageEmptyState').value = s.emptyState || '';
+    } catch { /* optional page settings */ }
+  }
+
+  document.getElementById('savePageSettingsBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('savePageSettingsBtn');
+    const status = document.getElementById('pageSettingsStatus');
+    status.classList.remove('visible');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      const r = await fetch('/api/materials/page-settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pageSettingPayload()),
+      });
+      if (!r.ok) throw new Error('Could not save page copy.');
+      status.textContent = 'Saved.';
+      status.classList.add('visible');
+    } catch (err) {
+      status.textContent = err.message;
+      status.classList.add('visible');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save copy';
+    }
+  });
 
   // ── Load materials ────────────────────────────────────────────
   async function loadMaterials() {
@@ -730,6 +937,20 @@
     document.getElementById('materialForm').reset();
     document.getElementById('panelError').classList.remove('visible');
     document.getElementById('materialId').value = '';
+    document.getElementById('mLongDescription').value = '';
+    document.getElementById('mPriceUnit').value = 'per cm³';
+    document.getElementById('mRecommended').checked = false;
+    document.getElementById('mImageUrl').value = '';
+    document.getElementById('mImageAlt').value = '';
+    document.getElementById('mImageFile').value = '';
+    document.getElementById('mTags').value = '';
+    document.getElementById('mBestFor').value = '';
+    document.getElementById('mColoursJson').value = '[]';
+    document.getElementById('mFinishesJson').value = '[]';
+    document.getElementById('mSpecsJson').value = '[]';
+    document.getElementById('mDetail').value = 3;
+    document.getElementById('mOutdoorUse').value = 3;
+    setImagePreview('');
 
     // Sliders default
     setSliderValue('mStrength', 50);
@@ -757,6 +978,17 @@
       document.getElementById('mName').value = mat.name || '';
       document.getElementById('mCategory').value = mat.category || 'FDM';
       document.getElementById('mDescription').value = mat.description_short || '';
+      document.getElementById('mLongDescription').value = mat.description_long || '';
+      document.getElementById('mPriceUnit').value = mat.price_unit || 'per cm³';
+      document.getElementById('mRecommended').checked = !!mat.recommended;
+      document.getElementById('mImageUrl').value = mat.image_url || '';
+      document.getElementById('mImageAlt').value = mat.image_alt || '';
+      document.getElementById('mTags').value = arrayToCsv(mat.tags || []);
+      document.getElementById('mBestFor').value = arrayToCsv(mat.best_for || []);
+      document.getElementById('mColoursJson').value = JSON.stringify(mat.colours || [], null, 2);
+      document.getElementById('mFinishesJson').value = JSON.stringify(mat.finishes || [], null, 2);
+      document.getElementById('mSpecsJson').value = JSON.stringify(mat.specs || [], null, 2);
+      setImagePreview(mat.image_url || '');
       document.getElementById('mStockStatus').value = mat.stock_status || 'in_stock';
       document.getElementById('mActive').checked = mat.active !== false;
 
@@ -789,6 +1021,8 @@
       if (p.strength    != null) setSliderValue('mStrength',    p.strength);
       if (p.flexibility != null) setSliderValue('mFlexibility', p.flexibility);
       if (p.heat        != null) setSliderValue('mHeat',        p.heat);
+      document.getElementById('mDetail').value = p.ratings?.detail || p.detail || 3;
+      document.getElementById('mOutdoorUse').value = p.ratings?.outdoorUse || p.outdoor_use || 3;
       if (Array.isArray(p.ideal_for)) p.ideal_for.forEach(addIdealForTag);
       if (Array.isArray(p.not_for))   p.not_for.forEach(addNotForTag);
       document.getElementById('mLearnMore').value = p.learn_more || '';
@@ -1178,6 +1412,18 @@
     document.getElementById('finishInput').focus();
   });
 
+  document.getElementById('mImageFile').addEventListener('change', e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setImagePreview(ev.target.result);
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('mImageUrl').addEventListener('input', e => {
+    setImagePreview(e.target.value.trim());
+  });
+
   // ── Form submit ───────────────────────────────────────────────
   document.getElementById('materialForm').addEventListener('submit', async e => {
     e.preventDefault();
@@ -1193,11 +1439,39 @@
       return;
     }
 
-    // Bundle "Learn more" drawer config into the existing `properties` JSON column
+    let advancedColours;
+    let advancedFinishes;
+    let specs;
+    try {
+      advancedColours = parseJsonField('mColoursJson', colours);
+      advancedFinishes = parseJsonField('mFinishesJson', finishes);
+      specs = parseJsonField('mSpecsJson', []);
+      if (!Array.isArray(advancedColours) || !Array.isArray(advancedFinishes) || !Array.isArray(specs)) {
+        throw new Error('Advanced colour, finish, and specs fields must be JSON arrays.');
+      }
+      if (!advancedColours.length && colours.length) advancedColours = colours;
+      if (!advancedFinishes.length && finishes.length) advancedFinishes = finishes;
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.add('visible');
+      return;
+    }
+
+    const detail = Math.max(1, Math.min(5, parseInt(document.getElementById('mDetail').value, 10) || 3));
+    const outdoorUse = Math.max(1, Math.min(5, parseInt(document.getElementById('mOutdoorUse').value, 10) || 3));
+
+    // Bundle customer material-page config into the existing `properties` JSON column
     const properties = {
       strength:    parseInt(document.getElementById('mStrength').value, 10),
       flexibility: parseInt(document.getElementById('mFlexibility').value, 10),
       heat:        parseInt(document.getElementById('mHeat').value, 10),
+      ratings: {
+        strength:    Math.max(1, Math.min(5, Math.round(parseInt(document.getElementById('mStrength').value, 10) / 20))),
+        flexibility: Math.max(1, Math.min(5, Math.round(parseInt(document.getElementById('mFlexibility').value, 10) / 20))),
+        heatResistance: Math.max(1, Math.min(5, Math.round(parseInt(document.getElementById('mHeat').value, 10) / 20))),
+        detail,
+        outdoorUse,
+      },
       ideal_for:   [...idealFor],
       not_for:     [...notFor],
       learn_more:  document.getElementById('mLearnMore').value.trim(),
@@ -1224,10 +1498,18 @@
       name,
       category:       document.getElementById('mCategory').value,
       description_short: document.getElementById('mDescription').value.trim(),
+      description_long: document.getElementById('mLongDescription').value.trim(),
+      image_url:       document.getElementById('mImageUrl').value.trim(),
+      image_alt:       document.getElementById('mImageAlt').value.trim(),
+      price_unit:      document.getElementById('mPriceUnit').value.trim() || 'per cm³',
+      recommended:     document.getElementById('mRecommended').checked,
+      tags:            csvToArray(document.getElementById('mTags').value),
+      best_for:        csvToArray(document.getElementById('mBestFor').value),
+      specs,
       stock_status:   document.getElementById('mStockStatus').value,
       active:         document.getElementById('mActive').checked,
-      colours,
-      finishes,
+      colours:         advancedColours,
+      finishes:        advancedFinishes,
       properties,
       production_days_min: prodMin,
       production_days_max: prodMax,
@@ -1247,6 +1529,10 @@
     saveBtn.textContent = 'Saving…';
 
     try {
+      const imageFile = document.getElementById('mImageFile').files?.[0];
+      if (imageFile) {
+        payload.image_url = await uploadAsset(imageFile);
+      }
       const r = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -1323,6 +1609,7 @@
   });
 
   // ── Init ──────────────────────────────────────────────────────
+  loadPageSettings();
   loadMaterials();
   loadMaterialLibrary();  // Warm the cache so the first Suggest click is instant
 </script>

@@ -62,6 +62,13 @@ CREATE TABLE IF NOT EXISTS materials (
   category         TEXT    NOT NULL DEFAULT 'FDM',
   colours          TEXT    NOT NULL DEFAULT '[]',  -- JSON array of {hex, name}
   finishes         TEXT    NOT NULL DEFAULT '[]',  -- JSON array of {name, modifier}
+  image_url        TEXT,
+  image_alt        TEXT,
+  price_unit       TEXT    NOT NULL DEFAULT 'per cm³',
+  recommended      INTEGER NOT NULL DEFAULT 0,
+  tags             TEXT    NOT NULL DEFAULT '[]',
+  best_for         TEXT    NOT NULL DEFAULT '[]',
+  specs            TEXT    NOT NULL DEFAULT '[]',
   pricing_model    TEXT    NOT NULL DEFAULT 'per_cm3',
   base_price       REAL    NOT NULL DEFAULT 0.18,
   min_charge       REAL    NOT NULL DEFAULT 4.50,
@@ -157,6 +164,7 @@ CREATE TABLE IF NOT EXISTS store_settings (
   notifications  TEXT    NOT NULL DEFAULT '{}',
   email_templates TEXT   NOT NULL DEFAULT '{}',
   shipping_zones  TEXT   NOT NULL DEFAULT '[]',
+  material_page_settings TEXT NOT NULL DEFAULT '{}',
   updated_at     TEXT    NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
 );

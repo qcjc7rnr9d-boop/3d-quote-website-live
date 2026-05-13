@@ -959,7 +959,7 @@
     const vol  = Number(fileData.volumeCm3) || 0;
     const rate = Number(selectionData.ratePerCm3) || 0;
     const min  = Number(selectionData.minCharge) || 0;
-    const finishMult = selectionData.finish === 'fine' ? 1.50 : 1.0;
+    const finishMult = Number(selectionData.finishMultiplier) || 1.0;
     const infillMult = infillMultiplier();
     let p = vol * rate * finishMult * infillMult;
     if (p < min) p = min;
@@ -1021,7 +1021,8 @@
         fetch(`/api/customer/catalog?shop=${encodeURIComponent(SHOP_SLUG)}`),
       ]);
       const pricing = pRes.ok ? await pRes.json() : { materials: [] };
-      const cat     = cRes.ok ? await cRes.json() : [];
+      const catPayload = cRes.ok ? await cRes.json() : [];
+      const cat     = Array.isArray(catPayload) ? catPayload : (catPayload.materials || []);
       const pMap    = Object.fromEntries((pricing.materials || []).map(m => [m.id, m]));
       catalog = cat.map(m => {
         const pm = pMap[m.id] || {};
@@ -1029,6 +1030,8 @@
           ...m,
           base_price: pm.base_price ?? 0.18,
           min_charge: pm.min_charge ?? 4.50,
+          colours: Array.isArray(m.colours) ? m.colours.filter(c => c.enabled !== false) : [],
+          finishes: Array.isArray(m.finishes) ? m.finishes.filter(f => f.enabled !== false) : [],
         };
       });
       infillTiers = Array.isArray(pricing.infill_tiers) ? pricing.infill_tiers : [];
@@ -1048,7 +1051,7 @@
     // Dropdown shows clean names only — production time is rendered in
     // the dedicated row below the picker (driven by onMaterialChange).
     sel.innerHTML = catalog.map(m =>
-      `<option value="${m.id}">${m.name}</option>`
+      `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`
     ).join('');
 
     const saved = catalog.find(m => m.id == selectionData.materialId || m.name === selectionData.materialName);
@@ -1097,7 +1100,7 @@
     const cols  = Array.isArray(mat.colours) ? mat.colours : [];
     const colSel = $('colourSelect');
     colSel.innerHTML = cols.length
-      ? cols.map((c, i) => `<option value="${i}" data-hex="${c.hex}">${c.name}</option>`).join('')
+      ? cols.map((c, i) => `<option value="${i}" data-hex="${escapeHtml(c.hex)}">${escapeHtml(c.name)}</option>`).join('')
       : '<option value="">—</option>';
 
     // Restore prior colour selection if valid
@@ -1107,12 +1110,27 @@
     }
     onColourChange(false);
 
-    // Finish toggle availability — show "Fine" only if the material lists it
-    const hasFine = (mat.finishes || []).some(f => String(f.name || f).toLowerCase().includes('fine'));
-    const fineBtn = document.querySelector('.seg-btn[data-finish="fine"]');
-    if (fineBtn) fineBtn.style.display = hasFine ? '' : 'none';
-    if (!hasFine && selectionData.finish === 'fine') selectionData.finish = 'standard';
-    updateFinishUI(selectionData.finish || 'standard');
+    const finishes = Array.isArray(mat.finishes) ? mat.finishes : [];
+    const savedFinish = finishes.find(f => String(f.id || f.name || f) === String(selectionData.finishId || selectionData.finish))
+      || finishes.find(f => String(f.name || f) === String(selectionData.finishLabel))
+      || finishes.find(f => f.default)
+      || finishes[0]
+      || null;
+    if (savedFinish) {
+      selectionData.finish = savedFinish.id || savedFinish.name || 'finish';
+      selectionData.finishId = savedFinish.id || selectionData.finish;
+      selectionData.finishLabel = savedFinish.name || String(savedFinish);
+      selectionData.finishLayerHeight = savedFinish.layerHeight || savedFinish.layer_height || '';
+      selectionData.finishMultiplier = Number(savedFinish.priceMultiplier ?? savedFinish.price_multiplier) || 1;
+    } else {
+      selectionData.finish = null;
+      selectionData.finishId = null;
+      selectionData.finishLabel = '';
+      selectionData.finishLayerHeight = '';
+      selectionData.finishMultiplier = 1;
+    }
+    renderFinishOptions(mat);
+    updateFinishUI(selectionData.finishId || selectionData.finish);
 
     if (save) saveSelection();
     renderPrice();
@@ -1131,6 +1149,36 @@
     if (typeof setViewerColor === 'function') setViewerColor(hex);
   }
 
+  function renderFinishOptions(mat) {
+    const seg = document.querySelector('.seg[role="group"][aria-label="Finish"]');
+    if (!seg) return;
+    const finishes = Array.isArray(mat?.finishes) ? mat.finishes : [];
+    if (!finishes.length) {
+      seg.innerHTML = '<span style="color:var(--muted);font-size:13px;">No finish presets</span>';
+      return;
+    }
+    seg.innerHTML = finishes.map(f => `
+      <button type="button" class="seg-btn" data-finish="${escapeHtml(f.id || f.name || 'finish')}"
+              data-label="${escapeHtml(f.name || f)}"
+              data-layer="${escapeHtml(f.layerHeight || f.layer_height || '')}"
+              data-multiplier="${Number(f.priceMultiplier ?? f.price_multiplier) || 1}">
+        ${escapeHtml(f.name || f)}
+      </button>
+    `).join('');
+    seg.querySelectorAll('.seg-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        selectionData.finish = b.dataset.finish;
+        selectionData.finishId = b.dataset.finish;
+        selectionData.finishLabel = b.dataset.label || b.textContent.trim();
+        selectionData.finishLayerHeight = b.dataset.layer || '';
+        selectionData.finishMultiplier = Number(b.dataset.multiplier) || 1;
+        updateFinishUI(b.dataset.finish);
+        saveSelection();
+        renderPrice();
+      });
+    });
+  }
+
   function updateFinishUI(value) {
     document.querySelectorAll('.seg-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.finish === value)
@@ -1143,6 +1191,10 @@
   document.querySelectorAll('.seg-btn').forEach(b => {
     b.addEventListener('click', () => {
       selectionData.finish = b.dataset.finish;
+      selectionData.finishId = b.dataset.finish;
+      selectionData.finishLabel = b.textContent.trim();
+      selectionData.finishLayerHeight = '';
+      selectionData.finishMultiplier = b.dataset.finish === 'fine' ? 1.50 : 1.0;
       updateFinishUI(b.dataset.finish);
       saveSelection();
       renderPrice();
@@ -1548,8 +1600,9 @@
       materialName:    selectionData.materialName,
       colorName:       selectionData.colorName  || '—',
       colorHex:        selectionData.colorHex   || null,
-      finish:          selectionData.finish     || 'standard',
-      finishLabel:     (selectionData.finish === 'fine') ? 'Fine' : 'Standard',
+      finish:          selectionData.finishId || selectionData.finish || null,
+      finishLabel:     selectionData.finishLabel || selectionData.finish || '—',
+      finishLayerHeight: selectionData.finishLayerHeight || '',
       infillTierId:    selectionData.infillTierId  || null,
       infillLabel:     infillLabel,
       quantity:        qty,
