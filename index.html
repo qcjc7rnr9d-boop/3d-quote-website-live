@@ -154,8 +154,8 @@
 
     /* ── Hero ────────────────────────────────────────────────────── */
     .hero {
-      min-height: 100dvh;
-      padding: 110px 24px 80px;
+      min-height: auto;
+      padding: 118px 24px 72px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -333,19 +333,6 @@
       margin-top: 1px;
     }
 
-    /* Security note */
-    .security-note {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      margin-top: 16px;
-      font-family: var(--font-ui);
-      font-size: 12px;
-      font-weight: 400;
-      color: var(--muted-2);
-    }
-
     /* File card (post-upload) */
     .file-card {
       display: none;
@@ -383,10 +370,11 @@
 
     /* ── How it works ─────────────────────────────────────────────── */
     .hiw-section {
-      padding: 100px 24px 120px;
+      padding: 72px 24px 96px;
       display: flex;
       flex-direction: column;
       align-items: center;
+      text-align: center;
     }
 
     .hiw-label {
@@ -395,8 +383,8 @@
       font-weight: 600;
       letter-spacing: 0.09em;
       text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 14px;
+      color: var(--sage);
+      margin-bottom: 10px;
     }
 
     /* Section heading — Space Grotesk */
@@ -406,20 +394,46 @@
       font-size: clamp(28px, 4vw, 40px);
       letter-spacing: -0.03em;
       color: var(--ink);
-      margin-bottom: 60px;
+      margin-bottom: 8px;
       text-align: center;
+    }
+    .hiw-subtitle {
+      font-family: var(--font-ui);
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 42px;
     }
 
     .hiw-steps {
+      position: relative;
       display: grid;
-      grid-template-columns: 1fr auto 1fr auto 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       align-items: start;
-      gap: 0;
+      gap: 52px;
       width: 100%;
-      max-width: 680px;
+      max-width: 920px;
+      margin-bottom: 42px;
+    }
+    .hiw-steps::before {
+      content: '';
+      position: absolute;
+      top: 18px;
+      left: 6%;
+      right: 6%;
+      height: 1px;
+      background: var(--border-2);
+      opacity: 0.7;
+      z-index: 0;
     }
 
-    .hiw-step { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .hiw-step {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
 
     .step-num {
       width: 36px; height: 36px;
@@ -431,47 +445,95 @@
       font-size: 13px;
       font-weight: 600;
       color: var(--sage);
-      margin-bottom: 16px;
+      margin-bottom: 24px;
       position: relative;
+      z-index: 2;
+    }
+    .step-card {
+      width: 100%;
+      min-height: 210px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: var(--shadow-card);
+      padding: 34px 24px 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .step-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--sage-bg);
+      border: 1px solid var(--sage-light);
+      color: var(--ink-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 22px;
     }
 
     .step-title {
-      font-family: var(--font-ui);
-      font-size: 14px;
+      font-family: var(--font-brand);
+      font-size: 18px;
       font-weight: 600;
       color: var(--ink);
-      margin-bottom: 5px;
+      margin-bottom: 8px;
     }
     .step-desc {
       font-family: var(--font-ui);
-      font-size: 13px;
+      font-size: 14px;
       color: var(--muted);
-      line-height: 1.5;
+      line-height: 1.65;
+      max-width: 210px;
     }
-
-    /* Connector line */
-    .hiw-connector {
+    .hiw-cta {
       display: flex;
-      align-items: flex-start;
-      padding-top: 18px;
-      padding-left: 16px;
-      padding-right: 16px;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
     }
-    .hiw-connector-line {
-      width: 100%;
-      height: 1px;
-      background: var(--border-2);
+    .hiw-cta-text {
+      font-family: var(--font-ui);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .hiw-cta-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-width: 168px;
+      height: 52px;
+      padding: 0 22px;
+      border-radius: var(--radius);
+      background: var(--sage);
+      color: var(--white);
+      font-family: var(--font-ui);
+      font-size: 15px;
+      font-weight: 500;
+      text-decoration: none;
+      box-shadow: 0 8px 22px rgba(90, 138, 94, 0.22);
+      transition: background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+    }
+    .hiw-cta-btn:hover {
+      background: #4A7A4E;
+      box-shadow: 0 10px 26px rgba(90, 138, 94, 0.28);
+      transform: translateY(-1px);
     }
 
     /* ── Footer ──────────────────────────────────────────────────── */
     .footer {
       border-top: 1px solid var(--border);
-      padding: 32px 36px;
+      padding: 34px 48px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 20px;
+      gap: 24px;
       flex-wrap: wrap;
+      background: rgba(255,255,255,0.24);
     }
     .footer-wordmark {
       font-family: var(--font-brand);
@@ -483,10 +545,10 @@
       text-decoration: none;
     }
     .footer-links {
-      display: flex; gap: 24px; list-style: none;
+      display: flex; gap: 28px; list-style: none; flex-wrap: wrap;
     }
     .footer-links a {
-      font-size: 12px; color: var(--muted);
+      font-size: 13px; color: var(--muted);
       text-decoration: none; transition: color 140ms;
     }
     .footer-links a:hover { color: var(--ink); }
@@ -538,7 +600,7 @@
       }
       .nav-links-mobile a:last-child { border-bottom: none; }
 
-      .hero { padding: 90px 20px 60px; }
+      .hero { padding: 90px 20px 56px; }
       .hero-heading { letter-spacing: -0.03em; }
 
       .features-strip {
@@ -547,14 +609,16 @@
       }
       .feature-divider { height: 1px; width: auto; }
 
+      .hiw-section { padding: 56px 20px 76px; }
+      .hiw-subtitle { margin-bottom: 32px; }
       .hiw-steps {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto auto auto;
-        gap: 0;
+        gap: 22px;
+        margin-bottom: 34px;
       }
-      .hiw-connector { display: none; }
-      .hiw-step { margin-bottom: 36px; flex-direction: row; text-align: left; gap: 16px; }
-      .step-num { flex-shrink: 0; margin-bottom: 0; }
+      .hiw-steps::before { display: none; }
+      .step-num { margin-bottom: 12px; }
+      .step-card { min-height: auto; padding: 28px 22px; }
 
       .footer {
         flex-direction: column;
@@ -1204,47 +1268,73 @@
     </div>
   </div>
 
-  <!-- Security note -->
-  <p class="security-note" aria-label="Security information">
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-      <path d="M6.5 1L2 3v3.5c0 2.8 1.9 5.4 4.5 6 2.6-.6 4.5-3.2 4.5-6V3L6.5 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
-    </svg>
-    Your files are secure and never shared.
-  </p>
-
 </section>
 
 <!-- ── How it works ── -->
 <section class="hiw-section" id="how-it-works" aria-labelledby="hiw-heading">
-  <p class="hiw-label">Process</p>
+  <p class="hiw-label">Quote Process</p>
   <h2 class="hiw-heading" id="hiw-heading">How it works</h2>
+  <p class="hiw-subtitle">Upload your file, choose your options, and review your quote.</p>
 
   <div class="hiw-steps" role="list">
     <div class="hiw-step" role="listitem">
       <div class="step-num" aria-hidden="true">1</div>
-      <h3 class="step-title">Upload your file</h3>
-      <p class="step-desc">Drag &amp; drop your 3D model</p>
-    </div>
-
-    <div class="hiw-connector" aria-hidden="true">
-      <div class="hiw-connector-line"></div>
+      <div class="step-card">
+        <div class="step-icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+            <path d="M8 4.5h9l5 5v16H8v-21z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M17 4.5V10h5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M15 22v-8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            <path d="M11.5 17.5L15 14l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h3 class="step-title">Upload your file</h3>
+        <p class="step-desc">Drop in an STL or OBJ to start your quote.</p>
+      </div>
     </div>
 
     <div class="hiw-step" role="listitem">
       <div class="step-num" aria-hidden="true">2</div>
-      <h3 class="step-title">Choose options</h3>
-      <p class="step-desc">Select material, finish &amp; quantity</p>
-    </div>
-
-    <div class="hiw-connector" aria-hidden="true">
-      <div class="hiw-connector-line"></div>
+      <div class="step-card">
+        <div class="step-icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+            <path d="M7 9h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M7 15h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M7 21h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="12" cy="9" r="2" fill="var(--sage-bg)" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="19" cy="15" r="2" fill="var(--sage-bg)" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="14" cy="21" r="2" fill="var(--sage-bg)" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <h3 class="step-title">Choose options</h3>
+        <p class="step-desc">Select material, colour, finish, and quantity.</p>
+      </div>
     </div>
 
     <div class="hiw-step" role="listitem">
       <div class="step-num" aria-hidden="true">3</div>
-      <h3 class="step-title">Receive your order</h3>
-      <p class="step-desc">We print and ship to you</p>
+      <div class="step-card">
+        <div class="step-icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+            <path d="M6.5 16.5L16 7h7v7l-9.5 9.5-7-7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            <circle cx="20" cy="10" r="1.6" fill="currentColor"/>
+            <path d="M11.5 17.5l2 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 class="step-title">Review your quote</h3>
+        <p class="step-desc">Check the price before continuing.</p>
+      </div>
     </div>
+  </div>
+
+  <div class="hiw-cta">
+    <p class="hiw-cta-text">Ready to price your part?</p>
+    <a href="#uploadZone" class="hiw-cta-btn" id="startQuoteBtn">
+      Start a Quote
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+        <path d="M4 11L11 4M11 4H5.5M11 4V9.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
   </div>
 </section>
 </main>
@@ -1254,9 +1344,13 @@
   <a href="index.html" class="footer-wordmark">mahi3d</a>
   <ul class="footer-links">
     <li><a href="catalog.html">Materials</a></li>
+    <li><a href="quote.html">Quote</a></li>
     <li><a href="customer/login.html">My Orders</a></li>
+    <li><a href="#">Contact</a></li>
+    <li><a href="#">Terms</a></li>
+    <li><a href="#">Privacy</a></li>
   </ul>
-  <p class="footer-copy">&copy; 2025 mahi3d. All rights reserved.</p>
+  <p class="footer-copy">&copy; 2026 mahi3d. All rights reserved.</p>
 </footer>
 
 <!-- ── Portal overlay ── -->
@@ -1461,6 +1555,12 @@
     }
   });
 
+  document.getElementById('startQuoteBtn').addEventListener('click', e => {
+    e.preventDefault();
+    uploadZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => uploadZone.focus({ preventScroll: true }), 420);
+  });
+
   // ── STL volume parser (binary STL) ───────────────────────────
   function parseBinaryVolumeCm3(buffer) {
     const view = new DataView(buffer);
@@ -1577,7 +1677,7 @@
   const observer = new IntersectionObserver(entries => {
     entries.forEach(e => {
       if (e.isIntersecting) {
-        e.target.querySelectorAll('.hiw-step, .hiw-heading, .hiw-label').forEach((el, i) => {
+        e.target.querySelectorAll('.hiw-step, .hiw-heading, .hiw-label, .hiw-subtitle, .hiw-cta').forEach((el, i) => {
           el.style.opacity = '0';
           el.style.transform = 'translateY(12px)';
           el.style.transition = `opacity 400ms ease ${i * 80}ms, transform 400ms ease ${i * 80}ms`;
