@@ -176,6 +176,50 @@
 
   <div class="section-card" style="margin-bottom:32px">
     <div class="section-card-header">
+      <h2 class="section-card-title">Platform security</h2>
+    </div>
+    <div class="section-card-body">
+      <div id="accountError" style="display:none;color:#C0392B;font-size:13px;margin-bottom:16px"></div>
+      <div class="success-box" id="accountSuccess" style="margin-top:0;margin-bottom:16px">Security settings saved.</div>
+      <div class="platform-form">
+        <div class="form-group">
+          <label class="form-label" for="ownerEmail">Owner reset email</label>
+          <input class="form-input" type="email" id="ownerEmail" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="currentPlatformPassword">Current password</label>
+          <input class="form-input" type="password" id="currentPlatformPassword" autocomplete="current-password">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="newPlatformPassword">New password</label>
+          <input class="form-input" type="password" id="newPlatformPassword" autocomplete="new-password" placeholder="Optional">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="confirmPlatformPassword">Confirm new password</label>
+          <input class="form-input" type="password" id="confirmPlatformPassword" autocomplete="new-password" placeholder="Optional">
+        </div>
+      </div>
+      <div style="margin-top:20px">
+        <button class="btn btn-primary" type="button" id="saveAccountBtn">Save security settings</button>
+      </div>
+      <div class="config-grid">
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px">Owner account</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+            <div><strong>Owner email:</strong> <span id="ownerEmailStatus">—</span></div>
+            <div><strong>Password source:</strong> <span id="ownerPasswordStatus">—</span></div>
+            <div><strong>Email provider:</strong> <span id="mailProviderStatus">—</span></div>
+          </div>
+        </div>
+        <div style="background:rgba(122,158,126,0.06);border:1px solid var(--sage-light);border-radius:var(--radius);padding:16px;font-size:13px;color:var(--sage-dark);line-height:1.7">
+          The forgot-password link is sent only to this owner email. This portal controls platform-wide Stripe keys, fees, stores, and impersonation.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-card" style="margin-bottom:32px">
+    <div class="section-card-header">
       <h2 class="section-card-title">Platform payments</h2>
     </div>
     <div class="section-card-body">
@@ -318,6 +362,7 @@
     try {
       const r = await fetch('/api/platform/me');
       if (!r.ok) { window.location.href = '/platform/login.html'; return; }
+      loadAccount();
       loadStats();
       loadPayments();
       loadShops();
@@ -340,6 +385,24 @@
       document.getElementById('statFees').textContent = '$' + Number(s.monthFees).toFixed(2);
     } catch (err) {
       console.error('Stats error:', err);
+    }
+  }
+
+  async function loadAccount() {
+    try {
+      const r = await fetch('/api/platform/account');
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed to load platform account');
+
+      document.getElementById('ownerEmail').value = data.owner_email || '';
+      document.getElementById('ownerEmailStatus').textContent = data.owner_email || 'Not set';
+      document.getElementById('ownerPasswordStatus').innerHTML = data.has_password
+        ? '<span class="badge badge-sage">Hashed account password</span>'
+        : '<span class="badge badge-warm">Using .env bootstrap password</span>';
+      document.getElementById('mailProviderStatus').textContent =
+        data.mail_provider === 'dev' ? 'Dev preview' : data.mail_provider.toUpperCase();
+    } catch (err) {
+      console.error('Platform account error:', err);
     }
   }
 
@@ -548,6 +611,56 @@
       btn.textContent = 'Copied!';
       setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
     });
+  });
+
+  document.getElementById('saveAccountBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveAccountBtn');
+    const errEl = document.getElementById('accountError');
+    const okEl = document.getElementById('accountSuccess');
+    const newPassword = document.getElementById('newPlatformPassword').value;
+    const confirmPassword = document.getElementById('confirmPlatformPassword').value;
+
+    errEl.style.display = 'none';
+    okEl.classList.remove('visible');
+
+    if (newPassword && newPassword !== confirmPassword) {
+      errEl.textContent = 'New passwords do not match.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      const payload = {
+        owner_email: document.getElementById('ownerEmail').value.trim(),
+      };
+      if (newPassword) {
+        payload.current_password = document.getElementById('currentPlatformPassword').value;
+        payload.new_password = newPassword;
+      }
+
+      const r = await fetch('/api/platform/account', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed to save security settings');
+
+      document.getElementById('currentPlatformPassword').value = '';
+      document.getElementById('newPlatformPassword').value = '';
+      document.getElementById('confirmPlatformPassword').value = '';
+      okEl.classList.add('visible');
+      loadAccount();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save security settings';
+    }
   });
 
   document.getElementById('savePaymentsBtn').addEventListener('click', async () => {

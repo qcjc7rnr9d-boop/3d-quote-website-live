@@ -34,6 +34,24 @@ CREATE TABLE IF NOT EXISTS platform_settings (
   created_at           TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS platform_admins (
+  id                   INTEGER PRIMARY KEY CHECK (id = 1),
+  owner_email          TEXT UNIQUE COLLATE NOCASE,
+  password_hash        TEXT,
+  created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at           TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS platform_reset_tokens (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  admin_id             INTEGER NOT NULL DEFAULT 1,
+  token                TEXT UNIQUE NOT NULL,
+  used                 INTEGER NOT NULL DEFAULT 0,
+  expires_at           TEXT NOT NULL,
+  created_at           TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (admin_id) REFERENCES platform_admins(id) ON DELETE CASCADE
+);
+
 -- ── Materials ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS materials (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -172,3 +190,4 @@ CREATE INDEX IF NOT EXISTS idx_materials_shop  ON materials(shop_id);
 CREATE INDEX IF NOT EXISTS idx_customers_shop  ON customers(shop_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token  ON sessions(token);
 CREATE INDEX IF NOT EXISTS idx_reset_token     ON reset_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_platform_reset_token ON platform_reset_tokens(token);

@@ -1,34 +1,178 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
 import { db, requirePlatformAuth } from '../middleware/auth.js';
-import { BCRYPT_ROUNDS, PLATFORM_FEE_PERCENT } from '../config.js';
+import { BCRYPT_ROUNDS, PLATFORM_FEE_PERCENT, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES, RESET_TOKEN_HOURS } from '../config.js';
+import { sendMail, currentProvider } from '../lib/mailer.js';
 import {
   getMaskedPlatformStripeConfig,
   getEffectivePlatformStripeConfig,
   updatePlatformStripeConfig,
 } from '../lib/platform-payments.js';
+import {
+  bootstrapPlatformAdmin,
+  createPlatformResetToken,
+  ensurePlatformAdmin,
+  getPlatformAdmin,
+  markPlatformResetTokenUsed,
+  normaliseEmail,
+  updatePlatformAdminAccount,
+  validatePlatformPassword,
+  verifyPlatformPassword,
+  verifyPlatformResetToken,
+} from '../lib/platform-auth.js';
 
 const router = Router();
 
+const platformLoginLimiter = rateLimit({
+  windowMs: LOGIN_WINDOW_MINUTES * 60 * 1000,
+  max: LOGIN_MAX_ATTEMPTS,
+  message: { error: 'Too many login attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const platformForgotLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { ok: true, message: 'If the owner email is configured, a reset link will be sent shortly.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+function publicPlatformAccount(admin = getPlatformAdmin()) {
+  return {
+    owner_email: admin?.owner_email || null,
+    has_owner_email: !!admin?.owner_email,
+    has_password: !!admin?.password_hash,
+    mail_provider: currentProvider(),
+  };
+}
+
 // ── POST /api/platform/login ──────────────────────────────────
-router.post('/login', (req, res) => {
-  const { password } = req.body;
-  if (!password || password !== process.env.PLATFORM_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Incorrect password' });
+router.post('/login', platformLoginLimiter, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const ownerEmail = normaliseEmail(email);
+    const admin = ensurePlatformAdmin();
+
+    if (!ownerEmail || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const emailMatches = !admin.owner_email || ownerEmail === normaliseEmail(admin.owner_email);
+    const passwordOk = await verifyPlatformPassword(password);
+    if (!emailMatches || !passwordOk) {
+      return res.status(401).json({ error: 'Incorrect email or password' });
+    }
+
+    let nextAdmin = admin;
+    if (!admin.password_hash) {
+      nextAdmin = await bootstrapPlatformAdmin(ownerEmail, password);
+    } else if (!admin.owner_email) {
+      nextAdmin = await updatePlatformAdminAccount({ ownerEmail });
+    }
+
+    req.session.platformAdmin = true;
+    req.session.platformAdminId = nextAdmin?.id || 1;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Platform login error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
-  req.session.platformAdmin = true;
-  res.json({ ok: true });
 });
 
 // ── POST /api/platform/logout ─────────────────────────────────
 router.post('/logout', (req, res) => {
   req.session.platformAdmin = false;
+  req.session.platformAdminId = null;
   res.json({ ok: true });
 });
 
 // ── GET /api/platform/me ──────────────────────────────────────
 router.get('/me', requirePlatformAuth, (req, res) => {
-  res.json({ ok: true, role: 'platform' });
+  res.json({ ok: true, role: 'platform', account: publicPlatformAccount() });
+});
+
+router.get('/account', requirePlatformAuth, (req, res) => {
+  res.json(publicPlatformAccount());
+});
+
+router.put('/account', requirePlatformAuth, async (req, res) => {
+  try {
+    const { owner_email, current_password, new_password } = req.body;
+    const nextEmail = owner_email !== undefined ? normaliseEmail(owner_email) : undefined;
+
+    if (nextEmail !== undefined && (!nextEmail || !nextEmail.includes('@'))) {
+      return res.status(400).json({ error: 'Enter a valid owner email.' });
+    }
+
+    if (new_password) {
+      if (!current_password || !await verifyPlatformPassword(current_password)) {
+        return res.status(400).json({ error: 'Current password is incorrect.' });
+      }
+      const strengthError = validatePlatformPassword(new_password);
+      if (strengthError) return res.status(400).json({ error: strengthError });
+    }
+
+    const admin = await updatePlatformAdminAccount({
+      ownerEmail: nextEmail,
+      newPassword: new_password || undefined,
+    });
+
+    res.json({ ok: true, ...publicPlatformAccount(admin) });
+  } catch (err) {
+    console.error('Platform account update error:', err);
+    res.status(500).json({ error: 'Failed to update platform account' });
+  }
+});
+
+router.post('/forgot-password', platformForgotLimiter, async (req, res) => {
+  const message = 'If the owner email is configured, a reset link will be sent shortly.';
+  try {
+    const admin = ensurePlatformAdmin();
+    if (admin?.owner_email) {
+      const token = createPlatformResetToken();
+      const resetLink = `${process.env.BASE_URL || 'http://localhost:3000'}/platform/reset-password.html?token=${encodeURIComponent(token)}`;
+      await sendMail({
+        to: admin.owner_email,
+        subject: 'Reset your Trennen platform password',
+        text: `Reset your Trennen platform password using this link. It expires in ${RESET_TOKEN_HOURS} hour(s):\n\n${resetLink}\n\nIf you did not request this, you can ignore this email.`,
+        html: `
+          <p>Reset your Trennen platform password using the link below.</p>
+          <p><a href="${resetLink}">Reset platform password</a></p>
+          <p>This link expires in ${RESET_TOKEN_HOURS} hour(s). If you did not request this, you can ignore this email.</p>
+        `,
+      });
+    }
+    res.json({ ok: true, message });
+  } catch (err) {
+    console.error('Platform forgot password error:', err);
+    res.json({ ok: true, message });
+  }
+});
+
+router.get('/reset-password/verify', (req, res) => {
+  const row = verifyPlatformResetToken(req.query.token);
+  res.status(row ? 200 : 400).json({ valid: !!row });
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    const row = verifyPlatformResetToken(token);
+    if (!row) return res.status(400).json({ error: 'Token expired or invalid' });
+
+    const strengthError = validatePlatformPassword(newPassword);
+    if (strengthError) return res.status(400).json({ error: strengthError });
+
+    await updatePlatformAdminAccount({ newPassword });
+    markPlatformResetTokenUsed(token);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Platform reset password error:', err);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
 });
 
 // ── GET /api/platform/stats ───────────────────────────────────
