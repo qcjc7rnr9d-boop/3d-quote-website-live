@@ -24,6 +24,14 @@ const loginLimiter = rateLimit({
   legacyHeaders: false
 });
 
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { ok: true, message: "If that email is registered, you'll receive a reset link shortly." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 function validatePasswordStrength(password) {
   if (!password || password.length < MIN_PASSWORD_LENGTH) {
     return `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
@@ -146,7 +154,7 @@ router.post('/change-password', requireShopAuth, async (req, res) => {
 });
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', resetLimiter, async (req, res) => {
   const message = "If that email is registered, you'll receive a reset link shortly.";
   try {
     const { email } = req.body;
@@ -209,7 +217,7 @@ router.get('/reset-password/verify', (req, res) => {
 });
 
 // POST /api/auth/reset-password
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', resetLimiter, async (req, res) => {
   try {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) {
@@ -274,21 +282,27 @@ router.delete('/sessions/:id', requireShopAuth, (req, res) => {
   }
 
   db.prepare('DELETE FROM sessions WHERE id = ?').run(req.params.id);
+  db.prepare('DELETE FROM app_sessions WHERE sid = ?').run(row.token);
   res.json({ ok: true });
 });
 
 // POST /api/auth/sessions/revoke-all
 router.post('/sessions/revoke-all', requireShopAuth, (req, res) => {
-  db.prepare('DELETE FROM sessions WHERE shop_id = ? AND token != ?')
-    .run(req.shop.id, req.sessionID);
+  const tokens = db.prepare('SELECT token FROM sessions WHERE shop_id = ? AND token != ?')
+    .all(req.shop.id, req.sessionID);
+  db.prepare('DELETE FROM sessions WHERE shop_id = ? AND token != ?').run(req.shop.id, req.sessionID);
+  const del = db.prepare('DELETE FROM app_sessions WHERE sid = ?');
+  for (const row of tokens) del.run(row.token);
   res.json({ ok: true });
 });
 
 // DELETE /api/auth/account
 router.delete('/account', requireShopAuth, (req, res) => {
   const shopId = req.shop.id;
+  const sessionToken = req.sessionID;
   db.prepare('DELETE FROM shops WHERE id = ?').run(shopId);
   req.session.destroy(() => {
+    db.prepare('DELETE FROM app_sessions WHERE sid = ?').run(sessionToken);
     res.json({ ok: true });
   });
 });

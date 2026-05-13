@@ -199,3 +199,9 @@ CREATE INDEX IF NOT EXISTS idx_customers_shop  ON customers(shop_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token  ON sessions(token);
 CREATE INDEX IF NOT EXISTS idx_reset_token     ON reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_platform_reset_token ON platform_reset_tokens(token);
+
+CREATE TABLE IF NOT EXISTS app_sessions (
+  sid TEXT PRIMARY KEY,
+  sess TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);

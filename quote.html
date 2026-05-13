@@ -1100,7 +1100,7 @@
     const cols  = Array.isArray(mat.colours) ? mat.colours : [];
     const colSel = $('colourSelect');
     colSel.innerHTML = cols.length
-      ? cols.map((c, i) => `<option value="${i}" data-hex="${escapeHtml(c.hex)}">${escapeHtml(c.name)}</option>`).join('')
+      ? cols.map((c, i) => `<option value="${i}" data-id="${escapeHtml(c.id || '')}" data-hex="${escapeHtml(c.hex)}">${escapeHtml(c.name)}</option>`).join('')
       : '<option value="">—</option>';
 
     // Restore prior colour selection if valid
@@ -1144,6 +1144,7 @@
     $('colourSwatch').style.background = hex;
     selectionData.colorHex   = hex;
     selectionData.colorName  = name;
+    selectionData.colorId    = opt?.dataset.id || null;
     selectionData.colorIndex = colSel.selectedIndex;
     if (save) saveSelection();
     if (typeof setViewerColor === 'function') setViewerColor(hex);
@@ -1598,6 +1599,7 @@
       file:            { ...fileData },
       materialId:      selectionData.materialId,
       materialName:    selectionData.materialName,
+      colorId:         selectionData.colorId || null,
       colorName:       selectionData.colorName  || '—',
       colorHex:        selectionData.colorHex   || null,
       finish:          selectionData.finishId || selectionData.finish || null,

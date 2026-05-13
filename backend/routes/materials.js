@@ -1,12 +1,17 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { mkdirSync, writeFileSync } from 'fs';
-import { extname, join } from 'path';
+import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { db, requireShopAuth } from '../middleware/auth.js';
 import { MATERIAL_LIBRARY, findMaterialMatch } from '../lib/material-library.js';
 import { aiLookupMaterial } from '../lib/material-ai.js';
+import {
+  normalizeMaterialPayload,
+  parseMaterialRow,
+  safeJson,
+} from '../lib/material-config.js';
 
 const router = Router();
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -14,113 +19,20 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (!/^image\//.test(file.mimetype || '')) return cb(new Error('Only image uploads are supported'));
+    const allowedMime = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+    if (!allowedMime.has(file.mimetype || '')) return cb(new Error('Only PNG, JPEG, WebP, or GIF uploads are supported'));
     cb(null, true);
   },
 });
 
-function safeJson(value, fallback) {
-  try { return JSON.parse(value || ''); } catch { return fallback; }
-}
-
-function cleanTextArray(value) {
-  if (!Array.isArray(value)) return [];
-  return value.map(v => String(v || '').trim()).filter(Boolean);
-}
-
-function makeId(prefix = 'item') {
-  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function normalizeColour(c, index = 0) {
-  if (typeof c === 'string') {
-    return { id: makeId('colour'), name: c, hex: '#cccccc', textureUrl: null, enabled: true, sortOrder: index };
-  }
-  const name = String(c?.name || c?.label || c?.hex || `Colour ${index + 1}`).trim();
-  return {
-    id: String(c?.id || makeId('colour')),
-    name,
-    hex: String(c?.hex || '#cccccc').trim(),
-    textureUrl: c?.textureUrl || c?.texture_url || c?.imageUrl || null,
-    enabled: c?.enabled !== false,
-    sortOrder: Number.isFinite(Number(c?.sortOrder)) ? Number(c.sortOrder) : index,
-  };
-}
-
-function normalizeFinish(f, index = 0) {
-  if (typeof f === 'string') {
-    return {
-      id: makeId('finish'),
-      name: f,
-      layerHeight: '',
-      description: '',
-      priceMultiplier: 1,
-      previewType: index === 0 ? 'standard' : 'fine',
-      previewImageUrl: null,
-      enabled: true,
-      default: index === 0,
-      sortOrder: index,
-    };
-  }
-  return {
-    id: String(f?.id || makeId('finish')),
-    name: String(f?.name || `Finish ${index + 1}`).trim(),
-    layerHeight: String(f?.layerHeight || f?.layer_height || '').trim(),
-    description: String(f?.description || '').trim(),
-    priceMultiplier: Number.isFinite(Number(f?.priceMultiplier ?? f?.price_multiplier))
-      ? Number(f?.priceMultiplier ?? f?.price_multiplier)
-      : 1,
-    previewType: String(f?.previewType || f?.preview_type || (index === 0 ? 'standard' : 'fine')),
-    previewImageUrl: f?.previewImageUrl || f?.preview_image_url || null,
-    enabled: f?.enabled !== false,
-    default: !!f?.default,
-    sortOrder: Number.isFinite(Number(f?.sortOrder)) ? Number(f.sortOrder) : index,
-  };
-}
-
-function normalizeProperties(properties = {}) {
-  const p = properties && typeof properties === 'object' ? { ...properties } : {};
-  const ratingFrom100 = v => {
-    if (v == null || v === '') return 3;
-    const n = Number(v);
-    if (!Number.isFinite(n)) return 3;
-    return Math.max(1, Math.min(5, n > 5 ? Math.round(n / 20) : Math.round(n)));
-  };
-  const ratings = p.ratings && typeof p.ratings === 'object' ? p.ratings : {};
-  p.ratings = {
-    strength: ratingFrom100(ratings.strength ?? p.strength),
-    flexibility: ratingFrom100(ratings.flexibility ?? p.flexibility),
-    heatResistance: ratingFrom100(ratings.heatResistance ?? ratings.heat ?? p.heat),
-    detail: ratingFrom100(ratings.detail ?? p.detail),
-    outdoorUse: ratingFrom100(ratings.outdoorUse ?? p.outdoor_use),
-  };
-  return p;
-}
-
-function normalizeMaterialPayload(input = {}, existing = {}) {
-  const rawProperties = input.properties !== undefined
-    ? input.properties
-    : safeJson(existing.properties, {});
-  const properties = normalizeProperties(rawProperties);
-  const colours = (input.colours !== undefined ? input.colours : safeJson(existing.colours, []))
-    .map(normalizeColour)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-  let finishes = (input.finishes !== undefined ? input.finishes : safeJson(existing.finishes, []))
-    .map(normalizeFinish)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-  if (finishes.length && !finishes.some(f => f.default && f.enabled !== false)) {
-    finishes = finishes.map((f, i) => ({ ...f, default: i === 0 }));
-  }
-  return {
-    properties,
-    colours,
-    finishes,
-    tags: cleanTextArray(input.tags !== undefined ? input.tags : safeJson(existing.tags, [])),
-    best_for: cleanTextArray(input.best_for !== undefined ? input.best_for : safeJson(existing.best_for, [])),
-    specs: Array.isArray(input.specs !== undefined ? input.specs : safeJson(existing.specs, []))
-      ? (input.specs !== undefined ? input.specs : safeJson(existing.specs, []))
-      : [],
-  };
+function verifiedImageExtension(file) {
+  const buf = file.buffer;
+  const mime = file.mimetype;
+  if (mime === 'image/png' && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return '.png';
+  if (mime === 'image/jpeg' && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return '.jpg';
+  if (mime === 'image/gif' && (buf.subarray(0, 6).toString('ascii') === 'GIF87a' || buf.subarray(0, 6).toString('ascii') === 'GIF89a')) return '.gif';
+  if (mime === 'image/webp' && buf.subarray(0, 4).toString('ascii') === 'RIFF' && buf.subarray(8, 12).toString('ascii') === 'WEBP') return '.webp';
+  return null;
 }
 
 // ── Material library (curated reference data — used by the admin
@@ -170,19 +82,7 @@ router.post('/library/ai-lookup', requireShopAuth, async (req, res) => {
 });
 
 function parseMaterialJSON(row) {
-  if (!row) return row;
-  return {
-    ...row,
-    active: !!row.active,
-    recommended: !!row.recommended,
-    colours: safeJson(row.colours, []).map(normalizeColour),
-    finishes: safeJson(row.finishes, []).map(normalizeFinish),
-    tags: cleanTextArray(safeJson(row.tags, [])),
-    best_for: cleanTextArray(safeJson(row.best_for, [])),
-    specs: safeJson(row.specs, []),
-    volume_tiers: safeJson(row.volume_tiers, []),
-    properties: normalizeProperties(safeJson(row.properties, '{}'))
-  };
+  return parseMaterialRow(row);
 }
 
 // GET /api/materials/
@@ -228,9 +128,8 @@ router.patch('/page-settings', requireShopAuth, (req, res) => {
 // POST /api/materials/assets
 router.post('/assets', requireShopAuth, upload.single('asset'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'asset is required' });
-  const allowed = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg']);
-  const ext = (extname(req.file.originalname || '') || '.png').toLowerCase();
-  if (!allowed.has(ext)) return res.status(400).json({ error: 'Unsupported image type' });
+  const ext = verifiedImageExtension(req.file);
+  if (!ext) return res.status(400).json({ error: 'Uploaded image content did not match an allowed image type' });
   const dir = join(__dirname, '../../uploads/material-assets', String(req.shop.id));
   mkdirSync(dir, { recursive: true });
   const name = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}${ext}`;

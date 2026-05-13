@@ -63,12 +63,13 @@
     document.getElementById('reviewColorName').textContent =
       (cart.colorName && cart.colorName !== '') ? cart.colorName : 'No colour selected';
 
-    const finishLabel = cart.finishLabel
-      || (cart.finish === 'fine' ? 'Fine' : 'Standard');
-    const finishBadge = (cart.finish === 'fine')
-      ? `<span class="badge badge-sage">${finishLabel}</span>`
-      : `<span class="badge badge-stone">${finishLabel}</span>`;
-    document.getElementById('reviewFinish').innerHTML = finishBadge;
+    const finishLabel = cart.finishLabel || cart.finish || 'Standard';
+    const finishBadge = document.createElement('span');
+    finishBadge.className = cart.finish === 'fine' ? 'badge badge-sage' : 'badge badge-stone';
+    finishBadge.textContent = finishLabel;
+    const finishEl = document.getElementById('reviewFinish');
+    finishEl.textContent = '';
+    finishEl.appendChild(finishBadge);
 
     if (cart.infillLabel) {
       document.getElementById('reviewInfill').textContent = cart.infillLabel;
@@ -195,12 +196,17 @@
           customerName:    name,
           orderData: {
             fileName:   cart.file?.name,
+            volumeCm3:  cart.file?.volumeCm3,
             materialId: cart.materialId,
             colour:     cart.colorName,
+            colourId:   cart.colorId,
             finish:     cart.finish,
+            finishId:   cart.finish,
+            infillTierId: cart.infillTierId,
             quantity:   cart.quantity,
             subtotal:   cart.itemsNzd,
             shipping:   cart.shippingNzd,
+            shippingId: cart.shipping?.id || null,
             tax:        0,
           },
         }),

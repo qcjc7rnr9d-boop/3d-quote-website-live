@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { db } from '../middleware/auth.js';
 import { BCRYPT_ROUNDS } from '../config.js';
 import { parseInfillTiers } from '../lib/infill-tiers.js';
+import { parseMaterialRow, safeJson } from '../lib/material-config.js';
 
 const router = Router();
 
@@ -16,79 +17,6 @@ function requireCustomerAuth(req, res, next) {
 
   req.customerAccount = account;
   next();
-}
-
-function safeJson(value, fallback) {
-  try { return JSON.parse(value || ''); } catch { return fallback; }
-}
-
-function cleanTextArray(value) {
-  if (!Array.isArray(value)) return [];
-  return value.map(v => String(v || '').trim()).filter(Boolean);
-}
-
-function normalizeColour(c, index = 0) {
-  if (typeof c === 'string') {
-    return { id: `colour_${index}`, name: c, hex: '#cccccc', textureUrl: null, enabled: true, sortOrder: index };
-  }
-  return {
-    id: String(c?.id || `colour_${index}`),
-    name: String(c?.name || c?.hex || `Colour ${index + 1}`).trim(),
-    hex: String(c?.hex || '#cccccc').trim(),
-    textureUrl: c?.textureUrl || c?.texture_url || c?.imageUrl || null,
-    enabled: c?.enabled !== false,
-    sortOrder: Number.isFinite(Number(c?.sortOrder)) ? Number(c.sortOrder) : index,
-  };
-}
-
-function normalizeFinish(f, index = 0) {
-  if (typeof f === 'string') {
-    return {
-      id: `finish_${index}`,
-      name: f,
-      layerHeight: '',
-      description: '',
-      priceMultiplier: 1,
-      previewType: index === 0 ? 'standard' : 'fine',
-      previewImageUrl: null,
-      enabled: true,
-      default: index === 0,
-      sortOrder: index,
-    };
-  }
-  return {
-    id: String(f?.id || `finish_${index}`),
-    name: String(f?.name || `Finish ${index + 1}`).trim(),
-    layerHeight: String(f?.layerHeight || f?.layer_height || '').trim(),
-    description: String(f?.description || '').trim(),
-    priceMultiplier: Number.isFinite(Number(f?.priceMultiplier ?? f?.price_multiplier))
-      ? Number(f?.priceMultiplier ?? f?.price_multiplier)
-      : 1,
-    previewType: String(f?.previewType || f?.preview_type || (index === 0 ? 'standard' : 'fine')),
-    previewImageUrl: f?.previewImageUrl || f?.preview_image_url || null,
-    enabled: f?.enabled !== false,
-    default: !!f?.default,
-    sortOrder: Number.isFinite(Number(f?.sortOrder)) ? Number(f.sortOrder) : index,
-  };
-}
-
-function normalizeProperties(properties = {}) {
-  const p = properties && typeof properties === 'object' ? { ...properties } : {};
-  const rating = v => {
-    if (v == null || v === '') return 3;
-    const n = Number(v);
-    if (!Number.isFinite(n)) return 3;
-    return Math.max(1, Math.min(5, n > 5 ? Math.round(n / 20) : Math.round(n)));
-  };
-  const r = p.ratings && typeof p.ratings === 'object' ? p.ratings : {};
-  p.ratings = {
-    strength: rating(r.strength ?? p.strength),
-    flexibility: rating(r.flexibility ?? p.flexibility),
-    heatResistance: rating(r.heatResistance ?? r.heat ?? p.heat),
-    detail: rating(r.detail ?? p.detail),
-    outdoorUse: rating(r.outdoorUse ?? p.outdoor_use),
-  };
-  return p;
 }
 
 // ── GET /api/customer/shop-info?slug=X  (public) ─────────────
@@ -178,29 +106,7 @@ router.get('/catalog', (req, res) => {
      WHERE shop_id = ? AND active = 1
      ORDER BY sort_order, name`
   ).all(shop.id);
-  const materials = rows.map(r => {
-    const colours = safeJson(r.colours, [])
-      .map(normalizeColour)
-      .filter(c => c.enabled !== false)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
-    let finishes = safeJson(r.finishes, [])
-      .map(normalizeFinish)
-      .filter(f => f.enabled !== false)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
-    if (finishes.length && !finishes.some(f => f.default)) {
-      finishes = finishes.map((f, i) => ({ ...f, default: i === 0 }));
-    }
-    return {
-      ...r,
-      recommended: !!r.recommended,
-      tags: cleanTextArray(safeJson(r.tags, [])),
-      best_for: cleanTextArray(safeJson(r.best_for, [])),
-      specs: safeJson(r.specs, []),
-      colours,
-      finishes,
-      properties: normalizeProperties(safeJson(r.properties, {})),
-    };
-  });
+  const materials = rows.map(r => parseMaterialRow(r, { stableIds: true, publicOnly: true }));
   const filters = [...new Set(materials.flatMap(m => m.tags || []))];
   res.json({
     settings: {

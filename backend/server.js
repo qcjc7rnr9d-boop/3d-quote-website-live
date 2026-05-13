@@ -11,6 +11,7 @@ import session from 'express-session';
 
 import { db, requireShopAuth } from './middleware/auth.js';
 import { SESSION_DAYS } from './config.js';
+import { SQLiteSessionStore } from './lib/sqlite-session-store.js';
 
 import authRouter from './routes/auth.js';
 import materialsRouter from './routes/materials.js';
@@ -25,6 +26,24 @@ import shippingRouter from './routes/shipping.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const ROOT_DIR = join(__dirname, '..');
+const isProduction = process.env.NODE_ENV === 'production';
+const sessionStore = new SQLiteSessionStore(db);
+
+function assertProductionConfig() {
+  if (!isProduction) return;
+  const missing = [];
+  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'dev-secret-change-me') missing.push('SESSION_SECRET');
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-jwt-secret') missing.push('JWT_SECRET');
+  if (!process.env.BASE_URL || !/^https:\/\//.test(process.env.BASE_URL)) missing.push('BASE_URL=https://...');
+  if (!process.env.RESEND_API_KEY && !process.env.SMTP_HOST) missing.push('RESEND_API_KEY or SMTP_HOST');
+  if (missing.length) {
+    throw new Error(`Refusing to start in production. Missing/unsafe config: ${missing.join(', ')}`);
+  }
+}
+
+assertProductionConfig();
+app.disable('x-powered-by');
 
 // ── Security headers ──────────────────────────────────────────
 app.use((req, res, next) => {
@@ -47,6 +66,7 @@ app.use(express.urlencoded({ extended: true }));
 // ── Session ───────────────────────────────────────────────────
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+  store: sessionStore,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -56,9 +76,43 @@ app.use(session({
     maxAge: SESSION_DAYS * 24 * 60 * 60 * 1000
   }
 }));
+setInterval(() => {
+  try { sessionStore.clearExpired(); } catch {}
+}, 60 * 60 * 1000).unref();
 
-// ── Static files (public website) ────────────────────────────
-app.use(express.static(join(__dirname, '..')));
+// ── Static files (public website only) ───────────────────────
+const privatePrefixes = [
+  '/backend', '/.git', '/node_modules', '/package.json', '/package-lock.json',
+  '/trennen-site.zip', '/.env', '/.DS_Store', '/security.md', '/payments_setup.md',
+  '/milestone_stability_security.md'
+];
+app.use((req, res, next) => {
+  const path = req.path.toLowerCase();
+  if (privatePrefixes.some(prefix => path === prefix || path.startsWith(prefix + '/'))) {
+    return res.status(404).send('Not found');
+  }
+  next();
+});
+app.use('/assets', express.static(join(ROOT_DIR, 'assets'), { dotfiles: 'deny', index: false }));
+app.use('/admin', express.static(join(ROOT_DIR, 'admin'), { dotfiles: 'deny', index: false }));
+app.use('/customer', express.static(join(ROOT_DIR, 'customer'), { dotfiles: 'deny', index: false }));
+app.use('/platform', express.static(join(ROOT_DIR, 'platform'), { dotfiles: 'deny', index: false }));
+app.use('/uploads', express.static(join(ROOT_DIR, 'uploads'), {
+  dotfiles: 'deny',
+  index: false,
+  setHeaders(res) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  },
+}));
+const publicRootPages = new Set([
+  '/', '/index.html', '/catalog.html', '/checkout.html', '/confirmation.html',
+  '/materials.html', '/onboarding.html', '/quote.html', '/stripe-callback.html'
+]);
+app.get([...publicRootPages], (req, res) => {
+  const page = req.path === '/' ? 'index.html' : req.path.slice(1);
+  res.sendFile(join(ROOT_DIR, page));
+});
 
 // ── API routes ────────────────────────────────────────────────
 app.use('/api/auth', authRouter);
@@ -119,7 +173,7 @@ app.use((req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Not found' });
   }
-  res.sendFile(join(__dirname, '../index.html'));
+  res.sendFile(join(ROOT_DIR, 'index.html'));
 });
 
 // ── Error handler ─────────────────────────────────────────────
