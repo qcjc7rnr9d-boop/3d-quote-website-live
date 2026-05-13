@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout — mahi3d</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/shared.css">
+  <style>
+    /* ── Page layout ─────────────────────────────────────── */
+    .page-wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 80px 48px 60px;
+    }
+
+    .checkout-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 400px;
+      gap: 32px;
+      padding-top: 32px;
+    }
+
+    /* ── Left column: Order Review ───────────────────────── */
+    .review-heading {
+      font-size: 28px;
+      font-weight: 400;
+      margin-bottom: 24px;
+    }
+
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .file-icon-box {
+      width: 52px;
+      height: 52px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--off-white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .file-meta {
+      min-width: 0;
+    }
+
+    .file-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-size {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    /* ── Detail rows ─────────────────────────────────────── */
+    .detail-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .detail-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .detail-label {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .detail-value {
+      font-size: 14px;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .color-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.12);
+      flex-shrink: 0;
+    }
+
+    /* ── Price breakdown ─────────────────────────────────── */
+    .price-table {
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid var(--stone);
+    }
+
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-top: 1px solid var(--stone);
+      font-size: 14px;
+    }
+
+    .price-row:first-child {
+      border-top: none;
+    }
+
+    .price-row.total {
+      font-weight: 500;
+      font-size: 15px;
+    }
+
+    .price-row .price-label {
+      color: var(--muted);
+    }
+
+    .price-row.total .price-label {
+      color: var(--ink);
+    }
+
+    .price-row .price-amount {
+      color: var(--ink);
+    }
+
+    .edit-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      margin-top: 20px;
+      transition: color 200ms ease-out;
+    }
+
+    .edit-link:hover { color: var(--ink); }
+
+    /* ── Payment toggle ──────────────────────────────────── */
+    .payment-toggle {
+      display: flex;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+      margin-bottom: 24px;
+      background: var(--white);
+    }
+
+    .toggle-btn {
+      flex: 1;
+      height: 36px;
+      border: none;
+      border-radius: 18px;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 200ms ease-out, color 200ms ease-out;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .toggle-btn.active {
+      background: var(--sage);
+      color: var(--white);
+    }
+
+    /* ── Card panel ──────────────────────────────────────── */
+    .card-panel-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #card-element-wrapper {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 11px 14px;
+      background: var(--white);
+      transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
+    }
+
+    /* ── Shop Pay panel ──────────────────────────────────── */
+    .shop-pay-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 0;
+    }
+
+    .shop-pay-logo {
+      display: inline-block;
+      background: #1A1A1A;
+      color: #FFFFFF;
+      font-family: var(--font-ui);
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 28px;
+      padding: 6px 20px;
+      border-radius: 4px;
+      letter-spacing: 0.02em;
+    }
+
+    .shop-pay-caption {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .btn-shoppay {
+      background: #1A1A1A !important;
+      width: 100%;
+    }
+
+    .btn-shoppay:hover {
+      background: #333 !important;
+    }
+
+    /* ── Security caption ────────────────────────────────── */
+    .security-caption {
+      text-align: center;
+      font-family: var(--font-ui);
+      font-weight: 400;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 12px;
+    }
+
+    /* ── Trust badges ────────────────────────────────────── */
+    .trust-strip {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    /* ── Empty state ─────────────────────────────────────── */
+    .empty-state {
+      padding: 60px 24px;
+      text-align: center;
+    }
+
+    .empty-state p {
+      color: var(--muted);
+      margin-bottom: 20px;
+      font-size: 15px;
+    }
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media (max-width: 820px) {
+      .checkout-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .page-wrap {
+        padding: 80px 24px 48px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page-wrap {
+        padding: 80px 16px 40px;
+      }
+    }
+  </style>
+  <script src="assets/brand.js" defer></script>
+</head>
+<body>
+
+  <nav class="nav" role="navigation">
+    <a href="index.html" class="nav-wordmark">mahi3d</a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="materials.html">Materials</a></li>
+      <li><a href="quote.html">Quote</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <rect x="2" y="5" width="18" height="1.5" rx="0.75" fill="currentColor"/>
+        <rect x="2" y="10.25" width="18" height="1.5" rx="0.75" fill="currentColor"/>
+        <rect x="2" y="15.5" width="18" height="1.5" rx="0.75" fill="currentColor"/>
+      </svg>
+    </button>
+  </nav>
+
+  <div class="page-wrap">
+
+    <!-- Empty state (shown when no localStorage data) -->
+    <div class="empty-state" id="emptyState" style="display:none;text-align:center;padding:64px 24px;">
+      <h2 style="font-family:var(--font-brand,'Space Grotesk',sans-serif);font-weight:600;font-size:24px;margin:0 0 8px;color:var(--ink);">No order to check out yet</h2>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 24px;line-height:1.6;max-width:420px;margin-left:auto;margin-right:auto;">
+        Pop back to the quote page, upload your model, choose a material and click <strong>Add to Cart</strong> — your order will land here ready for payment.
+      </p>
+      <a href="quote.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;padding:12px 22px;">Start a quote</a>
+      <p style="margin-top:18px;">
+        <button type="button" id="clearStaleCartBtn"
+                style="background:none;border:0;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;">
+          Clear any saved cart data
+        </button>
+      </p>
+    </div>
+
+    <!-- Main checkout grid -->
+    <div class="checkout-grid fade-up" id="checkoutGrid">
+
+      <!-- LEFT COLUMN: Order Review -->
+      <div class="card" id="orderReviewCard">
+        <h2 class="review-heading">Order Review</h2>
+
+        <!-- File row -->
+        <div class="file-row">
+          <div class="file-icon-box">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="5" y="3" width="12" height="20" rx="1.5" stroke="#D4D0C8" stroke-width="1.5" fill="none"/>
+              <path d="M13 3v6h4" stroke="#D4D0C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M8 13h10M8 17h6" stroke="#B5CEB8" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M17 16l3 3M20 16l-3 3" stroke="#7A9E7E" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="file-meta">
+            <div class="file-name" id="reviewFileName">model.stl</div>
+            <div class="file-size" id="reviewFileSize">—</div>
+          </div>
+        </div>
+
+        <!-- Detail rows -->
+        <div class="detail-rows">
+          <div class="detail-row">
+            <span class="detail-label">Material</span>
+            <span class="detail-value" id="reviewMaterial">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Colour</span>
+            <span class="detail-value">
+              <span class="color-swatch" id="reviewColorSwatch"></span>
+              <span id="reviewColorName">—</span>
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Finish</span>
+            <span class="detail-value" id="reviewFinish">—</span>
+          </div>
+          <div class="detail-row" id="reviewInfillRow" style="display:none;">
+            <span class="detail-label">Infill</span>
+            <span class="detail-value" id="reviewInfill">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Quantity</span>
+            <span class="detail-value" id="reviewQty">—</span>
+          </div>
+        </div>
+
+        <!-- Price breakdown -->
+        <div class="price-table">
+          <div class="price-row" id="priceUnitRow">
+            <span class="price-label" id="priceUnitLabel">Unit price</span>
+            <span class="price-amount" id="priceUnit">—</span>
+          </div>
+          <div class="price-row">
+            <span class="price-label">Subtotal</span>
+            <span class="price-amount" id="priceSubtotal">—</span>
+          </div>
+          <div class="price-row">
+            <span class="price-label" id="priceShippingLabel">Shipping</span>
+            <span class="price-amount" id="priceShipping">—</span>
+          </div>
+          <div class="price-row total">
+            <span class="price-label">Total</span>
+            <span class="price-amount" id="priceTotal">—</span>
+          </div>
+        </div>
+
+        <a href="quote.html" class="edit-link">← Edit order</a>
+      </div>
+
+      <!-- RIGHT COLUMN: Payment -->
+      <div class="card">
+        <p class="overline" style="margin-bottom:20px;">Payment</p>
+
+        <!-- Payment method toggle -->
+        <div class="payment-toggle" role="group" aria-label="Payment method">
+          <button class="toggle-btn active" id="toggleCard" aria-pressed="true">Card</button>
+          <button class="toggle-btn" id="toggleShopPay" aria-pressed="false">Shop Pay</button>
+        </div>
+
+        <!-- Card panel -->
+        <div id="cardPanel">
+          <div class="card-panel-inner">
+            <div class="form-group">
+              <label class="form-label" for="customerEmail">Email for receipt</label>
+              <input
+                class="form-input"
+                type="email"
+                id="customerEmail"
+                name="customerEmail"
+                placeholder="you@example.com"
+                autocomplete="email"
+                required
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cardName">Name on card</label>
+              <input
+                class="form-input"
+                type="text"
+                id="cardName"
+                name="cardName"
+                placeholder="Name as it appears on card"
+                autocomplete="cc-name"
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label">Card details</label>
+              <div id="card-element-wrapper">
+                <div id="card-element"></div>
+              </div>
+              <div id="card-errors" class="form-error" style="margin-top:6px;" role="alert"></div>
+            </div>
+            <button class="btn btn-primary lg full" id="payBtn">Pay —</button>
+          </div>
+          <p class="security-caption">Your card details are processed securely by Stripe. We never see or store your card number.</p>
+        </div>
+
+        <!-- Shop Pay panel -->
+        <div id="shopPayPanel" style="display:none;">
+          <div class="shop-pay-inner">
+            <span class="shop-pay-logo">Shop Pay</span>
+            <button class="btn btn-primary lg full btn-shoppay" id="shopPayBtn">Continue with Shop Pay →</button>
+            <p class="shop-pay-caption">You'll be redirected to Shopify Checkout to complete your payment securely.</p>
+          </div>
+        </div>
+
+        <!-- Trust badges -->
+        <div class="trust-strip">
+          <span class="chip">🔒 Stripe Verified</span>
+          <span class="chip">🔒 SSL Secured</span>
+          <span class="chip">✦ No card data stored</span>
+        </div>
+      </div>
+
+    </div><!-- /checkout-grid -->
+  </div><!-- /page-wrap -->
+
+  <script src="https://js.stripe.com/v3/"></script>
+  <script async src="https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js"></script>
+
+  <script>
+    // ── Nav toggle ──────────────────────────────────────────
+    const nt = document.getElementById('navToggle');
+    const nl = document.getElementById('navLinks');
+    if (nt) nt.addEventListener('click', () => {
+      const o = nl.classList.toggle('open');
+      nt.setAttribute('aria-expanded', o);
+    });
+
+    // ── Load cart (snapshotted from quote.html) ──────────────
+    let cart;
+    try { cart = JSON.parse(localStorage.getItem('cart') || 'null'); } catch { cart = null; }
+
+    // We only hide the whole grid when there's literally nothing to show.
+    // Otherwise we render the review with whatever data is in the cart and
+    // surface a friendly message about what's missing — much better UX
+    // than wiping the page with an empty state.
+    const hasData = !!(cart && (cart.materialId || cart.file || cart.itemsNzd != null));
+
+    if (!hasData) {
+      console.warn('[checkout] no cart data found — showing empty state. localStorage.cart =', cart);
+      document.getElementById('checkoutGrid').style.display = 'none';
+      document.getElementById('emptyState').style.display = '';
+
+      // Allow the user to wipe any partial/stale cart in one click
+      const clearBtn = document.getElementById('clearStaleCartBtn');
+      if (clearBtn) clearBtn.addEventListener('click', () => {
+        try {
+          localStorage.removeItem('cart');
+          localStorage.removeItem('form_file');
+          localStorage.removeItem('form_selection');
+        } catch {}
+        clearBtn.textContent = 'Cleared — heading to quote page…';
+        setTimeout(() => { location.href = 'quote.html'; }, 700);
+      });
+    } else {
+      // Log what we got so the user can debug in DevTools if anything's off
+      console.info('[checkout] loaded cart:', cart);
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return '—';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    // All payments charge in NZD (the platform's home currency).
+    // The currency picker on the quote page is for DISPLAY only.
+    const fmtNzd = n => '$' + (Number(n) || 0).toFixed(2);
+
+    let totalNzd = 0;
+    if (hasData) {
+      // ── Order review card ─────────────────────────────────
+      document.getElementById('reviewFileName').textContent = cart.file?.name || 'model.stl';
+      document.getElementById('reviewFileSize').textContent = formatBytes(cart.file?.size);
+      document.getElementById('reviewMaterial').textContent = cart.materialName || '—';
+
+      // Colour (swatch + name)
+      const swatch = document.getElementById('reviewColorSwatch');
+      if (cart.colorHex && cart.colorHex !== '—') {
+        swatch.style.background = cart.colorHex;
+        swatch.style.display = '';
+      } else {
+        swatch.style.display = 'none';
+      }
+      document.getElementById('reviewColorName').textContent =
+        (cart.colorName && cart.colorName !== '') ? cart.colorName : 'No colour selected';
+
+      // Finish — uses friendlyLabel if present, else infers from raw value
+      const finishLabel = cart.finishLabel
+        || (cart.finish === 'fine' ? 'Fine' : 'Standard');
+      const finishBadge = (cart.finish === 'fine')
+        ? `<span class="badge badge-sage">${finishLabel}</span>`
+        : `<span class="badge badge-stone">${finishLabel}</span>`;
+      document.getElementById('reviewFinish').innerHTML = finishBadge;
+
+      // Infill — only show the row if we know the label
+      if (cart.infillLabel) {
+        document.getElementById('reviewInfill').textContent = cart.infillLabel;
+        document.getElementById('reviewInfillRow').style.display = '';
+      }
+
+      // Quantity
+      const qty = Math.max(1, parseInt(cart.quantity, 10) || 1);
+      document.getElementById('reviewQty').textContent = '× ' + qty;
+
+      // ── Price breakdown ───────────────────────────────────
+      // Values come straight from the quote page so prices match exactly.
+      const unitPriceNzd = Number(cart.unitNzd)     || 0;
+      const subtotalNzd  = Number(cart.itemsNzd)    || (unitPriceNzd * qty);
+      const shippingNzd  = Number(cart.shippingNzd) || 0;
+      totalNzd           = Number(cart.totalNzd)    || (subtotalNzd + shippingNzd);
+
+      // Unit-price row — only shown when qty > 1 (otherwise unit = subtotal)
+      const unitRow = document.getElementById('priceUnitRow');
+      if (qty > 1 && unitPriceNzd > 0) {
+        document.getElementById('priceUnitLabel').textContent = `Unit price · × ${qty}`;
+        document.getElementById('priceUnit').textContent      = fmtNzd(unitPriceNzd);
+        unitRow.style.display = '';
+      } else {
+        unitRow.style.display = 'none';
+      }
+
+      document.getElementById('priceSubtotal').textContent = fmtNzd(subtotalNzd);
+
+      // Shipping row: show the courier label when one was chosen
+      const shipLbl = cart.shipping?.label;
+      document.getElementById('priceShippingLabel').textContent =
+        (shippingNzd > 0 && shipLbl) ? `Shipping · ${shipLbl}` : 'Shipping';
+      document.getElementById('priceShipping').textContent = shippingNzd > 0 ? fmtNzd(shippingNzd) : 'Free';
+
+      document.getElementById('priceTotal').textContent = fmtNzd(totalNzd);
+
+      // Pay button — disabled with a clear message when the total is $0
+      // (usually means the shop hasn't set a price on the chosen material).
+      const payBtn = document.getElementById('payBtn');
+      if (totalNzd > 0) {
+        payBtn.textContent = 'Pay ' + fmtNzd(totalNzd);
+        payBtn.disabled = false;
+      } else {
+        payBtn.textContent = 'No price set — contact the shop';
+        payBtn.disabled = true;
+        payBtn.style.opacity = '0.6';
+        payBtn.style.cursor = 'not-allowed';
+      }
+    }
+
+    // ── Stripe init (publishable key fetched from backend) ───
+    let stripe, elements, cardEl;
+    (async () => {
+      if (!hasData) return;
+      try {
+        const r = await fetch('/api/stripe/public-key?shop=' + encodeURIComponent(cart.shopSlug || 'mahi3d'));
+        const data = await r.json();
+        if (!r.ok || !data.publishable_key) {
+          document.getElementById('card-errors').textContent =
+            data.error || 'Card payments are not configured on this server yet.';
+          document.getElementById('payBtn').disabled = true;
+          return;
+        }
+        stripe = Stripe(data.publishable_key);
+        elements = stripe.elements();
+        cardEl = elements.create('card', {
+          style: {
+            base: { fontFamily: 'var(--font-ui)', fontSize: '14px', color: '#1A1A1A', '::placeholder': { color: '#9B9B9B' } },
+            invalid: { color: '#C0392B' },
+          },
+          hidePostalCode: true,
+        });
+        cardEl.mount('#card-element');
+
+        const wrapper = document.getElementById('card-element-wrapper');
+        cardEl.on('focus', () => { wrapper.style.borderColor = '#7A9E7E'; wrapper.style.boxShadow = '0 0 0 3px rgba(122,158,126,0.15)'; });
+        cardEl.on('blur',  () => { wrapper.style.borderColor = 'var(--border)'; wrapper.style.boxShadow = ''; });
+        cardEl.on('change', e => {
+          document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
+        });
+      } catch (e) {
+        document.getElementById('card-errors').textContent = 'Could not initialise card form: ' + e.message;
+        document.getElementById('payBtn').disabled = true;
+      }
+    })();
+
+    // ── Pay handler ─────────────────────────────────────────
+    document.getElementById('payBtn').addEventListener('click', async (e) => {
+      if (!hasData) return;
+      const btn = e.currentTarget;
+      const errEl = document.getElementById('card-errors');
+      errEl.textContent = '';
+
+      const name  = document.getElementById('cardName').value.trim();
+      const email = document.getElementById('customerEmail').value.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errEl.textContent = 'Please enter a valid email address.'; return;
+      }
+      if (!name) { errEl.textContent = 'Please enter the name on your card.'; return; }
+      if (!stripe || !cardEl) { errEl.textContent = 'Card form is still loading — please try again in a moment.'; return; }
+
+      btn.disabled = true;
+      const origLabel = btn.textContent;
+      btn.textContent = 'Processing…';
+
+      try {
+        const { paymentMethod, error: pmErr } = await stripe.createPaymentMethod({
+          type: 'card',
+          card: cardEl,
+          billing_details: { name, email },
+        });
+        if (pmErr) throw new Error(pmErr.message);
+
+        const res = await fetch('/api/stripe/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentMethodId: paymentMethod.id,
+            shopSlug:        cart.shopSlug || 'mahi3d',
+            amount:          totalNzd,             // total in NZD (backend converts to cents)
+            currency:        'nzd',
+            customerEmail:   email,
+            customerName:    name,
+            orderData: {
+              fileName:   cart.file?.name,
+              materialId: cart.materialId,
+              colour:     cart.colorName,
+              finish:     cart.finish,
+              quantity:   cart.quantity,
+              subtotal:   cart.itemsNzd,
+              shipping:   cart.shippingNzd,
+              tax:        0,
+            },
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Payment failed');
+
+        // If 3DS / SCA is required, the intent will come back in
+        // requires_action and we need to finish on the client.
+        if (data.status === 'requires_action' && data.clientSecret) {
+          const { error: confErr } = await stripe.confirmCardPayment(data.clientSecret);
+          if (confErr) throw new Error(confErr.message);
+        }
+
+        // Clear the cart and go to confirmation
+        try { localStorage.removeItem('cart'); } catch {}
+        window.location.href = 'confirmation.html?order=' + encodeURIComponent(data.orderId);
+      } catch (err) {
+        errEl.textContent = err.message || 'Payment failed. Please try again.';
+        btn.disabled = false;
+        btn.textContent = origLabel;
+      }
+    });
+
+      // ── Shop Pay ────────────────────────────────────────────
+      document.getElementById('shopPayBtn').addEventListener('click', async () => {
+        if (typeof ShopifyBuy === 'undefined') {
+          alert('Shop Pay is loading, please try again.');
+          return;
+        }
+        try {
+          const client   = ShopifyBuy.buildClient({
+            domain: 'REPLACE.myshopify.com',
+            storefrontAccessToken: 'REPLACE_TOKEN'
+          });
+          const checkout = await client.checkout.create();
+          window.location.href = checkout.webUrl;
+        } catch (e) {
+          alert('Shop Pay is not configured yet. Please use card payment.');
+        }
+      });
+
+    // ── Payment method toggle ───────────────────────────────
+    const toggleCard    = document.getElementById('toggleCard');
+    const toggleShopPay = document.getElementById('toggleShopPay');
+    const cardPanel     = document.getElementById('cardPanel');
+    const shopPayPanel  = document.getElementById('shopPayPanel');
+
+    function showPanel(which) {
+      if (which === 'card') {
+        cardPanel.style.display    = '';
+        shopPayPanel.style.display = 'none';
+        toggleCard.classList.add('active');
+        toggleCard.setAttribute('aria-pressed', 'true');
+        toggleShopPay.classList.remove('active');
+        toggleShopPay.setAttribute('aria-pressed', 'false');
+      } else {
+        cardPanel.style.display    = 'none';
+        shopPayPanel.style.display = '';
+        toggleShopPay.classList.add('active');
+        toggleShopPay.setAttribute('aria-pressed', 'true');
+        toggleCard.classList.remove('active');
+        toggleCard.setAttribute('aria-pressed', 'false');
+      }
+    }
+
+    toggleCard.addEventListener('click',    () => showPanel('card'));
+    toggleShopPay.addEventListener('click', () => showPanel('shoppay'));
+  </script>
+
+</body>
+</html>

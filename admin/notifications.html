@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Notifications — mahi3d Admin</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    /* Toggle row */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--stone);
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-row-info {}
+    .toggle-row-label { font-size: 14px; color: var(--ink); font-weight: 400; }
+    .toggle-row-desc  { font-size: 12px; color: var(--muted); margin-top: 2px; font-weight: 400; }
+
+    /* SMTP section */
+    .smtp-section {
+      padding-top: 24px;
+      margin-top: 8px;
+      border-top: 1px solid var(--stone);
+    }
+    .smtp-section .form-group { margin-bottom: 14px; }
+    .smtp-row { display: flex; gap: 10px; align-items: flex-end; }
+    .smtp-row .form-group { flex: 1; margin-bottom: 0; }
+
+    /* Template cards */
+    .template-save-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    /* "Recommended" / "Custom" tag next to template title */
+    .tpl-source-tag {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 999px;
+      margin-left: 10px;
+    }
+    .tpl-recommended {
+      background: rgba(74,112,80,0.08);
+      color: var(--sage-dark);
+      border: 1px solid rgba(74,112,80,0.22);
+    }
+    .tpl-custom {
+      background: rgba(160,90,0,0.07);
+      color: #a05a00;
+      border: 1px solid rgba(160,90,0,0.22);
+    }
+
+    /* ── Pill-based template editor ─────────────────────────── */
+    .pill-editor {
+      font-family: var(--font-ui, 'Inter', sans-serif);
+      font-size: 13.5px;
+      line-height: 1.7;
+      color: var(--ink);
+      padding: 12px 14px;
+      background: var(--white, #fff);
+      border: 1px solid var(--border, #e5e1da);
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 140ms;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .pill-editor:focus {
+      border-color: var(--sage-dark, #3a5a40);
+      box-shadow: 0 0 0 3px rgba(74,112,80,0.10);
+    }
+    .pill-editor.pill-editor-body { min-height: 180px; }
+    .pill-editor:empty::before {
+      content: attr(data-placeholder);
+      color: var(--muted, #7a7972);
+      pointer-events: none;
+    }
+
+    .var-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 9px 2px;
+      margin: 0 1px;
+      background: rgba(74,112,80,0.10);
+      color: var(--sage-dark, #3a5a40);
+      border: 1px solid rgba(74,112,80,0.28);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: default;
+      user-select: none;
+      white-space: nowrap;
+      vertical-align: 1px;
+    }
+    .var-pill::before {
+      content: '';
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--sage-dark, #3a5a40);
+      opacity: 0.55;
+    }
+    .var-pill[data-rich="true"] {
+      background: rgba(74,112,80,0.16);
+    }
+    .var-pill[data-rich="true"]::before {
+      background: var(--sage-dark, #3a5a40);
+      opacity: 0.9;
+      transform: rotate(45deg);
+      border-radius: 1px;
+    }
+
+    .editor-helptext {
+      font-size: 11px;
+      color: var(--muted, #7a7972);
+      margin: 6px 0 0;
+      line-height: 1.55;
+    }
+
+    /* Variable helper — collapsed by default */
+    .var-help {
+      margin-top: 6px;
+      margin-bottom: 8px;
+      background: var(--off-white, #f7f4ee);
+      border: 1px solid var(--border, #e5e1da);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+    .var-help summary {
+      cursor: pointer;
+      list-style: none;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--ink);
+      padding: 2px 0;
+      user-select: none;
+    }
+    .var-help summary::-webkit-details-marker { display: none; }
+    .var-help summary::before {
+      content: '';
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-right: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      transform: rotate(-45deg);
+      margin-right: 8px;
+      margin-bottom: 2px;
+      transition: transform 150ms;
+    }
+    .var-help[open] summary::before { transform: rotate(45deg); margin-bottom: -1px; }
+    .var-count {
+      display: inline-block;
+      background: rgba(74,112,80,0.10);
+      color: var(--sage-dark);
+      font-weight: 600;
+      font-size: 10.5px;
+      padding: 1px 7px;
+      border-radius: 999px;
+      margin-left: 4px;
+    }
+    .var-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .var-chip {
+      display: flex; flex-direction: column;
+      align-items: flex-start; gap: 4px;
+      text-align: left;
+      background: var(--white, #fff);
+      border: 1px solid var(--border, #e5e1da);
+      border-radius: 8px;
+      padding: 9px 11px;
+      cursor: pointer;
+      transition: border-color 120ms, background 120ms, transform 80ms;
+      font: inherit;
+      color: var(--ink);
+    }
+    .var-chip:hover { border-color: var(--sage-dark); background: rgba(74,112,80,0.04); }
+    .var-chip:active { transform: translateY(1px); }
+    .var-chip-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+    .var-chip-name::before {
+      content: '+';
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: rgba(74,112,80,0.12);
+      color: var(--sage-dark);
+      font-size: 13px;
+      line-height: 1;
+      font-weight: 600;
+    }
+    .var-chip .var-chip-desc {
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .var-rich-tag {
+      display: inline-block;
+      margin-left: 6px;
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(74,112,80,0.10);
+      color: var(--sage-dark);
+      vertical-align: 1px;
+      text-transform: none;
+    }
+    .var-help-note {
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.55;
+      margin: 14px 0 0;
+    }
+
+    /* Preview modal */
+    .preview-modal-body {
+      background: var(--off-white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      font-family: 'DM Mono', 'Courier New', monospace;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    .inline-success {
+      background: rgba(26,122,58,0.07);
+      border: 1px solid rgba(26,122,58,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #1a7a3a;
+      margin-top: 12px;
+      display: none;
+    }
+    .inline-error {
+      background: rgba(192,57,43,0.07);
+      border: 1px solid rgba(192,57,43,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #C0392B;
+      margin-top: 12px;
+      display: none;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-in { animation: fadeIn 300ms ease-out; }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">R</div>
+      <div class="sidebar-store-name" id="sidebarStoreName">Loading…</div>
+      <span class="sidebar-plan" id="sidebarPlan">—</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-link" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-section">Catalogue</div>
+      <a href="materials.html" class="sidebar-link" id="nav-materials">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Materials
+      </a>
+      <a href="pricing.html" class="sidebar-link" id="nav-pricing">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg>
+        Pricing
+      </a>
+      <div class="sidebar-section">Sales</div>
+      <a href="orders.html" class="sidebar-link" id="nav-orders">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Orders
+      </a>
+      <a href="customers.html" class="sidebar-link" id="nav-customers">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Customers
+      </a>
+      <div class="sidebar-section">Store</div>
+      <a href="shipping.html" class="sidebar-link" id="nav-shipping">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m0 0h3l3 3v4h-1M15 17H9m-4 0a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Shipping
+      </a>
+      <a href="payments.html" class="sidebar-link" id="nav-payments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Payments
+      </a>
+      <a href="notifications.html" class="sidebar-link active" id="nav-notifications">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </a>
+      <a href="settings.html" class="sidebar-link" id="nav-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="account.html" class="sidebar-link" id="nav-account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-signout" id="signoutBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div class="admin-title-block">
+        <h1 class="admin-title">Notifications</h1>
+        <p class="admin-subtitle">Configure email alerts and customer messages</p>
+      </div>
+      <div class="admin-actions">
+        <button class="btn btn-primary" id="saveBtn">Save</button>
+      </div>
+    </div>
+
+    <div class="admin-content fade-in">
+
+      <!-- Save feedback -->
+      <div class="inline-success" id="saveSuccess">Settings saved successfully.</div>
+      <div class="inline-error" id="saveError"></div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="alerts">Alerts</button>
+        <button class="tab-btn" data-tab="templates">Email Templates</button>
+      </div>
+
+      <!-- Tab: Alerts -->
+      <div class="tab-panel active" id="tab-alerts">
+        <div class="section-card">
+          <div class="section-card-header">
+            <span class="section-card-title">Admin alerts</span>
+          </div>
+          <div class="section-card-body">
+
+            <div class="toggle-row">
+              <div class="toggle-row-info">
+                <div class="toggle-row-label">New order received</div>
+                <div class="toggle-row-desc">Email when a customer places a new order</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="alert-new-order" checked>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+
+            <div class="toggle-row">
+              <div class="toggle-row-info">
+                <div class="toggle-row-label">Order payment failed</div>
+                <div class="toggle-row-desc">Email when a payment is declined or fails</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="alert-payment-failed" checked>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+
+            <div class="toggle-row">
+              <div class="toggle-row-info">
+                <div class="toggle-row-label">Low stock material</div>
+                <div class="toggle-row-desc">Email when a material's available quantity is low</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="alert-low-stock" checked>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+
+            <div class="toggle-row">
+              <div class="toggle-row-info">
+                <div class="toggle-row-label">New customer signup</div>
+                <div class="toggle-row-desc">Email when a new customer creates an account</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="alert-new-customer">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+
+            <!-- SMTP section -->
+            <div class="smtp-section">
+              <div class="smtp-row">
+                <div class="form-group">
+                  <label class="form-label" for="alertEmail">Email alerts sent to</label>
+                  <input type="email" class="form-input" id="alertEmail" placeholder="you@example.com">
+                </div>
+                <button class="btn btn-outline" id="testEmailBtn" style="flex-shrink:0;height:42px;">
+                  Send test email
+                </button>
+              </div>
+              <div class="inline-success" id="testSuccess">Test email sent.</div>
+              <div class="inline-error" id="testError"></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Email Templates -->
+      <div class="tab-panel" id="tab-templates">
+
+        <div id="templatesError" class="inline-error" style="margin-bottom:16px;"></div>
+        <div id="templatesLoading" style="padding:40px 0;text-align:center;color:var(--muted);font-size:13px;">Loading…</div>
+        <div id="templatesBody" style="display:none;"></div>
+
+        <!-- Simple thank-you sentence card -->
+        <div id="thanksCard" class="section-card" style="display:none;">
+          <div class="section-card-header">
+            <span class="section-card-title">Your personal touch</span>
+          </div>
+          <div class="section-card-body">
+            <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 14px;">
+              Add one short sentence — a thank-you note, a friendly reminder, anything you'd like
+              your customers to read. It appears on <strong>every</strong> email we send
+              (orders, password resets, shipping updates, etc.) so your voice stays consistent.
+              Leave it blank to skip it entirely.
+            </p>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label" for="thankYouInput">Thank-you sentence</label>
+              <input type="text" id="thankYouInput" class="form-input"
+                     maxlength="200"
+                     placeholder="e.g. Thanks for choosing us — we appreciate your business!"
+                     style="font-size:14px;">
+              <p style="font-size:11px;color:var(--muted);margin-top:6px;">
+                Up to 200 characters. <span id="thankYouCount">0</span> / 200.
+              </p>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <button class="btn btn-primary" id="saveThankYouBtn">Save</button>
+              <div class="inline-success" id="thankYouSuccess" style="margin-top:0;"></div>
+              <div class="inline-error"   id="thankYouError"   style="margin-top:0;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Read-only list: which emails get sent -->
+        <div id="emailsListCard" class="section-card" style="display:none;">
+          <div class="section-card-header">
+            <span class="section-card-title">Emails we send</span>
+          </div>
+          <div class="section-card-body">
+            <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 14px;">
+              All emails use the same clean format with your shop name, the customer's details,
+              and your thank-you sentence above. No editing needed — we look after the design.
+            </p>
+            <div id="emailsList"></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div><!-- /admin-content -->
+  </main>
+
+</div><!-- /admin-layout -->
+
+<!-- Preview Modal -->
+<div class="modal-overlay hidden" id="previewModal" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle">
+  <div class="modal" style="width:min(600px,100%)">
+    <h2 class="modal-title" id="previewModalTitle">Template preview</h2>
+    <p class="modal-body" id="previewModalSubject" style="margin-bottom:12px;font-size:13px;font-weight:400;color:var(--ink);"></p>
+    <div class="preview-modal-body" id="previewModalBody"></div>
+    <div class="modal-actions" style="margin-top:20px;">
+      <button class="btn btn-outline" id="closePreviewBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Auth guard ─────────────────────────────────────────────
+  (async () => {
+    try {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location.href = 'login.html'; return; }
+      const shop = await r.json();
+      document.getElementById('sidebarStoreName').textContent = shop.name;
+      document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
+      document.getElementById('alertEmail').value = shop.email || '';
+      if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
+    } catch { window.location.href = 'login.html'; }
+  })();
+
+  document.getElementById('signoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  // ── Tabs ───────────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const panelId = 'tab-' + btn.dataset.tab;
+      document.getElementById(panelId).classList.add('active');
+      if (btn.dataset.tab === 'templates' && !templatesLoaded) loadTemplates();
+    });
+  });
+
+  // ── Load notification settings ─────────────────────────────
+  (async () => {
+    try {
+      const r = await fetch('/api/settings');
+      if (!r.ok) return;
+      const s = await r.json();
+      if (s.notifications) {
+        const n = s.notifications;
+        if (n.new_order      != null) document.getElementById('alert-new-order').checked      = !!n.new_order;
+        if (n.payment_failed != null) document.getElementById('alert-payment-failed').checked = !!n.payment_failed;
+        if (n.low_stock      != null) document.getElementById('alert-low-stock').checked      = !!n.low_stock;
+        if (n.new_customer   != null) document.getElementById('alert-new-customer').checked   = !!n.new_customer;
+      }
+      if (s.alert_email) document.getElementById('alertEmail').value = s.alert_email;
+    } catch { /* ignore */ }
+  })();
+
+  // ── Save alerts ────────────────────────────────────────────
+  const saveBtn     = document.getElementById('saveBtn');
+  const saveSuccess = document.getElementById('saveSuccess');
+  const saveError   = document.getElementById('saveError');
+
+  saveBtn.addEventListener('click', async () => {
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    saveSuccess.style.display = 'none';
+    saveError.style.display   = 'none';
+
+    const payload = {
+      alert_email: document.getElementById('alertEmail').value.trim(),
+      notifications: {
+        new_order:      document.getElementById('alert-new-order').checked,
+        payment_failed: document.getElementById('alert-payment-failed').checked,
+        low_stock:      document.getElementById('alert-low-stock').checked,
+        new_customer:   document.getElementById('alert-new-customer').checked,
+      }
+    };
+
+    try {
+      const r = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Save failed.');
+      saveSuccess.style.display = 'block';
+      saveSuccess.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      setTimeout(() => { saveSuccess.style.display = 'none'; }, 4000);
+    } catch (err) {
+      saveError.textContent = err.message;
+      saveError.style.display = 'block';
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+    }
+  });
+
+  // ── Send test email ────────────────────────────────────────
+  const testEmailBtn = document.getElementById('testEmailBtn');
+  const testSuccess  = document.getElementById('testSuccess');
+  const testError    = document.getElementById('testError');
+
+  testEmailBtn.addEventListener('click', async () => {
+    if (testEmailBtn.disabled) return;
+    testEmailBtn.disabled = true;
+    testEmailBtn.textContent = 'Sending…';
+    testSuccess.style.display = 'none';
+    testError.style.display   = 'none';
+
+    try {
+      const r = await fetch('/api/settings/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: document.getElementById('alertEmail').value.trim() }),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Could not send test email.');
+      testSuccess.style.display = 'block';
+      setTimeout(() => { testSuccess.style.display = 'none'; }, 4000);
+    } catch (err) {
+      testError.textContent = err.message;
+      testError.style.display = 'block';
+    } finally {
+      testEmailBtn.disabled = false;
+      testEmailBtn.textContent = 'Send test email';
+    }
+  });
+
+  // ── Email Templates ────────────────────────────────────────
+  // ── Templates tab — radically simplified to one thank-you sentence ──
+  let templatesLoaded = false;
+  // Customer-visible email types only. Password-reset emails still get
+  // sent automatically by the platform — they're just not listed here so
+  // shop owners don't have to think about them.
+  const EMAIL_TYPES = [
+    { id: 'order_status',      label: 'Order updates',       desc: 'Sent when an order changes status (received, confirmed, in production, shipped, delivered, cancelled)' },
+    { id: 'customer_welcome',  label: 'Customer welcome',    desc: 'Sent when a customer first creates an account' },
+    { id: 'quote_saved',       label: 'Saved quote receipt', desc: 'Sent when a customer saves a quote for later' },
+    { id: 'test_notification', label: 'Test notification',   desc: 'Sent when you press "Send test email" on the Alerts tab' },
+  ];
+
+  async function loadTemplates() {
+    templatesLoaded = true;
+    const loadEl   = document.getElementById('templatesLoading');
+    const errEl    = document.getElementById('templatesError');
+    const thxCard  = document.getElementById('thanksCard');
+    const listCard = document.getElementById('emailsListCard');
+
+    try {
+      const r = await fetch('/api/settings');
+      if (!r.ok) throw new Error('Could not load settings.');
+      const s = await r.json();
+      const current = String(s.email_thank_you || '');
+
+      // Fill the input
+      const input = document.getElementById('thankYouInput');
+      input.value = current;
+      updateThankYouCount();
+
+      // Build the read-only emails list
+      const listEl = document.getElementById('emailsList');
+      listEl.innerHTML = EMAIL_TYPES.map(t => `
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-top:1px solid var(--stone);">
+          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sage-dark, #3a5a40);margin-top:7px;flex-shrink:0;"></span>
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--ink);">${escHtml(t.label)}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5;">${escHtml(t.desc)}</div>
+          </div>
+        </div>
+      `).join('').replace(/border-top:1px solid var\(--stone\);/, '');  // strip top border on first row
+
+      loadEl.style.display   = 'none';
+      thxCard.style.display  = '';
+      listCard.style.display = '';
+    } catch (err) {
+      loadEl.style.display   = 'none';
+      errEl.textContent      = err.message;
+      errEl.style.display    = 'block';
+    }
+  }
+
+  // Live character counter
+  function updateThankYouCount() {
+    const input = document.getElementById('thankYouInput');
+    const count = document.getElementById('thankYouCount');
+    if (input && count) count.textContent = String(input.value.length);
+  }
+  document.addEventListener('input', e => {
+    if (e.target && e.target.id === 'thankYouInput') updateThankYouCount();
+  });
+
+  // Save handler
+  document.addEventListener('click', async e => {
+    if (e.target.id !== 'saveThankYouBtn') return;
+    const btn       = e.target;
+    const input     = document.getElementById('thankYouInput');
+    const successEl = document.getElementById('thankYouSuccess');
+    const errorEl   = document.getElementById('thankYouError');
+    if (btn.disabled) return;
+
+    successEl.style.display = 'none';
+    errorEl.style.display   = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      const r = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email_thank_you: input.value.trim() }),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Save failed.');
+      successEl.textContent = input.value.trim()
+        ? 'Saved — your thank-you sentence is now on every email.'
+        : 'Saved — no thank-you sentence will be added.';
+      successEl.style.display = 'block';
+      setTimeout(() => { successEl.style.display = 'none'; }, 3500);
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save';
+    }
+  });
+
+  document.getElementById('closePreviewBtn').addEventListener('click', () => {
+    document.getElementById('previewModal').classList.add('hidden');
+  });
+  document.getElementById('previewModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+  });
+
+  // ── Utility ────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>

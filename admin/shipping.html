@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Shipping — mahi3d Admin</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    .options-table th, .options-table td { vertical-align: middle; }
+    .options-table .col-courier  { font-weight: 500; }
+    .options-table .col-service  { color: var(--muted); font-size: 12px; }
+    .options-table .col-price    { font-variant-numeric: tabular-nums; }
+    .options-table .col-speed    { color: var(--muted); font-size: 12px; }
+    .badge-recommended {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 999px;
+      background: rgba(122,158,126,0.10); color: var(--sage-dark);
+      border: 1px solid rgba(122,158,126,0.25);
+      font-size: 11px; font-weight: 500;
+    }
+    .empty-state {
+      text-align: center; padding: 40px 24px;
+      color: var(--muted); font-size: 13px; line-height: 1.6;
+    }
+    .empty-state strong { color: var(--ink); display: block; margin-bottom: 6px; font-weight: 600; }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">R</div>
+      <div class="sidebar-store-name" id="sidebarStoreName">Loading…</div>
+      <span class="sidebar-plan" id="sidebarPlan">—</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-link" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-section">Catalogue</div>
+      <a href="materials.html" class="sidebar-link" id="nav-materials">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Materials
+      </a>
+      <a href="pricing.html" class="sidebar-link" id="nav-pricing">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg>
+        Pricing
+      </a>
+      <div class="sidebar-section">Sales</div>
+      <a href="orders.html" class="sidebar-link" id="nav-orders">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Orders
+      </a>
+      <a href="customers.html" class="sidebar-link" id="nav-customers">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Customers
+      </a>
+      <div class="sidebar-section">Store</div>
+      <a href="shipping.html" class="sidebar-link active" id="nav-shipping">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m0 0h3l3 3v4h-1M15 17H9m-4 0a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Shipping
+      </a>
+      <a href="payments.html" class="sidebar-link" id="nav-payments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Payments
+      </a>
+      <a href="notifications.html" class="sidebar-link" id="nav-notifications">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </a>
+      <a href="settings.html" class="sidebar-link" id="nav-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="account.html" class="sidebar-link" id="nav-account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-signout" id="signoutBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <header class="admin-header">
+      <div class="admin-title-block">
+        <h1 class="admin-title">Shipping</h1>
+        <p class="admin-subtitle">Set the courier options customers see at checkout</p>
+      </div>
+      <div class="admin-actions">
+        <button class="btn btn-primary" id="saveAllBtn" style="height:40px;font-size:13px;padding:0 20px;">Save changes</button>
+      </div>
+    </header>
+
+    <div class="admin-content">
+
+      <!-- Shipping options card -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-card-title">Shipping options</h2>
+          <button class="btn btn-outline" id="addOptionBtn" style="height:36px;font-size:13px;padding:0 14px;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Add option
+          </button>
+        </div>
+        <div class="section-card-body" style="padding:0;">
+          <p style="font-size:13px;color:var(--muted);padding:14px 22px 0;line-height:1.6;">
+            Add any number of courier services with their own price and delivery speed.
+            Customers see every active option; the one marked <strong>Recommended</strong> is
+            pre-selected as the best price-and-speed match (if none is marked, the cheapest wins).
+          </p>
+          <div id="optionsTableWrapper">
+            <table class="data-table options-table" id="optionsTable">
+              <thead>
+                <tr>
+                  <th>Courier</th>
+                  <th>Service</th>
+                  <th>Price</th>
+                  <th>Speed</th>
+                  <th>Recommended</th>
+                  <th>Active</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="optionsBody">
+                <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="optionsError" style="display:none;padding:12px 24px;font-size:13px;color:#C0392B;"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Add/Edit option modal -->
+<div class="modal-overlay hidden" id="optionModal" role="dialog" aria-modal="true" aria-labelledby="optionModalTitle">
+  <div class="modal" style="width:min(560px,100%);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h2 class="modal-title" id="optionModalTitle">Add shipping option</h2>
+      <button class="table-action" id="closeOptionModal" aria-label="Close">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="form-grid-2" style="margin-bottom:16px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="optCourier">Courier</label>
+        <input type="text" class="form-input" id="optCourier" placeholder="e.g. NZ Post" autocomplete="off">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="optService">Service</label>
+        <input type="text" class="form-input" id="optService" placeholder="e.g. Standard" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="form-grid-2" style="margin-bottom:16px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="optPrice">Price ($ NZD)</label>
+        <input type="number" class="form-input" id="optPrice" min="0" step="0.01" placeholder="e.g. 7.50">
+        <span class="form-hint">Set to 0 for free shipping.</span>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Delivery time (business days)</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="number" class="form-input" id="optDaysMin" min="1" max="30" step="1" placeholder="Min" style="flex:1;">
+          <span style="color:var(--muted);font-size:13px;">to</span>
+          <input type="number" class="form-input" id="optDaysMax" min="1" max="30" step="1" placeholder="Max" style="flex:1;">
+        </div>
+        <span class="form-hint">Use the same number for both for an exact time.</span>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--ink);">
+        <label class="toggle">
+          <input type="checkbox" id="optRecommended">
+          <span class="toggle-track"></span>
+        </label>
+        Mark as recommended (best value)
+      </label>
+      <span class="form-hint" style="margin-left:54px;">Only one option can be recommended — selecting this clears it on the others.</span>
+    </div>
+
+    <div class="form-group" style="margin-bottom:20px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--ink);">
+        <label class="toggle">
+          <input type="checkbox" id="optActive" checked>
+          <span class="toggle-track"></span>
+        </label>
+        Active (shown to customers)
+      </label>
+    </div>
+
+    <div id="optionModalError" style="display:none;margin-bottom:12px;font-size:13px;color:#C0392B;"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cancelOptionBtn" style="height:38px;font-size:13px;padding:0 16px;">Cancel</button>
+      <button class="btn btn-primary" id="saveOptionBtn" style="height:38px;font-size:13px;padding:0 16px;">Save option</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Auth ──────────────────────────────────────────────────────
+  (async () => {
+    try {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location.href = 'login.html'; return; }
+      const shop = await r.json();
+      document.getElementById('sidebarStoreName').textContent = shop.name;
+      document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
+      if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
+    } catch { window.location.href = 'login.html'; }
+  })();
+  document.getElementById('signoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  // ── State ─────────────────────────────────────────────────────
+  let options = [];
+  let editingOptionIndex = null; // null = add, number = edit
+  let saving = false;
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtSpeed(min, max) {
+    if (!min && !max) return '—';
+    if (min === max) return min === 1 ? 'Next business day' : `${min} business days`;
+    return `${min}–${max} business days`;
+  }
+
+  function fmtPrice(p) {
+    return Number(p) === 0 ? '<span style="color:var(--sage-dark);font-weight:500;">Free</span>'
+                           : '$' + Number(p).toFixed(2);
+  }
+
+  // ── Load data ─────────────────────────────────────────────────
+  async function loadData() {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const s = await res.json();
+        // Backwards compat: old "zones" shape gets coerced into the new option shape
+        options = (s.shipping_zones || []).map(o => ({
+          courier:     o.courier     || o.name || '',
+          service:     o.service     || (o.rate_type === 'free' ? 'Free shipping' : 'Standard'),
+          price:       o.price != null ? Number(o.price) : Number(o.rate || 0),
+          days_min:    Number(o.days_min) || 2,
+          days_max:    Number(o.days_max) || 5,
+          recommended: !!o.recommended,
+          active:      o.active !== false,
+        }));
+        renderOptions();
+      } else {
+        showLoadError();
+      }
+    } catch {
+      showLoadError();
+    }
+  }
+
+  function showLoadError() {
+    document.getElementById('optionsError').textContent = 'Failed to load shipping settings.';
+    document.getElementById('optionsError').style.display = 'block';
+  }
+
+  // ── Render options table ──────────────────────────────────────
+  function renderOptions() {
+    const tbody = document.getElementById('optionsBody');
+    if (options.length === 0) {
+      tbody.innerHTML = `
+        <tr><td colspan="7">
+          <div class="empty-state">
+            <strong>No shipping options yet</strong>
+            Add at least one courier service so customers can check out.
+            You can mix multiple couriers and speeds — Standard, Express, Rural, etc.
+          </div>
+        </td></tr>`;
+      return;
+    }
+    tbody.innerHTML = options.map((o, i) => `
+      <tr>
+        <td class="col-courier">${escHtml(o.courier || '—')}</td>
+        <td class="col-service">${escHtml(o.service || '—')}</td>
+        <td class="col-price">${fmtPrice(o.price)}</td>
+        <td class="col-speed">${escHtml(fmtSpeed(o.days_min, o.days_max))}</td>
+        <td>${o.recommended ? '<span class="badge-recommended">★ Recommended</span>' : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
+        <td>
+          <label class="toggle">
+            <input type="checkbox" ${o.active ? 'checked' : ''} onchange="toggleActive(${i}, this.checked)">
+            <span class="toggle-track"></span>
+          </label>
+        </td>
+        <td style="white-space:nowrap;">
+          <button class="table-action" onclick="openEditOption(${i})">Edit</button>
+          <button class="table-action danger" onclick="deleteOption(${i})">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function toggleActive(index, value) {
+    options[index].active = value;
+  }
+
+  function deleteOption(index) {
+    if (!confirm(`Delete "${options[index].courier} ${options[index].service}"?`)) return;
+    options.splice(index, 1);
+    renderOptions();
+  }
+
+  // ── Modal ─────────────────────────────────────────────────────
+  function resetOptionModal() {
+    document.getElementById('optCourier').value = '';
+    document.getElementById('optService').value = '';
+    document.getElementById('optPrice').value   = '';
+    document.getElementById('optDaysMin').value = '';
+    document.getElementById('optDaysMax').value = '';
+    document.getElementById('optRecommended').checked = false;
+    document.getElementById('optActive').checked      = true;
+    document.getElementById('optionModalError').style.display = 'none';
+  }
+
+  function openAddOption() {
+    editingOptionIndex = null;
+    resetOptionModal();
+    document.getElementById('optionModalTitle').textContent = 'Add shipping option';
+    document.getElementById('optionModal').classList.remove('hidden');
+    document.getElementById('optCourier').focus();
+  }
+
+  function openEditOption(index) {
+    editingOptionIndex = index;
+    const o = options[index];
+    resetOptionModal();
+    document.getElementById('optionModalTitle').textContent = 'Edit shipping option';
+    document.getElementById('optCourier').value     = o.courier || '';
+    document.getElementById('optService').value     = o.service || '';
+    document.getElementById('optPrice').value       = o.price ?? '';
+    document.getElementById('optDaysMin').value     = o.days_min ?? '';
+    document.getElementById('optDaysMax').value     = o.days_max ?? '';
+    document.getElementById('optRecommended').checked = !!o.recommended;
+    document.getElementById('optActive').checked      = o.active !== false;
+    document.getElementById('optionModal').classList.remove('hidden');
+  }
+
+  function closeOptionModal() {
+    document.getElementById('optionModal').classList.add('hidden');
+    editingOptionIndex = null;
+  }
+
+  document.getElementById('addOptionBtn').addEventListener('click', openAddOption);
+  document.getElementById('closeOptionModal').addEventListener('click', closeOptionModal);
+  document.getElementById('cancelOptionBtn').addEventListener('click', closeOptionModal);
+  document.getElementById('optionModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('optionModal')) closeOptionModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeOptionModal();
+  });
+
+  // ── Save option ───────────────────────────────────────────────
+  document.getElementById('saveOptionBtn').addEventListener('click', () => {
+    const errEl = document.getElementById('optionModalError');
+    errEl.style.display = 'none';
+
+    const courier  = document.getElementById('optCourier').value.trim();
+    const service  = document.getElementById('optService').value.trim();
+    const price    = parseFloat(document.getElementById('optPrice').value);
+    let daysMin    = parseInt(document.getElementById('optDaysMin').value);
+    let daysMax    = parseInt(document.getElementById('optDaysMax').value);
+    const recommended = document.getElementById('optRecommended').checked;
+    const active   = document.getElementById('optActive').checked;
+
+    if (!courier) {
+      errEl.textContent = 'Courier name is required.';
+      errEl.style.display = 'block';
+      document.getElementById('optCourier').focus();
+      return;
+    }
+    if (!service) {
+      errEl.textContent = 'Service name is required (e.g. Standard, Express).';
+      errEl.style.display = 'block';
+      document.getElementById('optService').focus();
+      return;
+    }
+    if (isNaN(price) || price < 0) {
+      errEl.textContent = 'Price must be a number ≥ 0.';
+      errEl.style.display = 'block';
+      document.getElementById('optPrice').focus();
+      return;
+    }
+    if (isNaN(daysMin) || daysMin < 1) daysMin = 2;
+    if (isNaN(daysMax) || daysMax < daysMin) daysMax = daysMin;
+
+    const option = { courier, service, price, days_min: daysMin, days_max: daysMax, recommended, active };
+
+    // If marked recommended, clear it on every other option
+    if (recommended) {
+      options.forEach((o, i) => {
+        if (i !== editingOptionIndex) o.recommended = false;
+      });
+    }
+
+    if (editingOptionIndex === null) {
+      options.push(option);
+    } else {
+      options[editingOptionIndex] = option;
+    }
+
+    renderOptions();
+    closeOptionModal();
+  });
+
+  // ── Save all ──────────────────────────────────────────────────
+  document.getElementById('saveAllBtn').addEventListener('click', async () => {
+    if (saving) return;
+    saving = true;
+    const btn   = document.getElementById('saveAllBtn');
+    const errEl = document.getElementById('optionsError');
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    errEl.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shipping_zones: options }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      btn.textContent = 'Saved ✓';
+      setTimeout(() => { btn.textContent = 'Save changes'; }, 1800);
+    } catch {
+      errEl.textContent = 'Could not save. Please try again.';
+      errEl.style.display = 'block';
+      btn.textContent = 'Save changes';
+    } finally {
+      btn.disabled = false;
+      saving = false;
+    }
+  });
+
+  // ── Init ──────────────────────────────────────────────────────
+  loadData();
+</script>
+</body>
+</html>

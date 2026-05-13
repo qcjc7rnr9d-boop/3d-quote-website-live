@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mahi3d — Choose Material</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── Design Tokens ─────────────────────────────────────────── */
+    :root {
+      --font-brand:  'Space Grotesk', system-ui, sans-serif;
+      --font-ui:     'Inter', system-ui, sans-serif;
+      --white:      #FFFFFF;
+      --off-white:  #F7F6F3;
+      --sage:       #7A9E7E;
+      --sage-light: #B5CEB8;
+      --sage-dark:  #4A7050;
+      --stone:      #E8E4DC;
+      --ink:        #111317;
+      --muted:      #6B7280;
+      --border:     #D1D5DB;
+      --radius:     6px;
+      --shadow:     0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-ui);
+      font-weight: 400;
+      background: var(--off-white);
+      color: var(--ink);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Nav ───────────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      height: 60px;
+      background: var(--white);
+      border-bottom: 1px solid var(--stone);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+    }
+    .nav-wordmark {
+      font-family: var(--font-brand);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .nav-links { display: flex; gap: 36px; list-style: none; }
+    .nav-links a {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 200ms ease-out;
+    }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--ink);
+    }
+
+    /* ── Page layout ───────────────────────────────────────────── */
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 120px 48px 80px;
+    }
+
+    /* ── Page header ───────────────────────────────────────────── */
+    .page-header {
+      margin-bottom: 52px;
+    }
+    .page-header h2 {
+      font-family: var(--font-brand);
+      font-weight: 600;
+      font-size: clamp(32px, 4vw, 40px);
+      color: var(--ink);
+      line-height: 1.15;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+    .page-header p {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    /* ── Material grid ─────────────────────────────────────────── */
+    .material-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    /* ── Material card ─────────────────────────────────────────── */
+    .mat-card {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: border-color 200ms ease-out, background 200ms ease-out;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .mat-card:hover { border-color: var(--sage-light); }
+    .mat-card.selected {
+      border: 2px solid var(--sage-dark);
+      background: rgba(122, 158, 126, 0.04);
+    }
+    .mat-card:focus-visible {
+      outline: 2px solid var(--sage);
+      outline-offset: 2px;
+    }
+
+    .mat-card-body { padding: 24px 24px 0; flex: 1; }
+
+    .mat-name {
+      font-family: var(--font-brand);
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.1;
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+    .mat-desc {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 16px;
+    }
+
+    /* Colour swatches preview */
+    .mat-swatches {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .swatch-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.10);
+      flex-shrink: 0;
+    }
+
+    .mat-price {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--sage);
+      margin-bottom: 16px;
+    }
+
+    /* ── Learn more toggle ─────────────────────────────────────── */
+    .learn-more-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      padding: 0 24px 18px;
+      transition: color 200ms ease-out;
+    }
+    .learn-more-btn:hover { color: var(--ink); }
+
+    .learn-more-arrow {
+      display: inline-block;
+      transition: transform 200ms ease-out;
+      font-size: 11px;
+    }
+    .learn-more-btn.open .learn-more-arrow { transform: rotate(180deg); }
+
+    /* ── Drawer ────────────────────────────────────────────────── */
+    .drawer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 300ms ease-out;
+    }
+    .drawer.open { max-height: 360px; }
+
+    .drawer-inner {
+      padding: 18px 24px 22px;
+      border-top: 1px solid var(--stone);
+      background: var(--off-white);
+    }
+
+    /* Property bars */
+    .properties { margin-bottom: 16px; display: flex; flex-direction: column; gap: 9px; }
+
+    .prop-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .prop-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      width: 110px;
+      flex-shrink: 0;
+    }
+    .prop-track {
+      flex: 1;
+      height: 3px;
+      background: var(--stone);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .prop-fill {
+      height: 100%;
+      background: var(--sage);
+      border-radius: 2px;
+      transition: width 400ms ease-out;
+    }
+    .prop-value {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      line-height: 1.1;
+      min-width: 92px;
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: 0.01em;
+    }
+    .prop-value small {
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--muted);
+      margin-top: 1px;
+      letter-spacing: 0.02em;
+    }
+    .drawer-prop-legend {
+      font-size: 11px;
+      line-height: 1.5;
+      color: var(--muted);
+      margin: 4px 0 12px;
+      padding: 8px 10px;
+      background: rgba(0,0,0,0.02);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .drawer-prop-legend span { color: var(--ink); font-size: 11px; }
+
+    .drawer-section-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+      margin-top: 14px;
+    }
+    .drawer-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .drawer-list li {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      padding-left: 12px;
+      position: relative;
+    }
+    .drawer-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--sage-light);
+    }
+    .drawer-list.not-for li::before { background: var(--border); }
+    .drawer-learn-more {
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: var(--muted-2, var(--muted));
+      margin: 8px 0 4px;
+      white-space: pre-line;
+    }
+    .drawer-prod-time {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      background: rgba(90,138,94,0.06);
+      border: 1px solid rgba(90,138,94,0.18);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--ink);
+    }
+    .drawer-prod-time strong {
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    /* ── Colour & finish selector ──────────────────────────────── */
+    .selector-section {
+      display: none;
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 28px 24px;
+      margin-bottom: 40px;
+      animation: fadeUp 250ms ease-out;
+    }
+    .selector-section.visible { display: block; }
+
+    .selector-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .colour-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+
+    .colour-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      position: relative;
+      transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+      padding: 0;
+      background: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .colour-btn::before {
+      content: '';
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--c);
+      border: 1px solid rgba(0,0,0,0.12);
+      display: block;
+      transition: transform 200ms ease-out;
+    }
+    .colour-btn:hover { transform: scale(1.1); }
+    .colour-btn.selected {
+      border-color: var(--sage-dark);
+    }
+    .colour-btn.selected::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--sage-dark);
+      opacity: 0.8;
+    }
+
+    /* Finish toggle */
+    .finish-row { display: flex; gap: 8px; }
+
+    .finish-btn {
+      padding: 8px 22px;
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 200ms ease-out, border-color 200ms ease-out, color 200ms ease-out;
+    }
+    .finish-btn:hover { border-color: var(--sage-light); color: var(--ink); }
+    .finish-btn.selected {
+      background: var(--sage);
+      border-color: var(--sage);
+      color: var(--white);
+      font-weight: 500;
+    }
+
+    /* ── CTA row ───────────────────────────────────────────────── */
+    .cta-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 48px;
+      padding: 0 32px;
+      background: var(--sage);
+      color: var(--white);
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-ui);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 200ms ease-out, opacity 200ms ease-out;
+      letter-spacing: 0.01em;
+    }
+    .btn-primary:hover { background: var(--sage-dark); }
+    .btn-primary[aria-disabled="true"] {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .cta-note {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    /* ── Animations ────────────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .material-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 640px) {
+      nav { padding: 0 20px; }
+      .nav-links {
+        display: none;
+        position: fixed;
+        top: 60px; left: 0; right: 0;
+        background: var(--white);
+        border-bottom: 1px solid var(--stone);
+        flex-direction: column;
+        padding: 28px 24px;
+        gap: 24px;
+        z-index: 99;
+      }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+
+      .page { padding: 90px 20px 60px; }
+      .material-grid { grid-template-columns: 1fr; }
+      .cta-row { flex-direction: column; align-items: stretch; }
+      .cta-row .btn-primary { width: 100%; justify-content: center; }
+    }
+  </style>
+  <script src="assets/brand.js" defer></script>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav role="navigation" aria-label="Main navigation">
+  <a href="index.html" class="nav-wordmark">mahi3d</a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="materials.html">Materials</a></li>
+    <li><a href="quote.html">Quote</a></li>
+  </ul>
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <rect x="2" y="5"    width="18" height="1.5" rx="0.75" fill="currentColor"/>
+      <rect x="2" y="10.25" width="18" height="1.5" rx="0.75" fill="currentColor"/>
+      <rect x="2" y="15.5" width="18" height="1.5" rx="0.75" fill="currentColor"/>
+    </svg>
+  </button>
+</nav>
+
+<main>
+  <div class="page">
+
+    <header class="page-header">
+      <h2>Choose your material</h2>
+      <p>Not sure? Start with PLA — it's our most popular.</p>
+    </header>
+
+    <!-- Material cards injected by JS -->
+    <div class="material-grid" id="materialGrid" role="list" aria-label="Available materials"></div>
+
+    <!-- Colour & finish selector (shown after material is chosen) -->
+    <section class="selector-section" id="selectorSection" aria-label="Colour and finish options">
+      <div class="selector-label">Select a colour</div>
+      <div class="colour-row" id="colourRow" role="group" aria-label="Colour options"></div>
+
+      <div class="selector-label">Finish</div>
+      <div class="finish-row" role="group" aria-label="Finish options">
+        <button class="finish-btn selected" data-finish="standard" aria-pressed="true">Standard</button>
+        <button class="finish-btn" data-finish="fine" aria-pressed="false">Fine</button>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <div class="cta-row">
+      <span class="cta-note" id="ctaNote">Select a material above</span>
+      <a href="quote.html" class="btn-primary" id="ctaBtn" aria-disabled="true"
+         aria-label="Get your quote">
+        Get Your Quote
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  // ── Static fallback data (descriptions, properties for drawer UI) ──
+  const STATIC_DATA = {
+    'PLA':   { strength:62, flexibility:20, heat:30,
+               idealFor:['Prototypes & concept models','Display pieces & figurines','Everyday household objects'],
+               notFor:['Outdoor UV exposure','High-heat environments (>55 °C)'] },
+    'PETG':  { strength:75, flexibility:45, heat:55,
+               idealFor:['Mechanical & structural parts','Water-resistant containers','Brackets and clips'],
+               notFor:['Very high-precision detail','Temperatures above 80 °C'] },
+    'Nylon': { strength:90, flexibility:60, heat:75,
+               idealFor:['Gears, bearings & bushings','Snap-fit assemblies','Functional prototypes'],
+               notFor:['High-moisture environments','Fine decorative surface detail'] },
+    'TPU':   { strength:50, flexibility:95, heat:40,
+               idealFor:['Phone & device cases','Gaskets and seals','Grip handles & soft-touch parts'],
+               notFor:['Rigid structural components','Fine surface detail'] },
+    'ASA':   { strength:70, flexibility:35, heat:80,
+               idealFor:['Outdoor enclosures & housings','Automotive external parts','Garden fixtures'],
+               notFor:['Food contact applications','Ultra-fine miniature detail'] },
+  };
+
+  // MATERIALS will be populated from the API — not hardcoded
+  let MATERIALS = [];
+
+  // Drawer text is admin-editable, so escape it before inserting as HTML.
+  function escDrawer(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // Map a 0–100 perceptual value to a qualitative tier + approx real-world units.
+  // Keeps the bars meaningful without dumping technical jargon on the customer.
+  function propTier(prop, value) {
+    if (value == null) return { label: '', unit: '' };
+    const v = Number(value);
+    if (prop === 'strength') {
+      if (v < 30) return { label: 'Weak',       unit: '<20 MPa tensile' };
+      if (v < 55) return { label: 'Light-duty', unit: '20–40 MPa' };
+      if (v < 70) return { label: 'Standard',   unit: '40–60 MPa' };
+      if (v < 85) return { label: 'Strong',     unit: '60–80 MPa' };
+      return                 { label: 'Industrial', unit: '80+ MPa' };
+    }
+    if (prop === 'flexibility') {
+      if (v < 30) return { label: 'Rigid',         unit: '<10% elongation' };
+      if (v < 55) return { label: 'Stiff',         unit: '10–30%' };
+      if (v < 75) return { label: 'Bendy',         unit: '30–100%' };
+      return                 { label: 'Elastomeric',   unit: '100%+ stretch' };
+    }
+    if (prop === 'heat') {
+      if (v < 30) return { label: 'Low',       unit: 'up to ~55 °C' };
+      if (v < 55) return { label: 'Moderate',  unit: '55–75 °C' };
+      if (v < 75) return { label: 'Good',      unit: '75–100 °C' };
+      if (v < 90) return { label: 'High',      unit: '100–150 °C' };
+      return                 { label: 'Extreme',   unit: '150 °C+' };
+    }
+    return { label: '', unit: '' };
+  }
+
+  // ── State ───────────────────────────────────────────────────────
+  const SHOP_SLUG    = new URLSearchParams(window.location.search).get('shop') || 'mahi3d';
+  let selectedMat    = null;
+  let selectedColor  = 0;
+  let selectedFinish = 'standard';
+  const grid = document.getElementById('materialGrid');
+
+  // ── Build card HTML ─────────────────────────────────────────────
+  function buildCard(mat, idx) {
+    // Merge: API-configured properties win; STATIC_DATA is the fallback.
+    const p = mat.properties || {};
+    const fallback = STATIC_DATA[mat.name] || {};
+    const s = {
+      strength:    p.strength    ?? fallback.strength,
+      flexibility: p.flexibility ?? fallback.flexibility,
+      heat:        p.heat        ?? fallback.heat,
+      idealFor:    (p.ideal_for && p.ideal_for.length) ? p.ideal_for : (fallback.idealFor || []),
+      notFor:      (p.not_for   && p.not_for.length)   ? p.not_for   : (fallback.notFor   || []),
+      learnMore:   p.learn_more  || '',
+    };
+    const hasProps = s.strength != null;
+
+    const card = document.createElement('div');
+    card.className = 'mat-card';
+    card.setAttribute('role', 'listitem');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', `${mat.name} — ${mat.desc}`);
+    card.dataset.id = mat.id;
+
+    // Production time string (e.g. "2–3 business days" or "Next business day")
+    const minD = mat.prodDaysMin, maxD = mat.prodDaysMax;
+    let prodTimeHtml = '';
+    if (minD != null && maxD != null) {
+      let label;
+      if (minD === maxD) label = minD === 1 ? 'Next business day' : `${minD} business days`;
+      else               label = `${minD}–${maxD} business days`;
+      prodTimeHtml = `
+        <div class="drawer-prod-time">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"
+               style="vertical-align:-2px;margin-right:5px;opacity:0.7;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span><strong>Production time:</strong> ${label}</span>
+        </div>`;
+    }
+
+    const tS = propTier('strength',    s.strength);
+    const tF = propTier('flexibility', s.flexibility);
+    const tH = propTier('heat',        s.heat);
+
+    const propsHtml = hasProps ? `
+      <p class="drawer-prop-legend">
+        Bars compare materials on a 0–100 scale.
+        <span>Strength → tensile resistance (MPa)</span>
+        <span>Flexibility → bend without breaking (% elongation)</span>
+        <span>Heat → continuous-use temperature (°C)</span>
+      </p>
+      <div class="properties">
+        <div class="prop-row">
+          <span class="prop-label">Strength</span>
+          <div class="prop-track" role="progressbar" aria-valuenow="${s.strength}" aria-valuemin="0" aria-valuemax="100"
+               aria-valuetext="${tS.label}, approximately ${escDrawer(tS.unit)}">
+            <div class="prop-fill" style="width:${s.strength}%"></div>
+          </div>
+          <span class="prop-value">${escDrawer(tS.label)}<small>${escDrawer(tS.unit)}</small></span>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Flexibility</span>
+          <div class="prop-track" role="progressbar" aria-valuenow="${s.flexibility}" aria-valuemin="0" aria-valuemax="100"
+               aria-valuetext="${tF.label}, approximately ${escDrawer(tF.unit)}">
+            <div class="prop-fill" style="width:${s.flexibility}%"></div>
+          </div>
+          <span class="prop-value">${escDrawer(tF.label)}<small>${escDrawer(tF.unit)}</small></span>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Heat resistance</span>
+          <div class="prop-track" role="progressbar" aria-valuenow="${s.heat}" aria-valuemin="0" aria-valuemax="100"
+               aria-valuetext="${tH.label}, approximately ${escDrawer(tH.unit)}">
+            <div class="prop-fill" style="width:${s.heat}%"></div>
+          </div>
+          <span class="prop-value">${escDrawer(tH.label)}<small>${escDrawer(tH.unit)}</small></span>
+        </div>
+      </div>
+      <div class="drawer-section-label">Ideal for</div>
+      <ul class="drawer-list">${(s.idealFor||[]).map(i=>`<li>${escDrawer(i)}</li>`).join('')}</ul>
+      <div class="drawer-section-label">Not for</div>
+      <ul class="drawer-list not-for">${(s.notFor||[]).map(i=>`<li>${escDrawer(i)}</li>`).join('')}</ul>
+      ${s.learnMore ? `
+      <div class="drawer-section-label">More info</div>
+      <p class="drawer-learn-more">${escDrawer(s.learnMore).replace(/\n/g,'<br>')}</p>
+      ` : ''}
+    ` : '';
+
+    card.innerHTML = `
+      <div class="mat-card-body">
+        <div class="mat-name">${mat.name}</div>
+        <div class="mat-desc">${mat.desc || ''}</div>
+        <div class="mat-swatches" aria-hidden="true">
+          ${mat.colors.map(c => `<div class="swatch-dot" style="background:${c.hex}" title="${c.name}"></div>`).join('')}
+        </div>
+        <div class="mat-price">From $${mat.minCharge.toFixed(2)}</div>
+      </div>
+      ${(hasProps || prodTimeHtml || s.learnMore || mat.desc) ? `
+      <button class="learn-more-btn" data-idx="${idx}" aria-expanded="false"
+              aria-controls="drawer-${mat.id}">
+        Learn more <span class="learn-more-arrow" aria-hidden="true">▾</span>
+      </button>
+      <div class="drawer" id="drawer-${mat.id}" role="region" aria-label="${mat.name} details">
+        <div class="drawer-inner">${prodTimeHtml}${propsHtml}</div>
+      </div>` : ''}
+    `;
+
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.learn-more-btn')) return;
+      selectMaterial(mat.id);
+    });
+    card.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.learn-more-btn')) {
+        e.preventDefault();
+        selectMaterial(mat.id);
+      }
+    });
+    return card;
+  }
+
+  // ── Render all cards ────────────────────────────────────────────
+  function renderCards() {
+    grid.innerHTML = '';
+    MATERIALS.forEach((mat, idx) => grid.appendChild(buildCard(mat, idx)));
+
+    // Learn more toggle (event delegation)
+    grid.addEventListener('click', (e) => {
+      const btn = e.target.closest('.learn-more-btn');
+      if (!btn) return;
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.idx);
+      const mat = MATERIALS[idx];
+      const drawer = document.getElementById(`drawer-${mat.id}`);
+      const isOpen = drawer.classList.toggle('open');
+      btn.classList.toggle('open', isOpen);
+      btn.setAttribute('aria-expanded', isOpen);
+    });
+  }
+
+  // ── Select material ─────────────────────────────────────────────
+  function selectMaterial(id) {
+    selectedMat   = MATERIALS.find(m => m.id === id);
+    selectedColor = 0;
+    document.querySelectorAll('.mat-card').forEach(c =>
+      c.classList.toggle('selected', c.dataset.id == id)
+    );
+    renderColours(selectedMat);
+    document.getElementById('selectorSection').classList.add('visible');
+    document.getElementById('ctaBtn').removeAttribute('aria-disabled');
+    document.getElementById('ctaNote').textContent = `${selectedMat.name} selected`;
+    saveSelection();
+  }
+
+  // ── Render colour buttons ───────────────────────────────────────
+  function renderColours(mat) {
+    const row = document.getElementById('colourRow');
+    row.innerHTML = '';
+    mat.colors.forEach((c, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'colour-btn' + (i === selectedColor ? ' selected' : '');
+      btn.style.setProperty('--c', c.hex);
+      btn.setAttribute('aria-label', c.name);
+      btn.setAttribute('aria-pressed', i === selectedColor);
+      btn.addEventListener('click', () => {
+        selectedColor = i;
+        row.querySelectorAll('.colour-btn').forEach((b, j) => {
+          b.classList.toggle('selected', j === i);
+          b.setAttribute('aria-pressed', j === i);
+        });
+        saveSelection();
+      });
+      row.appendChild(btn);
+    });
+  }
+
+  // ── Finish toggle ───────────────────────────────────────────────
+  document.querySelectorAll('.finish-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedFinish = btn.dataset.finish;
+      document.querySelectorAll('.finish-btn').forEach(b => {
+        b.classList.toggle('selected', b.dataset.finish === selectedFinish);
+        b.setAttribute('aria-pressed', b.dataset.finish === selectedFinish);
+      });
+      saveSelection();
+    });
+  });
+
+  // ── Persist selection (includes live rates for quote page) ──────
+  function saveSelection() {
+    if (!selectedMat) return;
+    const color = selectedMat.colors[selectedColor];
+    localStorage.setItem('form_selection', JSON.stringify({
+      materialId:   selectedMat.id,
+      materialName: selectedMat.name,
+      ratePerCm3:   selectedMat.ratePerCm3,
+      minCharge:    selectedMat.minCharge,
+      colorIndex:   selectedColor,
+      colorHex:     color.hex,
+      colorName:    color.name,
+      finish:       selectedFinish,
+      shopSlug:     SHOP_SLUG,
+    }));
+  }
+
+  // ── Load materials + pricing from API ───────────────────────────
+  (async () => {
+    grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--muted);font-size:14px">Loading materials…</div>`;
+    try {
+      const [pricingRes, catalogRes] = await Promise.all([
+        fetch(`/api/customer/pricing?shop=${encodeURIComponent(SHOP_SLUG)}`),
+        fetch(`/api/customer/catalog?shop=${encodeURIComponent(SHOP_SLUG)}`),
+      ]);
+      if (!pricingRes.ok || !catalogRes.ok) throw new Error('Failed');
+
+      const pricing = await pricingRes.json();
+      const catalog = await catalogRes.json();
+
+      // Build MATERIALS from DB data, merged with pricing
+      const pricingMap = Object.fromEntries(pricing.materials.map(m => [m.id, m]));
+
+      MATERIALS = catalog.map(cat => {
+        const p     = pricingMap[cat.id] || {};
+        const props = cat.properties || {};
+        return {
+          id:         cat.id,
+          name:       cat.name,
+          desc:       cat.description_short || '',
+          ratePerCm3: p.base_price  || 0.18,
+          minCharge:  p.min_charge  || 4.50,
+          colors:     cat.colours   || [],
+          finishes:   cat.finishes  || [],
+          properties: props,        // { strength, flexibility, heat, ideal_for, not_for, learn_more }
+          prodDaysMin: cat.production_days_min ?? null,
+          prodDaysMax: cat.production_days_max ?? null,
+        };
+      }).filter(m => m.colors.length > 0 || true); // show all active
+
+      if (!MATERIALS.length) {
+        grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--muted);font-size:14px">No materials available.</div>`;
+        return;
+      }
+
+      renderCards();
+
+      // Restore previous selection if still valid
+      const saved = JSON.parse(localStorage.getItem('form_selection') || 'null');
+      if (saved) {
+        const match = MATERIALS.find(m => m.id == saved.materialId || m.name === saved.materialName);
+        if (match) {
+          selectMaterial(match.id);
+          selectedColor  = saved.colorIndex || 0;
+          selectedFinish = saved.finish || 'standard';
+          renderColours(selectedMat);
+          document.querySelectorAll('.finish-btn').forEach(b => {
+            b.classList.toggle('selected', b.dataset.finish === selectedFinish);
+            b.setAttribute('aria-pressed', b.dataset.finish === selectedFinish);
+          });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--muted);font-size:14px">Could not load materials. Please try again.</div>`;
+    }
+  })();
+
+  // ── Nav toggle ──────────────────────────────────────────────────
+  const navToggle = document.getElementById('navToggle');
+  const navLinks  = document.getElementById('navLinks');
+  navToggle.addEventListener('click', () => {
+    const open = navLinks.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', open);
+  });
+</script>
+</body>
+</html>

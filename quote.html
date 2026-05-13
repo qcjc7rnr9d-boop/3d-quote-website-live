@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Quote — mahi3d</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.stripe.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root {
+      --bg:           #f7f4ee;   /* warm off-white page background */
+      --white:        #ffffff;   /* card surface */
+      --ink:          #1c1c1a;   /* primary text */
+      --ink-soft:     #3a3a36;   /* secondary heading text */
+      --muted:        #7a7972;   /* helper text */
+      --muted-2:      #a2a09a;   /* tertiary text */
+      --border:       #e5e1da;   /* subtle hairlines */
+      --border-soft:  #efebe3;   /* very faint dividers */
+      --stone:        #f1ede5;   /* hover/track */
+
+      --sage:         #4a7050;   /* primary forest green */
+      --sage-dark:    #3a5a40;   /* darker green for hover */
+      --sage-soft:    #eaf0ea;   /* tinted background for accents */
+
+      --shadow-sm:    0 1px 2px rgba(28,28,26,0.03);
+      --shadow-md:    0 4px 16px rgba(28,28,26,0.04), 0 1px 3px rgba(28,28,26,0.03);
+
+      --radius-sm:    6px;
+      --radius:       12px;
+      --radius-lg:    16px;
+
+      --font-heading: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+      --font-ui:      'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* ── Reset / base ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-ui);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    button { font-family: inherit; cursor: pointer; }
+    input, select, button { font-family: inherit; color: inherit; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Top nav ───────────────────────────────────────────────── */
+    .nav {
+      position: sticky; top: 0; z-index: 30;
+      background: rgba(247,244,238,0.92);
+      backdrop-filter: saturate(140%) blur(8px);
+      -webkit-backdrop-filter: saturate(140%) blur(8px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1220px; margin: 0 auto;
+      padding: 14px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 24px;
+    }
+    .logo {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+    }
+    .logo-dot { color: var(--sage); }
+    .nav-links {
+      display: flex; align-items: center; gap: 28px;
+    }
+    .nav-link {
+      font-size: 13px; font-weight: 500;
+      color: var(--muted);
+      padding: 4px 0;
+      border-bottom: 1.5px solid transparent;
+      transition: color 140ms;
+    }
+    .nav-link:hover { color: var(--ink); }
+    .nav-link.active {
+      color: var(--ink);
+      border-bottom-color: var(--sage);
+    }
+    .nav-right {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .currency-select {
+      appearance: none; -webkit-appearance: none;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 26px 6px 10px;
+      font-size: 12px; font-weight: 500;
+      color: var(--ink);
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a7972' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      transition: border-color 140ms;
+    }
+    .currency-select:hover { border-color: var(--muted-2); }
+    .currency-select:focus { outline: none; border-color: var(--sage); }
+
+    /* ── Page layout ──────────────────────────────────────────── */
+    .page-head {
+      max-width: 1220px; margin: 0 auto;
+      padding: 36px 28px 12px;
+    }
+    .page-title {
+      font-family: var(--font-heading);
+      font-size: 28px; font-weight: 600;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      margin: 0 0 4px;
+    }
+    .page-sub {
+      font-size: 13px; color: var(--muted);
+    }
+
+    .main-grid {
+      max-width: 1220px; margin: 0 auto;
+      padding: 16px 28px 48px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 28px;
+      align-items: start;
+    }
+
+    /* ── Cards ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+    .card-pad { padding: 26px 28px; }
+    .card-title {
+      font-family: var(--font-heading);
+      font-size: 18px; font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      margin: 0;
+    }
+    .card-divider {
+      height: 1px; background: var(--border-soft);
+      border: 0; margin: 0;
+    }
+
+    /* ── 3D Viewer ─────────────────────────────────────────────── */
+    .viewer-wrap {
+      padding: 22px 28px 0;
+    }
+    .viewer {
+      position: relative;
+      width: 100%;
+      height: 360px;
+      background:
+        radial-gradient(ellipse at center, #fcfaf5 0%, #f3efe6 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .viewer canvas {
+      display: block;
+      width: 100%; height: 100%;
+      touch-action: none;
+    }
+    .viewer-loading {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      font-size: 12px;
+      pointer-events: none;
+    }
+    .viewer-empty {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      pointer-events: none;
+    }
+    .viewer-empty .ve-icon {
+      width: 36px; height: 36px;
+      opacity: 0.5;
+    }
+
+    /* Floating viewer controls */
+    .viewer-ctrls {
+      position: absolute;
+      bottom: 14px; right: 14px;
+      display: flex; gap: 4px;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px;
+      box-shadow: 0 1px 4px rgba(28,28,26,0.04);
+    }
+    .v-btn {
+      width: 30px; height: 30px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: transparent;
+      border: 0; border-radius: 999px;
+      color: var(--ink-soft);
+      transition: background 120ms, color 120ms;
+    }
+    .v-btn:hover { background: var(--stone); color: var(--ink); }
+    .v-btn svg { width: 14px; height: 14px; }
+
+    .viewer-hint {
+      position: absolute;
+      bottom: 16px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(28,28,26,0.78);
+      color: #fff;
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.02em;
+      padding: 5px 12px;
+      border-radius: 999px;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 600ms;
+    }
+    .viewer-hint.fade { opacity: 0; }
+
+    /* ── File row ──────────────────────────────────────────────── */
+    .file-row {
+      margin: 18px 28px 0;
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      background: var(--stone);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+    }
+    .file-icon {
+      width: 36px; height: 36px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--ink-soft);
+    }
+    .file-icon svg { width: 16px; height: 16px; }
+    .file-meta { flex: 1; min-width: 0; }
+    .file-name {
+      font-size: 13px; font-weight: 500;
+      color: var(--ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-size {
+      font-size: 11px; color: var(--muted);
+      margin-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+    .btn-link {
+      background: transparent; border: 0;
+      color: var(--sage);
+      font-size: 12px; font-weight: 500;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      transition: background 120ms;
+    }
+    .btn-link:hover { background: var(--sage-soft); }
+
+    /* ── Settings rows ─────────────────────────────────────────── */
+    .settings { margin-top: 22px; }
+    .settings-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 28px;
+      border-top: 1px solid var(--border-soft);
+    }
+    .settings-row:first-child { border-top: 1px solid var(--border-soft); }
+    .settings-label {
+      font-size: 13px; font-weight: 500;
+      color: var(--ink-soft);
+    }
+    .settings-value {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px;
+      color: var(--ink);
+    }
+    .swatch-dot {
+      width: 14px; height: 14px;
+      border-radius: 999px;
+      background: #ccc;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .select-clean {
+      appearance: none; -webkit-appearance: none;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 7px 30px 7px 12px;
+      font-size: 13px; font-weight: 500;
+      color: var(--ink);
+      cursor: pointer;
+      min-width: 150px;
+      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a7972' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      transition: border-color 140ms;
+    }
+    .select-clean:hover { border-color: var(--muted-2); }
+    .select-clean:focus { outline: none; border-color: var(--sage); }
+
+    /* Finish toggle (segmented control) */
+    .seg {
+      display: inline-flex;
+      background: var(--stone);
+      border-radius: 999px;
+      padding: 3px;
+    }
+    .seg-btn {
+      background: transparent; border: 0;
+      padding: 6px 14px;
+      font-size: 12px; font-weight: 500;
+      color: var(--muted);
+      border-radius: 999px;
+      transition: background 140ms, color 140ms;
+    }
+    .seg-btn.active {
+      background: var(--white);
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(28,28,26,0.06);
+    }
+
+    /* Quantity stepper */
+    .qty {
+      display: inline-flex; align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--white);
+      overflow: hidden;
+    }
+    .qty-btn {
+      width: 28px; height: 28px;
+      background: transparent; border: 0;
+      color: var(--ink-soft);
+      font-size: 14px; font-weight: 500;
+      transition: background 120ms;
+    }
+    .qty-btn:hover:not(:disabled) { background: var(--stone); }
+    .qty-btn:disabled { color: var(--muted-2); cursor: not-allowed; }
+    .qty-val {
+      width: 36px;
+      text-align: center;
+      font-size: 13px; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      border: 0; outline: 0; background: transparent;
+      padding: 0;
+    }
+    .qty-val::-webkit-outer-spin-button,
+    .qty-val::-webkit-inner-spin-button {
+      -webkit-appearance: none; margin: 0;
+    }
+
+    /* ── Quote Summary (right card) ────────────────────────────── */
+    .summary {
+      position: sticky;
+      top: 88px;
+    }
+    .summary-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+      padding: 22px 26px 0;
+    }
+    .summary-body { padding: 22px 26px 26px; }
+    .price-label {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 18px 0 4px;
+    }
+    .price-display {
+      font-family: var(--font-heading);
+      font-size: 44px; font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .price-symbol { font-size: 26px; vertical-align: top; margin-right: 2px; opacity: 0.7; line-height: 1.6; }
+    .price-decimal { font-size: 24px; opacity: 0.6; }
+    .price-helper {
+      font-size: 12px; color: var(--muted);
+      margin-top: 4px;
+    }
+    .prod-time-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 14px;
+      padding: 6px 10px;
+      background: var(--sage-soft);
+      border: 1px solid rgba(74,112,80,0.22);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--sage-dark);
+      line-height: 1;
+    }
+    .prod-time-pill svg { opacity: 0.7; flex-shrink: 0; }
+    .sum-divider {
+      height: 1px; background: var(--border-soft);
+      border: 0; margin: 18px 0;
+    }
+    .sum-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+    .sum-row .lbl { color: var(--muted); }
+    .sum-row .val { color: var(--ink); font-variant-numeric: tabular-nums; }
+    .sum-row.total {
+      margin-top: 6px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-soft);
+      font-weight: 600;
+    }
+    .sum-row.total .lbl { color: var(--ink); }
+    .sum-row.total .val { font-size: 15px; }
+
+    .shipping-block { margin-top: 6px; }
+    .shipping-block .sb-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .shipping-block .sb-lbl {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .shipping-block .sb-loading {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 10px 0;
+    }
+    .shipping-block .sb-empty {
+      background: var(--stone);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+    }
+    .shipping-block .sb-empty .sb-val {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .shipping-block .sb-help {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .shipping-block .sb-options {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .ship-opt {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: border-color 120ms, background 120ms;
+    }
+    .ship-opt:hover { border-color: var(--muted-2); }
+    .ship-opt.selected {
+      border-color: var(--sage);
+      background: rgba(74,112,80,0.04);
+    }
+    .ship-opt input[type="radio"] {
+      accent-color: var(--sage);
+      flex-shrink: 0;
+      margin: 0;
+    }
+    .ship-opt-body { flex: 1; min-width: 0; }
+    .ship-opt-name {
+      font-size: 13px; font-weight: 500; color: var(--ink);
+      line-height: 1.25;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .ship-opt-rec {
+      display: inline-block;
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(74,112,80,0.10);
+      color: var(--sage-dark);
+      border: 1px solid rgba(74,112,80,0.25);
+    }
+    .ship-opt-eta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .ship-opt-price {
+      font-size: 13px; font-weight: 600; color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .ship-opt-price.free { color: var(--sage-dark); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px;
+      width: 100%;
+      height: 46px;
+      padding: 0 18px;
+      font-size: 14px; font-weight: 600;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      transition: background 140ms, border-color 140ms, color 140ms, transform 80ms;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary {
+      background: var(--sage);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--sage-dark); }
+    .btn-primary:disabled {
+      background: var(--stone);
+      color: var(--muted-2);
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--ink);
+      margin-top: 10px;
+      height: 42px;
+      font-weight: 500;
+    }
+    .btn-secondary:hover { border-color: var(--ink); }
+
+    /* ── Trust strip ───────────────────────────────────────────── */
+    .trust {
+      max-width: 1220px; margin: 0 auto;
+      padding: 0 28px 56px;
+      display: flex; justify-content: center;
+      gap: 48px;
+      flex-wrap: wrap;
+    }
+    .trust-item {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .trust-item svg {
+      width: 14px; height: 14px;
+      color: var(--sage);
+      opacity: 0.85;
+    }
+
+    /* ── Toast (Save Quote feedback) ──────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: var(--ink);
+      color: #fff;
+      font-size: 13px; font-weight: 500;
+      padding: 10px 18px;
+      border-radius: 999px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms, transform 200ms;
+      z-index: 100;
+      box-shadow: 0 6px 20px rgba(28,28,26,0.20);
+    }
+    .toast.show {
+      opacity: 1; transform: translateX(-50%) translateY(0);
+    }
+
+    /* Hidden file input */
+    .hidden-input { display: none; }
+
+    /* ── Fullscreen ────────────────────────────────────────────── */
+    .viewer:fullscreen,
+    .viewer:-webkit-full-screen {
+      width: 100vw; height: 100vh;
+      border-radius: 0;
+      border: 0;
+    }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 980px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .summary { position: static; }
+    }
+    @media (max-width: 640px) {
+      .nav-inner { padding: 12px 18px; gap: 12px; }
+      .nav-links { gap: 18px; }
+      .page-head, .main-grid, .trust { padding-left: 18px; padding-right: 18px; }
+      .viewer-wrap { padding: 18px 18px 0; }
+      .file-row { margin: 14px 18px 0; }
+      .settings-row { padding: 14px 18px; }
+      .card-pad { padding: 22px 18px; }
+      .summary-head, .summary-body { padding-left: 20px; padding-right: 20px; }
+      .price-display { font-size: 36px; }
+    }
+  </style>
+  <script src="assets/brand.js" defer></script>
+</head>
+<body>
+
+<!-- ─── Top nav ────────────────────────────────────────────── -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="index.html">mahi<span class="logo-dot">3d</span></a>
+    <div class="nav-links">
+      <a href="materials.html" class="nav-link">Materials</a>
+      <a href="quote.html"     class="nav-link active">Quote</a>
+    </div>
+    <div class="nav-right">
+      <select class="currency-select" id="navCurrency" aria-label="Currency">
+        <option value="NZD">NZD</option>
+        <option value="AUD">AUD</option>
+        <option value="USD">USD</option>
+        <option value="GBP">GBP</option>
+        <option value="EUR">EUR</option>
+        <option value="CAD">CAD</option>
+      </select>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── Page heading ───────────────────────────────────────── -->
+<header class="page-head">
+  <h1 class="page-title">Your quote</h1>
+  <p class="page-sub">Review your model and order details before checkout.</p>
+</header>
+
+<!-- ─── Main grid ──────────────────────────────────────────── -->
+<main class="main-grid">
+
+  <!-- LEFT: Your Order -->
+  <section class="card order">
+    <div class="card-pad" style="padding-bottom:14px;">
+      <h2 class="card-title">Your Order</h2>
+    </div>
+
+    <!-- 3D Viewer -->
+    <div class="viewer-wrap">
+      <div class="viewer" id="viewer">
+        <canvas id="viewerCanvas" aria-label="3D model preview"></canvas>
+        <div class="viewer-empty" id="viewerEmpty" style="display:none;">
+          <svg class="ve-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+          <span>Upload an STL or OBJ file to preview</span>
+        </div>
+
+        <!-- Floating controls -->
+        <div class="viewer-ctrls" role="group" aria-label="Viewer controls">
+          <button class="v-btn" id="btnReset" type="button" title="Reset view" aria-label="Reset view">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="1 4 1 10 7 10"/>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+            </svg>
+          </button>
+          <button class="v-btn" id="btnFs" type="button" title="Fullscreen" aria-label="Toggle fullscreen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 9 3 3 9 3"/>
+              <polyline points="21 9 21 3 15 3"/>
+              <polyline points="3 15 3 21 9 21"/>
+              <polyline points="21 15 21 21 15 21"/>
+            </svg>
+          </button>
+          <button class="v-btn" id="btnZoomOut" type="button" title="Zoom out" aria-label="Zoom out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <line x1="8" y1="11" x2="14" y2="11"/>
+            </svg>
+          </button>
+          <button class="v-btn" id="btnZoomIn" type="button" title="Zoom in" aria-label="Zoom in">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <line x1="11" y1="8" x2="11" y2="14"/>
+              <line x1="8" y1="11" x2="14" y2="11"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Drag-to-rotate hint -->
+        <div class="viewer-hint" id="viewerHint">Drag to rotate</div>
+      </div>
+    </div>
+
+    <!-- File row -->
+    <div class="file-row">
+      <div class="file-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+          <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+      </div>
+      <div class="file-meta">
+        <div class="file-name" id="fileName">No file selected</div>
+        <div class="file-size" id="fileSize">—</div>
+      </div>
+      <button class="btn-link" id="replaceBtn" type="button">Replace file</button>
+      <input type="file" id="fileInput" class="hidden-input" accept=".stl,.obj">
+    </div>
+
+    <!-- Editable settings -->
+    <div class="settings" style="margin-bottom:6px;">
+      <div class="settings-row">
+        <label class="settings-label" for="materialSelect">Material</label>
+        <div class="settings-value">
+          <select class="select-clean" id="materialSelect" aria-label="Select material">
+            <option value="">Loading…</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label class="settings-label" for="colourSelect">Colour</label>
+        <div class="settings-value">
+          <span class="swatch-dot" id="colourSwatch"></span>
+          <select class="select-clean" id="colourSelect" aria-label="Select colour" style="min-width:140px;">
+            <option value="">—</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Finish</span>
+        <div class="settings-value">
+          <div class="seg" role="group" aria-label="Finish">
+            <button type="button" class="seg-btn active" data-finish="standard">Standard</button>
+            <button type="button" class="seg-btn" data-finish="fine">Fine</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-row" id="infillRow">
+        <label class="settings-label" for="infillSelect">Infill</label>
+        <div class="settings-value">
+          <select class="select-clean" id="infillSelect" aria-label="Select infill density">
+            <option value="">Loading…</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Quantity</span>
+        <div class="settings-value">
+          <div class="qty">
+            <button class="qty-btn" id="qtyMinus" type="button" aria-label="Decrease">−</button>
+            <input class="qty-val" id="qtyVal" type="number" value="1" min="1" max="999">
+            <button class="qty-btn" id="qtyPlus"  type="button" aria-label="Increase">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT: Quote Summary (sticky) -->
+  <aside class="card summary">
+    <div class="summary-head">
+      <h2 class="card-title">Quote Summary</h2>
+      <select class="currency-select" id="currencySelect" aria-label="Currency">
+        <option value="NZD">NZD</option>
+        <option value="AUD">AUD</option>
+        <option value="USD">USD</option>
+        <option value="GBP">GBP</option>
+        <option value="EUR">EUR</option>
+        <option value="CAD">CAD</option>
+      </select>
+    </div>
+
+    <div class="summary-body">
+      <div class="price-label">Estimated price</div>
+      <div class="price-display" aria-live="polite">
+        <span class="price-symbol" id="priceSymbol">$</span><span id="priceInt">—</span><span class="price-decimal" id="priceDec"></span>
+      </div>
+      <div class="price-helper" id="priceHelper">excluding shipping</div>
+
+      <!-- Production time of the selected material, surfaced right next to
+           the price so customers can weigh cost vs. turnaround at a glance.
+           Hidden when the material has no time configured in the admin. -->
+      <div class="prod-time-pill" id="prodTimePill" style="display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span id="prodTimeText">—</span>
+      </div>
+
+      <hr class="sum-divider">
+
+      <div class="sum-row">
+        <span class="lbl">Unit price</span>
+        <span class="val" id="sumUnit">—</span>
+      </div>
+      <div class="sum-row">
+        <span class="lbl">Quantity</span>
+        <span class="val" id="sumQty">× 1</span>
+      </div>
+      <div class="sum-row total">
+        <span class="lbl">Subtotal</span>
+        <span class="val" id="sumSubtotal">—</span>
+      </div>
+
+      <hr class="sum-divider">
+
+      <div class="shipping-block" id="shippingBlock">
+        <div class="sb-head">
+          <span class="sb-lbl">Shipping</span>
+        </div>
+        <!-- Loading state -->
+        <div id="shippingLoading" class="sb-loading">Loading options…</div>
+        <!-- Rendered option list (up to 3 best) -->
+        <div id="shippingOptions" class="sb-options" style="display:none;"></div>
+        <!-- Empty / fallback state -->
+        <div id="shippingEmpty" class="sb-empty" style="display:none;">
+          <span class="sb-val">Select at checkout</span>
+          <p class="sb-help">Shipping options will be confirmed at checkout.</p>
+        </div>
+      </div>
+
+      <hr class="sum-divider">
+
+      <button class="btn btn-primary" id="addToCartBtn" type="button">Add to Cart</button>
+      <button class="btn btn-secondary" id="saveQuoteBtn" type="button">Save Quote</button>
+    </div>
+  </aside>
+</main>
+
+<!-- ─── Trust strip ────────────────────────────────────────── -->
+<div class="trust">
+  <span class="trust-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Secure checkout
+  </span>
+  <span class="trust-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    Quality guaranteed
+  </span>
+  <span class="trust-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    Instant pricing
+  </span>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Import map so Three.js example modules can resolve their bare 'three' import. -->
+<script type="importmap">
+{
+  "imports": {
+    "three":           "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/":   "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+  // ──────────────────────────────────────────────────────────────
+  //  Quote page — interactive 3D preview + pricing
+  //  Pricing/state logic runs synchronously. The 3D viewer is
+  //  loaded asynchronously and wrapped in try/catch so that any
+  //  failure (network, CDN, etc.) leaves pricing fully functional.
+  // ──────────────────────────────────────────────────────────────
+
+  // ── Config ──────────────────────────────────────────────────
+  const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'mahi3d';
+
+  // Static currency conversion table (vs NZD = 1.000)
+  const RATES = {
+    NZD: { rate: 1.000, symbol: '$' },
+    AUD: { rate: 0.920, symbol: '$' },
+    USD: { rate: 0.610, symbol: '$' },
+    GBP: { rate: 0.490, symbol: '£' },
+    EUR: { rate: 0.570, symbol: '€' },
+    CAD: { rate: 0.840, symbol: '$' },
+  };
+
+  // ── State ───────────────────────────────────────────────────
+  let fileData         = null;   // { name, size, volumeCm3 }
+  let selectionData    = null;   // { materialId, materialName, ratePerCm3, minCharge, colorIndex, colorName, colorHex, finish, qty, currency }
+  let catalog          = [];     // material objects from API
+  let qty              = 1;
+  let currency         = 'NZD';
+  let shippingOptions  = [];     // top 3 returned from /api/shipping/rates
+  let selectedShipping = null;   // the option the customer is currently on
+
+  try { fileData      = JSON.parse(localStorage.getItem('form_file')      || 'null'); } catch {}
+  try { selectionData = JSON.parse(localStorage.getItem('form_selection') || 'null'); } catch {}
+  if (!selectionData) selectionData = {};
+  qty      = Math.max(1, parseInt(selectionData.qty)      || 1);
+  currency = RATES[selectionData.currency] ? selectionData.currency : 'NZD';
+
+  // ── Helpers ─────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+
+  function fmtBytes(n) {
+    if (!n) return '—';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(2) + ' MB';
+  }
+
+  function saveSelection() {
+    selectionData.qty      = qty;
+    selectionData.currency = currency;
+    try { localStorage.setItem('form_selection', JSON.stringify(selectionData)); } catch {}
+  }
+
+  function saveFileMeta() {
+    try { localStorage.setItem('form_file', JSON.stringify(fileData)); } catch {}
+  }
+
+  function showToast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1900);
+  }
+
+  // ── Pricing ─────────────────────────────────────────────────
+  // Infill tiers are configured by the shop owner (admin → Pricing).
+  // Each tier carries its own multiplier; we look up the active one.
+  let infillTiers = []; // populated from /api/customer/pricing
+
+  function infillMultiplier() {
+    const id = selectionData.infillTierId;
+    const tier = infillTiers.find(t => t.id === id) || infillTiers.find(t => t.is_default);
+    return tier ? Number(tier.multiplier) || 1.0 : 1.0;
+  }
+
+  function computeUnitNzd() {
+    if (!fileData || !selectionData) return 0;
+    const vol  = Number(fileData.volumeCm3) || 0;
+    const rate = Number(selectionData.ratePerCm3) || 0;
+    const min  = Number(selectionData.minCharge) || 0;
+    const finishMult = selectionData.finish === 'fine' ? 1.50 : 1.0;
+    const infillMult = infillMultiplier();
+    let p = vol * rate * finishMult * infillMult;
+    if (p < min) p = min;
+    return p;
+  }
+
+  function convert(nzd) {
+    const r = RATES[currency] || RATES.NZD;
+    return nzd * r.rate;
+  }
+
+  function fmtMoney(value) {
+    return value.toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function renderPrice() {
+    const sym         = RATES[currency].symbol;
+    const unitNzd     = computeUnitNzd();
+    const itemsNzd    = unitNzd * qty;
+    const shippingNzd = selectedShipping ? (Number(selectedShipping.price) || 0) : 0;
+    const totalNzd    = itemsNzd + shippingNzd;
+    const unitDisp    = convert(unitNzd);
+    const itemsDisp   = convert(itemsNzd);
+    const totalDisp   = convert(totalNzd);
+
+    $('priceSymbol').textContent = sym;
+    if (!unitNzd) {
+      $('priceInt').textContent = '—';
+      $('priceDec').textContent = '';
+      $('sumUnit').textContent     = '—';
+      $('sumSubtotal').textContent = '—';
+    } else {
+      // Big price = full total INCLUDING the currently-selected shipping option
+      const [intPart, decPart] = totalDisp.toFixed(2).split('.');
+      $('priceInt').textContent = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      $('priceDec').textContent = '.' + decPart;
+      $('sumUnit').textContent     = sym + fmtMoney(unitDisp);
+      $('sumSubtotal').textContent = sym + fmtMoney(itemsDisp); // pre-shipping items subtotal
+    }
+    $('sumQty').textContent = '× ' + qty;
+
+    // Helper line under the big price tracks shipping inclusion + qty:
+    //   no shipping options yet → "excluding shipping"
+    //   shipping included       → "incl. shipping" (and qty hint)
+    const helper = $('priceHelper');
+    if (helper) {
+      const qtyHint = qty > 1 ? `total for ${qty} units` : 'total';
+      helper.textContent = selectedShipping
+        ? `${qtyHint} · incl. shipping`
+        : `${qtyHint} · excluding shipping`;
+    }
+  }
+
+  // ── Catalog (materials) ─────────────────────────────────────
+  async function loadCatalog() {
+    try {
+      const [pRes, cRes] = await Promise.all([
+        fetch(`/api/customer/pricing?shop=${encodeURIComponent(SHOP_SLUG)}`),
+        fetch(`/api/customer/catalog?shop=${encodeURIComponent(SHOP_SLUG)}`),
+      ]);
+      const pricing = pRes.ok ? await pRes.json() : { materials: [] };
+      const cat     = cRes.ok ? await cRes.json() : [];
+      const pMap    = Object.fromEntries((pricing.materials || []).map(m => [m.id, m]));
+      catalog = cat.map(m => {
+        const pm = pMap[m.id] || {};
+        return {
+          ...m,
+          base_price: pm.base_price ?? 0.18,
+          min_charge: pm.min_charge ?? 4.50,
+        };
+      });
+      infillTiers = Array.isArray(pricing.infill_tiers) ? pricing.infill_tiers : [];
+      populateInfillSelect();
+      populateMaterialSelect();
+    } catch (e) {
+      console.warn('Catalog load failed', e);
+    }
+  }
+
+  function populateMaterialSelect() {
+    const sel = $('materialSelect');
+    if (!catalog.length) {
+      sel.innerHTML = '<option value="">No materials</option>';
+      return;
+    }
+    // Dropdown shows clean names only — production time is rendered in
+    // the dedicated row below the picker (driven by onMaterialChange).
+    sel.innerHTML = catalog.map(m =>
+      `<option value="${m.id}">${m.name}</option>`
+    ).join('');
+
+    const saved = catalog.find(m => m.id == selectionData.materialId || m.name === selectionData.materialName);
+    sel.value = String(saved ? saved.id : catalog[0].id);
+    onMaterialChange(false);
+  }
+
+  // Friendly production-time label for the detail row + summary
+  function fmtProdTime(min, max) {
+    if (min == null || max == null) return null;
+    const lo = Number(min), hi = Number(max);
+    if (Number.isNaN(lo) || Number.isNaN(hi)) return null;
+    if (lo === hi) return lo === 1 ? 'Next business day' : `${lo} business days`;
+    return `${lo}–${hi} business days`;
+  }
+
+  // Show/hide and populate the production-time pill that sits right
+  // below the Estimated price. Per-material — driven by whatever the
+  // shop admin saved on this material in admin/materials.html.
+  // Hidden when no production time is configured for that material.
+  function updateProdTimeUI(mat) {
+    const label = fmtProdTime(mat?.production_days_min, mat?.production_days_max);
+    const pill  = $('prodTimePill');
+    const text  = $('prodTimeText');
+    if (label) {
+      text.textContent = label;
+      pill.style.display = '';
+    } else {
+      pill.style.display = 'none';
+    }
+  }
+
+  function onMaterialChange(save = true) {
+    const id  = $('materialSelect').value;
+    const mat = catalog.find(m => String(m.id) === id);
+    if (!mat) { updateProdTimeUI(null); return; }
+    selectionData.materialId   = mat.id;
+    selectionData.materialName = mat.name;
+    selectionData.ratePerCm3   = mat.base_price;
+    selectionData.minCharge    = mat.min_charge;
+
+    // Update the production-time line on left + summary cards
+    updateProdTimeUI(mat);
+
+    // Repopulate colours
+    const cols  = Array.isArray(mat.colours) ? mat.colours : [];
+    const colSel = $('colourSelect');
+    colSel.innerHTML = cols.length
+      ? cols.map((c, i) => `<option value="${i}" data-hex="${c.hex}">${c.name}</option>`).join('')
+      : '<option value="">—</option>';
+
+    // Restore prior colour selection if valid
+    if (selectionData.colorName) {
+      const idx = cols.findIndex(c => c.name === selectionData.colorName);
+      if (idx >= 0) colSel.value = String(idx);
+    }
+    onColourChange(false);
+
+    // Finish toggle availability — show "Fine" only if the material lists it
+    const hasFine = (mat.finishes || []).some(f => String(f.name || f).toLowerCase().includes('fine'));
+    const fineBtn = document.querySelector('.seg-btn[data-finish="fine"]');
+    if (fineBtn) fineBtn.style.display = hasFine ? '' : 'none';
+    if (!hasFine && selectionData.finish === 'fine') selectionData.finish = 'standard';
+    updateFinishUI(selectionData.finish || 'standard');
+
+    if (save) saveSelection();
+    renderPrice();
+  }
+
+  function onColourChange(save = true) {
+    const colSel = $('colourSelect');
+    const opt    = colSel.options[colSel.selectedIndex];
+    const hex    = opt?.dataset.hex || '#cccccc';
+    const name   = opt?.text || '';
+    $('colourSwatch').style.background = hex;
+    selectionData.colorHex   = hex;
+    selectionData.colorName  = name;
+    selectionData.colorIndex = colSel.selectedIndex;
+    if (save) saveSelection();
+    if (typeof setViewerColor === 'function') setViewerColor(hex);
+  }
+
+  function updateFinishUI(value) {
+    document.querySelectorAll('.seg-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.finish === value)
+    );
+  }
+
+  // ── Events: material / colour / finish / qty ───────────────
+  $('materialSelect').addEventListener('change', () => onMaterialChange(true));
+  $('colourSelect').addEventListener('change',   () => onColourChange(true));
+  document.querySelectorAll('.seg-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      selectionData.finish = b.dataset.finish;
+      updateFinishUI(b.dataset.finish);
+      saveSelection();
+      renderPrice();
+    });
+  });
+
+  // Infill — populated from /api/customer/pricing once the catalog loads
+  const infillSelect = $('infillSelect');
+
+  function populateInfillSelect() {
+    const row = $('infillRow');
+    const active = infillTiers.filter(t => t.active !== false);
+
+    // If the shop has no infill tiers configured, hide the row entirely
+    // and apply a 1.0× multiplier (so pricing is unaffected).
+    if (!active.length) {
+      if (row) row.style.display = 'none';
+      selectionData.infillTierId = null;
+      return;
+    }
+    if (row) row.style.display = '';
+
+    infillSelect.innerHTML = active.map(t => {
+      const pct = (typeof t.percent === 'number') ? ` · ${t.percent}%` : '';
+      return `<option value="${t.id}">${t.label}${pct}</option>`;
+    }).join('');
+
+    // Restore prior choice if still valid, otherwise use the tier marked default
+    const savedId = selectionData.infillTierId;
+    const choose  = active.find(t => t.id === savedId)
+                 || active.find(t => t.is_default)
+                 || active[0];
+    infillSelect.value = choose.id;
+    selectionData.infillTierId = choose.id;
+  }
+
+  infillSelect.addEventListener('change', () => {
+    selectionData.infillTierId = infillSelect.value;
+    saveSelection();
+    renderPrice();
+  });
+
+  function setQty(n) {
+    qty = Math.max(1, Math.min(999, n | 0));
+    $('qtyVal').value = qty;
+    $('qtyMinus').disabled = qty <= 1;
+    saveSelection();
+    renderPrice();
+  }
+  $('qtyMinus').addEventListener('click', () => setQty(qty - 1));
+  $('qtyPlus').addEventListener('click',  () => setQty(qty + 1));
+  $('qtyVal').addEventListener('change', e => setQty(parseInt(e.target.value) || 1));
+  setQty(qty);
+
+  // ── Currency selectors (nav + summary kept in sync) ─────────
+  function setCurrency(c) {
+    if (!RATES[c]) return;
+    currency = c;
+    $('currencySelect').value = c;
+    $('navCurrency').value    = c;
+    saveSelection();
+    renderPrice();
+  }
+  $('currencySelect').value = currency;
+  $('navCurrency').value    = currency;
+  $('currencySelect').addEventListener('change', e => setCurrency(e.target.value));
+  $('navCurrency').addEventListener('change',    e => setCurrency(e.target.value));
+
+  // ── File row ────────────────────────────────────────────────
+  function applyFileMeta() {
+    $('fileName').textContent = fileData?.name || 'No file selected';
+    $('fileSize').textContent = fileData?.size ? fmtBytes(fileData.size) : '—';
+  }
+  applyFileMeta();
+
+  // ──────────────────────────────────────────────────────────────
+  //  3D Viewer (Three.js) — loaded dynamically so pricing is
+  //  isolated from any 3D-library load failure.
+  // ──────────────────────────────────────────────────────────────
+  (async () => {
+  let THREE, STLLoader, OBJLoader, OrbitControls;
+  try {
+    THREE         = await import('three');
+    ({ STLLoader }     = await import('three/addons/loaders/STLLoader.js'));
+    ({ OBJLoader }     = await import('three/addons/loaders/OBJLoader.js'));
+    ({ OrbitControls } = await import('three/addons/controls/OrbitControls.js'));
+  } catch (err) {
+    console.warn('3D viewer unavailable:', err);
+    const e = $('viewerEmpty');
+    if (e) {
+      e.style.display = 'flex';
+      const s = e.querySelector('span');
+      if (s) s.textContent = 'Preview unavailable in this browser';
+    }
+    return; // viewer disabled, but pricing keeps working
+  }
+
+  const viewerEl   = $('viewer');
+  const canvas     = $('viewerCanvas');
+  const emptyEl    = $('viewerEmpty');
+  const hintEl     = $('viewerHint');
+
+  const renderer   = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+  const scene  = new THREE.Scene();
+  scene.background = null;
+
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 5000);
+  camera.position.set(60, 50, 90);
+
+  // Soft lighting — emulates a daylight softbox
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const key = new THREE.DirectionalLight(0xffffff, 0.7);
+  key.position.set(60, 80, 50); scene.add(key);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.30);
+  fill.position.set(-70, 40, -50); scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xffffff, 0.18);
+  rim.position.set(0, -40, -60); scene.add(rim);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 8;
+  controls.maxDistance = 600;
+  controls.enablePan = true;
+  controls.target.set(0, 0, 0);
+
+  // Soft neutral material — colour can be tinted by selected colour
+  const modelMaterial = new THREE.MeshStandardMaterial({
+    color:     new THREE.Color(0xd9d4ca),
+    roughness: 0.78,
+    metalness: 0.06,
+    flatShading: false,
+  });
+
+  // setViewerColor — called from onColourChange
+  window.setViewerColor = function (hex) {
+    try { modelMaterial.color.set(hex); }
+    catch {}
+  };
+
+  let currentMesh = null;
+  let homeCamPos  = camera.position.clone();
+  let homeTarget  = controls.target.clone();
+
+  function disposeMesh() {
+    if (!currentMesh) return;
+    scene.remove(currentMesh);
+    currentMesh.geometry?.dispose?.();
+    currentMesh = null;
+  }
+
+  function fitTo(object) {
+    const box = new THREE.Box3().setFromObject(object);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+
+    object.position.sub(center); // center on origin
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov    = camera.fov * (Math.PI / 180);
+    const dist   = (maxDim / 2) / Math.tan(fov / 2) * 1.7;
+
+    camera.position.set(dist * 0.8, dist * 0.65, dist * 1.0);
+    controls.target.set(0, 0, 0);
+    camera.near = Math.max(0.1, dist / 200);
+    camera.far  = dist * 50;
+    camera.updateProjectionMatrix();
+    controls.update();
+
+    homeCamPos = camera.position.clone();
+    homeTarget = controls.target.clone();
+  }
+
+  function placePlaceholder() {
+    // Simple rounded box as a friendly placeholder
+    disposeMesh();
+    const g = new THREE.BoxGeometry(28, 28, 28, 1, 1, 1);
+    g.computeVertexNormals();
+    currentMesh = new THREE.Mesh(g, modelMaterial);
+    currentMesh.rotation.set(-0.35, 0.55, 0);
+    scene.add(currentMesh);
+    fitTo(currentMesh);
+  }
+
+  function placeGeometry(geom) {
+    disposeMesh();
+    geom.computeVertexNormals?.();
+    currentMesh = new THREE.Mesh(geom, modelMaterial);
+    scene.add(currentMesh);
+    fitTo(currentMesh);
+    emptyEl.style.display = 'none';
+  }
+
+  function placeGroup(group) {
+    disposeMesh();
+    // Re-apply the shared material so colour selection still works
+    group.traverse(child => {
+      if (child.isMesh) child.material = modelMaterial;
+    });
+    currentMesh = group;
+    scene.add(currentMesh);
+    fitTo(currentMesh);
+    emptyEl.style.display = 'none';
+  }
+
+  // STL/OBJ loading helpers
+  function loadFromBuffer(buffer, ext) {
+    try {
+      if (ext === 'obj') {
+        const loader = new OBJLoader();
+        const text   = new TextDecoder().decode(new Uint8Array(buffer));
+        const group  = loader.parse(text);
+        placeGroup(group);
+      } else {
+        const loader = new STLLoader();
+        const geom   = loader.parse(buffer);
+        placeGeometry(geom);
+      }
+    } catch (e) {
+      console.warn('Model parse failed', e);
+      placePlaceholder();
+    }
+  }
+
+  // ── IndexedDB for the uploaded file blob ───────────────────
+  function openIDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('mahi3d-quote', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('files');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror   = () => reject(req.error);
+    });
+  }
+  async function idbPut(key, val) {
+    const db = await openIDB();
+    return new Promise(res => {
+      const tx = db.transaction('files', 'readwrite');
+      tx.objectStore('files').put(val, key);
+      tx.oncomplete = () => res();
+    });
+  }
+  async function idbGet(key) {
+    const db = await openIDB();
+    return new Promise(res => {
+      const tx = db.transaction('files', 'readonly');
+      const r  = tx.objectStore('files').get(key);
+      r.onsuccess = () => res(r.result || null);
+      r.onerror   = () => res(null);
+    });
+  }
+
+  async function tryLoadStoredModel() {
+    try {
+      const entry = await idbGet('current_model');
+      if (entry && entry.buffer && entry.ext) {
+        loadFromBuffer(entry.buffer, entry.ext);
+        emptyEl.style.display = 'none';
+        return true;
+      }
+    } catch {}
+    return false;
+  }
+
+  // ── STL volume estimate (cm³, assumes mm units) ────────────
+  function stlVolumeCm3(buffer) {
+    const dv  = new DataView(buffer);
+    if (dv.byteLength < 84) return 0;
+    const tri = dv.getUint32(80, true);
+    let off   = 84;
+    let vol6  = 0; // 6 × volume
+    for (let i = 0; i < tri; i++) {
+      off += 12; // skip normal
+      const ax = dv.getFloat32(off,      true), ay = dv.getFloat32(off + 4,  true), az = dv.getFloat32(off + 8,  true);
+      const bx = dv.getFloat32(off + 12, true), by = dv.getFloat32(off + 16, true), bz = dv.getFloat32(off + 20, true);
+      const cx = dv.getFloat32(off + 24, true), cy = dv.getFloat32(off + 28, true), cz = dv.getFloat32(off + 32, true);
+      vol6 += ax * (by * cz - bz * cy)
+            + ay * (bz * cx - bx * cz)
+            + az * (bx * cy - by * cx);
+      off += 36 + 2; // 3 verts + uint16 attribute
+    }
+    return Math.abs(vol6) / 6 / 1000; // mm³ → cm³
+  }
+
+  // ── Resize handling ────────────────────────────────────────
+  function resize() {
+    const w = viewerEl.clientWidth;
+    const h = viewerEl.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  resize();
+  new ResizeObserver(resize).observe(viewerEl);
+
+  // ── Render loop ────────────────────────────────────────────
+  function tick() {
+    requestAnimationFrame(tick);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  tick();
+
+  // ── Floating controls ──────────────────────────────────────
+  $('btnReset').addEventListener('click', () => {
+    if (currentMesh) {
+      fitTo(currentMesh);
+    } else {
+      camera.position.copy(homeCamPos);
+      controls.target.copy(homeTarget);
+      controls.update();
+    }
+  });
+  $('btnZoomIn').addEventListener('click',  () => zoom(0.83));
+  $('btnZoomOut').addEventListener('click', () => zoom(1.20));
+  function zoom(factor) {
+    const dir = camera.position.clone().sub(controls.target);
+    const d   = dir.length() * factor;
+    const min = controls.minDistance, max = controls.maxDistance;
+    dir.setLength(Math.max(min, Math.min(max, d)));
+    camera.position.copy(controls.target).add(dir);
+  }
+  $('btnFs').addEventListener('click', () => {
+    if (!document.fullscreenElement) viewerEl.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+  document.addEventListener('fullscreenchange', resize);
+
+  // Hide the "Drag to rotate" hint after first interaction
+  let hintShown = true;
+  function hideHint() {
+    if (!hintShown) return;
+    hintShown = false;
+    hintEl.classList.add('fade');
+    setTimeout(() => { hintEl.style.display = 'none'; }, 700);
+  }
+  renderer.domElement.addEventListener('pointerdown', hideHint, { once: true });
+  renderer.domElement.addEventListener('wheel',       hideHint, { once: true });
+  setTimeout(hideHint, 5000);
+
+  // ── File replace flow ──────────────────────────────────────
+  $('replaceBtn').addEventListener('click', () => $('fileInput').click());
+  $('fileInput').addEventListener('change', async e => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (!['stl', 'obj'].includes(ext)) {
+      showToast('Only STL or OBJ files supported');
+      return;
+    }
+    const buf = await f.arrayBuffer();
+    loadFromBuffer(buf, ext);
+    // Persist
+    await idbPut('current_model', { buffer: buf, ext });
+    fileData = {
+      name:      f.name,
+      size:      f.size,
+      volumeCm3: ext === 'stl' ? stlVolumeCm3(buf) : (fileData?.volumeCm3 || 0),
+    };
+    saveFileMeta();
+    applyFileMeta();
+    renderPrice();
+  });
+
+  // ── Init the viewer ────────────────────────────────────────
+  const loaded = await tryLoadStoredModel();
+  if (!loaded) {
+    placePlaceholder();
+    // Show the "upload" empty hint only if there is genuinely no file metadata either
+    if (!fileData) emptyEl.style.display = 'flex';
+  }
+  // After viewer is ready, also reflect the saved colour onto the material
+  if (selectionData?.colorHex) setViewerColor(selectionData.colorHex);
+
+  })();   // ← close outer async viewer IIFE
+
+  // ── Add to Cart / Save Quote ───────────────────────────────
+  // "Add to Cart" → snapshot the full order into localStorage, then
+  // navigate to checkout.html which reads it and shows a Stripe form.
+  $('addToCartBtn').addEventListener('click', () => {
+    const btn = $('addToCartBtn');
+    if (!fileData) { showToast('Please upload a file first'); return; }
+    if (!selectionData?.materialId) { showToast('Please pick a material'); return; }
+
+    // Persist the full order snapshot for the checkout page
+    const unitNzd     = computeUnitNzd();
+    const itemsNzd    = unitNzd * qty;
+    const shippingNzd = selectedShipping ? (Number(selectedShipping.price) || 0) : 0;
+    const totalNzd    = itemsNzd + shippingNzd;
+
+    // Resolve a human label for the chosen infill tier so checkout doesn't
+    // need to re-fetch the pricing API.
+    const infillOpt = infillSelect.options[infillSelect.selectedIndex];
+    const infillLabel = infillOpt ? infillOpt.text : null;
+
+    // Material's pricing model (per_cm3 etc.) for the order record
+    const cart = {
+      shopSlug:        SHOP_SLUG,
+      file:            { ...fileData },
+      materialId:      selectionData.materialId,
+      materialName:    selectionData.materialName,
+      colorName:       selectionData.colorName  || '—',
+      colorHex:        selectionData.colorHex   || null,
+      finish:          selectionData.finish     || 'standard',
+      finishLabel:     (selectionData.finish === 'fine') ? 'Fine' : 'Standard',
+      infillTierId:    selectionData.infillTierId  || null,
+      infillLabel:     infillLabel,
+      quantity:        qty,
+      currency,
+      unitNzd, itemsNzd, shippingNzd, totalNzd,
+      shipping:        selectedShipping ? {
+        id:     selectedShipping.id,
+        label:  (selectedShipping.carrier && selectedShipping.service && selectedShipping.carrier !== selectedShipping.service)
+                  ? `${selectedShipping.carrier} · ${selectedShipping.service}`
+                  : (selectedShipping.carrier || selectedShipping.service || 'Standard'),
+        price:  Number(selectedShipping.price) || 0,
+      } : null,
+      savedAt:         new Date().toISOString(),
+    };
+    try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
+
+    btn.disabled = true;
+    btn.textContent = 'Going to checkout…';
+    // tiny delay so the click feedback registers
+    setTimeout(() => { location.href = 'checkout.html'; }, 150);
+  });
+
+  $('saveQuoteBtn').addEventListener('click', () => {
+    try {
+      const list = JSON.parse(localStorage.getItem('saved_quotes') || '[]');
+      list.unshift({
+        savedAt:    new Date().toISOString(),
+        file:       fileData ? { ...fileData } : null,
+        selection:  { ...selectionData },
+        priceNzd:   computeUnitNzd() * qty,
+      });
+      localStorage.setItem('saved_quotes', JSON.stringify(list.slice(0, 50)));
+      showToast('Quote saved');
+    } catch {
+      showToast('Could not save quote');
+    }
+  });
+
+  // ── Shipping options (top 3) ───────────────────────────────
+  // Loaded fresh on every page open, sorted server-side
+  // (recommended first → cheapest → fastest), capped here at 3.
+  // State vars (shippingOptions, selectedShipping) are declared at the
+  // top of the script alongside the other state so renderPrice() can
+  // reference them safely before this block runs.
+
+  function fmtEta(min, max) {
+    if (min == null || max == null) return '';
+    const lo = Number(min), hi = Number(max);
+    if (Number.isNaN(lo) || Number.isNaN(hi)) return '';
+    if (lo === hi) return lo === 1 ? 'Next business day' : `${lo} business days`;
+    return `${lo}–${hi} business days`;
+  }
+
+  function renderShipping(rates) {
+    const optsEl  = $('shippingOptions');
+    const loadEl  = $('shippingLoading');
+    const emptyEl = $('shippingEmpty');
+
+    loadEl.style.display  = 'none';
+    if (!rates || rates.length === 0) {
+      optsEl.style.display  = 'none';
+      emptyEl.style.display = '';
+      selectedShipping = null;
+      renderPrice();
+      return;
+    }
+
+    shippingOptions = rates.slice(0, 3);                      // max 3 best
+    emptyEl.style.display = 'none';
+    optsEl.style.display  = '';
+
+    // Restore prior selection if still in the top 3, otherwise pick #1
+    const savedId = selectionData?.shippingOptionId;
+    const found   = shippingOptions.find(o => o.id === savedId);
+    selectedShipping = found || shippingOptions[0];
+
+    optsEl.innerHTML = shippingOptions.map((r, i) => {
+      const free   = Number(r.price) === 0;
+      const sym    = (RATES[currency] || RATES.NZD).symbol;
+      const price  = free ? 'Free' : `${sym}${fmtMoney(convert(Number(r.price) || 0))}`;
+      const name   = (r.carrier && r.service && r.carrier !== r.service)
+        ? `${r.carrier} · ${r.service}`
+        : (r.carrier || r.service || 'Standard');
+      const eta    = fmtEta(r.est_days_min, r.est_days_max);
+      const isSel  = r.id === selectedShipping.id;
+      const recTag = r.recommended ? '<span class="ship-opt-rec">Recommended</span>' : '';
+      return `<label class="ship-opt${isSel ? ' selected' : ''}" data-idx="${i}">
+        <input type="radio" name="shippingOption" value="${i}" ${isSel ? 'checked' : ''}>
+        <div class="ship-opt-body">
+          <div class="ship-opt-name">${escapeHtml(name)}${recTag}</div>
+          ${eta ? `<div class="ship-opt-eta">${escapeHtml(eta)}</div>` : ''}
+        </div>
+        <span class="ship-opt-price${free ? ' free' : ''}">${escapeHtml(price)}</span>
+      </label>`;
+    }).join('');
+
+    // Selection handler
+    optsEl.querySelectorAll('input[type="radio"]').forEach((radio, i) => {
+      radio.addEventListener('change', () => {
+        selectedShipping = shippingOptions[i];
+        selectionData.shippingOptionId    = selectedShipping.id;
+        selectionData.shippingOptionLabel = selectedShipping.service || selectedShipping.carrier;
+        selectionData.shippingOptionPrice = selectedShipping.price;
+        saveSelection();
+        optsEl.querySelectorAll('.ship-opt').forEach((el, j) =>
+          el.classList.toggle('selected', j === i));
+        renderPrice();
+      });
+    });
+
+    // Persist initial selection so the rest of the price flow uses it
+    if (selectedShipping) {
+      selectionData.shippingOptionId    = selectedShipping.id;
+      selectionData.shippingOptionLabel = selectedShipping.service || selectedShipping.carrier;
+      selectionData.shippingOptionPrice = selectedShipping.price;
+      saveSelection();
+    }
+    renderPrice();
+  }
+
+  async function loadShippingOptions() {
+    try {
+      const r = await fetch('/api/shipping/rates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shopSlug: SHOP_SLUG }),
+      });
+      if (!r.ok) throw new Error('rates fetch failed');
+      const data = await r.json();
+      renderShipping(data.rates || []);
+    } catch {
+      renderShipping([]);   // fall back to "Select at checkout"
+    }
+  }
+
+  // Tiny HTML escaper for dynamic labels
+  function escapeHtml(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // ── Boot ────────────────────────────────────────────────────
+  loadCatalog().then(renderPrice);
+  loadShippingOptions();
+</script>
+</body>
+</html>

@@ -1,0 +1,636 @@
+/* ============================================================
+   Trennen — Design System
+   Typography foundation
+   ──────────────────────────────────────────────────────────
+   Font stack (load via <link> in each HTML page):
+   https://fonts.googleapis.com/css2?
+     family=Space+Grotesk:wght@400;600;700
+     &family=Inter:ital,wght@0,400;0,500;0,600;1,400
+     &family=IBM+Plex+Sans:wght@400;500;600
+     &display=swap
+
+   Usage guide
+   ───────────
+   Space Grotesk 600  →  .wordmark, logo, brand identity
+   Space Grotesk 700  →  hero headlines, major marketing headings
+   Space Grotesk 400  →  subheadings, large display text
+
+   Inter 400          →  body copy, descriptions, table cells
+   Inter 500          →  buttons, nav links, form labels
+   Inter 600          →  UI section titles, sidebar labels, emphasis
+
+   IBM Plex Sans 400  →  docs body, technical descriptions
+   IBM Plex Sans 500  →  docs headings, parameter names
+   IBM Plex Sans 600  →  API method names, spec titles
+   ============================================================ */
+
+/* ── Font family tokens ───────────────────────────────────── */
+:root {
+  --font-brand:  'Space Grotesk', system-ui, sans-serif;
+  --font-ui:     'Inter',         system-ui, sans-serif;
+  --font-code:   'IBM Plex Sans', 'SF Mono', 'Fira Code', monospace;
+
+  /* Weight tokens */
+  --fw-regular:    400;
+  --fw-medium:     500;
+  --fw-semibold:   600;
+  --fw-bold:       700;
+
+  /* ── Colour tokens ──────────────────────────────────────── */
+  --white:       #FFFFFF;
+  --off-white:   #F7F6F3;
+  --sage:        #7A9E7E;
+  --sage-light:  #B5CEB8;
+  --sage-dark:   #4A7050;
+  --stone:       #E8E4DC;
+  --ink:         #111317;
+  --ink-2:       #2D3139;
+  --muted:       #6B7280;
+  --muted-light: #9CA3AF;
+  --border:      #D1D5DB;
+  --border-light:#E5E7EB;
+  --radius:      6px;
+  --radius-sm:   4px;
+  --radius-lg:   10px;
+  --shadow:      0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:   0 12px 32px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.04);
+}
+
+/* ── Reset ────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Base body — Inter Regular ────────────────────────────── */
+body {
+  font-family: var(--font-ui);
+  font-weight: var(--fw-regular);
+  font-size: 15px;
+  background: var(--off-white);
+  color: var(--ink);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ============================================================
+   BRAND TYPOGRAPHY — Space Grotesk
+   ============================================================ */
+
+/* Wordmark / Logo — SemiBold + tracked */
+.wordmark,
+.brand-wordmark {
+  font-family: var(--font-brand);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* Hero & major marketing headings — Bold */
+h1,
+.hero-heading,
+.display-heading {
+  font-family: var(--font-brand);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+
+/* Section / sub-headings — SemiBold */
+h2,
+.section-heading {
+  font-family: var(--font-brand);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+/* Smaller brand headings — Regular */
+h3,
+.subsection-heading {
+  font-family: var(--font-brand);
+  font-weight: var(--fw-regular);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* Scale */
+.display-2xl { font-size: clamp(3rem, 7vw, 5.5rem); }
+.display-xl  { font-size: clamp(2.25rem, 5vw, 3.75rem); }
+.display-lg  { font-size: clamp(1.75rem, 3.5vw, 2.75rem); }
+.display-md  { font-size: clamp(1.375rem, 2.5vw, 2rem); }
+.display-sm  { font-size: 1.25rem; }
+
+/* ============================================================
+   UI TYPOGRAPHY — Inter
+   ============================================================ */
+
+/* Section titles / UI emphasis — SemiBold */
+.ui-title,
+.section-title {
+  font-family: var(--font-ui);
+  font-weight: var(--fw-semibold);
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+
+/* Overline labels */
+.overline {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Body text */
+p,
+.body-text {
+  font-family: var(--font-ui);
+  font-weight: var(--fw-regular);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+
+.body-sm {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.body-xs {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+/* ============================================================
+   DEVELOPER / DOCS TYPOGRAPHY — IBM Plex Sans
+   ============================================================ */
+
+.docs-body,
+.dev-portal,
+.api-docs,
+.tech-spec {
+  font-family: var(--font-code);
+  font-weight: var(--fw-regular);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+.docs-heading {
+  font-family: var(--font-code);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.docs-label,
+.param-name {
+  font-family: var(--font-code);
+  font-weight: var(--fw-medium);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.api-method {
+  font-family: var(--font-code);
+  font-weight: var(--fw-semibold);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+code,
+kbd,
+pre {
+  font-family: 'IBM Plex Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  height: 60px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 48px;
+}
+
+/* Logo wordmark — Space Grotesk SemiBold tracked */
+.nav-wordmark {
+  font-family: var(--font-brand);
+  font-weight: var(--fw-semibold);
+  font-size: 17px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* Nav links — Inter Medium */
+.nav-links { display: flex; gap: 36px; list-style: none; }
+.nav-links a {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+.nav-links a:hover,
+.nav-links a.active { color: var(--ink); }
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--ink);
+}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+
+/* ============================================================
+   BUTTONS — Inter Medium
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-weight: var(--fw-medium);
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease,
+    opacity 150ms ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--white);
+  height: 40px;
+  padding: 0 20px;
+}
+.btn-primary:hover {
+  background: var(--ink-2);
+  box-shadow: 0 2px 8px rgba(17,19,23,0.18);
+}
+.btn-primary.lg   { height: 48px; padding: 0 32px; font-size: 15px; }
+.btn-primary.full { width: 100%; }
+
+.btn-outline {
+  background: var(--white);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  height: 40px;
+  padding: 0 20px;
+}
+.btn-outline:hover { border-color: var(--ink); }
+
+.btn-ghost {
+  background: none;
+  color: var(--muted);
+  height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.btn-ghost:hover { color: var(--ink); background: var(--off-white); }
+
+.btn-sage {
+  background: var(--sage);
+  color: var(--white);
+  height: 40px;
+  padding: 0 20px;
+}
+.btn-sage:hover { background: var(--sage-dark); }
+
+.btn-danger {
+  background: #DC2626;
+  color: var(--white);
+  height: 40px;
+  padding: 0 20px;
+}
+.btn-danger:hover { background: #B91C1C; }
+
+.btn:disabled,
+.btn[aria-disabled="true"] { opacity: 0.38; pointer-events: none; }
+
+/* ============================================================
+   FORMS — Inter
+   ============================================================ */
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+
+/* Labels — Inter SemiBold */
+.form-label {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+  letter-spacing: 0.03em;
+}
+
+/* Inputs — Inter Regular */
+.form-input,
+.form-select,
+.form-textarea {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: var(--fw-regular);
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 13px;
+  width: 100%;
+  height: 40px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(17,19,23,0.08);
+}
+.form-textarea { resize: vertical; min-height: 100px; height: auto; line-height: 1.55; }
+.form-input::placeholder,
+.form-textarea::placeholder { color: var(--muted-light); }
+.form-hint  { font-family: var(--font-ui); font-size: 12px; color: var(--muted); line-height: 1.5; }
+.form-error { font-family: var(--font-ui); font-size: 12px; color: #DC2626; }
+
+/* Grid helpers */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.form-grid-2 .col-span-2 { grid-column: span 2; }
+
+/* ============================================================
+   BADGES — Inter SemiBold
+   ============================================================ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  line-height: 1.6;
+}
+.badge-sage  { color: var(--sage-dark);  background: rgba(74,112,80,0.08);  border: 1px solid rgba(74,112,80,0.20); }
+.badge-stone { color: var(--muted);      background: var(--off-white);       border: 1px solid var(--border-light); }
+.badge-green { color: #166534;           background: rgba(22,101,52,0.08);   border: 1px solid rgba(22,101,52,0.20); }
+.badge-amber { color: #92400E;           background: rgba(146,64,14,0.08);   border: 1px solid rgba(146,64,14,0.20); }
+.badge-red   { color: #991B1B;           background: rgba(153,27,27,0.08);   border: 1px solid rgba(153,27,27,0.20); }
+.badge-blue  { color: #1E40AF;           background: rgba(30,64,175,0.08);   border: 1px solid rgba(30,64,175,0.20); }
+
+/* ============================================================
+   TOGGLE SWITCH
+   ============================================================ */
+
+.toggle { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0;
+  background: var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 200ms ease;
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 3px; top: 3px;
+  width: 14px; height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 200ms ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.toggle input:checked + .toggle-track { background: var(--ink); }
+.toggle input:checked + .toggle-track::after { transform: translateX(16px); }
+.toggle input:focus-visible + .toggle-track { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ============================================================
+   RADIO CARDS
+   ============================================================ */
+
+.radio-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+  background: var(--white);
+  font-family: var(--font-ui);
+}
+.radio-card:hover { border-color: var(--ink-2); }
+.radio-card.selected {
+  border-color: var(--ink);
+  background: rgba(17,19,23,0.03);
+}
+
+/* ============================================================
+   CHIP
+   ============================================================ */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 14px;
+  background: var(--white);
+}
+
+/* ============================================================
+   TAG INPUT (colours / finishes)
+   ============================================================ */
+
+.tag-input-wrapper {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px 10px; min-height: 40px; background: var(--white);
+  cursor: text; transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.tag-input-wrapper:focus-within {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(17,19,23,0.08);
+}
+.tag-item {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--off-white); border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm); padding: 2px 8px;
+  font-family: var(--font-ui); font-size: 12px; color: var(--ink);
+}
+.tag-remove {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 14px; line-height: 1; padding: 0;
+  transition: color 150ms;
+}
+.tag-remove:hover { color: #DC2626; }
+.tag-text-input {
+  border: none; outline: none; background: transparent;
+  font-family: var(--font-ui); font-size: 13px; color: var(--ink);
+  min-width: 140px; flex: 1;
+}
+
+/* ============================================================
+   QUANTITY CONTROL
+   ============================================================ */
+
+.qty-control {
+  display: inline-flex; align-items: center;
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+.qty-btn {
+  width: 36px; height: 36px;
+  background: var(--white); border: none; cursor: pointer;
+  font-size: 18px; font-weight: var(--fw-regular);
+  color: var(--muted); font-family: var(--font-ui);
+  transition: background 150ms, color 150ms;
+  display: flex; align-items: center; justify-content: center;
+}
+.qty-btn:hover { background: var(--off-white); color: var(--ink); }
+.qty-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.qty-divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+.qty-display {
+  width: 44px; text-align: center;
+  font-family: var(--font-ui); font-size: 14px; font-weight: var(--fw-medium);
+  color: var(--ink); background: var(--white); border: none; outline: none; padding: 0 4px;
+}
+.qty-display::-webkit-inner-spin-button,
+.qty-display::-webkit-outer-spin-button { -webkit-appearance: none; }
+.qty-display[type=number] { -moz-appearance: textfield; }
+
+/* ============================================================
+   DIVIDER
+   ============================================================ */
+
+hr.divider { border: none; border-top: 1px solid var(--border-light); margin: 24px 0; }
+
+/* ============================================================
+   AUTH PAGES
+   ============================================================ */
+
+.auth-page {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: var(--off-white); padding: 40px 20px;
+}
+.auth-wordmark {
+  font-family: var(--font-brand);
+  font-weight: var(--fw-semibold);
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink); text-decoration: none;
+  margin-bottom: 36px; display: block; text-align: center;
+}
+.auth-card {
+  background: var(--white); border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
+  padding: 36px 32px;
+}
+.auth-title {
+  font-family: var(--font-brand);
+  font-weight: var(--fw-semibold);
+  font-size: 22px; letter-spacing: -0.01em;
+  color: var(--ink); margin-bottom: 6px;
+}
+.auth-subtitle { font-family: var(--font-ui); font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+.auth-error {
+  background: rgba(153,27,27,0.06);
+  border: 1px solid rgba(153,27,27,0.20);
+  border-radius: var(--radius);
+  padding: 10px 14px; font-family: var(--font-ui); font-size: 13px; color: #991B1B;
+  margin-bottom: 16px; display: none;
+}
+.auth-error.visible { display: block; }
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 280ms ease-out; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-in { animation: fadeIn 220ms ease-out; }
+
+/* ============================================================
+   RESPONSIVE — mobile nav
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .nav { padding: 0 20px; }
+  .nav-links {
+    display: none; position: fixed;
+    top: 60px; left: 0; right: 0;
+    background: var(--white); border-bottom: 1px solid var(--border-light);
+    flex-direction: column; padding: 28px 24px; gap: 24px; z-index: 99;
+  }
+  .nav-links.open { display: flex; }
+  .nav-links.open a { font-size: 15px; }
+  .nav-toggle { display: block; }
+
+  .form-grid-2 { grid-template-columns: 1fr; }
+  .form-grid-2 .col-span-2 { grid-column: span 1; }
+}

@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Pricing — mahi3d Admin</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    /* Badge variants */
+    .badge-warm { color: #a05a00; background: rgba(160,90,0,0.10); border: 1px solid rgba(160,90,0,0.25); }
+
+    /* Inline error / success */
+    .inline-error {
+      background: rgba(192,57,43,0.07);
+      border: 1px solid rgba(192,57,43,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px; font-size: 13px; color: #C0392B;
+      margin-bottom: 16px; display: none;
+    }
+    .inline-error.visible { display: block; }
+
+    .inline-success {
+      background: rgba(26,122,58,0.07);
+      border: 1px solid rgba(26,122,58,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px; font-size: 13px; color: #1a7a3a;
+      margin-bottom: 16px; display: none;
+    }
+    .inline-success.visible { display: block; }
+
+    /* Toggle inline in form-grid */
+    .form-group-toggle { display: flex; flex-direction: column; gap: 6px; }
+    .form-group-toggle .form-label { display: block; }
+    .toggle-row { display: flex; align-items: center; gap: 10px; height: 40px; }
+    .toggle-row .toggle-label { font-size: 13px; color: var(--muted); }
+
+    /* Surcharge inline row */
+    .surcharge-add-row {
+      display: none; /* shown when adding */
+      grid-template-columns: 1fr 120px 100px 60px auto;
+      gap: 8px; align-items: end;
+      padding: 12px 16px;
+      background: var(--off-white);
+      border-bottom: 1px solid var(--stone);
+    }
+    .surcharge-add-row.visible { display: grid; }
+
+    /* Discount type radio cards layout */
+    .discount-type-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 4px; }
+
+    /* Modal */
+    .modal-error {
+      background: rgba(192,57,43,0.07);
+      border: 1px solid rgba(192,57,43,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px; font-size: 13px; color: #C0392B;
+      margin-bottom: 16px; display: none;
+    }
+    .modal-error.visible { display: block; }
+
+    /* Generate code btn */
+    .input-with-action { position: relative; }
+    .input-with-action .form-input { padding-right: 90px; }
+    .generate-btn {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      font-size: 11px; font-weight: 500; color: var(--sage-dark);
+      padding: 3px 6px; border-radius: var(--radius);
+      transition: background 150ms;
+    }
+    .generate-btn:hover { background: rgba(122,158,126,0.12); }
+
+    /* Discount code badge */
+    .code-mono { font-family: monospace; font-size: 13px; letter-spacing: 0.03em; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-in { animation: fadeIn 300ms ease-out; }
+
+    /* Mode radio cards — make the whole label clickable */
+    label.radio-card[id^="mode"] { user-select: none; }
+    label.radio-card[id^="mode"] input[type="radio"] { accent-color: var(--sage); }
+
+    /* Material rates table */
+    .mat-rate-row {
+      display: grid;
+      border-bottom: 1px solid var(--stone);
+    }
+    .mat-rate-row:last-child { border-bottom: none; }
+    .mat-rate-main {
+      display: grid;
+      grid-template-columns: 1fr 140px 110px 110px 90px;
+      gap: 0;
+      align-items: center;
+      padding: 10px 14px;
+      min-height: 52px;
+    }
+    .mat-rate-cell { padding: 0 8px; }
+    .mat-rate-cell:first-child { padding-left: 0; }
+    .mat-rate-cell input.form-input,
+    .mat-rate-cell select.form-input { height: 34px; font-size: 12px; padding: 0 8px; }
+    .mat-rate-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+    .mat-rate-cat  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .tiers-toggle {
+      background: none; border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 11px; color: var(--sage-dark); cursor: pointer; padding: 4px 10px;
+      transition: background 150ms;
+    }
+    .tiers-toggle:hover { background: rgba(122,158,126,0.08); }
+    .tiers-panel {
+      display: none; padding: 12px 14px 16px;
+      background: var(--off-white); border-top: 1px solid var(--stone);
+    }
+    .tiers-panel.open { display: block; }
+    .tier-row-inline {
+      display: grid; grid-template-columns: 1fr 1fr auto;
+      gap: 8px; align-items: center; margin-bottom: 8px;
+    }
+    .tier-row-inline input.form-input { height: 32px; font-size: 12px; }
+    .tier-remove-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 16px; padding: 2px 6px;
+      border-radius: var(--radius); transition: color 150ms;
+    }
+    .tier-remove-btn:hover { color: #C0392B; }
+    .mat-rates-header {
+      display: grid;
+      grid-template-columns: 1fr 140px 110px 110px 90px;
+      gap: 0;
+      padding: 8px 14px;
+      background: var(--off-white);
+      border-bottom: 1px solid var(--stone);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted);
+    }
+    .mat-rates-header span { padding: 0 8px; }
+    .mat-rates-header span:first-child { padding-left: 0; }
+
+    /* Time-mode override table (simpler — 3 cols) */
+    .time-rate-row {
+      display: grid;
+      grid-template-columns: 1fr 110px 110px;
+      gap: 0; align-items: center;
+      padding: 10px 14px; min-height: 52px;
+      border-bottom: 1px solid var(--stone);
+    }
+    .time-rate-row:last-child { border-bottom: none; }
+    .time-rate-row input.form-input { height: 34px; font-size: 12px; padding: 0 8px; }
+    .time-rates-header {
+      display: grid; grid-template-columns: 1fr 110px 110px;
+      gap: 0; padding: 8px 14px;
+      background: var(--off-white); border-bottom: 1px solid var(--stone);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted);
+    }
+    .time-rates-header span { padding: 0 8px; }
+    .time-rates-header span:first-child { padding-left: 0; }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">R</div>
+      <div class="sidebar-store-name" id="sidebarStoreName">Loading…</div>
+      <span class="sidebar-plan" id="sidebarPlan">—</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-link" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-section">Catalogue</div>
+      <a href="materials.html" class="sidebar-link" id="nav-materials">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Materials
+      </a>
+      <a href="pricing.html" class="sidebar-link active" id="nav-pricing">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg>
+        Pricing
+      </a>
+      <div class="sidebar-section">Sales</div>
+      <a href="orders.html" class="sidebar-link" id="nav-orders">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Orders
+      </a>
+      <a href="customers.html" class="sidebar-link" id="nav-customers">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Customers
+      </a>
+      <div class="sidebar-section">Store</div>
+      <a href="shipping.html" class="sidebar-link" id="nav-shipping">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m0 0h3l3 3v4h-1M15 17H9m-4 0a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Shipping
+      </a>
+      <a href="payments.html" class="sidebar-link" id="nav-payments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Payments
+      </a>
+      <a href="notifications.html" class="sidebar-link" id="nav-notifications">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </a>
+      <a href="settings.html" class="sidebar-link" id="nav-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="account.html" class="sidebar-link" id="nav-account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-signout" id="signoutBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div class="admin-title-block">
+        <h1 class="admin-title">Pricing</h1>
+        <p class="admin-subtitle">Configure your pricing rules and discounts</p>
+      </div>
+      <div class="admin-actions">
+        <button class="btn btn-primary" id="savePricingBtn">Save changes</button>
+      </div>
+    </div>
+
+    <div class="admin-content fade-in">
+
+      <div id="pageError" class="inline-error"></div>
+      <div id="pageSuccess" class="inline-success"></div>
+
+      <!-- Tabs -->
+      <div class="tabs" role="tablist">
+        <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-rules" id="tabRulesBtn">Pricing Rules</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-discounts" id="tabDiscountsBtn">Discount Codes</button>
+      </div>
+
+      <!-- Tab 1: Pricing Rules -->
+      <div class="tab-panel active" id="tab-rules" role="tabpanel" aria-labelledby="tabRulesBtn">
+
+        <!-- Calculation Method -->
+        <div class="section-card" style="margin-bottom:24px">
+          <div class="section-card-header">
+            <span class="section-card-title">Calculation method</span>
+          </div>
+          <div class="section-card-body">
+
+            <!-- Mode selector -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px">
+
+              <label class="radio-card" id="modeMaterialCard" style="align-items:flex-start;gap:12px;cursor:pointer">
+                <input type="radio" name="pricing_mode" value="material" checked style="margin-top:3px;flex-shrink:0">
+                <span>
+                  <div style="font-weight:500;font-size:13px">Material volume / weight</div>
+                  <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
+                    Price per cm³ or gram set on each material. Best when your costs scale mainly with filament usage.
+                  </div>
+                </span>
+              </label>
+
+              <label class="radio-card" id="modeTimeCard" style="align-items:flex-start;gap:12px;cursor:pointer">
+                <input type="radio" name="pricing_mode" value="time_material" style="margin-top:3px;flex-shrink:0">
+                <span>
+                  <div style="font-weight:500;font-size:13px">Print time + material</div>
+                  <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
+                    Hourly machine rate plus a per-gram material cost. Best for large prints where machine time dominates.
+                  </div>
+                </span>
+              </label>
+
+            </div>
+
+            <!-- Scheme A settings -->
+            <div id="schemeMatSettings">
+              <div style="border-top:1px solid var(--stone);padding-top:20px">
+
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                  <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">Material options</div>
+                  <div class="form-group-toggle" style="flex-direction:row;align-items:center;gap:10px;margin:0">
+                    <label class="form-label" style="margin:0;white-space:nowrap">Include support material</label>
+                    <label class="toggle">
+                      <input type="checkbox" id="pMatIncludeSupport" checked>
+                      <span class="toggle-track"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Per-material rates table -->
+                <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
+                  Set the rate and minimum charge for each material. Volume tiers let you offer lower prices for larger prints.
+                </div>
+                <div id="matRatesBody" style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+                  <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Loading materials…</div>
+                </div>
+
+                <!-- Material mode quote preview -->
+                <div style="background:rgba(122,158,126,0.06);border:1px solid var(--sage-light);border-radius:var(--radius);padding:16px 18px;margin-top:20px">
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--sage-dark);margin-bottom:12px">Quote preview — what the customer sees</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="form-group" style="margin:0">
+                      <label class="form-label" style="font-size:11px">STL volume (cm³)</label>
+                      <input class="form-input" type="number" id="matPreviewVol" min="0" step="1" placeholder="50" style="height:34px;font-size:13px">
+                    </div>
+                    <div class="form-group" style="margin:0">
+                      <label class="form-label" style="font-size:11px">Material</label>
+                      <select class="form-input" id="matPreviewMat" style="height:34px;font-size:13px">
+                        <option value="">— select —</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="margin:0">
+                      <label class="form-label" style="font-size:11px">Finish</label>
+                      <select class="form-input" id="matPreviewFinish" style="height:34px;font-size:13px">
+                        <option value="standard">Standard</option>
+                        <option value="fine">Fine (+40%)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style="font-size:13px;color:var(--muted)" id="matPreviewResult">Enter a volume and select a material to preview.</div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Scheme B settings -->
+            <div id="schemeTimeSettings" style="display:none">
+              <div style="border-top:1px solid var(--stone);padding-top:20px">
+
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                  <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">Global rates</div>
+                  <div class="form-group-toggle" style="flex-direction:row;align-items:center;gap:10px;margin:0">
+                    <label class="form-label" style="margin:0;white-space:nowrap">Include support material</label>
+                    <label class="toggle">
+                      <input type="checkbox" id="pTimeIncludeSupport" checked>
+                      <span class="toggle-track"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-grid-2" style="margin-bottom:20px">
+                  <div class="form-group">
+                    <label class="form-label" for="pTimeRateHour">Machine rate ($ / hr)</label>
+                    <input class="form-input" type="number" id="pTimeRateHour" min="0" step="0.01" placeholder="e.g. 4.00">
+                    <p style="font-size:11px;color:var(--muted);margin-top:5px">Electricity, wear, and overhead per print hour.</p>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="pTimeRateGram">Default material rate ($ / g)</label>
+                    <input class="form-input" type="number" id="pTimeRateGram" min="0" step="0.001" placeholder="e.g. 0.030">
+                    <p style="font-size:11px;color:var(--muted);margin-top:5px">Used when no per-material override is set below.</p>
+                  </div>
+                </div>
+
+                <!-- Per-material $/g overrides -->
+                <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px">Per-material cost overrides</div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
+                  Override the default material rate for specific filaments. Leave blank to use the default rate above. Min charge still applies.
+                </div>
+                <div id="timeRatesBody" style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
+                  <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Loading materials…</div>
+                </div>
+
+                <!-- Live estimator — matches customer quote calculation exactly -->
+                <div style="background:rgba(122,158,126,0.06);border:1px solid var(--sage-light);border-radius:var(--radius);padding:16px 18px">
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--sage-dark);margin-bottom:4px">Quote preview — what the customer sees</div>
+                  <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Uses the same formula as the customer quote: volume → estimated hours &amp; grams → cost.</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="form-group" style="margin:0">
+                      <label class="form-label" style="font-size:11px">STL volume (cm³)</label>
+                      <input class="form-input" type="number" id="previewVol" min="0" step="1" placeholder="50" style="height:34px;font-size:13px">
+                    </div>
+                    <div class="form-group" style="margin:0">
+                      <label class="form-label" style="font-size:11px">Material</label>
+                      <select class="form-input" id="previewMat" style="height:34px;font-size:13px">
+                        <option value="">— select —</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="margin:0">
+                      <label class="form-label" style="font-size:11px">Finish</label>
+                      <select class="form-input" id="previewFinish" style="height:34px;font-size:13px">
+                        <option value="standard">Standard</option>
+                        <option value="fine">Fine (+40%)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style="font-size:13px;color:var(--muted)" id="previewResult">Enter a volume and select a material to preview.</div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Base rates -->
+        <div class="section-card" style="margin-bottom:24px">
+          <div class="section-card-header">
+            <span class="section-card-title">Base rates</span>
+          </div>
+          <div class="section-card-body">
+            <div class="form-grid-2">
+
+              <div class="form-group">
+                <label class="form-label" for="pCurrency">Currency</label>
+                <select class="form-input" id="pCurrency" name="currency">
+                  <option value="NZD">NZD — New Zealand Dollar</option>
+                  <option value="AUD">AUD — Australian Dollar</option>
+                  <option value="USD">USD — US Dollar</option>
+                  <option value="GBP">GBP — British Pound</option>
+                  <option value="EUR">EUR — Euro</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="pTaxRate">Tax rate (%)</label>
+                <input class="form-input" type="number" id="pTaxRate" name="tax_rate" min="0" max="100" step="0.1" placeholder="15">
+              </div>
+
+              <div class="form-group-toggle">
+                <label class="form-label">Tax inclusive?</label>
+                <div class="toggle-row">
+                  <label class="toggle">
+                    <input type="checkbox" id="pTaxInclusive" name="tax_inclusive">
+                    <span class="toggle-track"></span>
+                  </label>
+                  <span class="toggle-label">Prices include tax</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="pMinOrder">Min order value ($)</label>
+                <input class="form-input" type="number" id="pMinOrder" name="min_order" min="0" step="0.01" placeholder="0.00">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="pFreeShipping">Free shipping above ($)</label>
+                <input class="form-input" type="number" id="pFreeShipping" name="free_shipping_above" min="0" step="0.01" placeholder="150.00">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="pRounding">Quote rounding ($)</label>
+                <select class="form-input" id="pRounding" name="quote_rounding">
+                  <option value="0.01">$0.01 — exact</option>
+                  <option value="0.05">$0.05</option>
+                  <option value="0.10">$0.10</option>
+                  <option value="0.50">$0.50</option>
+                  <option value="1.00">$1.00</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="pQuoteHours">Quote valid (hours)</label>
+                <input class="form-input" type="number" id="pQuoteHours" name="quote_valid_hours" min="1" step="1" placeholder="72">
+              </div>
+
+              <div class="form-group-toggle">
+                <label class="form-label">Show price breakdown?</label>
+                <div class="toggle-row">
+                  <label class="toggle">
+                    <input type="checkbox" id="pShowBreakdown" name="show_price_breakdown">
+                    <span class="toggle-track"></span>
+                  </label>
+                  <span class="toggle-label">Visible to customer</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Infill tiers -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <span class="section-card-title">Infill tiers</span>
+            <button class="btn btn-outline" id="addInfillTierBtn" style="height:34px;padding:0 14px;font-size:12px">+ Add tier</button>
+          </div>
+          <p style="font-size:12px;color:var(--muted);padding:0 24px;margin:0 0 4px;line-height:1.6;">
+            Each tier becomes a choice in the customer's quote-page Infill dropdown.
+            The multiplier scales the base price (1.00 = no change). Use percent for
+            the label your customer sees; one tier should be marked as Default.
+          </p>
+          <div id="infillTiersError" class="inline-error" style="margin:12px 24px;display:none;"></div>
+          <div id="infillTiersBody" style="padding:8px 24px 20px;">
+            <table class="data-table" id="infillTiersTable" style="width:100%;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;">Label</th>
+                  <th style="text-align:left;width:90px;">Percent</th>
+                  <th style="text-align:left;width:110px;">Multiplier</th>
+                  <th style="text-align:center;width:70px;">Default</th>
+                  <th style="text-align:center;width:60px;">Active</th>
+                  <th style="width:40px;"></th>
+                </tr>
+              </thead>
+              <tbody id="infillTiersTbody">
+                <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Surcharges -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <span class="section-card-title">Surcharges</span>
+            <button class="btn btn-outline" id="addSurchargeBtn" style="height:34px;padding:0 14px;font-size:12px">+ Add surcharge</button>
+          </div>
+          <div id="surchargesError" class="inline-error" style="margin:12px 24px;"></div>
+          <!-- Inline add row -->
+          <div class="surcharge-add-row" id="surchargeAddRow">
+            <div class="form-group">
+              <label class="form-label">Name</label>
+              <input class="form-input" id="surchargeName" placeholder="e.g. Rush fee">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select class="form-input" id="surchargeType">
+                <option value="percent">Percent (%)</option>
+                <option value="fixed">Fixed ($)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Value</label>
+              <input class="form-input" type="number" id="surchargeValue" min="0" step="0.01" placeholder="10">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Active</label>
+              <div style="height:40px;display:flex;align-items:center">
+                <label class="toggle"><input type="checkbox" id="surchargeActive" checked><span class="toggle-track"></span></label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">&nbsp;</label>
+              <div style="display:flex;gap:8px">
+                <button type="button" class="btn btn-primary" id="surchargeAddConfirmBtn" style="height:40px">Add</button>
+                <button type="button" class="btn btn-outline" id="surchargeAddCancelBtn" style="height:40px">✕</button>
+              </div>
+            </div>
+          </div>
+          <!-- Table -->
+          <div id="surchargesBody">
+            <div class="empty-state" id="surchargesLoading"><p>Loading…</p></div>
+          </div>
+        </div>
+
+      </div><!-- /tab-rules -->
+
+      <!-- Tab 2: Discounts -->
+      <div class="tab-panel" id="tab-discounts" role="tabpanel" aria-labelledby="tabDiscountsBtn">
+
+        <div class="section-card">
+          <div class="section-card-header">
+            <span class="section-card-title">Discount Codes</span>
+            <button class="btn btn-primary" id="newDiscountBtn">+ New code</button>
+          </div>
+          <div id="discountsError" class="inline-error" style="margin:12px 24px;"></div>
+          <div id="discountsBody">
+            <div class="empty-state" id="discountsLoading"><p>Loading…</p></div>
+          </div>
+        </div>
+
+      </div><!-- /tab-discounts -->
+
+    </div><!-- /admin-content -->
+  </main>
+</div>
+
+<!-- Discount modal -->
+<div class="modal-overlay hidden" id="discountModal" role="dialog" aria-modal="true" aria-labelledby="discountModalTitle">
+  <div class="modal" style="width:min(520px,100%)">
+    <h2 class="modal-title" id="discountModalTitle">New discount code</h2>
+    <div class="modal-error" id="discountModalError"></div>
+    <form id="discountForm" novalidate>
+      <input type="hidden" id="discountId">
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label class="form-label" for="discountCode">Code <span style="color:#C0392B">*</span></label>
+        <div class="input-with-action">
+          <input class="form-input" type="text" id="discountCode" name="code" required placeholder="e.g. DEWI20"
+            style="text-transform:uppercase;letter-spacing:0.05em">
+          <button type="button" class="generate-btn" id="generateCodeBtn">Generate</button>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label class="form-label">Type <span style="color:#C0392B">*</span></label>
+        <div class="discount-type-grid">
+          <label class="radio-card selected" id="typePercentCard">
+            <span>
+              <div style="font-weight:500;font-size:13px">% Percentage</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Off total</div>
+            </span>
+            <input type="radio" name="discount_type" value="percent" checked style="margin-left:8px">
+          </label>
+          <label class="radio-card" id="typeFixedCard">
+            <span>
+              <div style="font-weight:500;font-size:13px">$ Fixed</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Dollar off</div>
+            </span>
+            <input type="radio" name="discount_type" value="fixed" style="margin-left:8px">
+          </label>
+          <label class="radio-card" id="typeShippingCard">
+            <span>
+              <div style="font-weight:500;font-size:13px">Free shipping</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">No shipping cost</div>
+            </span>
+            <input type="radio" name="discount_type" value="free_shipping" style="margin-left:8px">
+          </label>
+        </div>
+      </div>
+
+      <div class="form-grid-2" style="margin-bottom:16px">
+        <div class="form-group" id="discountValueGroup">
+          <label class="form-label" for="discountValue">Value</label>
+          <input class="form-input" type="number" id="discountValue" name="value" min="0" step="0.01" placeholder="20">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="discountMinOrder">Min order value ($)</label>
+          <input class="form-input" type="number" id="discountMinOrder" name="min_order" min="0" step="0.01" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="discountExpiry">Expiry date (optional)</label>
+          <input class="form-input" type="date" id="discountExpiry" name="expires_at">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Options</label>
+          <div style="display:flex;gap:16px;height:40px;align-items:center">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+              <label class="toggle">
+                <input type="checkbox" id="discountOneTime" name="one_time">
+                <span class="toggle-track"></span>
+              </label>
+              One-time
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+              <label class="toggle">
+                <input type="checkbox" id="discountActive" name="active" checked>
+                <span class="toggle-track"></span>
+              </label>
+              Active
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="discountCancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="discountSaveBtn">Save code</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Auth guard
+  (async () => {
+    try {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location.href = 'login.html'; return; }
+      const shop = await r.json();
+      document.getElementById('sidebarStoreName').textContent = shop.name;
+      document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
+      if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
+    } catch { window.location.href = 'login.html'; }
+  })();
+
+  document.getElementById('signoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  // ── State ─────────────────────────────────────────────────────
+  let surcharges = [];   // local copy for edits
+  let allDiscounts = [];
+  let infillTiers  = []; // local copy of infill-tier list
+
+  // ── Helpers ───────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showPageError(msg) {
+    const el = document.getElementById('pageError');
+    el.textContent = msg; el.classList.add('visible');
+    document.getElementById('pageSuccess').classList.remove('visible');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function showPageSuccess(msg) {
+    const el = document.getElementById('pageSuccess');
+    el.textContent = msg; el.classList.add('visible');
+    document.getElementById('pageError').classList.remove('visible');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => el.classList.remove('visible'), 4000);
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────
+  document.getElementById('tabRulesBtn').addEventListener('click', () => switchTab('rules'));
+  document.getElementById('tabDiscountsBtn').addEventListener('click', () => switchTab('discounts'));
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(`tab-${name}`).classList.add('active');
+    document.getElementById(`tab${name.charAt(0).toUpperCase() + name.slice(1)}Btn`).classList.add('active');
+    document.getElementById(`tab${name.charAt(0).toUpperCase() + name.slice(1)}Btn`).setAttribute('aria-selected','true');
+    // Hide save button on discounts tab (handled per-modal)
+    document.getElementById('savePricingBtn').style.display = name === 'rules' ? '' : 'none';
+  }
+
+  // ── Material data (loaded once, shared between both scheme tables) ──
+  let allMaterials = [];
+
+  // ── Calculation mode switcher ─────────────────────────────────
+  function setPricingMode(mode) {
+    document.querySelectorAll('[name="pricing_mode"]').forEach(r => {
+      r.checked = r.value === mode;
+    });
+    document.querySelectorAll('.radio-card[id^="mode"]').forEach(c => c.classList.remove('selected'));
+    const cardId = mode === 'time_material' ? 'modeTimeCard' : 'modeMaterialCard';
+    document.getElementById(cardId).classList.add('selected');
+    document.getElementById('schemeMatSettings').style.display  = mode === 'material'      ? '' : 'none';
+    document.getElementById('schemeTimeSettings').style.display = mode === 'time_material' ? '' : 'none';
+  }
+
+  document.querySelectorAll('[name="pricing_mode"]').forEach(radio => {
+    radio.addEventListener('change', () => setPricingMode(radio.value));
+  });
+  document.querySelectorAll('.radio-card[id^="mode"]').forEach(card => {
+    card.addEventListener('click', () => {
+      const radio = card.querySelector('input[type="radio"]');
+      if (radio) setPricingMode(radio.value);
+    });
+  });
+
+  // ── Material rates table (Scheme A) ──────────────────────────
+  function renderMatRates() {
+    const body = document.getElementById('matRatesBody');
+    if (!allMaterials.length) {
+      body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">
+        No materials yet. <a href="materials.html" style="color:var(--sage-dark)">Add materials first.</a>
+      </div>`;
+      return;
+    }
+
+    const headerHtml = `<div class="mat-rates-header">
+      <span>Material</span>
+      <span>Pricing model</span>
+      <span>Base price</span>
+      <span>Min charge</span>
+      <span>Volume tiers</span>
+    </div>`;
+
+    const rowsHtml = allMaterials.map((m, idx) => {
+      const tiers = Array.isArray(m.volume_tiers) ? m.volume_tiers : [];
+      const tierRows = tiers.map((t, ti) => `
+        <div class="tier-row-inline" data-mat="${idx}" data-tier="${ti}">
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:10px">From (cm³)</label>
+            <input class="form-input tier-from" type="number" min="0" step="1" value="${t.from_cm3 ?? ''}" placeholder="100">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:10px">Price / cm³ ($)</label>
+            <input class="form-input tier-price" type="number" min="0" step="0.0001" value="${t.price_per_cm3 ?? ''}" placeholder="0.06">
+          </div>
+          <button type="button" class="tier-remove-btn" title="Remove tier">×</button>
+        </div>`).join('');
+
+      const pricingModelVal = m.pricing_model || 'per_cm3';
+      const basePrice = m.base_price != null ? m.base_price : (m.base_price_per_cm3 ?? '');
+
+      return `<div class="mat-rate-row" data-idx="${idx}">
+        <div class="mat-rate-main">
+          <div class="mat-rate-cell">
+            <div class="mat-rate-name">${escHtml(m.name)}</div>
+            <div class="mat-rate-cat">${escHtml(m.category || 'FDM')}</div>
+          </div>
+          <div class="mat-rate-cell">
+            <select class="form-input mat-pricing-model">
+              <option value="per_cm3" ${pricingModelVal === 'per_cm3' ? 'selected' : ''}>Per cm³</option>
+              <option value="per_gram" ${pricingModelVal === 'per_gram' ? 'selected' : ''}>Per gram</option>
+              <option value="flat" ${pricingModelVal === 'flat' ? 'selected' : ''}>Flat rate</option>
+            </select>
+          </div>
+          <div class="mat-rate-cell">
+            <input class="form-input mat-base-price" type="number" min="0" step="0.0001"
+              value="${basePrice}" placeholder="0.08">
+          </div>
+          <div class="mat-rate-cell">
+            <input class="form-input mat-min-charge" type="number" min="0" step="0.01"
+              value="${m.min_charge != null ? m.min_charge : ''}" placeholder="5.00">
+          </div>
+          <div class="mat-rate-cell" style="text-align:center">
+            <button type="button" class="tiers-toggle" data-idx="${idx}">
+              Tiers ${tiers.length ? `(${tiers.length})` : ''}
+            </button>
+          </div>
+        </div>
+        <div class="tiers-panel" id="tiersPanel_${idx}">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px">
+            Volume tiers — lower price for larger prints
+          </div>
+          <div class="tiers-rows-container">${tierRows}</div>
+          <button type="button" class="btn btn-outline add-tier-btn" data-idx="${idx}"
+            style="height:30px;padding:0 12px;font-size:11px;margin-top:6px">+ Add tier</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    body.innerHTML = headerHtml + rowsHtml;
+
+    // Wire up tier toggles
+    body.querySelectorAll('.tiers-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const panel = document.getElementById(`tiersPanel_${btn.dataset.idx}`);
+        panel.classList.toggle('open');
+      });
+    });
+
+    // Wire up add tier buttons
+    body.querySelectorAll('.add-tier-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx);
+        const container = btn.previousElementSibling;
+        const ti = container.querySelectorAll('.tier-row-inline').length;
+        const newRow = document.createElement('div');
+        newRow.className = 'tier-row-inline';
+        newRow.dataset.mat = idx;
+        newRow.dataset.tier = ti;
+        newRow.innerHTML = `
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:10px">From (cm³)</label>
+            <input class="form-input tier-from" type="number" min="0" step="1" placeholder="100">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:10px">Price / cm³ ($)</label>
+            <input class="form-input tier-price" type="number" min="0" step="0.0001" placeholder="0.06">
+          </div>
+          <button type="button" class="tier-remove-btn" title="Remove tier">×</button>`;
+        newRow.querySelector('.tier-remove-btn').addEventListener('click', () => newRow.remove());
+        container.appendChild(newRow);
+        // Update toggle button text
+        const toggle = body.querySelector(`.tiers-toggle[data-idx="${idx}"]`);
+        if (toggle) {
+          const count = container.querySelectorAll('.tier-row-inline').length;
+          toggle.textContent = `Tiers (${count})`;
+        }
+      });
+    });
+
+    // Wire up existing remove buttons
+    body.querySelectorAll('.tier-remove-btn').forEach(btn => {
+      btn.addEventListener('click', () => btn.closest('.tier-row-inline').remove());
+    });
+  }
+
+  // Read material rate values from DOM back into allMaterials (before save)
+  function collectMatRates() {
+    const body = document.getElementById('matRatesBody');
+    if (!body) return;
+    allMaterials.forEach((m, idx) => {
+      const row = body.querySelector(`.mat-rate-row[data-idx="${idx}"]`);
+      if (!row) return;
+      m.pricing_model  = row.querySelector('.mat-pricing-model').value;
+      m.base_price     = parseFloat(row.querySelector('.mat-base-price').value)  || 0;
+      m.min_charge     = parseFloat(row.querySelector('.mat-min-charge').value)  || 0;
+      // Volume tiers
+      const tiers = [];
+      row.querySelectorAll('.tier-row-inline').forEach(tr => {
+        const from  = parseFloat(tr.querySelector('.tier-from').value);
+        const price = parseFloat(tr.querySelector('.tier-price').value);
+        if (!isNaN(from) && !isNaN(price)) {
+          tiers.push({ from_cm3: from, price_per_cm3: price });
+        }
+      });
+      m.volume_tiers = tiers;
+    });
+  }
+
+  // ── Time+material per-material override table (Scheme B) ──────
+  function renderTimeRates() {
+    const body = document.getElementById('timeRatesBody');
+    if (!allMaterials.length) {
+      body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">
+        No materials yet. <a href="materials.html" style="color:var(--sage-dark)">Add materials first.</a>
+      </div>`;
+      return;
+    }
+
+    const header = `<div class="time-rates-header">
+      <span>Material</span>
+      <span>Material rate ($ / g)</span>
+      <span>Min charge ($)</span>
+    </div>`;
+
+    const rows = allMaterials.map((m, idx) => {
+      const override = m.time_rate_per_gram_override != null ? m.time_rate_per_gram_override : '';
+      const minCharge = m.min_charge != null ? m.min_charge : '';
+      return `<div class="time-rate-row" data-idx="${idx}">
+        <div style="padding:0 8px 0 0">
+          <div class="mat-rate-name">${escHtml(m.name)}</div>
+          <div class="mat-rate-cat">${escHtml(m.category || 'FDM')}</div>
+        </div>
+        <div style="padding:0 8px">
+          <input class="form-input time-mat-rate" type="number" min="0" step="0.001"
+            value="${override}" placeholder="default">
+        </div>
+        <div style="padding:0 8px">
+          <input class="form-input time-min-charge" type="number" min="0" step="0.01"
+            value="${minCharge}" placeholder="0.00">
+        </div>
+      </div>`;
+    }).join('');
+
+    body.innerHTML = header + rows;
+  }
+
+  function collectTimeRates() {
+    const body = document.getElementById('timeRatesBody');
+    if (!body) return;
+    allMaterials.forEach((m, idx) => {
+      const row = body.querySelector(`.time-rate-row[data-idx="${idx}"]`);
+      if (!row) return;
+      const rateVal = row.querySelector('.time-mat-rate').value;
+      m.time_rate_per_gram_override = rateVal !== '' ? parseFloat(rateVal) : null;
+      const mcVal = row.querySelector('.time-min-charge').value;
+      if (mcVal !== '') m.min_charge = parseFloat(mcVal) || 0;
+    });
+  }
+
+  // ── Shared preview constants (must match quote.html exactly) ────
+  const PREVIEW_PRINT_SPEED_CM3_PER_HR = 50;  // Bambu standard
+  const PREVIEW_DENSITY = {
+    'pla': 1.24, 'petg': 1.27, 'resin': 1.18,
+    'nylon': 1.14, 'tpu': 1.21, 'asa': 1.07, 'abs': 1.05, 'pc': 1.20,
+  };
+  const FINE_PREMIUM = 1.40;
+
+  function previewRound(n, step) {
+    if (!step) return n;
+    return Math.ceil(n / step) * step;
+  }
+
+  // ── Time+material quote preview ───────────────────────────────
+  function updatePreview() {
+    const rateHr   = parseFloat(document.getElementById('pTimeRateHour').value) || 0;
+    const rateGm   = parseFloat(document.getElementById('pTimeRateGram').value) || 0;
+    const vol      = parseFloat(document.getElementById('previewVol').value)    || 0;
+    const matIdx   = document.getElementById('previewMat').value;
+    const finish   = document.getElementById('previewFinish').value;
+    const rounding = parseFloat(document.getElementById('pRounding').value)     || 0;
+
+    const el = document.getElementById('previewResult');
+    if (!vol) { el.textContent = 'Enter a volume and select a material to preview.'; return; }
+    if (!rateHr && !rateGm) { el.textContent = 'Enter machine and/or material rates above.'; return; }
+
+    // Get material
+    const mat = matIdx !== '' ? allMaterials[parseInt(matIdx)] : null;
+    const minCharge = mat ? (mat.min_charge ?? 0) : 0;
+    const matKey    = (mat?.name || '').toLowerCase().split(' ')[0];
+    const density   = PREVIEW_DENSITY[matKey] || 1.24;
+    const gramRate  = (mat?.time_rate_per_gram_override != null)
+      ? mat.time_rate_per_gram_override : rateGm;
+
+    const hours     = vol / PREVIEW_PRINT_SPEED_CM3_PER_HR;
+    const grams     = vol * density;
+    const timeCost  = hours * rateHr;
+    const matCost   = grams * gramRate;
+    const rawCost   = Math.max(minCharge, timeCost + matCost);
+    const finishMul = finish === 'fine' ? FINE_PREMIUM : 1.0;
+    const total     = previewRound(rawCost * finishMul, rounding);
+
+    const minHit = (timeCost + matCost) < minCharge;
+    el.innerHTML = `
+      <strong style="color:var(--ink);font-size:15px">$${total.toFixed(2)}</strong>
+      <span style="margin-left:12px;font-size:12px;color:var(--muted)">
+        ${hours.toFixed(2)} hrs × $${rateHr}/hr = $${timeCost.toFixed(2)}
+        &nbsp;+&nbsp; ${grams.toFixed(1)}g × $${gramRate}/g = $${matCost.toFixed(2)}
+        ${minHit ? `<span style="color:#b45309"> → min charge $${minCharge.toFixed(2)} applied</span>` : ''}
+        ${finish === 'fine' ? `<span style="color:var(--sage-dark)"> × 1.40 fine finish</span>` : ''}
+      </span>`;
+  }
+
+  ['pTimeRateHour','pTimeRateGram','previewVol','previewMat','previewFinish'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updatePreview);
+    document.getElementById(id).addEventListener('change', updatePreview);
+  });
+  document.getElementById('pRounding').addEventListener('input', () => { updatePreview(); updateMatPreview(); });
+
+  // ── Material mode quote preview ───────────────────────────────
+  function updateMatPreview() {
+    const vol      = parseFloat(document.getElementById('matPreviewVol').value)    || 0;
+    const matIdx   = document.getElementById('matPreviewMat').value;
+    const finish   = document.getElementById('matPreviewFinish').value;
+    const rounding = parseFloat(document.getElementById('pRounding').value)        || 0;
+
+    const el = document.getElementById('matPreviewResult');
+    if (!vol) { el.textContent = 'Enter a volume and select a material to preview.'; return; }
+
+    const mat = matIdx !== '' ? allMaterials[parseInt(matIdx)] : null;
+    if (!mat) { el.textContent = 'Select a material to preview.'; return; }
+
+    const rate      = parseFloat(mat.base_price) || 0;
+    const minCharge = mat.min_charge ?? 0;
+    const rawCost   = Math.max(minCharge, vol * rate);
+    const finishMul = finish === 'fine' ? FINE_PREMIUM : 1.0;
+    const total     = previewRound(rawCost * finishMul, rounding);
+
+    const minHit = (vol * rate) < minCharge;
+    el.innerHTML = `
+      <strong style="color:var(--ink);font-size:15px">$${total.toFixed(2)}</strong>
+      <span style="margin-left:12px;font-size:12px;color:var(--muted)">
+        ${vol} cm³ × $${rate}/cm³ = $${(vol * rate).toFixed(2)}
+        ${minHit ? `<span style="color:#b45309"> → min charge $${minCharge.toFixed(2)} applied</span>` : ''}
+        ${finish === 'fine' ? `<span style="color:var(--sage-dark)"> × 1.40 fine finish</span>` : ''}
+      </span>`;
+  }
+
+  ['matPreviewVol','matPreviewMat','matPreviewFinish'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateMatPreview);
+    document.getElementById(id).addEventListener('change', updateMatPreview);
+  });
+
+  // ── Load pricing + materials ──────────────────────────────────
+  async function loadPricing() {
+    try {
+      const [pr, mr] = await Promise.all([
+        fetch('/api/pricing'),
+        fetch('/api/materials')
+      ]);
+      if (!pr.ok) throw new Error('Could not load pricing settings.');
+      const p = await pr.json();
+
+      // General
+      if (p.currency)            document.getElementById('pCurrency').value = p.currency;
+      if (p.tax_rate != null)    document.getElementById('pTaxRate').value = p.tax_rate;
+      document.getElementById('pTaxInclusive').checked = !!p.tax_inclusive;
+      if (p.min_order_value != null) document.getElementById('pMinOrder').value = p.min_order_value;
+      if (p.free_shipping_above != null) document.getElementById('pFreeShipping').value = p.free_shipping_above;
+      if (p.quote_rounding)      document.getElementById('pRounding').value = p.quote_rounding;
+      if (p.quote_valid_hours)   document.getElementById('pQuoteHours').value = p.quote_valid_hours;
+      document.getElementById('pShowBreakdown').checked = !!p.show_breakdown;
+
+      // Pricing scheme
+      const mode = p.pricing_mode || 'material';
+      setPricingMode(mode);
+      document.getElementById('pMatIncludeSupport').checked  = p.mat_include_support !== 0;
+      if (p.time_rate_per_hour) document.getElementById('pTimeRateHour').value = p.time_rate_per_hour;
+      if (p.time_rate_per_gram) document.getElementById('pTimeRateGram').value = p.time_rate_per_gram;
+      document.getElementById('pTimeIncludeSupport').checked = p.time_include_support !== 0;
+
+      surcharges = Array.isArray(p.surcharges) ? p.surcharges : [];
+      renderSurcharges();
+
+      infillTiers = Array.isArray(p.infill_tiers) && p.infill_tiers.length
+        ? p.infill_tiers
+        : defaultInfillTiers();
+      renderInfillTiers();
+
+      // Materials for rate tables
+      if (mr.ok) {
+        allMaterials = await mr.json();
+      }
+      renderMatRates();
+      renderTimeRates();
+      // Populate material selectors in both previews
+      ['previewMat', 'matPreviewMat'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        sel.innerHTML = '<option value="">— select —</option>' +
+          allMaterials.map((m, i) => `<option value="${i}">${escHtml(m.name)}</option>`).join('');
+      });
+    } catch (err) {
+      showPageError(err.message);
+    }
+  }
+
+  // ── Save pricing ──────────────────────────────────────────────
+  document.getElementById('savePricingBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('savePricingBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    const mode = document.querySelector('[name="pricing_mode"]:checked')?.value || 'material';
+
+    const payload = {
+      currency:            document.getElementById('pCurrency').value,
+      tax_rate:            parseFloat(document.getElementById('pTaxRate').value) || 0,
+      tax_inclusive:       document.getElementById('pTaxInclusive').checked,
+      min_order_value:     parseFloat(document.getElementById('pMinOrder').value) || 0,
+      free_shipping_above: parseFloat(document.getElementById('pFreeShipping').value) || null,
+      quote_rounding:      document.getElementById('pRounding').value,
+      quote_valid_hours:   parseInt(document.getElementById('pQuoteHours').value) || 72,
+      show_breakdown:      document.getElementById('pShowBreakdown').checked,
+      surcharges,
+      // Pricing scheme
+      pricing_mode:          mode,
+      mat_include_support:   document.getElementById('pMatIncludeSupport').checked,
+      time_rate_per_hour:    parseFloat(document.getElementById('pTimeRateHour').value) || 0,
+      time_rate_per_gram:    parseFloat(document.getElementById('pTimeRateGram').value) || 0,
+      time_include_support:  document.getElementById('pTimeIncludeSupport').checked,
+      // Infill tier config (validated server-side)
+      infill_tiers: infillTiers,
+    };
+
+    try {
+      // 1) Save pricing config
+      const r = await fetch('/api/pricing', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.error || d.message || 'Save failed.');
+      }
+
+      // 2) Collect and save material rates
+      collectMatRates();
+      collectTimeRates();
+      await Promise.all(allMaterials.map(m =>
+        fetch(`/api/materials/${m.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pricing_model:  m.pricing_model,
+            base_price:     m.base_price,
+            min_charge:     m.min_charge,
+            volume_tiers:   m.volume_tiers,
+          }),
+        })
+      ));
+
+      showPageSuccess('Pricing settings and material rates saved.');
+    } catch (err) {
+      showPageError(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save changes';
+    }
+  });
+
+  // ── Surcharges ────────────────────────────────────────────────
+  function renderSurcharges() {
+    const body = document.getElementById('surchargesBody');
+    if (!surcharges.length) {
+      body.innerHTML = `<div class="empty-state" style="padding:40px 24px">
+        <p style="font-size:13px;color:var(--muted)">No surcharges configured. Add fees like rush charges or handling.</p>
+      </div>`;
+      return;
+    }
+
+    body.innerHTML = `<table class="data-table">
+      <thead><tr><th>Name</th><th>Type</th><th>Value</th><th>Active</th><th>Actions</th></tr></thead>
+      <tbody id="surchargesTbody"></tbody>
+    </table>`;
+
+    const tbody = document.getElementById('surchargesTbody');
+    surcharges.forEach((s, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escHtml(s.name)}</td>
+        <td><span class="badge badge-stone">${s.type === 'percent' ? 'Percent' : 'Fixed'}</span></td>
+        <td>${s.type === 'percent' ? s.value + '%' : '$' + Number(s.value).toFixed(2)}</td>
+        <td>
+          <label class="toggle">
+            <input type="checkbox" class="surcharge-toggle" data-idx="${idx}" ${s.active ? 'checked' : ''}>
+            <span class="toggle-track"></span>
+          </label>
+        </td>
+        <td>
+          <button class="table-action danger surcharge-delete" data-idx="${idx}">Delete</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('.surcharge-toggle').forEach(cb => {
+      cb.addEventListener('change', e => {
+        surcharges[parseInt(e.target.dataset.idx)].active = e.target.checked;
+      });
+    });
+
+    tbody.querySelectorAll('.surcharge-delete').forEach(btn => {
+      btn.addEventListener('click', e => {
+        surcharges.splice(parseInt(btn.dataset.idx), 1);
+        renderSurcharges();
+      });
+    });
+  }
+
+  // Add surcharge inline
+  document.getElementById('addSurchargeBtn').addEventListener('click', () => {
+    document.getElementById('surchargeAddRow').classList.add('visible');
+    document.getElementById('surchargeName').focus();
+  });
+
+  document.getElementById('surchargeAddCancelBtn').addEventListener('click', () => {
+    document.getElementById('surchargeAddRow').classList.remove('visible');
+    document.getElementById('surchargeName').value = '';
+    document.getElementById('surchargeValue').value = '';
+  });
+
+  document.getElementById('surchargeAddConfirmBtn').addEventListener('click', () => {
+    const name = document.getElementById('surchargeName').value.trim();
+    const type = document.getElementById('surchargeType').value;
+    const value = parseFloat(document.getElementById('surchargeValue').value);
+    const active = document.getElementById('surchargeActive').checked;
+
+    const errEl = document.getElementById('surchargesError');
+    if (!name) {
+      errEl.textContent = 'Surcharge name is required.';
+      errEl.classList.add('visible');
+      return;
+    }
+    if (isNaN(value) || value < 0) {
+      errEl.textContent = 'Please enter a valid value.';
+      errEl.classList.add('visible');
+      return;
+    }
+    errEl.classList.remove('visible');
+
+    surcharges.push({ name, type, value, active });
+    renderSurcharges();
+    document.getElementById('surchargeAddRow').classList.remove('visible');
+    document.getElementById('surchargeName').value = '';
+    document.getElementById('surchargeValue').value = '';
+  });
+
+  // ── Infill tiers ──────────────────────────────────────────────
+  function defaultInfillTiers() {
+    return [
+      { id: 'light',    label: 'Light',    percent: 10,  multiplier: 0.90, is_default: false, active: true },
+      { id: 'standard', label: 'Standard', percent: 20,  multiplier: 1.00, is_default: true,  active: true },
+      { id: 'medium',   label: 'Medium',   percent: 35,  multiplier: 1.15, is_default: false, active: true },
+      { id: 'strong',   label: 'Strong',   percent: 50,  multiplier: 1.30, is_default: false, active: true },
+      { id: 'heavy',    label: 'Heavy',    percent: 75,  multiplier: 1.55, is_default: false, active: true },
+      { id: 'solid',    label: 'Solid',    percent: 100, multiplier: 1.80, is_default: false, active: true },
+    ];
+  }
+
+  function slugify(s) {
+    return String(s || '').toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function renderInfillTiers() {
+    const tbody = document.getElementById('infillTiersTbody');
+    if (!infillTiers.length) {
+      tbody.innerHTML = `
+        <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">
+          No tiers yet — click "Add tier" to create one (or use the default set).
+        </td></tr>`;
+      return;
+    }
+    tbody.innerHTML = infillTiers.map((t, i) => `
+      <tr>
+        <td><input type="text" class="form-input" value="${escHtml(t.label)}"
+                   data-tier-idx="${i}" data-field="label"
+                   style="width:100%;max-width:200px;padding:6px 10px;font-size:13px;"></td>
+        <td><input type="number" class="form-input" value="${t.percent}" min="0" max="100" step="1"
+                   data-tier-idx="${i}" data-field="percent"
+                   style="width:80px;padding:6px 10px;font-size:13px;text-align:right;"></td>
+        <td><input type="number" class="form-input" value="${t.multiplier}" min="0.10" max="10" step="0.01"
+                   data-tier-idx="${i}" data-field="multiplier"
+                   style="width:90px;padding:6px 10px;font-size:13px;text-align:right;"></td>
+        <td style="text-align:center;">
+          <input type="radio" name="infillTierDefault" value="${i}"
+                 data-tier-idx="${i}" data-field="is_default" ${t.is_default ? 'checked' : ''}>
+        </td>
+        <td style="text-align:center;">
+          <label class="toggle">
+            <input type="checkbox" data-tier-idx="${i}" data-field="active" ${t.active ? 'checked' : ''}>
+            <span class="toggle-track"></span>
+          </label>
+        </td>
+        <td style="text-align:right;">
+          <button class="table-action danger" type="button" data-tier-remove="${i}"
+                  title="Remove this tier" style="padding:4px 8px;">×</button>
+        </td>
+      </tr>
+    `).join('');
+
+    // Wire field edits
+    tbody.querySelectorAll('input[data-tier-idx]').forEach(el => {
+      el.addEventListener('input',  onTierEdit);
+      el.addEventListener('change', onTierEdit);
+    });
+    tbody.querySelectorAll('button[data-tier-remove]').forEach(b => {
+      b.addEventListener('click', () => {
+        const idx = parseInt(b.dataset.tierRemove, 10);
+        if (!Number.isFinite(idx)) return;
+        infillTiers.splice(idx, 1);
+        // Ensure something stays default
+        if (infillTiers.length && !infillTiers.some(t => t.is_default)) {
+          const firstActive = infillTiers.find(t => t.active) || infillTiers[0];
+          firstActive.is_default = true;
+        }
+        renderInfillTiers();
+      });
+    });
+  }
+
+  function onTierEdit(e) {
+    const idx   = parseInt(e.target.dataset.tierIdx, 10);
+    const field = e.target.dataset.field;
+    const tier  = infillTiers[idx];
+    if (!tier) return;
+    if (field === 'label') {
+      tier.label = e.target.value.trim().slice(0, 40);
+      tier.id    = slugify(tier.label) || `tier-${idx + 1}`;
+    } else if (field === 'percent') {
+      tier.percent = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0));
+    } else if (field === 'multiplier') {
+      tier.multiplier = Math.max(0.10, Math.min(10, parseFloat(e.target.value) || 1));
+    } else if (field === 'is_default') {
+      infillTiers.forEach((t, i) => { t.is_default = (i === idx); });
+      renderInfillTiers();
+    } else if (field === 'active') {
+      tier.active = e.target.checked;
+      // If the default tier was just deactivated, promote another active tier
+      if (!tier.active && tier.is_default) {
+        const promote = infillTiers.find(t => t.active);
+        if (promote) {
+          infillTiers.forEach(t => t.is_default = (t === promote));
+          renderInfillTiers();
+        }
+      }
+    }
+  }
+
+  document.getElementById('addInfillTierBtn').addEventListener('click', () => {
+    // Suggest a sensible next percent based on the last tier
+    const last = infillTiers[infillTiers.length - 1];
+    const nextPct  = last ? Math.min(100, last.percent + 15) : 20;
+    const nextMult = last ? Math.round((last.multiplier + 0.15) * 100) / 100 : 1.0;
+    infillTiers.push({
+      id:         `tier-${infillTiers.length + 1}`,
+      label:      'New tier',
+      percent:    nextPct,
+      multiplier: nextMult,
+      is_default: infillTiers.length === 0,
+      active:     true,
+    });
+    renderInfillTiers();
+  });
+
+  // ── Discounts ─────────────────────────────────────────────────
+  async function loadDiscounts() {
+    const errEl = document.getElementById('discountsError');
+    errEl.classList.remove('visible');
+    try {
+      const r = await fetch('/api/pricing/discounts');
+      if (!r.ok) throw new Error('Could not load discount codes.');
+      allDiscounts = await r.json();
+      renderDiscounts();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.add('visible');
+      document.getElementById('discountsBody').innerHTML = '';
+    }
+  }
+
+  function discountTypeBadge(type) {
+    const map = {
+      percent:      ['badge-sage',  'Percentage'],
+      fixed:        ['badge-stone', 'Fixed'],
+      free_shipping:['badge-warm',  'Free shipping'],
+    };
+    const [cls, label] = map[type] || ['badge-stone', type];
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+
+  function renderDiscounts() {
+    const body = document.getElementById('discountsBody');
+    if (!allDiscounts.length) {
+      body.innerHTML = `<div class="empty-state">
+        <h3>No discount codes</h3>
+        <p>Create codes to offer percentage off, fixed amounts, or free shipping.</p>
+        <button class="btn btn-primary" onclick="openDiscountModal()">+ New code</button>
+      </div>`;
+      return;
+    }
+
+    body.innerHTML = `<table class="data-table">
+      <thead><tr>
+        <th>Code</th><th>Type</th><th>Value</th>
+        <th>Min order</th><th>One-time</th><th>Uses</th>
+        <th>Expires</th><th>Active</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="discountsTbody"></tbody>
+    </table>`;
+
+    const tbody = document.getElementById('discountsTbody');
+    allDiscounts.forEach(d => {
+      const tr = document.createElement('tr');
+      const expiryStr = d.expires_at
+        ? new Date(d.expires_at).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '—';
+      const valueStr = d.type === 'percent'
+        ? `${d.value}%`
+        : d.type === 'fixed'
+          ? `$${Number(d.value).toFixed(2)}`
+          : '—';
+
+      tr.innerHTML = `
+        <td><span class="code-mono">${escHtml(d.code)}</span></td>
+        <td>${discountTypeBadge(d.type)}</td>
+        <td>${escHtml(valueStr)}</td>
+        <td>${d.min_order ? '$' + Number(d.min_order).toFixed(2) : '—'}</td>
+        <td>${d.one_time ? '<span class="badge badge-stone">Yes</span>' : '—'}</td>
+        <td style="color:var(--muted)">${d.use_count != null ? d.use_count : '—'}</td>
+        <td style="color:var(--muted);white-space:nowrap">${expiryStr}</td>
+        <td>
+          <label class="toggle">
+            <input type="checkbox" class="discount-toggle" data-id="${d.id}" ${d.active ? 'checked' : ''}>
+            <span class="toggle-track"></span>
+          </label>
+        </td>
+        <td>
+          <button class="table-action discount-edit" data-id="${d.id}">Edit</button>
+          <button class="table-action danger discount-delete" data-id="${d.id}">Delete</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    // Toggle active
+    tbody.querySelectorAll('.discount-toggle').forEach(cb => {
+      cb.addEventListener('change', async e => {
+        const id = e.target.dataset.id;
+        const active = e.target.checked;
+        try {
+          const r = await fetch(`/api/pricing/discounts/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ active }),
+          });
+          if (!r.ok) throw new Error();
+          const disc = allDiscounts.find(d => String(d.id) === String(id));
+          if (disc) disc.active = active;
+        } catch {
+          e.target.checked = !active;
+        }
+      });
+    });
+
+    // Edit
+    tbody.querySelectorAll('.discount-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const d = allDiscounts.find(d => String(d.id) === btn.dataset.id);
+        if (d) openDiscountModal(d);
+      });
+    });
+
+    // Delete
+    tbody.querySelectorAll('.discount-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const d = allDiscounts.find(d => String(d.id) === btn.dataset.id);
+        if (!d) return;
+        if (!confirm(`Delete code "${d.code}"? This cannot be undone.`)) return;
+        try {
+          const r = await fetch(`/api/pricing/discounts/${d.id}`, { method: 'DELETE' });
+          if (!r.ok) throw new Error();
+          await loadDiscounts();
+        } catch {
+          const errEl = document.getElementById('discountsError');
+          errEl.textContent = 'Could not delete discount code.';
+          errEl.classList.add('visible');
+        }
+      });
+    });
+  }
+
+  // ── Discount modal ────────────────────────────────────────────
+  document.getElementById('newDiscountBtn').addEventListener('click', () => openDiscountModal());
+
+  function openDiscountModal(d = null) {
+    document.getElementById('discountForm').reset();
+    document.getElementById('discountModalError').classList.remove('visible');
+    document.getElementById('discountId').value = '';
+    // Reset type radio cards
+    document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('typePercentCard').classList.add('selected');
+    document.getElementById('discountValueGroup').style.display = '';
+    document.getElementById('discountActive').checked = true;
+
+    if (d) {
+      document.getElementById('discountModalTitle').textContent = 'Edit discount code';
+      document.getElementById('discountId').value = d.id;
+      document.getElementById('discountCode').value = d.code;
+      setDiscountType(d.type || 'percent');
+      if (d.value != null) document.getElementById('discountValue').value = d.value;
+      if (d.min_order != null) document.getElementById('discountMinOrder').value = d.min_order;
+      if (d.expires_at) document.getElementById('discountExpiry').value = d.expires_at.split('T')[0];
+      document.getElementById('discountOneTime').checked = !!d.one_time;
+      document.getElementById('discountActive').checked = d.active !== false;
+    } else {
+      document.getElementById('discountModalTitle').textContent = 'New discount code';
+    }
+
+    document.getElementById('discountModal').classList.remove('hidden');
+    document.getElementById('discountCode').focus();
+  }
+
+  function setDiscountType(type) {
+    document.querySelectorAll('[name="discount_type"]').forEach(r => {
+      r.checked = r.value === type;
+    });
+    document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+    const map = { percent: 'typePercentCard', fixed: 'typeFixedCard', free_shipping: 'typeShippingCard' };
+    const cardId = map[type];
+    if (cardId) document.getElementById(cardId).classList.add('selected');
+    document.getElementById('discountValueGroup').style.display = type === 'free_shipping' ? 'none' : '';
+  }
+
+  // Radio card click handlers
+  document.querySelectorAll('.radio-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const radio = card.querySelector('input[type="radio"]');
+      if (radio) setDiscountType(radio.value);
+    });
+  });
+
+  function closeDiscountModal() {
+    document.getElementById('discountModal').classList.add('hidden');
+  }
+
+  document.getElementById('discountCancelBtn').addEventListener('click', closeDiscountModal);
+  document.getElementById('discountModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('discountModal')) closeDiscountModal();
+  });
+
+  // Generate code
+  document.getElementById('generateCodeBtn').addEventListener('click', () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    document.getElementById('discountCode').value = code;
+  });
+
+  // Save discount
+  document.getElementById('discountForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const saveBtn = document.getElementById('discountSaveBtn');
+    const errEl = document.getElementById('discountModalError');
+    errEl.classList.remove('visible');
+
+    const code = document.getElementById('discountCode').value.trim().toUpperCase();
+    if (!code) {
+      errEl.textContent = 'Discount code is required.';
+      errEl.classList.add('visible');
+      return;
+    }
+
+    const type = document.querySelector('[name="discount_type"]:checked')?.value || 'percent';
+    const value = type !== 'free_shipping' ? parseFloat(document.getElementById('discountValue').value) : null;
+
+    if (type !== 'free_shipping' && (isNaN(value) || value < 0)) {
+      errEl.textContent = 'Please enter a valid discount value.';
+      errEl.classList.add('visible');
+      return;
+    }
+
+    const payload = {
+      code,
+      type,
+      value: value ?? null,
+      min_order: parseFloat(document.getElementById('discountMinOrder').value) || null,
+      one_time: document.getElementById('discountOneTime').checked,
+      expires_at: document.getElementById('discountExpiry').value || null,
+      active: document.getElementById('discountActive').checked,
+    };
+
+    const id = document.getElementById('discountId').value;
+    const url = id ? `/api/pricing/discounts/${id}` : '/api/pricing/discounts';
+    const method = id ? 'PATCH' : 'POST';
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    try {
+      const r = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.error || d.message || 'Save failed.');
+      }
+      closeDiscountModal();
+      await loadDiscounts();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.add('visible');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save code';
+    }
+  });
+
+  // ── Keyboard ──────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('discountModal').classList.contains('hidden')) {
+      closeDiscountModal();
+    }
+  });
+
+  // ── Init ──────────────────────────────────────────────────────
+  loadPricing();
+  loadDiscounts();
+</script>
+</body>
+</html>

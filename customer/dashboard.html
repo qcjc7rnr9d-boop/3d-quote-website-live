@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>My Orders</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self';">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--off-white); font-family: var(--font-ui); font-weight: 400; color: var(--ink); min-height: 100vh; }
+
+    .portal-nav {
+      background: var(--white); border-bottom: 1px solid var(--border);
+      padding: 0 32px; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .portal-wordmark { font-family: var(--font-brand); font-weight: 600; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); text-decoration: none; }
+    .portal-user { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 16px; }
+    .portal-signout { font-size: 13px; color: var(--muted); background: none; border: none; cursor: pointer; font-family: var(--font-ui); }
+    .portal-signout:hover { color: var(--ink); }
+
+    .portal-content { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    .portal-greeting { font-family: var(--font-brand); font-size: 32px; font-weight: 600; margin-bottom: 4px; }
+    .portal-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+
+    .stats-strip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 32px; }
+    .stat-pill {
+      background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 18px 20px; box-shadow: var(--shadow);
+    }
+    .stat-pill-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+    .stat-pill-value { font-family: var(--font-brand); font-size: 30px; color: var(--ink); line-height: 1; }
+
+    .order-card {
+      background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden;
+      transition: box-shadow 200ms;
+    }
+    .order-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.09); }
+    .order-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--stone); gap: 12px; flex-wrap: wrap;
+    }
+    .order-ref { font-size: 13px; font-weight: 500; color: var(--ink); }
+    .order-date { font-size: 12px; color: var(--muted); }
+    .order-card-body { padding: 16px 20px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
+    .order-meta { display: flex; flex-direction: column; gap: 5px; }
+    .order-meta-row { font-size: 13px; color: var(--muted); }
+    .order-meta-row strong { color: var(--ink); font-weight: 400; }
+    .order-total { font-family: var(--font-brand); font-size: 22px; color: var(--ink); text-align: right; white-space: nowrap; }
+
+    /* Status tracker */
+    .status-track { padding: 14px 20px; background: var(--off-white); border-top: 1px solid var(--stone); }
+    .status-steps { display: flex; align-items: center; gap: 0; }
+    .status-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+    .status-step + .status-step::before {
+      content: ''; position: absolute; top: 10px; right: 50%; left: -50%;
+      height: 2px; background: var(--stone); z-index: 0;
+    }
+    .status-step.done + .status-step::before { background: var(--sage-light); }
+    .status-dot {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--stone); border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; z-index: 1; position: relative;
+      transition: background 300ms, border-color 300ms;
+    }
+    .status-step.done .status-dot { background: var(--sage-light); border-color: var(--sage); }
+    .status-step.active .status-dot { background: var(--sage); border-color: var(--sage-dark); }
+    .status-step.active .status-dot::after { content: ''; width: 6px; height: 6px; background: #fff; border-radius: 50%; }
+    .status-step.done .status-dot::after { content: '✓'; color: var(--sage-dark); font-size: 9px; line-height: 1; }
+    .status-label { font-size: 10px; color: var(--muted); margin-top: 5px; text-align: center; white-space: nowrap; }
+    .status-step.active .status-label { color: var(--sage-dark); font-weight: 500; }
+
+    /* Tracking box */
+    .tracking-box {
+      margin: 0 20px 16px; background: rgba(122,158,126,0.06);
+      border: 1px solid var(--sage-light); border-radius: var(--radius); padding: 14px 16px;
+    }
+    .tracking-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--sage-dark); margin-bottom: 6px; }
+    .tracking-number { font-size: 15px; font-weight: 500; color: var(--ink); }
+    .tracking-msg { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+
+    .empty-state { text-align: center; padding: 80px 24px; }
+    .empty-state h2 { font-family: var(--font-brand); font-size: 28px; font-weight: 600; margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; color: var(--muted); }
+
+    @media (max-width: 560px) {
+      .stats-strip { grid-template-columns: 1fr 1fr; }
+      .order-card-body { grid-template-columns: 1fr; }
+      .portal-nav { padding: 0 20px; }
+      .portal-content { padding: 28px 16px 60px; }
+    }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body>
+  <nav class="portal-nav">
+    <a href="../index.html" class="portal-wordmark" id="portalWordmark">—</a>
+    <div class="portal-user">
+      <span id="navName">…</span>
+      <button class="portal-signout" onclick="doSignout()">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="portal-content">
+    <h1 class="portal-greeting" id="greeting">My orders</h1>
+    <p class="portal-subtitle" id="shopLabel">Loading…</p>
+
+    <div class="stats-strip">
+      <div class="stat-pill">
+        <div class="stat-pill-label">Total orders</div>
+        <div class="stat-pill-value" id="statCount">—</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill-label">Total spent</div>
+        <div class="stat-pill-value" id="statSpent">—</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill-label">Active orders</div>
+        <div class="stat-pill-value" id="statActive">—</div>
+      </div>
+    </div>
+
+    <div id="ordersList"></div>
+  </div>
+
+  <script>
+    const shopSlug = new URLSearchParams(window.location.search).get('shop') || '';
+
+    const STEPS = [
+      { key: 'pending',       label: 'Received' },
+      { key: 'processing',    label: 'Confirmed' },
+      { key: 'in_production', label: 'In Production' },
+      { key: 'shipped',       label: 'Shipped' },
+      { key: 'complete',      label: 'Delivered' }
+    ];
+
+    function stepIndex(status) {
+      return STEPS.findIndex(s => s.key === status);
+    }
+
+    function fmtDate(d) {
+      return new Date(d).toLocaleDateString('en-NZ', { day:'numeric', month:'short', year:'numeric' });
+    }
+
+    function renderStatusTrack(status) {
+      const cur = stepIndex(status);
+      return `<div class="status-track">
+        <div class="status-steps">
+          ${STEPS.map((s, i) => {
+            const cls = i < cur ? 'done' : i === cur ? 'active' : '';
+            return `<div class="status-step ${cls}">
+              <div class="status-dot"></div>
+              <div class="status-label">${s.label}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }
+
+    function renderTrackingBox(order) {
+      if (!['shipped','complete'].includes(order.fulfilment_status)) return '';
+      if (!order.tracking_number && !order.customer_message) return '';
+      const trackLink = order.tracking_url
+        ? `<a href="${order.tracking_url}" target="_blank" rel="noopener" style="color:var(--sage-dark)">${order.tracking_number}</a>`
+        : order.tracking_number;
+      return `<div class="tracking-box">
+        ${order.tracking_number ? `<div class="tracking-label">📦 Tracking</div>
+        <div class="tracking-number">${trackLink}</div>` : ''}
+        ${order.customer_message ? `<div class="tracking-msg">${order.customer_message.replace(/\n/g,'<br>')}</div>` : ''}
+      </div>`;
+    }
+
+    function statusBadgeClass(s) {
+      return { pending:'badge-stone', processing:'badge-stone', in_production:'badge-warm',
+               shipped:'badge-sage', complete:'badge-sage', cancelled:'badge-warm' }[s] || 'badge-stone';
+    }
+
+    function statusLabel(s) {
+      return { pending:'Received', processing:'Confirmed', in_production:'In Production',
+               shipped:'Shipped', complete:'Delivered', cancelled:'Cancelled' }[s] || s;
+    }
+
+    function renderOrders(orders) {
+      const list = document.getElementById('ordersList');
+      if (!orders.length) {
+        list.innerHTML = `<div class="empty-state">
+          <h2>No orders yet</h2>
+          <p>Once you place an order, it'll appear here.</p>
+        </div>`;
+        return;
+      }
+
+      const active = orders.filter(o => !['complete','cancelled'].includes(o.fulfilment_status)).length;
+      document.getElementById('statActive').textContent = active;
+
+      list.innerHTML = orders.map(o => `
+        <div class="order-card">
+          <div class="order-card-header">
+            <div>
+              <div class="order-ref">Order #${o.id}</div>
+              <div class="order-date">${fmtDate(o.created_at)}</div>
+            </div>
+            <span class="badge ${statusBadgeClass(o.fulfilment_status)}">${statusLabel(o.fulfilment_status)}</span>
+          </div>
+          <div class="order-card-body">
+            <div class="order-meta">
+              ${o.material_name ? `<div class="order-meta-row"><strong>${o.material_name}</strong></div>` : ''}
+              ${o.colour ? `<div class="order-meta-row">Colour: <strong>${o.colour}</strong></div>` : ''}
+              ${o.finish ? `<div class="order-meta-row">Finish: <strong>${o.finish}</strong></div>` : ''}
+              ${o.file_name ? `<div class="order-meta-row">File: <strong>${o.file_name}</strong></div>` : ''}
+              <div class="order-meta-row">Qty: <strong>${o.quantity}</strong></div>
+            </div>
+            <div class="order-total">$${Number(o.total).toFixed(2)}</div>
+          </div>
+          ${o.fulfilment_status !== 'cancelled' ? renderStatusTrack(o.fulfilment_status) : ''}
+          ${renderTrackingBox(o)}
+        </div>
+      `).join('');
+    }
+
+    async function doSignout() {
+      await fetch('/api/customer/logout', { method: 'POST' });
+      window.location.href = `login.html?shop=${shopSlug}`;
+    }
+
+    (async () => {
+      try {
+        const r = await fetch('/api/customer/me');
+        if (!r.ok) { window.location.href = `login.html?shop=${shopSlug}`; return; }
+        const me = await r.json();
+
+        const shopName = me.shop?.name || 'My Shop';
+        document.getElementById('portalWordmark').textContent = shopName;
+        document.getElementById('navName').textContent     = me.name;
+        document.getElementById('greeting').textContent    = `Hi, ${me.name.split(' ')[0]}`;
+        document.getElementById('shopLabel').textContent   = `${shopName} · Your orders`;
+        document.getElementById('statCount').textContent   = me.order_count;
+        document.getElementById('statSpent').textContent   = '$' + Number(me.total_spent).toFixed(2);
+        document.title = `My Orders · ${shopName}`;
+
+        const or = await fetch('/api/customer/orders');
+        const orders = await or.json();
+        renderOrders(orders);
+      } catch {
+        window.location.href = `login.html?shop=${shopSlug}`;
+      }
+    })();
+  </script>
+</body>
+</html>

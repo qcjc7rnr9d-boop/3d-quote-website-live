@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Account — mahi3d Admin</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    .inline-success {
+      background: rgba(26,122,58,0.07);
+      border: 1px solid rgba(26,122,58,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #1a7a3a;
+      margin-top: 12px;
+      display: none;
+    }
+    .inline-error {
+      background: rgba(192,57,43,0.07);
+      border: 1px solid rgba(192,57,43,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #C0392B;
+      margin-top: 12px;
+      display: none;
+    }
+
+    /* Password requirements */
+    .pw-requirements {
+      list-style: none;
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .pw-req {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 200ms;
+    }
+    .pw-req::before {
+      content: '○';
+      font-size: 10px;
+      flex-shrink: 0;
+      transition: color 200ms;
+    }
+    .pw-req.met { color: #1a7a3a; }
+    .pw-req.met::before { content: '✓'; }
+
+    /* Sessions table */
+    .session-device {
+      font-size: 13px;
+      color: var(--ink);
+    }
+    .session-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .sessions-footer {
+      padding: 14px 24px;
+      border-top: 1px solid var(--stone);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-in { animation: fadeIn 300ms ease-out; }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">R</div>
+      <div class="sidebar-store-name" id="sidebarStoreName">Loading…</div>
+      <span class="sidebar-plan" id="sidebarPlan">—</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-link" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-section">Catalogue</div>
+      <a href="materials.html" class="sidebar-link" id="nav-materials">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Materials
+      </a>
+      <a href="pricing.html" class="sidebar-link" id="nav-pricing">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg>
+        Pricing
+      </a>
+      <div class="sidebar-section">Sales</div>
+      <a href="orders.html" class="sidebar-link" id="nav-orders">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Orders
+      </a>
+      <a href="customers.html" class="sidebar-link" id="nav-customers">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Customers
+      </a>
+      <div class="sidebar-section">Store</div>
+      <a href="shipping.html" class="sidebar-link" id="nav-shipping">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m0 0h3l3 3v4h-1M15 17H9m-4 0a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Shipping
+      </a>
+      <a href="payments.html" class="sidebar-link" id="nav-payments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Payments
+      </a>
+      <a href="notifications.html" class="sidebar-link" id="nav-notifications">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </a>
+      <a href="settings.html" class="sidebar-link" id="nav-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="account.html" class="sidebar-link active" id="nav-account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-signout" id="signoutBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div class="admin-title-block">
+        <h1 class="admin-title">Account</h1>
+        <p class="admin-subtitle">Your personal account and security settings</p>
+      </div>
+    </div>
+
+    <div class="admin-content fade-in">
+
+      <!-- Profile -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Profile</span>
+        </div>
+        <div class="section-card-body">
+          <div class="form-grid-2" style="gap:16px;max-width:600px;">
+            <div class="form-group">
+              <label class="form-label" for="profileName">Name</label>
+              <input type="text" class="form-input" id="profileName" placeholder="Your name">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="profileEmail">Email</label>
+              <input type="email" class="form-input" id="profileEmail" readonly
+                style="background:var(--off-white);color:var(--muted);cursor:not-allowed;"
+                title="Email cannot be changed here">
+            </div>
+          </div>
+          <div style="margin-top:20px;display:flex;align-items:center;gap:12px;">
+            <button class="btn btn-primary" id="saveProfileBtn">Save profile</button>
+            <div class="inline-success" id="profileSuccess" style="margin-top:0;"></div>
+            <div class="inline-error"   id="profileError"   style="margin-top:0;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Change password -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Change password</span>
+        </div>
+        <div class="section-card-body">
+          <div style="max-width:440px;display:flex;flex-direction:column;gap:16px;">
+
+            <div class="form-group">
+              <label class="form-label" for="currentPassword">Current password</label>
+              <input type="password" class="form-input" id="currentPassword" autocomplete="current-password">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="newPassword">New password</label>
+              <input type="password" class="form-input" id="newPassword" autocomplete="new-password">
+              <div class="strength-bar" id="strengthBar">
+                <div class="strength-segment" id="seg0"></div>
+                <div class="strength-segment" id="seg1"></div>
+                <div class="strength-segment" id="seg2"></div>
+                <div class="strength-segment" id="seg3"></div>
+              </div>
+              <div class="strength-label" id="strengthLabel"></div>
+              <ul class="pw-requirements" id="pwRequirements">
+                <li class="pw-req" id="req-length">At least 8 characters</li>
+                <li class="pw-req" id="req-upper">One uppercase letter</li>
+                <li class="pw-req" id="req-number">One number</li>
+                <li class="pw-req" id="req-special">One special character</li>
+              </ul>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="confirmPassword">Confirm new password</label>
+              <input type="password" class="form-input" id="confirmPassword" autocomplete="new-password">
+              <div class="form-error" id="confirmError" style="display:none;margin-top:4px;"></div>
+            </div>
+
+          </div>
+          <div style="margin-top:20px;display:flex;align-items:center;gap:12px;">
+            <button class="btn btn-primary" id="savePasswordBtn">Save password</button>
+            <div class="inline-success" id="passwordSuccess" style="margin-top:0;"></div>
+            <div class="inline-error"   id="passwordError"   style="margin-top:0;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active sessions -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Active sessions</span>
+        </div>
+        <div id="sessionsBody">
+          <div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--muted);">
+            Loading sessions…
+          </div>
+        </div>
+        <div class="sessions-footer">
+          <button class="btn btn-outline" id="revokeAllBtn">Sign out all other sessions</button>
+        </div>
+      </div>
+
+    </div><!-- /admin-content -->
+  </main>
+
+</div><!-- /admin-layout -->
+
+<script>
+  // ── Auth guard ─────────────────────────────────────────────
+  (async () => {
+    try {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location.href = 'login.html'; return; }
+      const shop = await r.json();
+      document.getElementById('sidebarStoreName').textContent = shop.name;
+      document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
+      document.getElementById('profileEmail').value = shop.email || '';
+      document.getElementById('profileName').value  = shop.owner_name || shop.name || '';
+      if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
+    } catch { window.location.href = 'login.html'; }
+  })();
+
+  document.getElementById('signoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  // ── Save profile ───────────────────────────────────────────
+  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveProfileBtn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    const successEl = document.getElementById('profileSuccess');
+    const errorEl   = document.getElementById('profileError');
+    successEl.style.display = 'none';
+    errorEl.style.display   = 'none';
+
+    try {
+      const r = await fetch('/api/auth/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: document.getElementById('profileName').value.trim() }),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Could not save profile.');
+      successEl.textContent = 'Profile updated.';
+      successEl.style.display = 'block';
+      setTimeout(() => { successEl.style.display = 'none'; }, 3500);
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save profile';
+    }
+  });
+
+  // ── Password strength ──────────────────────────────────────
+  function scorePassword(pw) {
+    let s = 0;
+    if (pw.length >= 8)        s++;
+    if (/[A-Z]/.test(pw))      s++;
+    if (/[0-9]/.test(pw))      s++;
+    if (/[^A-Za-z0-9]/.test(pw)) s++;
+    return s;
+  }
+
+  const labels  = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+  const classes = ['', 'weak', 'fair', 'good', 'strong'];
+
+  document.getElementById('newPassword').addEventListener('input', function() {
+    const pw = this.value;
+
+    // Segments
+    const score = scorePassword(pw);
+    for (let i = 0; i < 4; i++) {
+      const seg = document.getElementById('seg' + i);
+      seg.className = 'strength-segment';
+      if (pw.length > 0 && i < score) seg.classList.add(classes[score]);
+    }
+    document.getElementById('strengthLabel').textContent = pw.length > 0 ? labels[score] : '';
+
+    // Requirements
+    toggle('req-length',  pw.length >= 8);
+    toggle('req-upper',   /[A-Z]/.test(pw));
+    toggle('req-number',  /[0-9]/.test(pw));
+    toggle('req-special', /[^A-Za-z0-9]/.test(pw));
+
+    // Confirm mismatch hint
+    const confirm = document.getElementById('confirmPassword').value;
+    const errEl = document.getElementById('confirmError');
+    if (confirm && confirm !== pw) {
+      errEl.textContent = 'Passwords do not match.';
+      errEl.style.display = 'block';
+    } else {
+      errEl.style.display = 'none';
+    }
+  });
+
+  document.getElementById('confirmPassword').addEventListener('input', function() {
+    const errEl = document.getElementById('confirmError');
+    const pw = document.getElementById('newPassword').value;
+    if (this.value && this.value !== pw) {
+      errEl.textContent = 'Passwords do not match.';
+      errEl.style.display = 'block';
+    } else {
+      errEl.style.display = 'none';
+    }
+  });
+
+  function toggle(id, met) {
+    document.getElementById(id).classList.toggle('met', met);
+  }
+
+  // ── Save password ──────────────────────────────────────────
+  document.getElementById('savePasswordBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('savePasswordBtn');
+    if (btn.disabled) return;
+
+    const current  = document.getElementById('currentPassword').value;
+    const newPw    = document.getElementById('newPassword').value;
+    const confirm  = document.getElementById('confirmPassword').value;
+    const successEl = document.getElementById('passwordSuccess');
+    const errorEl   = document.getElementById('passwordError');
+    successEl.style.display = 'none';
+    errorEl.style.display   = 'none';
+
+    if (!current) {
+      errorEl.textContent = 'Please enter your current password.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    if (scorePassword(newPw) < 4) {
+      errorEl.textContent = 'New password does not meet all requirements.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    if (newPw !== confirm) {
+      errorEl.textContent = 'New passwords do not match.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      const r = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current, newPassword: newPw }),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Could not change password.');
+      document.getElementById('currentPassword').value = '';
+      document.getElementById('newPassword').value     = '';
+      document.getElementById('confirmPassword').value = '';
+      // Reset strength bar
+      for (let i = 0; i < 4; i++) document.getElementById('seg' + i).className = 'strength-segment';
+      document.getElementById('strengthLabel').textContent = '';
+      ['req-length','req-upper','req-number','req-special'].forEach(id => {
+        document.getElementById(id).classList.remove('met');
+      });
+      successEl.textContent = 'Password updated successfully.';
+      successEl.style.display = 'block';
+      setTimeout(() => { successEl.style.display = 'none'; }, 4000);
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save password';
+    }
+  });
+
+  // ── Sessions ───────────────────────────────────────────────
+  async function loadSessions() {
+    const container = document.getElementById('sessionsBody');
+    try {
+      const r = await fetch('/api/auth/sessions');
+      if (!r.ok) throw new Error('Could not load sessions.');
+      const sessions = await r.json();
+
+      if (!sessions.length) {
+        container.innerHTML = `<div style="padding:30px 24px;font-size:13px;color:var(--muted);">No active sessions found.</div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <table class="data-table">
+          <thead><tr>
+            <th>Device</th>
+            <th>IP address</th>
+            <th>Started</th>
+            <th>Last seen</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="sessionsTableBody"></tbody>
+        </table>`;
+
+      const tbody = document.getElementById('sessionsTableBody');
+      sessions.forEach(s => {
+        const tr = document.createElement('tr');
+        const device = simplifyUA(s.user_agent || '');
+        const isCurrent = !!s.is_current;
+        tr.innerHTML = `
+          <td>
+            <div class="session-device">${escHtml(device)}</div>
+            ${isCurrent ? '<span class="badge badge-sage" style="margin-top:4px;">Current</span>' : ''}
+          </td>
+          <td style="font-size:12px;color:var(--muted);font-family:monospace;">${escHtml(s.ip || '—')}</td>
+          <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${formatDate(s.created_at)}</td>
+          <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${formatDate(s.last_seen_at)}</td>
+          <td style="text-align:right;">
+            ${isCurrent ? '' : `<button class="table-action danger" data-session-id="${escHtml(s.id)}">Revoke</button>`}
+          </td>`;
+        tbody.appendChild(tr);
+      });
+
+      // Bind revoke buttons
+      tbody.querySelectorAll('[data-session-id]').forEach(btn => {
+        btn.addEventListener('click', () => revokeSession(btn.dataset.sessionId, btn));
+      });
+
+    } catch (err) {
+      container.innerHTML = `<div style="padding:20px 24px;font-size:13px;color:#C0392B;">${escHtml(err.message)}</div>`;
+    }
+  }
+
+  async function revokeSession(id, btn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = 'Revoking…';
+    try {
+      const r = await fetch(`/api/auth/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Could not revoke session.');
+      // Remove row
+      btn.closest('tr').remove();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Revoke';
+      alert(err.message);
+    }
+  }
+
+  document.getElementById('revokeAllBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('revokeAllBtn');
+    if (btn.disabled) return;
+    if (!confirm('Sign out all other sessions?')) return;
+    btn.disabled = true;
+    btn.textContent = 'Signing out…';
+    try {
+      const r = await fetch('/api/auth/sessions/revoke-all', { method: 'POST' });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Failed.');
+      await loadSessions();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sign out all other sessions';
+    }
+  });
+
+  // ── Utilities ──────────────────────────────────────────────
+  function simplifyUA(ua) {
+    if (!ua) return 'Unknown device';
+    if (/iPhone/.test(ua))  return 'iPhone — Safari';
+    if (/iPad/.test(ua))    return 'iPad — Safari';
+    if (/Android/.test(ua)) return 'Android device';
+    if (/Mac OS X/.test(ua) && /Safari/.test(ua) && !/Chrome/.test(ua)) return 'Mac — Safari';
+    if (/Mac OS X/.test(ua) && /Chrome/.test(ua)) return 'Mac — Chrome';
+    if (/Windows/.test(ua) && /Chrome/.test(ua))  return 'Windows — Chrome';
+    if (/Windows/.test(ua) && /Firefox/.test(ua)) return 'Windows — Firefox';
+    if (/Linux/.test(ua))   return 'Linux';
+    return ua.slice(0, 60);
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function formatDate(str) {
+    if (!str) return '—';
+    try {
+      return new Date(str).toLocaleDateString('en-NZ', {
+        day: 'numeric', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    } catch { return str; }
+  }
+
+  // ── Init ───────────────────────────────────────────────────
+  loadSessions();
+</script>
+</body>
+</html>

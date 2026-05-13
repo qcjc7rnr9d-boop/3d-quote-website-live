@@ -1,0 +1,159 @@
+-- RF DEWI — Database Schema
+-- Run: node db/migrate.js
+
+PRAGMA foreign_keys = ON;
+PRAGMA journal_mode = WAL;
+
+-- ── Shops (one row per print-shop customer) ────────────────
+CREATE TABLE IF NOT EXISTS shops (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  name             TEXT    NOT NULL,
+  slug             TEXT    UNIQUE NOT NULL,
+  email            TEXT    UNIQUE NOT NULL COLLATE NOCASE,
+  password_hash    TEXT    NOT NULL,
+  is_temp_password INTEGER NOT NULL DEFAULT 1,
+  plan             TEXT    NOT NULL DEFAULT 'starter',
+  stripe_account_id  TEXT,
+  stripe_secret_key  TEXT,
+  stripe_client_id   TEXT,
+  created_at         TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- ── Materials ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS materials (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id          INTEGER NOT NULL,
+  name             TEXT    NOT NULL,
+  description_short TEXT,
+  description_long  TEXT,
+  category         TEXT    NOT NULL DEFAULT 'FDM',
+  colours          TEXT    NOT NULL DEFAULT '[]',  -- JSON array of {hex, name}
+  finishes         TEXT    NOT NULL DEFAULT '[]',  -- JSON array of {name, modifier}
+  pricing_model    TEXT    NOT NULL DEFAULT 'per_cm3',
+  base_price       REAL    NOT NULL DEFAULT 0.18,
+  min_charge       REAL    NOT NULL DEFAULT 4.50,
+  volume_tiers     TEXT    NOT NULL DEFAULT '[]',  -- JSON: [{from, price}]
+  properties       TEXT    NOT NULL DEFAULT '{}',  -- JSON: {strength, flexibility, heat, idealFor, notFor}
+  active           INTEGER NOT NULL DEFAULT 1,
+  stock_status     TEXT    NOT NULL DEFAULT 'in_stock',
+  sort_order       INTEGER NOT NULL DEFAULT 0,
+  created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+-- ── Orders ─────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS orders (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id             INTEGER NOT NULL,
+  customer_email      TEXT    NOT NULL COLLATE NOCASE,
+  customer_name       TEXT    NOT NULL,
+  file_name           TEXT,
+  material_id         INTEGER,
+  colour              TEXT,
+  finish              TEXT,
+  quantity            INTEGER NOT NULL DEFAULT 1,
+  subtotal            REAL    NOT NULL DEFAULT 0,
+  tax                 REAL    NOT NULL DEFAULT 0,
+  shipping            REAL    NOT NULL DEFAULT 0,
+  total               REAL    NOT NULL DEFAULT 0,
+  stripe_payment_id   TEXT,
+  fulfilment_status   TEXT    NOT NULL DEFAULT 'pending',
+  payment_status      TEXT    NOT NULL DEFAULT 'pending',
+  notes               TEXT,
+  created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id)    REFERENCES shops(id) ON DELETE CASCADE,
+  FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE SET NULL
+);
+
+-- ── Customers ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS customers (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id    INTEGER NOT NULL,
+  email      TEXT    NOT NULL COLLATE NOCASE,
+  name       TEXT,
+  notes      TEXT,
+  created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (shop_id, email),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+-- ── Discount codes ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS discount_codes (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id    INTEGER NOT NULL,
+  code       TEXT    NOT NULL COLLATE NOCASE,
+  type       TEXT    NOT NULL,             -- 'percent' | 'fixed' | 'free_shipping'
+  value      REAL    NOT NULL DEFAULT 0,
+  min_order  REAL    NOT NULL DEFAULT 0,
+  one_time   INTEGER NOT NULL DEFAULT 0,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  expires_at TEXT,
+  active     INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (shop_id, code),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+-- ── Pricing config (one row per shop) ──────────────────────
+CREATE TABLE IF NOT EXISTS pricing_config (
+  shop_id              INTEGER PRIMARY KEY,
+  currency             TEXT    NOT NULL DEFAULT 'NZD',
+  tax_rate             REAL    NOT NULL DEFAULT 0.15,
+  tax_inclusive        INTEGER NOT NULL DEFAULT 0,
+  min_order_value      REAL    NOT NULL DEFAULT 0,
+  free_shipping_above  REAL    NOT NULL DEFAULT 50,
+  quote_rounding       REAL    NOT NULL DEFAULT 0.10,
+  quote_valid_hours    INTEGER NOT NULL DEFAULT 24,
+  show_breakdown       INTEGER NOT NULL DEFAULT 1,
+  surcharges           TEXT    NOT NULL DEFAULT '[]',
+  updated_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+-- ── Store settings (one row per shop) ──────────────────────
+CREATE TABLE IF NOT EXISTS store_settings (
+  shop_id        INTEGER PRIMARY KEY,
+  tagline        TEXT,
+  about          TEXT,
+  phone          TEXT,
+  address        TEXT,
+  logo_url       TEXT,
+  gst_number     TEXT,
+  invoice_footer TEXT,
+  invoice_logo   INTEGER NOT NULL DEFAULT 1,
+  notifications  TEXT    NOT NULL DEFAULT '{}',
+  email_templates TEXT   NOT NULL DEFAULT '{}',
+  shipping_zones  TEXT   NOT NULL DEFAULT '[]',
+  updated_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+-- ── Sessions ───────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS sessions (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id    INTEGER NOT NULL,
+  token      TEXT    UNIQUE NOT NULL,
+  ip         TEXT,
+  user_agent TEXT,
+  created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT    NOT NULL,
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+-- ── Password-reset tokens ───────────────────────────────────
+CREATE TABLE IF NOT EXISTS reset_tokens (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id    INTEGER NOT NULL,
+  token      TEXT    UNIQUE NOT NULL,
+  used       INTEGER NOT NULL DEFAULT 0,
+  expires_at TEXT    NOT NULL,
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+-- ── Indexes ────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_orders_shop     ON orders(shop_id);
+CREATE INDEX IF NOT EXISTS idx_orders_email    ON orders(customer_email);
+CREATE INDEX IF NOT EXISTS idx_materials_shop  ON materials(shop_id);
+CREATE INDEX IF NOT EXISTS idx_customers_shop  ON customers(shop_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_token  ON sessions(token);
+CREATE INDEX IF NOT EXISTS idx_reset_token     ON reset_tokens(token);

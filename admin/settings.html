@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Settings — mahi3d Admin</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    .inline-success {
+      background: rgba(26,122,58,0.07);
+      border: 1px solid rgba(26,122,58,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #1a7a3a;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .inline-error {
+      background: rgba(192,57,43,0.07);
+      border: 1px solid rgba(192,57,43,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #C0392B;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    /* Logo preview */
+    .logo-preview {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--off-white);
+      display: block;
+      margin-bottom: 8px;
+    }
+    .logo-preview.hidden { display: none; }
+
+    /* Toggle row */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--stone);
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-row-label { font-size: 14px; color: var(--ink); font-weight: 400; }
+    .toggle-row-desc  { font-size: 12px; color: var(--muted); margin-top: 2px; font-weight: 400; }
+
+    /* Info box */
+    .info-box {
+      background: var(--off-white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 400;
+      line-height: 1.6;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-in { animation: fadeIn 300ms ease-out; }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">R</div>
+      <div class="sidebar-store-name" id="sidebarStoreName">Loading…</div>
+      <span class="sidebar-plan" id="sidebarPlan">—</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-link" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-section">Catalogue</div>
+      <a href="materials.html" class="sidebar-link" id="nav-materials">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Materials
+      </a>
+      <a href="pricing.html" class="sidebar-link" id="nav-pricing">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg>
+        Pricing
+      </a>
+      <div class="sidebar-section">Sales</div>
+      <a href="orders.html" class="sidebar-link" id="nav-orders">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Orders
+      </a>
+      <a href="customers.html" class="sidebar-link" id="nav-customers">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Customers
+      </a>
+      <div class="sidebar-section">Store</div>
+      <a href="shipping.html" class="sidebar-link" id="nav-shipping">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m0 0h3l3 3v4h-1M15 17H9m-4 0a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Shipping
+      </a>
+      <a href="payments.html" class="sidebar-link" id="nav-payments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Payments
+      </a>
+      <a href="notifications.html" class="sidebar-link" id="nav-notifications">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </a>
+      <a href="settings.html" class="sidebar-link active" id="nav-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="account.html" class="sidebar-link" id="nav-account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-signout" id="signoutBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div class="admin-title-block">
+        <h1 class="admin-title">Store settings</h1>
+        <p class="admin-subtitle">Your shop profile and preferences</p>
+      </div>
+      <div class="admin-actions">
+        <button class="btn btn-primary" id="saveBtn">Save</button>
+      </div>
+    </div>
+
+    <div class="admin-content fade-in">
+
+      <div class="inline-success" id="saveSuccess">Settings saved.</div>
+      <div class="inline-error"   id="saveError"></div>
+
+      <!-- Shop Profile -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Shop profile</span>
+        </div>
+        <div class="section-card-body">
+          <div class="form-grid-2" style="gap:20px;">
+
+            <div class="form-group">
+              <label class="form-label" for="shopName">Shop name</label>
+              <input type="text" class="form-input" id="shopName" placeholder="e.g. mahi3d">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="shopTagline">Tagline</label>
+              <input type="text" class="form-input" id="shopTagline" placeholder="Precision 3D printing…">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="shopEmail">Email</label>
+              <input type="email" class="form-input" id="shopEmail" readonly
+                style="background:var(--off-white);color:var(--muted);cursor:not-allowed;"
+                title="Contact support to change your email address">
+              <span class="form-hint">Contact support to change your email address.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="shopPhone">Phone</label>
+              <input type="tel" class="form-input" id="shopPhone" placeholder="+64 9 000 0000">
+            </div>
+
+            <div class="form-group col-span-2">
+              <label class="form-label" for="shopAddress">Address</label>
+              <input type="text" class="form-input" id="shopAddress" placeholder="123 Example St, Auckland, New Zealand">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="shopGST">GST / Tax number</label>
+              <input type="text" class="form-input" id="shopGST" placeholder="12-345-678">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="shopLogo">Logo</label>
+              <img class="logo-preview hidden" id="logoPreview" src="" alt="Current logo">
+              <input type="file" class="form-input" id="shopLogo" accept="image/*" style="padding:7px 14px;">
+              <span class="form-hint">PNG or SVG recommended. Max 2 MB.</span>
+            </div>
+
+            <div class="form-group col-span-2">
+              <label class="form-label" for="invoiceFooter">Invoice footer</label>
+              <textarea class="form-textarea" id="invoiceFooter" rows="3"
+                placeholder="Thank you for your order. Payment terms: 7 days."></textarea>
+              <span class="form-hint">Appears at the bottom of all PDF invoices.</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoice -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Invoice</span>
+        </div>
+        <div class="section-card-body">
+
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-row-label">Show logo on invoice</div>
+              <div class="toggle-row-desc">Display your shop logo in the PDF invoice header</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="invoiceLogo" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+
+          <div class="form-group" style="padding-top:16px;margin-bottom:16px;">
+            <label class="form-label" for="invoiceFooterInv">Invoice footer</label>
+            <textarea class="form-textarea" id="invoiceFooterInv" rows="3"
+              placeholder="Thank you for your order. Payment terms: 7 days."></textarea>
+            <span class="form-hint">Mirrors the field above — both update the same setting.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="invoicePrefix">Invoice prefix</label>
+            <input type="text" class="form-input" id="invoicePrefix" placeholder="INV-"
+              style="max-width:200px;">
+            <span class="form-hint">Prepended to all invoice numbers, e.g. INV-00042.</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Branding -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Branding</span>
+          <span class="badge badge-stone">Coming soon</span>
+        </div>
+        <div class="section-card-body">
+          <div class="info-box">
+            Custom domain branding coming soon — upgrade to Pro to add a custom domain and white-label your quoting portal.
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="danger-zone">
+        <div class="danger-zone-title">Delete shop account</div>
+        <p style="font-size:13px;font-weight: 400;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+          Permanently delete your account, all orders, and materials. This cannot be undone.
+        </p>
+        <button class="btn btn-danger" id="deleteAccountBtn">Delete account</button>
+      </div>
+
+    </div><!-- /admin-content -->
+  </main>
+
+</div><!-- /admin-layout -->
+
+<!-- Delete account confirmation modal -->
+<div class="modal-overlay hidden" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+  <div class="modal">
+    <h2 class="modal-title" id="deleteModalTitle">Delete shop account</h2>
+    <p class="modal-body">
+      This will permanently erase your shop, all orders, all materials and all customer data.
+      There is no recovery. To confirm, type your shop name exactly below.
+    </p>
+    <div class="form-group" style="margin-bottom:20px;">
+      <label class="form-label" for="deleteConfirmInput">Type your shop name to confirm</label>
+      <input type="text" class="form-input" id="deleteConfirmInput" placeholder="">
+    </div>
+    <div class="inline-error" id="deleteError" style="margin-bottom:12px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cancelDeleteBtn">Cancel</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn" disabled>Delete permanently</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Auth guard ─────────────────────────────────────────────
+  let shopNameValue = '';
+
+  (async () => {
+    try {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location.href = 'login.html'; return; }
+      const shop = await r.json();
+      shopNameValue = shop.name || '';
+      document.getElementById('sidebarStoreName').textContent = shop.name;
+      document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
+      document.getElementById('shopEmail').value = shop.email || '';
+      document.getElementById('deleteConfirmInput').placeholder = shop.name || '';
+      if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
+    } catch { window.location.href = 'login.html'; }
+  })();
+
+  document.getElementById('signoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  // ── Load settings ──────────────────────────────────────────
+  (async () => {
+    try {
+      const r = await fetch('/api/settings');
+      if (!r.ok) return;
+      const s = await r.json();
+
+      if (s.name)            document.getElementById('shopName').value     = s.name;
+      if (s.tagline)         document.getElementById('shopTagline').value  = s.tagline;
+      if (s.phone)           document.getElementById('shopPhone').value    = s.phone;
+      if (s.address)         document.getElementById('shopAddress').value  = s.address;
+      if (s.gst_number)      document.getElementById('shopGST').value      = s.gst_number;
+      if (s.invoice_footer)  {
+        document.getElementById('invoiceFooter').value    = s.invoice_footer;
+        document.getElementById('invoiceFooterInv').value = s.invoice_footer;
+      }
+      if (s.invoice_prefix)  document.getElementById('invoicePrefix').value = s.invoice_prefix;
+      if (s.invoice_logo != null) document.getElementById('invoiceLogo').checked = !!s.invoice_logo;
+      if (s.logo_url) {
+        const img = document.getElementById('logoPreview');
+        img.src = s.logo_url;
+        img.classList.remove('hidden');
+      }
+    } catch { /* ignore */ }
+  })();
+
+  // ── Sync footer textareas ──────────────────────────────────
+  document.getElementById('invoiceFooter').addEventListener('input', function() {
+    document.getElementById('invoiceFooterInv').value = this.value;
+  });
+  document.getElementById('invoiceFooterInv').addEventListener('input', function() {
+    document.getElementById('invoiceFooter').value = this.value;
+  });
+
+  // ── Logo file preview ──────────────────────────────────────
+  document.getElementById('shopLogo').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById('logoPreview');
+      img.src = e.target.result;
+      img.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ── Save settings ──────────────────────────────────────────
+  const saveBtn     = document.getElementById('saveBtn');
+  const saveSuccess = document.getElementById('saveSuccess');
+  const saveError   = document.getElementById('saveError');
+
+  saveBtn.addEventListener('click', async () => {
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    saveSuccess.style.display = 'none';
+    saveError.style.display   = 'none';
+
+    try {
+      const invoiceFooterVal = document.getElementById('invoiceFooter').value;
+      const logoFile = document.getElementById('shopLogo').files[0];
+
+      // If logo selected, upload first
+      let logoUrl;
+      if (logoFile) {
+        const fd = new FormData();
+        fd.append('logo', logoFile);
+        const lr = await fetch('/api/settings/logo', { method: 'POST', body: fd });
+        if (!lr.ok) throw new Error((await lr.json().catch(() => ({}))).error || 'Logo upload failed.');
+        const lj = await lr.json();
+        logoUrl = lj.url;
+      }
+
+      const payload = {
+        name:           document.getElementById('shopName').value.trim(),
+        tagline:        document.getElementById('shopTagline').value.trim(),
+        phone:          document.getElementById('shopPhone').value.trim(),
+        address:        document.getElementById('shopAddress').value.trim(),
+        gst_number:     document.getElementById('shopGST').value.trim(),
+        invoice_footer: invoiceFooterVal,
+        invoice_prefix: document.getElementById('invoicePrefix').value.trim(),
+        invoice_logo:   document.getElementById('invoiceLogo').checked,
+      };
+      if (logoUrl) payload.logo_url = logoUrl;
+
+      const r = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Save failed.');
+
+      // Update sidebar name if changed
+      if (payload.name) {
+        document.getElementById('sidebarStoreName').textContent = payload.name;
+        shopNameValue = payload.name;
+        document.getElementById('deleteConfirmInput').placeholder = payload.name;
+      }
+
+      saveSuccess.style.display = 'block';
+      setTimeout(() => { saveSuccess.style.display = 'none'; }, 4000);
+    } catch (err) {
+      saveError.textContent = err.message;
+      saveError.style.display = 'block';
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+    }
+  });
+
+  // ── Delete account flow ────────────────────────────────────
+  document.getElementById('deleteAccountBtn').addEventListener('click', () => {
+    document.getElementById('deleteConfirmInput').value = '';
+    document.getElementById('confirmDeleteBtn').disabled = true;
+    document.getElementById('deleteError').style.display = 'none';
+    document.getElementById('deleteModal').classList.remove('hidden');
+    document.getElementById('deleteConfirmInput').focus();
+  });
+
+  document.getElementById('deleteConfirmInput').addEventListener('input', function() {
+    document.getElementById('confirmDeleteBtn').disabled = (this.value !== shopNameValue);
+  });
+
+  document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+    document.getElementById('deleteModal').classList.add('hidden');
+  });
+
+  document.getElementById('deleteModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+  });
+
+  document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('confirmDeleteBtn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+    document.getElementById('deleteError').style.display = 'none';
+
+    try {
+      const r = await fetch('/api/auth/account', { method: 'DELETE' });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Deletion failed.');
+      window.location.href = 'login.html';
+    } catch (err) {
+      document.getElementById('deleteError').textContent = err.message;
+      document.getElementById('deleteError').style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Delete permanently';
+    }
+  });
+</script>
+</body>
+</html>

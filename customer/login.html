@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>My Orders — mahi3d</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self';">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    .tab-row { display:flex; border-bottom:1px solid var(--stone); margin-bottom:24px; }
+    .auth-tab {
+      flex:1; text-align:center; padding:11px 0;
+      font-size:13px; font-family:var(--font-ui);
+      border:none; background:none; cursor:pointer;
+      color:var(--muted); border-bottom:2px solid transparent;
+      margin-bottom:-1px; transition:color 150ms,border-color 150ms;
+    }
+    .auth-tab.active { color:var(--sage-dark); border-color:var(--sage); font-weight:500; }
+    .tab-pane { display:none; }
+    .tab-pane.active { display:block; }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body class="admin-body">
+  <div class="auth-page">
+    <a href="../index.html" class="auth-wordmark" id="shopWordmark">—</a>
+
+    <div class="auth-card fade-up" style="width:min(420px,100%)">
+      <div class="tab-row">
+        <button class="auth-tab active" onclick="switchTab('login')">Sign in</button>
+        <button class="auth-tab" onclick="switchTab('register')">Create account</button>
+      </div>
+
+      <div class="auth-error" id="authError" role="alert" aria-live="assertive"></div>
+
+      <!-- Shop ID banner (shown when no slug in URL) -->
+      <div id="shopBanner" style="display:none;margin-bottom:18px;padding:12px 14px;background:rgba(122,158,126,0.08);border:1px solid var(--sage-light);border-radius:var(--radius)">
+        <label class="form-label" for="shopSlugInput" style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--sage-dark);margin-bottom:6px">Shop ID</label>
+        <input class="form-input" type="text" id="shopSlugInput" placeholder="e.g. my-print-shop" autocomplete="organization" style="margin-bottom:0">
+        <p style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5">Enter the Shop ID from the link your print shop gave you.</p>
+      </div>
+
+      <!-- Login pane -->
+      <div class="tab-pane active" id="paneLogin">
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">Email</label>
+          <input class="form-input" type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">Password</label>
+          <input class="form-input" type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+        </div>
+        <button type="button" class="btn btn-primary full" style="margin-top:8px" onclick="doLogin()">Sign in</button>
+      </div>
+
+      <!-- Register pane -->
+      <div class="tab-pane" id="paneRegister">
+        <div class="form-group">
+          <label class="form-label" for="regName">Full name</label>
+          <input class="form-input" type="text" id="regName" placeholder="Jane Smith" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regEmail">Email</label>
+          <input class="form-input" type="email" id="regEmail" placeholder="your@email.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regPassword">Password <span style="font-weight: 400;color:var(--muted)">(min 8 characters)</span></label>
+          <input class="form-input" type="password" id="regPassword" placeholder="Choose a password" autocomplete="new-password">
+        </div>
+        <button type="button" class="btn btn-primary full" style="margin-top:8px" onclick="doRegister()">Create account</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Get shop slug from URL: /customer/login.html?shop=my-shop
+    let shopSlug = new URLSearchParams(window.location.search).get('shop') || '';
+
+    // If no slug in URL, show the shop ID input
+    if (!shopSlug) {
+      document.getElementById('shopBanner').style.display = 'block';
+    }
+
+    function getSlug() {
+      return shopSlug || document.getElementById('shopSlugInput').value.trim().toLowerCase();
+    }
+
+    // Populate wordmark with shop name if slug known
+    if (shopSlug) {
+      fetch(`/api/customer/shop-info?slug=${encodeURIComponent(shopSlug)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d?.name) document.getElementById('shopWordmark').textContent = d.name; })
+        .catch(() => {});
+    } else {
+      document.getElementById('shopWordmark').textContent = 'My Orders';
+    }
+
+    // Already logged in?
+    (async () => {
+      try {
+        const r = await fetch('/api/customer/me');
+        if (r.ok) window.location.href = `dashboard.html?shop=${shopSlug}`;
+      } catch {}
+    })();
+
+    function switchTab(tab) {
+      document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+      document.getElementById('paneLogin').classList.toggle('active', tab==='login');
+      document.getElementById('paneRegister').classList.toggle('active', tab==='register');
+      document.getElementById('authError').classList.remove('visible');
+      document.getElementById('authError').textContent = '';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('authError');
+      el.textContent = msg;
+      el.classList.add('visible');
+    }
+
+    async function doLogin() {
+      const slug = getSlug();
+      if (!slug) { showError('Please enter your Shop ID.'); return; }
+      const btn = document.querySelector('[onclick="doLogin()"]');
+      btn.disabled = true; btn.textContent = 'Signing in…';
+      document.getElementById('authError').classList.remove('visible');
+      try {
+        const r = await fetch('/api/customer/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shopSlug: slug,
+            email:    document.getElementById('loginEmail').value.trim(),
+            password: document.getElementById('loginPassword').value
+          })
+        });
+        const d = await r.json();
+        if (r.ok) {
+          window.location.href = `dashboard.html?shop=${slug}`;
+        } else {
+          showError(d.error || 'Incorrect email or password');
+        }
+      } catch { showError('Could not connect. Please try again.'); }
+      finally { btn.disabled = false; btn.textContent = 'Sign in'; }
+    }
+
+    async function doRegister() {
+      const slug = getSlug();
+      if (!slug) { showError('Please enter your Shop ID.'); return; }
+      const btn = document.querySelector('[onclick="doRegister()"]');
+      btn.disabled = true; btn.textContent = 'Creating account…';
+      document.getElementById('authError').classList.remove('visible');
+      try {
+        const r = await fetch('/api/customer/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shopSlug: slug,
+            name:     document.getElementById('regName').value.trim(),
+            email:    document.getElementById('regEmail').value.trim(),
+            password: document.getElementById('regPassword').value
+          })
+        });
+        const d = await r.json();
+        if (r.ok) {
+          window.location.href = `dashboard.html?shop=${slug}`;
+        } else {
+          showError(d.error || 'Could not create account');
+        }
+      } catch { showError('Could not connect. Please try again.'); }
+      finally { btn.disabled = false; btn.textContent = 'Create account'; }
+    }
+  </script>
+</body>
+</html>

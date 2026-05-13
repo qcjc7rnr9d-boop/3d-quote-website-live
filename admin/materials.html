@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Materials — mahi3d Admin</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    /* Badge variants */
+    .badge-warm { color: #a05a00; background: rgba(160,90,0,0.10); border: 1px solid rgba(160,90,0,0.25); }
+
+    /* ── Property slider (Strength / Flexibility / Heat) ─────── */
+    .prop-slider {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 6px; border-radius: 999px;
+      background: var(--border-light); outline: none; cursor: pointer;
+      margin-top: 4px;
+    }
+    .prop-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--sage-dark); border: 2px solid var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15); cursor: pointer;
+      transition: transform 120ms;
+    }
+    .prop-slider::-webkit-slider-thumb:hover { transform: scale(1.1); }
+    .prop-slider::-moz-range-thumb {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--sage-dark); border: 2px solid var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15); cursor: pointer;
+    }
+    .prop-tier-hint {
+      display: inline-block;
+      margin-left: 4px;
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Size-limit rows ─────────────────────────────────────── */
+    .size-limits {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .size-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .size-row-label {
+      font-size: 12px; font-weight: 500; color: var(--muted);
+      min-width: 78px;
+    }
+    .size-axis {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      letter-spacing: 0.04em; text-transform: uppercase;
+      margin-left: 2px;
+    }
+    .size-input {
+      width: 72px; padding: 6px 8px;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    /* ── AI suggestion card ──────────────────────────────────── */
+    .ai-suggest-card {
+      background: linear-gradient(135deg, rgba(122,158,126,0.06), rgba(122,158,126,0.02));
+      border: 1px solid rgba(122,158,126,0.25);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 18px;
+    }
+    .ai-suggest-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
+    }
+    .ai-suggest-title {
+      font-size: 13px; font-weight: 600; color: var(--sage-dark);
+    }
+    .ai-suggest-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Collapsible "How this works" disclosure — kept minimal */
+    .ai-suggest-info { margin-top: 4px; }
+    .ai-suggest-info summary {
+      cursor: pointer;
+      list-style: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--muted);
+      padding: 2px 0;
+      user-select: none;
+      transition: color 140ms;
+    }
+    .ai-suggest-info summary::-webkit-details-marker { display: none; }
+    .ai-suggest-info summary:hover { color: var(--ink); }
+    .ai-suggest-info summary::after {
+      content: '';
+      width: 6px; height: 6px;
+      border-right: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      transform: rotate(45deg);
+      margin-left: 2px;
+      margin-bottom: 2px;
+      transition: transform 160ms ease-out;
+    }
+    .ai-suggest-info[open] summary::after {
+      transform: rotate(-135deg);
+      margin-bottom: -2px;
+    }
+    .ai-suggest-info p {
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.55;
+      margin: 8px 0 0;
+    }
+    .ai-suggest-info p em { color: var(--ink); font-style: normal; font-weight: 500; }
+    .ai-suggest-status {
+      margin-top: 10px; padding: 8px 10px; border-radius: 6px;
+      font-size: 12px; line-height: 1.5;
+    }
+    .ai-suggest-status.ok    { background: rgba(122,158,126,0.10); color: var(--sage-dark); border: 1px solid rgba(122,158,126,0.30); }
+    .ai-suggest-status.warn  { background: rgba(160,90,0,0.08);    color: #a05a00;          border: 1px solid rgba(160,90,0,0.25); }
+
+    /* Slide-in material panel */
+    .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.30); z-index: 299; display: none; }
+    .panel-overlay.open { display: block; }
+
+    .material-panel {
+      position: fixed; top: 0; right: -540px; width: 520px; height: 100vh;
+      background: var(--white); border-left: 1.5px solid var(--border);
+      box-shadow: -4px 0 24px rgba(0,0,0,0.10); z-index: 300;
+      overflow-y: auto; padding: 32px;
+      transition: right 300ms ease-out;
+    }
+    .material-panel.open { right: 0; }
+
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .panel-title {
+      font-family: var(--font-brand);
+      font-size: 24px; font-weight: 400; color: var(--ink);
+    }
+    .panel-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 22px; line-height: 1;
+      padding: 4px 8px; border-radius: var(--radius);
+      transition: background 150ms, color 150ms;
+    }
+    .panel-close:hover { background: var(--off-white); color: var(--ink); }
+
+    .panel-footer {
+      display: flex; gap: 10px; justify-content: flex-end;
+      padding-top: 20px; margin-top: 20px;
+      border-top: 1px solid var(--stone);
+    }
+
+    /* Colour swatch tag */
+    .colour-swatch {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0;
+      display: inline-block;
+    }
+
+    /* Volume tiers */
+    .tier-row {
+      display: grid; grid-template-columns: 1fr 1fr auto;
+      gap: 8px; align-items: center; margin-bottom: 8px;
+    }
+    .tier-remove {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 18px; line-height: 1;
+      padding: 4px; border-radius: var(--radius); transition: color 150ms;
+    }
+    .tier-remove:hover { color: #C0392B; }
+
+    /* Confirm-delete modal */
+    .confirm-modal .modal { max-width: 380px; }
+
+    /* Inline error */
+    .inline-error {
+      background: rgba(192,57,43,0.07);
+      border: 1px solid rgba(192,57,43,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px; font-size: 13px; color: #C0392B;
+      margin-bottom: 16px; display: none;
+    }
+    .inline-error.visible { display: block; }
+
+    /* Panel inline error */
+    .panel-error {
+      background: rgba(192,57,43,0.07);
+      border: 1px solid rgba(192,57,43,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px; font-size: 13px; color: #C0392B;
+      margin-bottom: 16px; display: none;
+    }
+    .panel-error.visible { display: block; }
+
+    /* Material name + category in table */
+    .material-name { font-weight: 500; margin-bottom: 2px; }
+    .material-desc { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+
+    /* Section divider inside panel */
+    .panel-section-label {
+      font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--muted);
+      margin: 20px 0 12px; display: block;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-in { animation: fadeIn 300ms ease-out; }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">R</div>
+      <div class="sidebar-store-name" id="sidebarStoreName">Loading…</div>
+      <span class="sidebar-plan" id="sidebarPlan">—</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-link" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-section">Catalogue</div>
+      <a href="materials.html" class="sidebar-link active" id="nav-materials">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Materials
+      </a>
+      <a href="pricing.html" class="sidebar-link" id="nav-pricing">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg>
+        Pricing
+      </a>
+      <div class="sidebar-section">Sales</div>
+      <a href="orders.html" class="sidebar-link" id="nav-orders">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Orders
+      </a>
+      <a href="customers.html" class="sidebar-link" id="nav-customers">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Customers
+      </a>
+      <div class="sidebar-section">Store</div>
+      <a href="shipping.html" class="sidebar-link" id="nav-shipping">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m0 0h3l3 3v4h-1M15 17H9m-4 0a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Shipping
+      </a>
+      <a href="payments.html" class="sidebar-link" id="nav-payments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Payments
+      </a>
+      <a href="notifications.html" class="sidebar-link" id="nav-notifications">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </a>
+      <a href="settings.html" class="sidebar-link" id="nav-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="account.html" class="sidebar-link" id="nav-account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-signout" id="signoutBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div class="admin-title-block">
+        <h1 class="admin-title">Materials</h1>
+        <p class="admin-subtitle">Manage your printable materials</p>
+      </div>
+      <div class="admin-actions">
+        <button class="btn btn-primary" id="addMaterialBtn">+ Add material</button>
+      </div>
+    </div>
+
+    <div class="admin-content fade-in">
+
+      <!-- Materials table card -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">All materials</span>
+          <div style="display:flex;gap:10px;align-items:center">
+            <input class="form-input" id="searchInput" style="width:220px" placeholder="Search materials…" aria-label="Search materials">
+            <select class="form-input" id="filterCategory" style="width:140px" aria-label="Filter by category">
+              <option value="">All</option>
+              <option value="FDM">FDM</option>
+            </select>
+          </div>
+        </div>
+        <div id="materialsError" class="inline-error" style="margin:16px 24px;"></div>
+        <div id="materialsBody">
+          <div class="empty-state" id="materialsLoading">
+            <p>Loading materials…</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Panel overlay -->
+<div class="panel-overlay" id="panelOverlay"></div>
+
+<!-- Slide-in panel -->
+<div class="material-panel" id="materialPanel" role="dialog" aria-modal="true" aria-label="Material editor">
+  <div class="panel-header">
+    <h2 class="panel-title" id="panelTitle">Add material</h2>
+    <button class="panel-close" id="panelCloseBtn" aria-label="Close panel">×</button>
+  </div>
+
+  <div class="panel-error" id="panelError"></div>
+
+  <form id="materialForm" novalidate>
+    <input type="hidden" id="materialId">
+
+    <div style="font-size:12px;color:var(--muted);background:rgba(122,158,126,0.06);border:1px solid var(--sage-light);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px">
+      💡 Pricing rates (base price, min charge, volume tiers) are now managed on the <a href="pricing.html" style="color:var(--sage-dark)">Pricing page</a>.
+    </div>
+
+    <div class="form-grid-2">
+      <div class="form-group col-span-2">
+        <label class="form-label" for="mName">Material name <span style="color:#C0392B">*</span></label>
+        <input class="form-input" type="text" id="mName" name="name" required placeholder="e.g. PLA Standard">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="mCategory">Category</label>
+        <select class="form-input" id="mCategory" name="category">
+          <option value="FDM">FDM</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="mStockStatus">Stock status</label>
+        <select class="form-input" id="mStockStatus" name="stock_status">
+          <option value="in_stock">In stock</option>
+          <option value="low_stock">Low stock</option>
+          <option value="out_of_stock">Out of stock</option>
+        </select>
+      </div>
+
+      <div class="form-group col-span-2">
+        <label class="form-label">Production time</label>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="number" class="form-input" id="mProdDaysMin"
+                 min="0" max="60" step="1" placeholder="Min"
+                 style="flex:1;max-width:120px;" aria-label="Minimum production days">
+          <span style="color:var(--muted);font-size:13px;">to</span>
+          <input type="number" class="form-input" id="mProdDaysMax"
+                 min="0" max="60" step="1" placeholder="Max"
+                 style="flex:1;max-width:120px;" aria-label="Maximum production days">
+          <span style="color:var(--muted);font-size:13px;">business days</span>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;">
+          How long parts take to print &amp; finish in this material.
+          Shown to customers in the material's "Learn more" drawer and used for delivery ETAs.
+          Use the same number for both for an exact time, or leave both blank if not applicable.
+        </p>
+      </div>
+
+      <div class="form-group col-span-2">
+        <label class="form-label">Size limits (mm)</label>
+        <div class="size-limits">
+          <div class="size-row">
+            <span class="size-row-label">Minimum</span>
+            <span class="size-axis">X</span>
+            <input type="number" class="form-input size-input" id="mMinX" min="0" step="0.1" placeholder="5">
+            <span class="size-axis">Y</span>
+            <input type="number" class="form-input size-input" id="mMinY" min="0" step="0.1" placeholder="5">
+            <span class="size-axis">Z</span>
+            <input type="number" class="form-input size-input" id="mMinZ" min="0" step="0.1" placeholder="5">
+          </div>
+          <div class="size-row">
+            <span class="size-row-label">Maximum</span>
+            <span class="size-axis">X</span>
+            <input type="number" class="form-input size-input" id="mMaxX" min="0" step="0.1" placeholder="–">
+            <span class="size-axis">Y</span>
+            <input type="number" class="form-input size-input" id="mMaxY" min="0" step="0.1" placeholder="–">
+            <span class="size-axis">Z</span>
+            <input type="number" class="form-input size-input" id="mMaxZ" min="0" step="0.1" placeholder="–">
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;">
+          The smallest and largest part dimensions this material can reliably print.
+          <strong>5 mm per axis</strong> is the recommended minimum baseline — parts smaller than this
+          often lose detail or fail to print. Leave any maximum field blank to mean no upper limit.
+        </p>
+      </div>
+
+      <div class="form-group col-span-2">
+        <label class="form-label" for="mDescription">Short description</label>
+        <input class="form-input" type="text" id="mDescription" name="description" placeholder="e.g. Cost-effective for prototypes and display models">
+      </div>
+
+      <div class="form-group col-span-2" style="justify-content:flex-start;flex-direction:row;align-items:center;gap:12px">
+        <label class="form-label" style="margin:0">Active</label>
+        <label class="toggle">
+          <input type="checkbox" id="mActive" name="active" checked>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Colours -->
+    <span class="panel-section-label">Colours</span>
+    <div class="form-group">
+      <div class="tag-input-wrapper" id="coloursWrapper" role="group" aria-label="Colours">
+        <input class="tag-text-input" id="colourInput" placeholder="Type hex (e.g. #FF5733) then name, press Enter" aria-label="Add colour">
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:4px">Format: #RRGGBB Name (e.g. <code>#FFFFFF White</code>)</p>
+    </div>
+
+    <!-- Finishes -->
+    <span class="panel-section-label">Finishes</span>
+    <div class="form-group">
+      <div class="tag-input-wrapper" id="finishesWrapper" role="group" aria-label="Finishes">
+        <input class="tag-text-input" id="finishInput" placeholder="e.g. Matte, Gloss — press Enter to add" aria-label="Add finish">
+      </div>
+    </div>
+
+    <!-- ── "Learn more" drawer content ──────────────────────────── -->
+    <span class="panel-section-label">"Learn more" drawer</span>
+    <p style="font-size:12px;color:var(--muted);margin:-2px 0 14px;line-height:1.55;">
+      Shown when a customer expands this material's card on the materials page.
+      Use the sliders to set the property bars and add bullet lists of typical uses.
+    </p>
+
+    <!-- Property suggestion banner -->
+    <div class="ai-suggest-card">
+      <div class="ai-suggest-head">
+        <span class="ai-suggest-title">Property suggestions</span>
+        <div class="ai-suggest-actions">
+          <button type="button" class="btn btn-outline" id="aiSuggestBtn" style="height:30px;font-size:12px;padding:0 14px;">
+            Suggest from library
+          </button>
+        </div>
+      </div>
+      <details class="ai-suggest-info">
+        <summary>How this works</summary>
+        <p>
+          Enter a material name (e.g. <em>PLA</em>, <em>PETG-CF</em>, <em>Tough Resin</em>, <em>Nylon</em>)
+          and click Suggest to auto-fill the sliders and bullet lists.
+          The system checks the curated library of 36 common materials first; if there is no close match
+          it will offer to look the material up online for obscure or brand-specific filaments.
+          Every field remains editable after the suggestion is applied.
+        </p>
+      </details>
+      <div id="aiSuggestStatus" class="ai-suggest-status" style="display:none;"></div>
+    </div>
+
+    <!-- Property sliders -->
+    <p style="font-size:11px;color:var(--muted);margin:-4px 0 10px;line-height:1.55;">
+      0–100 perceptual scale. Tier labels and approximate real-world units are shown live as you drag —
+      use them as a sanity check (e.g. PLA ≈ Standard, ~50 MPa tensile).
+    </p>
+    <div class="form-grid-2" style="gap:14px 18px;margin-bottom:14px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="mStrength" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+          <span>Strength <em style="color:var(--muted);font-style:normal;font-weight:400;font-size:11px;">(MPa)</em></span>
+          <span style="text-align:right;">
+            <span id="mStrengthVal" style="font-weight:600;color:var(--sage-dark);font-variant-numeric:tabular-nums;">62</span>
+            <span id="mStrengthTier" class="prop-tier-hint">— Standard · ~40–60 MPa</span>
+          </span>
+        </label>
+        <input type="range" id="mStrength" min="0" max="100" value="62" step="1" class="prop-slider">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="mFlexibility" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+          <span>Flexibility <em style="color:var(--muted);font-style:normal;font-weight:400;font-size:11px;">(% elongation)</em></span>
+          <span style="text-align:right;">
+            <span id="mFlexibilityVal" style="font-weight:600;color:var(--sage-dark);font-variant-numeric:tabular-nums;">20</span>
+            <span id="mFlexibilityTier" class="prop-tier-hint">— Rigid · &lt;10%</span>
+          </span>
+        </label>
+        <input type="range" id="mFlexibility" min="0" max="100" value="20" step="1" class="prop-slider">
+      </div>
+      <div class="form-group col-span-2" style="margin-bottom:0;">
+        <label class="form-label" for="mHeat" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+          <span>Heat resistance <em style="color:var(--muted);font-style:normal;font-weight:400;font-size:11px;">(continuous-use °C)</em></span>
+          <span style="text-align:right;">
+            <span id="mHeatVal" style="font-weight:600;color:var(--sage-dark);font-variant-numeric:tabular-nums;">30</span>
+            <span id="mHeatTier" class="prop-tier-hint">— Low · up to ~55 °C</span>
+          </span>
+        </label>
+        <input type="range" id="mHeat" min="0" max="100" value="30" step="1" class="prop-slider">
+      </div>
+    </div>
+
+    <!-- Ideal for tag input -->
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label" for="idealForInput">Ideal for</label>
+      <div class="tag-input-wrapper" id="idealForWrapper" role="group" aria-label="Ideal for">
+        <input class="tag-text-input" id="idealForInput"
+               placeholder="e.g. Prototypes & concept models — press Enter to add" aria-label="Add ideal-for use">
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:4px;">Bullet items showing where this material excels.</p>
+    </div>
+
+    <!-- Not for tag input -->
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label" for="notForInput">Not recommended for</label>
+      <div class="tag-input-wrapper" id="notForWrapper" role="group" aria-label="Not for">
+        <input class="tag-text-input" id="notForInput"
+               placeholder="e.g. Outdoor UV exposure — press Enter to add" aria-label="Add not-for use">
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:4px;">Bullet items warning customers when to avoid this material.</p>
+    </div>
+
+    <!-- Learn more long-form text -->
+    <div class="form-group" style="margin-bottom:16px;">
+      <label class="form-label" for="mLearnMore">Learn more (extra detail)</label>
+      <textarea class="form-input" id="mLearnMore" rows="4"
+                placeholder="Optional. A paragraph or two of background — printing tips, surface finish notes, recyclability, anything else worth saying."
+                style="resize:vertical;min-height:90px;font-family:var(--font-ui);line-height:1.55;"></textarea>
+      <p style="font-size:11px;color:var(--muted);margin-top:4px;">Plain text. Line breaks are preserved.</p>
+    </div>
+
+    <div class="panel-footer">
+      <button type="button" class="btn btn-outline" id="panelCancelBtn">Cancel</button>
+      <button type="submit" class="btn btn-primary" id="panelSaveBtn">Save material</button>
+    </div>
+  </form>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="modal-overlay hidden" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+  <div class="modal">
+    <h2 class="modal-title" id="deleteModalTitle">Delete material</h2>
+    <p class="modal-body" id="deleteModalBody">This will permanently remove this material and cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="deleteCancelBtn">Cancel</button>
+      <button class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Auth guard
+  (async () => {
+    try {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location.href = 'login.html'; return; }
+      const shop = await r.json();
+      document.getElementById('sidebarStoreName').textContent = shop.name;
+      document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
+      if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
+    } catch { window.location.href = 'login.html'; }
+  })();
+
+  document.getElementById('signoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  // ── State ─────────────────────────────────────────────────────
+  let allMaterials = [];
+  let colours = [];     // [{hex, name}]
+  let finishes = [];    // [string]
+  let idealFor = [];    // [string]  — Learn more drawer
+  let notFor   = [];    // [string]  — Learn more drawer
+  let pendingDeleteId = null;
+  let materialLibrary = [];   // Loaded once from /api/materials/library
+
+  // ── Helpers ───────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function stockBadge(status) {
+    const map = {
+      in_stock:     ['badge-sage',  'In stock'],
+      low_stock:    ['badge-warm',  'Low stock'],
+      out_of_stock: ['badge-stone', 'Out of stock'],
+    };
+    const [cls, label] = map[status] || ['badge-stone', status];
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+
+  function categoryBadge(cat) {
+    return `<span class="badge badge-stone">${escHtml(cat)}</span>`;
+  }
+
+  // ── Load materials ────────────────────────────────────────────
+  async function loadMaterials() {
+    const errEl = document.getElementById('materialsError');
+    errEl.classList.remove('visible');
+    try {
+      const r = await fetch('/api/materials');
+      if (!r.ok) throw new Error('Could not load materials.');
+      allMaterials = await r.json();
+      renderTable();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.add('visible');
+      document.getElementById('materialsBody').innerHTML = '';
+    }
+  }
+
+  function filteredMaterials() {
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    const cat = document.getElementById('filterCategory').value;
+    return allMaterials.filter(m => {
+      if (cat && m.category !== cat) return false;
+      if (q && !m.name.toLowerCase().includes(q) && !(m.description || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }
+
+  function renderTable() {
+    const body = document.getElementById('materialsBody');
+    const list = filteredMaterials();
+    if (!list.length) {
+      body.innerHTML = `<div class="empty-state">
+        <h3>No materials yet</h3>
+        <p>Add your first printable material to get started.</p>
+        <button class="btn btn-primary" onclick="openPanel()">+ Add material</button>
+      </div>`;
+      return;
+    }
+
+    body.innerHTML = `<table class="data-table">
+      <thead><tr>
+        <th>Material</th>
+        <th>Stock</th>
+        <th>Active</th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody id="materialsTableBody"></tbody>
+    </table>`;
+
+    const tbody = document.getElementById('materialsTableBody');
+    list.forEach(m => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = m.id;
+      tr.innerHTML = `
+        <td>
+          <div class="material-name">${escHtml(m.name)}</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+            ${categoryBadge(m.category || 'FDM')}
+            ${m.description_short ? `<span class="material-desc">${escHtml(m.description_short)}</span>` : ''}
+          </div>
+        </td>
+        <td>${stockBadge(m.stock_status || 'in_stock')}</td>
+        <td>
+          <label class="toggle" title="${m.active ? 'Active' : 'Inactive'}">
+            <input type="checkbox" class="active-toggle" data-id="${m.id}" ${m.active ? 'checked' : ''}>
+            <span class="toggle-track"></span>
+          </label>
+        </td>
+        <td>
+          <button class="table-action edit-btn" data-id="${m.id}">Edit</button>
+          <button class="table-action danger delete-btn" data-id="${m.id}">Delete</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    // Active toggle handlers
+    tbody.querySelectorAll('.active-toggle').forEach(cb => {
+      cb.addEventListener('change', async e => {
+        const id = e.target.dataset.id;
+        const active = e.target.checked;
+        try {
+          const r = await fetch(`/api/materials/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ active }),
+          });
+          if (!r.ok) throw new Error();
+          const mat = allMaterials.find(m => String(m.id) === String(id));
+          if (mat) mat.active = active;
+        } catch {
+          e.target.checked = !active; // revert
+        }
+      });
+    });
+
+    // Edit
+    tbody.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mat = allMaterials.find(m => String(m.id) === btn.dataset.id);
+        if (mat) openPanel(mat);
+      });
+    });
+
+    // Delete
+    tbody.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mat = allMaterials.find(m => String(m.id) === btn.dataset.id);
+        openDeleteModal(mat);
+      });
+    });
+  }
+
+  // Search / filter live
+  document.getElementById('searchInput').addEventListener('input', renderTable);
+  document.getElementById('filterCategory').addEventListener('change', renderTable);
+
+  // ── Panel ─────────────────────────────────────────────────────
+  function openPanel(mat = null) {
+    colours = [];
+    finishes = [];
+    idealFor = [];
+    notFor   = [];
+    document.getElementById('materialForm').reset();
+    document.getElementById('panelError').classList.remove('visible');
+    document.getElementById('materialId').value = '';
+
+    // Sliders default
+    setSliderValue('mStrength', 50);
+    setSliderValue('mFlexibility', 50);
+    setSliderValue('mHeat', 50);
+    document.getElementById('mLearnMore').value = '';
+    document.getElementById('mProdDaysMin').value = '';
+    document.getElementById('mProdDaysMax').value = '';
+
+    // Size limits — minimum axes prefilled to the recommended 5 mm baseline,
+    // maximums left blank (meaning no upper limit)
+    document.getElementById('mMinX').value = 5;
+    document.getElementById('mMinY').value = 5;
+    document.getElementById('mMinZ').value = 5;
+    document.getElementById('mMaxX').value = '';
+    document.getElementById('mMaxY').value = '';
+    document.getElementById('mMaxZ').value = '';
+
+    // Reset suggestion status whenever the panel reopens
+    showSuggestStatus('', null);
+
+    if (mat) {
+      document.getElementById('panelTitle').textContent = 'Edit material';
+      document.getElementById('materialId').value = mat.id;
+      document.getElementById('mName').value = mat.name || '';
+      document.getElementById('mCategory').value = mat.category || 'FDM';
+      document.getElementById('mDescription').value = mat.description_short || '';
+      document.getElementById('mStockStatus').value = mat.stock_status || 'in_stock';
+      document.getElementById('mActive').checked = mat.active !== false;
+
+      if (Array.isArray(mat.colours)) {
+        mat.colours.forEach(c => addColourTag(c.hex, c.name));
+      }
+      if (Array.isArray(mat.finishes)) {
+        mat.finishes.forEach(f => addFinishTag(f));
+      }
+
+      // Production time
+      if (mat.production_days_min != null) {
+        document.getElementById('mProdDaysMin').value = mat.production_days_min;
+      }
+      if (mat.production_days_max != null) {
+        document.getElementById('mProdDaysMax').value = mat.production_days_max;
+      }
+
+      // Size limits — stored value wins; missing min falls back to recommended 5 mm
+      const sizeMap = [
+        ['mMinX', mat.min_x_mm, 5], ['mMinY', mat.min_y_mm, 5], ['mMinZ', mat.min_z_mm, 5],
+        ['mMaxX', mat.max_x_mm, ''], ['mMaxY', mat.max_y_mm, ''], ['mMaxZ', mat.max_z_mm, ''],
+      ];
+      sizeMap.forEach(([id, v, dflt]) => {
+        document.getElementById(id).value = (v != null && v !== '') ? v : dflt;
+      });
+
+      // Learn more drawer fields from properties JSON
+      const p = mat.properties || {};
+      if (p.strength    != null) setSliderValue('mStrength',    p.strength);
+      if (p.flexibility != null) setSliderValue('mFlexibility', p.flexibility);
+      if (p.heat        != null) setSliderValue('mHeat',        p.heat);
+      if (Array.isArray(p.ideal_for)) p.ideal_for.forEach(addIdealForTag);
+      if (Array.isArray(p.not_for))   p.not_for.forEach(addNotForTag);
+      document.getElementById('mLearnMore').value = p.learn_more || '';
+    } else {
+      document.getElementById('panelTitle').textContent = 'Add material';
+    }
+
+    renderIdealForTags();
+    renderNotForTags();
+    document.getElementById('panelOverlay').classList.add('open');
+    document.getElementById('materialPanel').classList.add('open');
+    document.getElementById('mName').focus();
+  }
+
+  // ── Property tier helper (mirrors the customer materials page) ──
+  function propTier(prop, value) {
+    if (value == null) return { label: '', unit: '' };
+    const v = Number(value);
+    if (prop === 'strength') {
+      if (v < 30) return { label: 'Weak',        unit: '<20 MPa' };
+      if (v < 55) return { label: 'Light-duty',  unit: '20–40 MPa' };
+      if (v < 70) return { label: 'Standard',    unit: '~40–60 MPa' };
+      if (v < 85) return { label: 'Strong',      unit: '60–80 MPa' };
+      return                 { label: 'Industrial',   unit: '80+ MPa' };
+    }
+    if (prop === 'flexibility') {
+      if (v < 30) return { label: 'Rigid',       unit: '<10%' };
+      if (v < 55) return { label: 'Stiff',       unit: '10–30%' };
+      if (v < 75) return { label: 'Bendy',       unit: '30–100%' };
+      return                 { label: 'Elastomeric',  unit: '100%+ stretch' };
+    }
+    if (prop === 'heat') {
+      if (v < 30) return { label: 'Low',         unit: 'up to ~55 °C' };
+      if (v < 55) return { label: 'Moderate',    unit: '55–75 °C' };
+      if (v < 75) return { label: 'Good',        unit: '75–100 °C' };
+      if (v < 90) return { label: 'High',        unit: '100–150 °C' };
+      return                 { label: 'Extreme',      unit: '150 °C+' };
+    }
+    return { label: '', unit: '' };
+  }
+
+  // map slider id → (prop name, tier-element id)
+  const SLIDER_MAP = {
+    mStrength:    { prop: 'strength',    tierId: 'mStrengthTier' },
+    mFlexibility: { prop: 'flexibility', tierId: 'mFlexibilityTier' },
+    mHeat:        { prop: 'heat',        tierId: 'mHeatTier' },
+  };
+
+  function refreshSliderTier(id) {
+    const cfg = SLIDER_MAP[id];
+    if (!cfg) return;
+    const val = parseInt(document.getElementById(id).value, 10);
+    const t   = propTier(cfg.prop, val);
+    const el  = document.getElementById(cfg.tierId);
+    if (el) el.textContent = `— ${t.label} · ${t.unit}`;
+  }
+
+  // ── Slider value sync ─────────────────────────────────────────
+  function setSliderValue(id, val) {
+    const s = document.getElementById(id);
+    if (!s) return;
+    s.value = val;
+    const out = document.getElementById(id + 'Val');
+    if (out) out.textContent = val;
+    refreshSliderTier(id);
+  }
+  ['mStrength','mFlexibility','mHeat'].forEach(id => {
+    document.getElementById(id).addEventListener('input', e => {
+      document.getElementById(id + 'Val').textContent = e.target.value;
+      refreshSliderTier(id);
+    });
+  });
+
+  // ── Ideal-for / Not-for tag inputs ────────────────────────────
+  function addIdealForTag(name) {
+    name = String(name || '').trim();
+    if (name && !idealFor.includes(name)) { idealFor.push(name); renderIdealForTags(); }
+  }
+  function removeIdealForTag(i) { idealFor.splice(i, 1); renderIdealForTags(); }
+  function renderIdealForTags() {
+    const wrapper = document.getElementById('idealForWrapper');
+    const inp = document.getElementById('idealForInput');
+    wrapper.querySelectorAll('.tag-item').forEach(el => el.remove());
+    idealFor.forEach((t, i) => {
+      const tag = document.createElement('span');
+      tag.className = 'tag-item';
+      tag.innerHTML = `${escHtml(t)}<button type="button" class="tag-remove" aria-label="Remove ${escHtml(t)}">×</button>`;
+      tag.querySelector('.tag-remove').addEventListener('click', () => removeIdealForTag(i));
+      wrapper.insertBefore(tag, inp);
+    });
+  }
+  document.getElementById('idealForInput').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const v = e.target.value.trim();
+    if (v) { addIdealForTag(v); e.target.value = ''; }
+  });
+  document.getElementById('idealForWrapper').addEventListener('click', () => {
+    document.getElementById('idealForInput').focus();
+  });
+
+  function addNotForTag(name) {
+    name = String(name || '').trim();
+    if (name && !notFor.includes(name)) { notFor.push(name); renderNotForTags(); }
+  }
+  function removeNotForTag(i) { notFor.splice(i, 1); renderNotForTags(); }
+  function renderNotForTags() {
+    const wrapper = document.getElementById('notForWrapper');
+    const inp = document.getElementById('notForInput');
+    wrapper.querySelectorAll('.tag-item').forEach(el => el.remove());
+    notFor.forEach((t, i) => {
+      const tag = document.createElement('span');
+      tag.className = 'tag-item';
+      tag.innerHTML = `${escHtml(t)}<button type="button" class="tag-remove" aria-label="Remove ${escHtml(t)}">×</button>`;
+      tag.querySelector('.tag-remove').addEventListener('click', () => removeNotForTag(i));
+      wrapper.insertBefore(tag, inp);
+    });
+  }
+  document.getElementById('notForInput').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const v = e.target.value.trim();
+    if (v) { addNotForTag(v); e.target.value = ''; }
+  });
+  document.getElementById('notForWrapper').addEventListener('click', () => {
+    document.getElementById('notForInput').focus();
+  });
+
+  // ── AI suggestion (material library lookup) ──────────────────
+  async function loadMaterialLibrary() {
+    if (materialLibrary.length) return; // already loaded
+    try {
+      const r = await fetch('/api/materials/library');
+      if (!r.ok) return;
+      const d = await r.json();
+      materialLibrary = d.materials || [];
+    } catch { /* leave empty — Suggest button will degrade gracefully */ }
+  }
+
+  /**
+   * Fuzzy-match a material name against the library.
+   * Same algorithm as backend lib/material-library.js#findMaterialMatch so
+   * results are identical whether matched server- or client-side.
+   */
+  function findMatchInLibrary(name) {
+    if (!name || !materialLibrary.length) return null;
+    const norm = String(name).toLowerCase().trim();
+    if (!norm) return null;
+
+    // 1. Exact displayName
+    for (const m of materialLibrary) {
+      if (m.displayName.toLowerCase() === norm) return m;
+    }
+    // 1b. Exact alias
+    for (const m of materialLibrary) {
+      if ((m.aliases || []).some(a => a.toLowerCase() === norm)) return m;
+    }
+    // 2. Longest-substring match
+    let best = null, bestLen = 0;
+    for (const m of materialLibrary) {
+      const candidates = [m.displayName.toLowerCase(), ...(m.aliases || []).map(a => a.toLowerCase())];
+      for (const c of candidates) {
+        if (c.length < 3) continue;
+        if (norm.includes(c) && c.length > bestLen) { best = m; bestLen = c.length; }
+      }
+    }
+    return best;
+  }
+
+  function showSuggestStatus(msg, kind) {
+    const el = document.getElementById('aiSuggestStatus');
+    if (!el) return;
+    if (!msg) { el.style.display = 'none'; return; }
+    el.textContent = msg;
+    el.className = 'ai-suggest-status ' + (kind === 'warn' ? 'warn' : 'ok');
+    el.style.display = '';
+  }
+
+  /**
+   * Apply a library/AI entry to the open material form.
+   * Sliders + ideal_for + not_for are overwritten. Production time is filled
+   * only if currently blank (so an admin's explicit value isn't clobbered).
+   */
+  function applyAiSuggestion(sugg, { silent = false } = {}) {
+    if (!sugg) return;
+    setSliderValue('mStrength',    sugg.strength    ?? 50);
+    setSliderValue('mFlexibility', sugg.flexibility ?? 50);
+    setSliderValue('mHeat',        sugg.heat        ?? 50);
+
+    idealFor = Array.isArray(sugg.ideal_for) ? [...sugg.ideal_for] : [];
+    notFor   = Array.isArray(sugg.not_for)   ? [...sugg.not_for]   : [];
+    renderIdealForTags();
+    renderNotForTags();
+
+    // Only fill production days if both fields are blank
+    const minIn = document.getElementById('mProdDaysMin');
+    const maxIn = document.getElementById('mProdDaysMax');
+    if (!minIn.value.trim() && !maxIn.value.trim()) {
+      if (sugg.production_days_min != null) minIn.value = sugg.production_days_min;
+      if (sugg.production_days_max != null) maxIn.value = sugg.production_days_max;
+    }
+
+    if (!silent) {
+      showSuggestStatus(
+        `Suggestions applied from "${sugg.displayName}" (${sugg.category}). All fields remain editable.`,
+        'ok'
+      );
+    }
+  }
+
+  // Fall back to the internet/AI lookup when the curated library has no match.
+  // Returns the parsed match object, or throws with a useful message.
+  async function fetchAiLookup(name) {
+    const r = await fetch('/api/materials/library/ai-lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const e = new Error(data.error || `AI lookup failed (HTTP ${r.status})`);
+      e.code = data.code;
+      throw e;
+    }
+    return data.match;
+  }
+
+  // Run the online (Claude) lookup and apply the result to the form.
+  async function runOnlineLookup(name) {
+    const btn = document.getElementById('aiSuggestBtn');
+    const originalLabel = btn.textContent;
+    btn.disabled    = true;
+    btn.textContent = 'Searching online…';
+    showSuggestStatus(`Looking up "${name}" online…`, 'ok');
+    try {
+      const aiMatch = await fetchAiLookup(name);
+      applyAiSuggestion(aiMatch, { silent: true });
+      const conf  = aiMatch.confidence || 'medium';
+      const notes = aiMatch.notes ? ` ${aiMatch.notes}` : '';
+      showSuggestStatus(
+        `Generated online for "${aiMatch.displayName}" (${aiMatch.category}, confidence: ${conf}).${notes} ` +
+        `These values are estimates, not lab-measured. Please review every field before saving.`,
+        conf === 'low' ? 'warn' : 'ok'
+      );
+    } catch (e) {
+      if (e.code === 'NO_API_KEY') {
+        showSuggestStatus(
+          `Online lookup is disabled on this server. Add ANTHROPIC_API_KEY to the backend .env file to enable it. ` +
+          `For now, try a more standard name (PLA, PETG, ABS, Nylon, TPU, Resin, and so on).`,
+          'warn'
+        );
+      } else {
+        showSuggestStatus(
+          `Could not look up "${name}" online: ${e.message}. Try again, or use a more standard name.`,
+          'warn'
+        );
+      }
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = originalLabel;
+    }
+  }
+
+  document.getElementById('aiSuggestBtn').addEventListener('click', async () => {
+    const name = document.getElementById('mName').value.trim();
+    if (!name) {
+      showSuggestStatus('Enter a material name above first.', 'warn');
+      document.getElementById('mName').focus();
+      return;
+    }
+
+    await loadMaterialLibrary();
+
+    // 1. Curated local library first — always silent, no prompt needed.
+    const match = findMatchInLibrary(name);
+    if (match) {
+      applyAiSuggestion(match);
+      return;
+    }
+
+    // 2. No local match — explicitly ask the admin if they want an online lookup.
+    const wantsOnline = window.confirm(
+      `"${name}" was not found in the local material library.\n\n` +
+      `Would you like to look it up online? This sends the material name to an external ` +
+      `AI service and returns estimated property values. You can edit any field afterwards.`
+    );
+    if (!wantsOnline) {
+      showSuggestStatus(
+        `No match found for "${name}" in the local library. Try a more standard name ` +
+        `(PLA, PETG, ABS, Nylon, TPU, Resin, and so on), or click Suggest again to look it up online.`,
+        'warn'
+      );
+      return;
+    }
+
+    await runOnlineLookup(name);
+  });
+
+  function closePanel() {
+    document.getElementById('panelOverlay').classList.remove('open');
+    document.getElementById('materialPanel').classList.remove('open');
+  }
+
+  document.getElementById('addMaterialBtn').addEventListener('click', () => openPanel());
+  document.getElementById('panelCloseBtn').addEventListener('click', closePanel);
+  document.getElementById('panelCancelBtn').addEventListener('click', closePanel);
+  document.getElementById('panelOverlay').addEventListener('click', closePanel);
+
+  // ── Colour tag input ──────────────────────────────────────────
+  function addColourTag(hex, name) {
+    colours.push({ hex, name });
+    renderColourTags();
+  }
+
+  function removeColourTag(idx) {
+    colours.splice(idx, 1);
+    renderColourTags();
+  }
+
+  function renderColourTags() {
+    const wrapper = document.getElementById('coloursWrapper');
+    const inp = document.getElementById('colourInput');
+    wrapper.querySelectorAll('.tag-item').forEach(el => el.remove());
+    colours.forEach((c, i) => {
+      const tag = document.createElement('span');
+      tag.className = 'tag-item';
+      tag.innerHTML = `<span class="colour-swatch" style="background:${escHtml(c.hex)}"></span>
+        ${escHtml(c.name)}
+        <button type="button" class="tag-remove" aria-label="Remove ${escHtml(c.name)}">×</button>`;
+      tag.querySelector('.tag-remove').addEventListener('click', () => removeColourTag(i));
+      wrapper.insertBefore(tag, inp);
+    });
+  }
+
+  document.getElementById('colourInput').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const val = e.target.value.trim();
+    const match = val.match(/^(#[0-9A-Fa-f]{3,8})\s+(.+)$/);
+    if (match) {
+      addColourTag(match[1], match[2]);
+      e.target.value = '';
+    }
+  });
+
+  document.getElementById('coloursWrapper').addEventListener('click', e => {
+    document.getElementById('colourInput').focus();
+  });
+
+  // ── Finish tag input ──────────────────────────────────────────
+  function addFinishTag(name) {
+    if (!finishes.includes(name)) {
+      finishes.push(name);
+      renderFinishTags();
+    }
+  }
+
+  function removeFinishTag(idx) {
+    finishes.splice(idx, 1);
+    renderFinishTags();
+  }
+
+  function renderFinishTags() {
+    const wrapper = document.getElementById('finishesWrapper');
+    const inp = document.getElementById('finishInput');
+    wrapper.querySelectorAll('.tag-item').forEach(el => el.remove());
+    finishes.forEach((f, i) => {
+      const tag = document.createElement('span');
+      tag.className = 'tag-item';
+      tag.innerHTML = `${escHtml(f)}<button type="button" class="tag-remove" aria-label="Remove ${escHtml(f)}">×</button>`;
+      tag.querySelector('.tag-remove').addEventListener('click', () => removeFinishTag(i));
+      wrapper.insertBefore(tag, inp);
+    });
+  }
+
+  document.getElementById('finishInput').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const val = e.target.value.trim();
+    if (val) {
+      addFinishTag(val);
+      e.target.value = '';
+    }
+  });
+
+  document.getElementById('finishesWrapper').addEventListener('click', e => {
+    document.getElementById('finishInput').focus();
+  });
+
+  // ── Form submit ───────────────────────────────────────────────
+  document.getElementById('materialForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const saveBtn = document.getElementById('panelSaveBtn');
+    const errEl = document.getElementById('panelError');
+    errEl.classList.remove('visible');
+
+    const name = document.getElementById('mName').value.trim();
+    if (!name) {
+      errEl.textContent = 'Material name is required.';
+      errEl.classList.add('visible');
+      document.getElementById('mName').focus();
+      return;
+    }
+
+    // Bundle "Learn more" drawer config into the existing `properties` JSON column
+    const properties = {
+      strength:    parseInt(document.getElementById('mStrength').value, 10),
+      flexibility: parseInt(document.getElementById('mFlexibility').value, 10),
+      heat:        parseInt(document.getElementById('mHeat').value, 10),
+      ideal_for:   [...idealFor],
+      not_for:     [...notFor],
+      learn_more:  document.getElementById('mLearnMore').value.trim(),
+    };
+
+    // Production time — auto-fill max from min (or vice versa) if only one given
+    const rawMin = document.getElementById('mProdDaysMin').value.trim();
+    const rawMax = document.getElementById('mProdDaysMax').value.trim();
+    let prodMin = rawMin === '' ? null : parseInt(rawMin, 10);
+    let prodMax = rawMax === '' ? null : parseInt(rawMax, 10);
+    if (prodMin != null && prodMax == null) prodMax = prodMin;
+    if (prodMax != null && prodMin == null) prodMin = prodMax;
+    if (prodMin != null && prodMax != null && prodMax < prodMin) prodMax = prodMin;
+
+    // Size limits — read each input, empty string -> null (no constraint)
+    const sizeNum = id => {
+      const raw = document.getElementById(id).value.trim();
+      if (raw === '') return null;
+      const n = parseFloat(raw);
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    };
+
+    const payload = {
+      name,
+      category:       document.getElementById('mCategory').value,
+      description_short: document.getElementById('mDescription').value.trim(),
+      stock_status:   document.getElementById('mStockStatus').value,
+      active:         document.getElementById('mActive').checked,
+      colours,
+      finishes,
+      properties,
+      production_days_min: prodMin,
+      production_days_max: prodMax,
+      min_x_mm: sizeNum('mMinX'),
+      min_y_mm: sizeNum('mMinY'),
+      min_z_mm: sizeNum('mMinZ'),
+      max_x_mm: sizeNum('mMaxX'),
+      max_y_mm: sizeNum('mMaxY'),
+      max_z_mm: sizeNum('mMaxZ'),
+    };
+
+    const id = document.getElementById('materialId').value;
+    const url = id ? `/api/materials/${id}` : '/api/materials';
+    const method = id ? 'PATCH' : 'POST';
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    try {
+      const r = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.message || 'Save failed. Please try again.');
+      }
+      closePanel();
+      await loadMaterials();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.add('visible');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save material';
+    }
+  });
+
+  // ── Delete modal ──────────────────────────────────────────────
+  function openDeleteModal(mat) {
+    pendingDeleteId = mat.id;
+    document.getElementById('deleteModalBody').textContent =
+      `Delete "${mat.name}"? This cannot be undone.`;
+    document.getElementById('deleteModal').classList.remove('hidden');
+  }
+
+  document.getElementById('deleteCancelBtn').addEventListener('click', () => {
+    pendingDeleteId = null;
+    document.getElementById('deleteModal').classList.add('hidden');
+  });
+
+  document.getElementById('deleteConfirmBtn').addEventListener('click', async () => {
+    if (!pendingDeleteId) return;
+    const btn = document.getElementById('deleteConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+    try {
+      const r = await fetch(`/api/materials/${pendingDeleteId}`, { method: 'DELETE' });
+      if (!r.ok) throw new Error();
+      document.getElementById('deleteModal').classList.add('hidden');
+      pendingDeleteId = null;
+      await loadMaterials();
+    } catch {
+      document.getElementById('deleteModal').classList.add('hidden');
+      const errEl = document.getElementById('materialsError');
+      errEl.textContent = 'Could not delete material. Please try again.';
+      errEl.classList.add('visible');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Delete';
+    }
+  });
+
+  // Close delete modal on overlay click
+  document.getElementById('deleteModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('deleteModal')) {
+      pendingDeleteId = null;
+      document.getElementById('deleteModal').classList.add('hidden');
+    }
+  });
+
+  // ── Keyboard close ────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (!document.getElementById('deleteModal').classList.contains('hidden')) {
+        pendingDeleteId = null;
+        document.getElementById('deleteModal').classList.add('hidden');
+      } else if (document.getElementById('materialPanel').classList.contains('open')) {
+        closePanel();
+      }
+    }
+  });
+
+  // ── Init ──────────────────────────────────────────────────────
+  loadMaterials();
+  loadMaterialLibrary();  // Warm the cache so the first Suggest click is instant
+</script>
+</body>
+</html>

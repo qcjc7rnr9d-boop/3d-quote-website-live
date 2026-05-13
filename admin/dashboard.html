@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Dashboard — mahi3d Admin</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    .badge-warm { color: #a05a00; background: rgba(160,90,0,0.10); border: 1px solid rgba(160,90,0,0.25); }
+
+    .two-col-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    @media (min-width: 900px) {
+      .two-col-grid { grid-template-columns: 3fr 2fr; }
+    }
+
+    .right-col { display: flex; flex-direction: column; gap: 20px; }
+
+    /* Quick action rows */
+    .quick-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      text-decoration: none;
+      color: var(--ink);
+      border-bottom: 1px solid var(--stone);
+      transition: background 150ms;
+    }
+    .quick-action-row:last-child { border-bottom: none; }
+    .quick-action-row:hover { background: var(--off-white); }
+    .quick-action-left { display: flex; align-items: center; gap: 12px; }
+    .quick-action-icon {
+      width: 32px; height: 32px;
+      background: rgba(122,158,126,0.10);
+      border: 1px solid var(--sage-light);
+      border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--sage-dark);
+      flex-shrink: 0;
+    }
+    .quick-action-label { font-size: 13px; font-weight: 400; }
+    .quick-action-arrow { color: var(--muted); font-size: 14px; }
+
+    /* Activity feed */
+    .activity-list { list-style: none; padding: 0; margin: 0; }
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 13px 24px;
+      border-bottom: 1px solid var(--stone);
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-dot {
+      width: 8px; height: 8px;
+      background: var(--sage);
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+    .activity-text { font-size: 13px; color: var(--ink); line-height: 1.5; flex: 1; }
+    .activity-time { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .inline-error {
+      background: rgba(192,57,43,0.07);
+      border: 1px solid rgba(192,57,43,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #C0392B;
+      margin-bottom: 16px;
+    }
+
+    .order-id { font-weight: 500; font-family: var(--font-ui); font-size: 12px; color: var(--muted); }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-in { animation: fadeIn 300ms ease-out; }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">R</div>
+      <div class="sidebar-store-name" id="sidebarStoreName">Loading…</div>
+      <span class="sidebar-plan" id="sidebarPlan">—</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-link active" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-section">Catalogue</div>
+      <a href="materials.html" class="sidebar-link" id="nav-materials">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Materials
+      </a>
+      <a href="pricing.html" class="sidebar-link" id="nav-pricing">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg>
+        Pricing
+      </a>
+      <div class="sidebar-section">Sales</div>
+      <a href="orders.html" class="sidebar-link" id="nav-orders">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Orders
+      </a>
+      <a href="customers.html" class="sidebar-link" id="nav-customers">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Customers
+      </a>
+      <div class="sidebar-section">Store</div>
+      <a href="shipping.html" class="sidebar-link" id="nav-shipping">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m0 0h3l3 3v4h-1M15 17H9m-4 0a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Shipping
+      </a>
+      <a href="payments.html" class="sidebar-link" id="nav-payments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Payments
+      </a>
+      <a href="notifications.html" class="sidebar-link" id="nav-notifications">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </a>
+      <a href="settings.html" class="sidebar-link" id="nav-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="account.html" class="sidebar-link" id="nav-account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-signout" id="signoutBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div class="admin-title-block">
+        <h1 class="admin-title">Dashboard</h1>
+        <p class="admin-subtitle" id="todayDate"></p>
+      </div>
+      <div class="admin-actions">
+        <button class="btn btn-primary" onclick="location.href='../quote.html'">New quote</button>
+      </div>
+    </div>
+
+    <div class="admin-content fade-in">
+
+      <!-- Stats row -->
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-label">Total orders</div>
+          <div class="stat-value" id="statTotalOrders">—</div>
+          <div class="stat-delta" id="statOrdersDelta"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Revenue this month</div>
+          <div class="stat-value" id="statRevenue">—</div>
+          <div class="stat-delta" id="statRevenueDelta"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active materials</div>
+          <div class="stat-value" id="statMaterials">—</div>
+          <div class="stat-delta" id="statMaterialsDelta"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Customers</div>
+          <div class="stat-value" id="statCustomers">—</div>
+          <div class="stat-delta" id="statCustomersDelta"></div>
+        </div>
+      </div>
+
+      <!-- Two-column grid -->
+      <div class="two-col-grid">
+
+        <!-- Recent orders card -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <span class="section-card-title">Recent Orders</span>
+            <a class="table-action" href="orders.html">View all →</a>
+          </div>
+          <div id="ordersError" class="inline-error" style="display:none;margin:16px 24px;"></div>
+          <div id="ordersBody">
+            <div class="empty-state" id="ordersLoading">
+              <p>Loading orders…</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div class="right-col">
+
+          <!-- Quick actions -->
+          <div class="section-card">
+            <div class="section-card-header">
+              <span class="section-card-title">Quick actions</span>
+            </div>
+            <div style="padding:0">
+              <a href="materials.html" class="quick-action-row">
+                <div class="quick-action-left">
+                  <div class="quick-action-icon">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                  </div>
+                  <span class="quick-action-label">Add material</span>
+                </div>
+                <span class="quick-action-arrow">→</span>
+              </a>
+              <a href="orders.html" class="quick-action-row">
+                <div class="quick-action-left">
+                  <div class="quick-action-icon">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                  </div>
+                  <span class="quick-action-label">View orders</span>
+                </div>
+                <span class="quick-action-arrow">→</span>
+              </a>
+              <a href="payments.html" class="quick-action-row">
+                <div class="quick-action-left">
+                  <div class="quick-action-icon">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+                  </div>
+                  <span class="quick-action-label">Stripe Connect</span>
+                </div>
+                <span class="quick-action-arrow">→</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Activity feed -->
+          <div class="section-card">
+            <div class="section-card-header">
+              <span class="section-card-title">Recent activity</span>
+            </div>
+            <div id="activityBody">
+              <div class="empty-state" id="activityLoading">
+                <p>Loading activity…</p>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /right-col -->
+      </div><!-- /two-col-grid -->
+
+    </div><!-- /admin-content -->
+  </main>
+</div>
+
+<script>
+  // Auth guard
+  (async () => {
+    try {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location.href = 'login.html'; return; }
+      const shop = await r.json();
+      document.getElementById('sidebarStoreName').textContent = shop.name;
+      document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
+      if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
+    } catch { window.location.href = 'login.html'; }
+  })();
+
+  document.getElementById('signoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  // Today's date
+  document.getElementById('todayDate').textContent =
+    new Date().toLocaleDateString('en-NZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // ── Helpers ───────────────────────────────────────────────────
+  function fmtMoney(v) {
+    return '$' + Number(v).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' NZD';
+  }
+
+  function timeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1)   return 'just now';
+    if (mins < 60)  return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)   return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  }
+
+  function statusBadge(status) {
+    const map = {
+      pending:    'badge-stone',
+      complete:   'badge-sage',
+      completed:  'badge-sage',
+      processing: 'badge-warm',
+      paid:       'badge-sage',
+    };
+    const cls = map[status] || 'badge-stone';
+    return `<span class="badge ${cls}">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
+  }
+
+  // ── Load stats ────────────────────────────────────────────────
+  async function loadStats() {
+    try {
+      const r = await fetch('/api/dashboard/stats');
+      if (!r.ok) throw new Error('Failed');
+      const s = await r.json();
+
+      document.getElementById('statTotalOrders').textContent = s.total_orders ?? '—';
+      if (s.orders_this_week != null) {
+        const el = document.getElementById('statOrdersDelta');
+        el.textContent = `+${s.orders_this_week} this week`;
+        el.className = 'stat-delta up';
+      }
+
+      document.getElementById('statRevenue').textContent =
+        s.revenue_this_month != null ? fmtMoney(s.revenue_this_month) : '—';
+      if (s.revenue_last_month != null && s.revenue_this_month != null) {
+        const delta = s.revenue_this_month - s.revenue_last_month;
+        const pct = s.revenue_last_month > 0 ? Math.round((delta / s.revenue_last_month) * 100) : 0;
+        const el = document.getElementById('statRevenueDelta');
+        el.textContent = (pct >= 0 ? '+' : '') + pct + '% vs last month';
+        el.className = 'stat-delta ' + (pct >= 0 ? 'up' : 'down');
+      }
+
+      document.getElementById('statMaterials').textContent = s.active_materials ?? '—';
+      document.getElementById('statCustomers').textContent = s.customers ?? '—';
+      if (s.new_customers_this_week != null) {
+        const el = document.getElementById('statCustomersDelta');
+        el.textContent = `+${s.new_customers_this_week} this week`;
+        el.className = 'stat-delta up';
+      }
+    } catch {
+      // Leave as — on failure
+    }
+  }
+
+  // ── Load orders ───────────────────────────────────────────────
+  async function loadOrders() {
+    const body = document.getElementById('ordersBody');
+    const errEl = document.getElementById('ordersError');
+    try {
+      const r = await fetch('/api/orders?limit=5');
+      if (!r.ok) throw new Error('Could not load orders.');
+      const orders = await r.json();
+
+      if (!orders.length) {
+        body.innerHTML = `<div class="empty-state">
+          <h3>No orders yet</h3>
+          <p>When customers place orders they will appear here.</p>
+        </div>`;
+        return;
+      }
+
+      body.innerHTML = `<table class="data-table">
+        <thead><tr>
+          <th>Order</th><th>Customer</th><th>Material</th><th>Total</th><th>Status</th><th>Date</th>
+        </tr></thead>
+        <tbody id="ordersTableBody"></tbody>
+      </table>`;
+
+      const tbody = document.getElementById('ordersTableBody');
+      orders.forEach(o => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="order-id">#${o.id || o.order_number}</span></td>
+          <td>${escHtml(o.customer_name || o.customer?.name || '—')}</td>
+          <td>${escHtml(o.material || o.material_name || '—')}</td>
+          <td>${o.total != null ? fmtMoney(o.total) : '—'}</td>
+          <td>${statusBadge(o.status || 'pending')}</td>
+          <td style="white-space:nowrap;color:var(--muted)">${formatDate(o.created_at)}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      // Populate activity feed from same data
+      loadActivity(orders);
+
+    } catch (err) {
+      errEl.textContent = err.message || 'Could not load orders.';
+      errEl.style.display = 'block';
+      body.innerHTML = '';
+      loadActivity([]);
+    }
+  }
+
+  // ── Activity feed ─────────────────────────────────────────────
+  function loadActivity(orders) {
+    const actBody = document.getElementById('activityBody');
+    if (!orders.length) {
+      actBody.innerHTML = `<div class="empty-state">
+        <p>No recent activity.</p>
+      </div>`;
+      return;
+    }
+    const recent = orders.slice(0, 5);
+    const ul = document.createElement('ul');
+    ul.className = 'activity-list';
+    recent.forEach(o => {
+      const li = document.createElement('li');
+      li.className = 'activity-item';
+      const customer = escHtml(o.customer_name || o.customer?.name || 'A customer');
+      li.innerHTML = `
+        <div class="activity-dot"></div>
+        <div>
+          <div class="activity-text">${customer} placed order <strong>#${o.id || o.order_number}</strong></div>
+          <div class="activity-time">${timeAgo(o.created_at)}</div>
+        </div>`;
+      ul.appendChild(li);
+    });
+    actBody.innerHTML = '';
+    actBody.appendChild(ul);
+  }
+
+  // ── Utilities ─────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatDate(str) {
+    if (!str) return '—';
+    try {
+      return new Date(str).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch { return str; }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────
+  loadStats();
+  loadOrders();
+</script>
+</body>
+</html>

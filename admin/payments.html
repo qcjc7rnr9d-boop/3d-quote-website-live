@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Payments — mahi3d Admin</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    .stripe-logo {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      font-size: 28px;
+      color: #635BFF;
+      letter-spacing: -0.02em;
+    }
+    .connect-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 48px 24px;
+      gap: 16px;
+    }
+    .connect-center h2 {
+      font-family: var(--font-brand);
+      font-size: 26px;
+      font-weight: 400;
+      color: var(--ink);
+    }
+    .connect-center p {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--muted);
+      max-width: 400px;
+      line-height: 1.7;
+    }
+    .connect-checklist {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-align: left;
+    }
+    .connect-checklist li {
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .connect-checklist li::before {
+      content: '✓';
+      color: var(--sage-dark);
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .connect-note {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .connected-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .connected-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--stone);
+      font-size: 13px;
+    }
+    .connected-row:last-child { border-bottom: none; }
+    .connected-row .label { color: var(--muted); font-weight: 400; }
+    .connected-row .value { color: var(--ink); font-family: 'Courier New', monospace; font-size: 12px; }
+    .fee-note {
+      background: rgba(122,158,126,0.06);
+      border: 1px solid var(--sage-light);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--sage-dark);
+      margin-top: 20px;
+    }
+    .payout-status-paid { color: #1a7a3a; font-weight: 500; }
+    .payout-status-pending { color: var(--muted); }
+    .payout-status-failed { color: #C0392B; }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">R</div>
+      <div class="sidebar-store-name" id="sidebarStoreName">Loading…</div>
+      <span class="sidebar-plan" id="sidebarPlan">—</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-link" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-section">Catalogue</div>
+      <a href="materials.html" class="sidebar-link" id="nav-materials">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Materials
+      </a>
+      <a href="pricing.html" class="sidebar-link" id="nav-pricing">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg>
+        Pricing
+      </a>
+      <div class="sidebar-section">Sales</div>
+      <a href="orders.html" class="sidebar-link" id="nav-orders">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Orders
+      </a>
+      <a href="customers.html" class="sidebar-link" id="nav-customers">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Customers
+      </a>
+      <div class="sidebar-section">Store</div>
+      <a href="shipping.html" class="sidebar-link" id="nav-shipping">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m0 0h3l3 3v4h-1M15 17H9m-4 0a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Shipping
+      </a>
+      <a href="payments.html" class="sidebar-link active" id="nav-payments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Payments
+      </a>
+      <a href="notifications.html" class="sidebar-link" id="nav-notifications">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </a>
+      <a href="settings.html" class="sidebar-link" id="nav-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="account.html" class="sidebar-link" id="nav-account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-signout" id="signoutBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div class="admin-title-block">
+        <h1 class="admin-title">Payments</h1>
+        <p class="admin-subtitle">Stripe Connect and payout settings</p>
+      </div>
+    </div>
+
+    <div class="admin-content">
+
+      <!-- Stripe Connect status -->
+      <div class="section-card" id="stripeCard">
+        <div class="section-card-header">
+          <h2 class="section-card-title">Stripe Connect</h2>
+          <span id="connectedBadge" class="badge badge-sage" style="display:none">Connected</span>
+        </div>
+        <div class="section-card-body">
+
+          <!-- Step 1: Enter API keys -->
+          <div id="keysState" style="display:none">
+            <div style="max-width:520px">
+              <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+                Enter your Stripe API keys below. You can find them in your
+                <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color:var(--sage-dark)">Stripe dashboard</a>.
+                Keys are stored securely on the server and never shown in full again.
+              </div>
+
+              <div id="keysError" class="inline-error" style="margin-bottom:14px"></div>
+              <div id="keysSuccess" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#166534;margin-bottom:14px"></div>
+
+              <div class="form-group">
+                <label class="form-label" for="inputSecretKey">
+                  Secret key
+                  <span style="font-weight:400;color:var(--muted)"> — starts with sk_live_ or sk_test_</span>
+                </label>
+                <div style="position:relative">
+                  <input class="form-input" type="password" id="inputSecretKey" placeholder="sk_live_…" autocomplete="off">
+                  <button type="button" id="toggleSecretKey" tabindex="-1"
+                    style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px">
+                    Show
+                  </button>
+                </div>
+                <p style="font-size:11px;color:var(--muted);margin-top:4px">
+                  From <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color:var(--sage-dark)">Stripe Dashboard → Developers → API keys</a>
+                </p>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="inputClientId">
+                  Client ID
+                  <span style="font-weight:400;color:var(--muted)"> — starts with ca_</span>
+                </label>
+                <input class="form-input" type="text" id="inputClientId" placeholder="ca_…" autocomplete="off">
+                <p style="font-size:11px;color:var(--muted);margin-top:4px">
+                  From <a href="https://dashboard.stripe.com/settings/connect" target="_blank" style="color:var(--sage-dark)">Stripe Dashboard → Connect → Settings</a>
+                </p>
+              </div>
+
+              <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+                <button class="btn btn-primary" id="saveKeysBtn">Save keys</button>
+                <div id="keysSaved" style="display:none;font-size:13px;color:var(--sage-dark)">✓ Saved</div>
+              </div>
+
+              <!-- Masked keys display (shown after saving) -->
+              <div id="savedKeysDisplay" style="display:none;margin-top:20px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px">Saved keys</div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-family:monospace">
+                  <div><span style="color:var(--muted);font-family:var(--font-ui);min-width:100px;display:inline-block">Secret key</span> <span id="maskedSecretKey" style="color:var(--ink)"></span></div>
+                  <div><span style="color:var(--muted);font-family:var(--font-ui);min-width:100px;display:inline-block">Client ID</span> <span id="maskedClientId" style="color:var(--ink)"></span></div>
+                </div>
+                <button class="btn btn-outline" id="updateKeysBtn" style="margin-top:12px;font-size:12px;height:30px;padding:0 12px">Update keys</button>
+              </div>
+
+              <div id="proceedToConnectWrap" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+                <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Keys saved. Now connect your Stripe account to start accepting payments.</p>
+                <button class="btn btn-primary" id="connectStripeBtn">
+                  Connect with Stripe →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Already has keys, not yet connected — show Connect button directly -->
+          <div id="notConnectedState" class="connect-center" style="display:none">
+            <div class="stripe-logo">stripe</div>
+            <h2>Connect your Stripe account</h2>
+            <p>Your API keys are saved. Authorise the connection to start accepting payments.</p>
+            <ul class="connect-checklist">
+              <li>Instant payouts to your bank</li>
+              <li>No card data stored on our servers</li>
+              <li>Supported in 40+ countries</li>
+            </ul>
+            <button class="btn btn-primary" id="connectStripeBtn2" style="margin-top:8px">
+              Connect with Stripe
+            </button>
+            <p class="connect-note">You'll be redirected to Stripe to authorise the connection.</p>
+            <button type="button" style="margin-top:8px;background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline" id="editKeysBtn">
+              Update API keys
+            </button>
+          </div>
+
+          <!-- Connected state -->
+          <div id="connectedState" style="display:none">
+            <div class="connected-card">
+              <div class="connected-row">
+                <span class="label">Account ID</span>
+                <span class="value" id="accountId">—</span>
+              </div>
+              <div class="connected-row">
+                <span class="label">Account type</span>
+                <span class="value" style="font-family: var(--font-ui)">Express</span>
+              </div>
+              <div class="connected-row">
+                <span class="label">Payouts enabled</span>
+                <span id="payoutsEnabled">—</span>
+              </div>
+              <div class="connected-row">
+                <span class="label">Charges enabled</span>
+                <span id="chargesEnabled">—</span>
+              </div>
+            </div>
+
+            <div class="fee-note">
+              RF DEWI takes a 5% platform fee from each transaction, applied automatically at checkout.
+            </div>
+
+            <div style="margin-top:24px">
+              <button class="btn btn-outline" id="disconnectBtn" style="color:#C0392B;border-color:rgba(192,57,43,0.4)">
+                Disconnect Stripe
+              </button>
+            </div>
+          </div>
+
+          <!-- Loading state -->
+          <div id="loadingState" class="connect-center">
+            <p style="color:var(--muted)">Loading…</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Recent payouts (shown only when connected) -->
+      <div class="section-card" id="payoutsCard" style="display:none">
+        <div class="section-card-header">
+          <h2 class="section-card-title">Recent payouts</h2>
+        </div>
+        <div class="section-card-body" style="padding:0">
+          <table class="data-table" id="payoutsTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Currency</th>
+                <th>Status</th>
+                <th>Payout ID</th>
+              </tr>
+            </thead>
+            <tbody id="payoutsTbody">
+              <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--muted)">Loading payouts…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Disconnect confirmation modal -->
+<div class="modal-overlay hidden" id="disconnectModal" role="dialog" aria-modal="true" aria-labelledby="disconnectTitle">
+  <div class="modal">
+    <h2 class="modal-title" id="disconnectTitle">Disconnect Stripe?</h2>
+    <p class="modal-body">Customers will no longer be able to pay online. You can reconnect at any time.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cancelDisconnect">Cancel</button>
+      <button class="btn btn-danger" id="confirmDisconnect">Disconnect</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let shopData   = null;
+  let keysStatus = null;
+
+  // ── Auth guard ────────────────────────────────────────────────
+  (async () => {
+    try {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location.href = 'login.html'; return; }
+      shopData = await r.json();
+      document.getElementById('sidebarStoreName').textContent = shopData.name;
+      document.getElementById('sidebarPlan').textContent =
+        shopData.plan.charAt(0).toUpperCase() + shopData.plan.slice(1);
+      if (shopData.is_temp_password) { window.location.href = 'change-password.html'; return; }
+      await loadAndRender();
+    } catch { window.location.href = 'login.html'; }
+  })();
+
+  document.getElementById('signoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  // ── Main render ───────────────────────────────────────────────
+  async function loadAndRender() {
+    // Fetch key status
+    try {
+      const kr = await fetch('/api/stripe/keys-status');
+      keysStatus = await kr.json();
+    } catch { keysStatus = { has_secret_key: false, has_client_id: false }; }
+
+    document.getElementById('loadingState').style.display = 'none';
+
+    if (shopData.stripe_account_id) {
+      // Fully connected
+      document.getElementById('connectedBadge').style.display = '';
+      document.getElementById('connectedState').style.display = '';
+      document.getElementById('accountId').textContent = shopData.stripe_account_id;
+      document.getElementById('payoutsEnabled').innerHTML = '<span class="badge badge-sage">Yes</span>';
+      document.getElementById('chargesEnabled').innerHTML = '<span class="badge badge-sage">Yes</span>';
+      document.getElementById('payoutsCard').style.display = '';
+      loadPayouts();
+    } else if (keysStatus.has_secret_key && keysStatus.has_client_id) {
+      // Keys saved, just need OAuth connect
+      document.getElementById('notConnectedState').style.display = '';
+    } else {
+      // Need to enter keys first
+      document.getElementById('keysState').style.display = '';
+      if (keysStatus.has_secret_key || keysStatus.has_client_id) {
+        // Partially saved — show what we have
+        renderSavedKeys();
+      }
+    }
+  }
+
+  function renderSavedKeys() {
+    if (keysStatus.secret_key_masked || keysStatus.client_id_masked) {
+      document.getElementById('savedKeysDisplay').style.display = '';
+      document.getElementById('maskedSecretKey').textContent = keysStatus.secret_key_masked || '—';
+      document.getElementById('maskedClientId').textContent  = keysStatus.client_id_masked  || '—';
+    }
+    if (keysStatus.has_secret_key && keysStatus.has_client_id) {
+      document.getElementById('proceedToConnectWrap').style.display = '';
+    }
+  }
+
+  // ── Show/hide password ────────────────────────────────────────
+  document.getElementById('toggleSecretKey').addEventListener('click', () => {
+    const inp = document.getElementById('inputSecretKey');
+    const btn = document.getElementById('toggleSecretKey');
+    if (inp.type === 'password') { inp.type = 'text';     btn.textContent = 'Hide'; }
+    else                         { inp.type = 'password'; btn.textContent = 'Show'; }
+  });
+
+  // ── Save keys ─────────────────────────────────────────────────
+  document.getElementById('saveKeysBtn').addEventListener('click', async () => {
+    const btn       = document.getElementById('saveKeysBtn');
+    const errEl     = document.getElementById('keysError');
+    const successEl = document.getElementById('keysSuccess');
+    errEl.classList.remove('visible');
+    successEl.style.display = 'none';
+
+    const secretKey = document.getElementById('inputSecretKey').value.trim();
+    const clientId  = document.getElementById('inputClientId').value.trim();
+
+    if (!secretKey && !clientId) {
+      errEl.textContent = 'Enter at least one key to save.';
+      errEl.classList.add('visible');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    try {
+      const body = {};
+      if (secretKey) body.secret_key = secretKey;
+      if (clientId)  body.client_id  = clientId;
+
+      const r = await fetch('/api/stripe/keys', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Save failed');
+
+      keysStatus = data;
+      document.getElementById('inputSecretKey').value = '';
+      document.getElementById('inputClientId').value  = '';
+
+      successEl.textContent = '✓ Keys saved securely.';
+      successEl.style.display = '';
+      document.getElementById('keysSaved').style.display = '';
+
+      renderSavedKeys();
+
+      // If both keys now set, transition to Connect button after short delay
+      if (data.has_secret_key && data.has_client_id) {
+        setTimeout(() => {
+          document.getElementById('keysState').style.display = 'none';
+          document.getElementById('notConnectedState').style.display = '';
+        }, 1200);
+      }
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.add('visible');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save keys';
+    }
+  });
+
+  // ── Update keys (clear inputs, re-show form) ──────────────────
+  document.getElementById('updateKeysBtn').addEventListener('click', () => {
+    document.getElementById('savedKeysDisplay').style.display = 'none';
+    document.getElementById('proceedToConnectWrap').style.display = 'none';
+    document.getElementById('inputSecretKey').focus();
+  });
+
+  // "Edit keys" link from notConnectedState
+  document.getElementById('editKeysBtn').addEventListener('click', () => {
+    document.getElementById('notConnectedState').style.display = 'none';
+    document.getElementById('keysState').style.display = '';
+    renderSavedKeys();
+  });
+
+  // ── Connect with Stripe (both buttons) ───────────────────────
+  async function doStripeConnect(btn) {
+    btn.disabled = true;
+    btn.textContent = 'Redirecting…';
+    try {
+      const r = await fetch('/api/stripe/connect-url');
+      const data = await r.json();
+      if (!r.ok) {
+        if (data.setup_required) {
+          document.getElementById('notConnectedState').style.display = 'none';
+          document.getElementById('keysState').style.display = '';
+          return;
+        }
+        throw new Error(data.error || 'Failed to get connect URL');
+      }
+      window.location.href = data.url;
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = btn.id === 'connectStripeBtn2' ? 'Connect with Stripe' : 'Connect with Stripe →';
+      alert(err.message || 'Failed to start Stripe connection. Please try again.');
+    }
+  }
+
+  document.getElementById('connectStripeBtn').addEventListener('click',  e => doStripeConnect(e.currentTarget));
+  document.getElementById('connectStripeBtn2').addEventListener('click', e => doStripeConnect(e.currentTarget));
+
+  // ── Payouts ───────────────────────────────────────────────────
+  async function loadPayouts() {
+    try {
+      const r = await fetch('/api/stripe/payouts');
+      const { payouts } = await r.json();
+      const tbody = document.getElementById('payoutsTbody');
+      if (!payouts || payouts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--muted)">No payouts yet</td></tr>';
+        return;
+      }
+      tbody.innerHTML = payouts.map(p => `
+        <tr>
+          <td>${p.arrival_date}</td>
+          <td>$${Number(p.amount).toFixed(2)}</td>
+          <td>${p.currency}</td>
+          <td><span class="payout-status-${p.status}">${p.status.charAt(0).toUpperCase() + p.status.slice(1)}</span></td>
+          <td style="font-family:'Courier New',monospace;font-size:11px;color:var(--muted)">${p.id}</td>
+        </tr>
+      `).join('');
+    } catch (err) { console.error('Payouts error:', err); }
+  }
+
+  // ── Disconnect ────────────────────────────────────────────────
+  document.getElementById('disconnectBtn').addEventListener('click', () => {
+    document.getElementById('disconnectModal').classList.remove('hidden');
+  });
+  document.getElementById('cancelDisconnect').addEventListener('click', () => {
+    document.getElementById('disconnectModal').classList.add('hidden');
+  });
+  document.getElementById('disconnectModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+  });
+  document.getElementById('confirmDisconnect').addEventListener('click', async () => {
+    const btn = document.getElementById('confirmDisconnect');
+    btn.disabled = true;
+    btn.textContent = 'Disconnecting…';
+    try {
+      const r = await fetch('/api/stripe/disconnect', { method: 'POST' });
+      if (!r.ok) throw new Error();
+      window.location.reload();
+    } catch {
+      btn.disabled = false;
+      btn.textContent = 'Disconnect';
+      document.getElementById('disconnectModal').classList.add('hidden');
+      alert('Failed to disconnect. Please try again.');
+    }
+  });
+</script>
+</body>
+</html>

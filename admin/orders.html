@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Orders — mahi3d Admin</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    .orders-stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .orders-stat-card {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 20px;
+    }
+    .orders-stat-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .orders-stat-value {
+      font-family: var(--font-brand);
+      font-size: 28px;
+      font-weight: 400;
+      color: var(--ink);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    /* Filter row extras */
+    .filter-row .filter-dates {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .filter-row .date-label {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .filter-row .form-input,
+    .filter-row .form-select {
+      height: 38px;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+    .filter-row input[type="date"] {
+      height: 38px;
+      padding: 0 10px;
+      font-size: 13px;
+      font-family: var(--font-ui);
+      color: var(--ink);
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      outline: none;
+      cursor: pointer;
+      transition: border-color 200ms, box-shadow 200ms;
+    }
+    .filter-row input[type="date"]:focus {
+      border-color: var(--sage);
+      box-shadow: 0 0 0 3px rgba(122,158,126,0.15);
+    }
+    .filter-spacer { flex: 1; }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--stone);
+    }
+    .pagination-label { font-size: 13px; color: var(--muted); }
+
+    /* Customer cell */
+    .customer-cell .customer-name { font-weight: 500; color: var(--ink); }
+    .customer-cell .customer-email { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    /* Order detail modal overrides */
+    .order-modal { width: min(620px, 100%); }
+    .order-detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+    .order-detail-section-title {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .order-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid #F2F1EE;
+      font-size: 13px;
+    }
+    .order-detail-row:last-child { border-bottom: none; }
+    .order-detail-label { color: var(--muted); flex-shrink: 0; }
+    .order-detail-value { color: var(--ink); text-align: right; word-break: break-all; }
+    .price-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+    .price-row.total { font-weight: 500; font-size: 14px; padding-top: 8px; border-top: 1px solid var(--stone); }
+    .stripe-id-code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--muted); }
+    .modal-section-gap { margin-top: 18px; }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">R</div>
+      <div class="sidebar-store-name" id="sidebarStoreName">Loading…</div>
+      <span class="sidebar-plan" id="sidebarPlan">—</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-link" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-section">Catalogue</div>
+      <a href="materials.html" class="sidebar-link" id="nav-materials">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Materials
+      </a>
+      <a href="pricing.html" class="sidebar-link" id="nav-pricing">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg>
+        Pricing
+      </a>
+      <div class="sidebar-section">Sales</div>
+      <a href="orders.html" class="sidebar-link active" id="nav-orders">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Orders
+      </a>
+      <a href="customers.html" class="sidebar-link" id="nav-customers">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Customers
+      </a>
+      <div class="sidebar-section">Store</div>
+      <a href="shipping.html" class="sidebar-link" id="nav-shipping">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m0 0h3l3 3v4h-1M15 17H9m-4 0a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Shipping
+      </a>
+      <a href="payments.html" class="sidebar-link" id="nav-payments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Payments
+      </a>
+      <a href="notifications.html" class="sidebar-link" id="nav-notifications">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </a>
+      <a href="settings.html" class="sidebar-link" id="nav-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="account.html" class="sidebar-link" id="nav-account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-signout" id="signoutBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <header class="admin-header">
+      <div class="admin-title-block">
+        <h1 class="admin-title">Orders</h1>
+        <p class="admin-subtitle">Track and manage customer orders</p>
+      </div>
+    </header>
+
+    <div class="admin-content">
+
+      <!-- Filter row -->
+      <div class="filter-row">
+        <input type="search" class="form-input" id="searchInput" placeholder="Search order, customer…" style="max-width:240px;">
+        <select class="form-select" id="statusFilter" style="max-width:160px;">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="processing">Processing</option>
+          <option value="complete">Complete</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <div class="filter-dates">
+          <span class="date-label">From</span>
+          <input type="date" id="dateFrom" aria-label="From date">
+          <span class="date-label">To</span>
+          <input type="date" id="dateTo" aria-label="To date">
+        </div>
+        <div class="filter-spacer"></div>
+        <button class="btn btn-outline" id="exportCsvBtn" style="height:38px;font-size:13px;padding:0 16px;">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Export CSV
+        </button>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="orders-stats-row">
+        <div class="orders-stat-card">
+          <div class="orders-stat-label">Today's orders</div>
+          <div class="orders-stat-value" id="statTodayOrders">—</div>
+        </div>
+        <div class="orders-stat-card">
+          <div class="orders-stat-label">This month revenue</div>
+          <div class="orders-stat-value" id="statMonthRevenue">—</div>
+        </div>
+        <div class="orders-stat-card">
+          <div class="orders-stat-label">Pending</div>
+          <div class="orders-stat-value" id="statPending">—</div>
+        </div>
+      </div>
+
+      <!-- Orders table -->
+      <div class="section-card">
+        <div id="tableWrapper">
+          <table class="data-table" id="ordersTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Customer</th>
+                <th>Material</th>
+                <th>Qty</th>
+                <th>Total</th>
+                <th>Fulfilment</th>
+                <th>Payment</th>
+                <th>Date</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="ordersBody">
+              <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">Loading orders…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination" style="display:none;">
+          <button class="btn btn-outline" id="prevPage" style="height:34px;padding:0 14px;font-size:13px;" disabled>← Prev</button>
+          <span class="pagination-label" id="pageLabel">Page 1 of 1</span>
+          <button class="btn btn-outline" id="nextPage" style="height:34px;padding:0 14px;font-size:13px;">Next →</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Order detail modal -->
+<div class="modal-overlay hidden" id="orderModal" role="dialog" aria-modal="true" aria-labelledby="orderModalTitle">
+  <div class="modal order-modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h2 class="modal-title" id="orderModalTitle">Order #—</h2>
+      <button class="table-action" id="closeOrderModal" aria-label="Close modal">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Two-column detail grid -->
+    <div class="order-detail-grid">
+      <div>
+        <div class="order-detail-section-title">Order details</div>
+        <div class="order-detail-row"><span class="order-detail-label">Customer</span><span class="order-detail-value" id="detCustomerName">—</span></div>
+        <div class="order-detail-row"><span class="order-detail-label">Email</span><span class="order-detail-value" id="detEmail">—</span></div>
+        <div class="order-detail-row"><span class="order-detail-label">Date</span><span class="order-detail-value" id="detDate">—</span></div>
+        <div class="order-detail-row"><span class="order-detail-label">File</span><span class="order-detail-value" id="detFile">—</span></div>
+        <div class="order-detail-row"><span class="order-detail-label">Material</span><span class="order-detail-value" id="detMaterial">—</span></div>
+        <div class="order-detail-row"><span class="order-detail-label">Colour</span><span class="order-detail-value" id="detColour">—</span></div>
+        <div class="order-detail-row"><span class="order-detail-label">Finish</span><span class="order-detail-value" id="detFinish">—</span></div>
+        <div class="order-detail-row"><span class="order-detail-label">Quantity</span><span class="order-detail-value" id="detQty">—</span></div>
+      </div>
+      <div>
+        <div class="order-detail-section-title">Price breakdown</div>
+        <div class="price-row"><span>Subtotal</span><span id="detSubtotal">—</span></div>
+        <div class="price-row"><span>Shipping</span><span id="detShipping">—</span></div>
+        <div class="price-row"><span>Tax</span><span id="detTax">—</span></div>
+        <div class="price-row total"><span>Total</span><span id="detTotal">—</span></div>
+        <div style="margin-top:16px;">
+          <div class="order-detail-section-title">Stripe payment</div>
+          <code class="stripe-id-code" id="detStripeId">—</code>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Status pipeline -->
+    <div style="margin:18px 0 6px">
+      <div class="form-label" style="margin-bottom:10px">Order status</div>
+      <div id="statusPipeline" style="display:flex;gap:0;border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- Tracking (only shown when shipping stage reached) -->
+    <div id="trackingSection" style="display:none;margin-top:16px;background:var(--off-white);border-radius:var(--radius);padding:16px">
+      <div class="form-label" style="margin-bottom:10px">📦 Shipping info <span style="font-weight: 400;color:var(--muted)">(visible to customer once shipped)</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label" for="trackingNumber">Tracking number</label>
+          <input class="form-input" type="text" id="trackingNumber" placeholder="NZ123456789">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label" for="trackingUrl">Tracking URL <span style="font-weight: 400;color:var(--muted)">(optional)</span></label>
+          <input class="form-input" type="url" id="trackingUrl" placeholder="https://tracking.nzpost.co.nz/…">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px;margin-bottom:0">
+        <label class="form-label" for="customerMessage">Message to customer <span style="font-weight: 400;color:var(--muted)">(included in notification email)</span></label>
+        <textarea class="form-textarea" id="customerMessage" rows="3" placeholder="e.g. Your order has been dispatched! Estimated delivery 2–4 business days." style="min-height:72px"></textarea>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="notifyCustomer" checked style="width:15px;height:15px;accent-color:var(--sage)">
+        Send notification email to customer
+      </label>
+    </div>
+
+    <!-- Internal notes -->
+    <div class="form-group" style="margin-top:16px">
+      <label class="form-label" for="orderNotes">Internal notes <span style="font-weight: 400;color:var(--muted)">(not visible to customer)</span></label>
+      <textarea class="form-textarea" id="orderNotes" rows="2" placeholder="Internal notes only…" style="min-height:60px"></textarea>
+    </div>
+
+    <div id="modalError" style="display:none;margin-top:12px;font-size:13px;color:#C0392B"></div>
+    <div id="modalSuccess" style="display:none;margin-top:12px;font-size:13px;color:#1a7a3a"></div>
+
+    <div class="modal-actions" style="margin-top:22px">
+      <button class="btn btn-outline" id="cancelOrderBtn" style="height:38px;font-size:13px;padding:0 16px;color:#C0392B;border-color:rgba(192,57,43,0.4)">Cancel order</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-outline" id="closeOrderBtn" style="height:38px;font-size:13px;padding:0 16px">Close</button>
+      <button class="btn btn-primary" id="updateOrderBtn" style="height:38px;font-size:13px;padding:0 16px">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Auth ──────────────────────────────────────────────────────
+  (async () => {
+    try {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location.href = 'login.html'; return; }
+      const shop = await r.json();
+      document.getElementById('sidebarStoreName').textContent = shop.name;
+      document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
+      if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
+    } catch { window.location.href = 'login.html'; }
+  })();
+  document.getElementById('signoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  // ── State ─────────────────────────────────────────────────────
+  let currentPage = 1;
+  let totalPages = 1;
+  let currentOrderId = null;
+  let updating = false;
+
+  const LIMIT = 20;
+
+  function fmtCurrency(val) {
+    if (val == null) return '—';
+    return '£' + Number(val).toFixed(2);
+  }
+  function fmtDate(val) {
+    if (!val) return '—';
+    return new Date(val).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function fulfilmentBadge(status) {
+    const map = { pending: 'badge-stone', processing: 'badge-amber', dispatched: 'badge-sage', complete: 'badge-sage', cancelled: 'badge-red' };
+    const cls = map[status] || 'badge-stone';
+    return `<span class="badge ${cls}">${status || 'unknown'}</span>`;
+  }
+  function paymentBadge(status) {
+    const map = { pending: 'badge-stone', paid: 'badge-sage', failed: 'badge-red' };
+    const cls = map[status] || 'badge-stone';
+    return `<span class="badge ${cls}">${status || 'unknown'}</span>`;
+  }
+
+  // ── Load stats ────────────────────────────────────────────────
+  async function loadStats() {
+    try {
+      const r = await fetch('/api/orders/stats');
+      if (!r.ok) return;
+      const d = await r.json();
+      document.getElementById('statTodayOrders').textContent = d.today_count ?? '0';
+      document.getElementById('statMonthRevenue').textContent = fmtCurrency(d.month_revenue);
+      document.getElementById('statPending').textContent = d.pending_count ?? '0';
+    } catch { /* non-critical */ }
+  }
+
+  // ── Load orders ───────────────────────────────────────────────
+  async function loadOrders(page = 1) {
+    const search = document.getElementById('searchInput').value.trim();
+    const status = document.getElementById('statusFilter').value;
+    const from   = document.getElementById('dateFrom').value;
+    const to     = document.getElementById('dateTo').value;
+
+    const params = new URLSearchParams({ page, limit: LIMIT, status, search, from, to });
+    const tbody = document.getElementById('ordersBody');
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Loading…</td></tr>';
+
+    try {
+      const r = await fetch('/api/orders?' + params);
+      if (!r.ok) throw new Error('Server error');
+      const data = await r.json();
+      const orders = data.orders || [];
+      totalPages = data.total_pages || 1;
+      currentPage = page;
+
+      if (orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">No orders found.</td></tr>';
+        document.getElementById('pagination').style.display = 'none';
+        return;
+      }
+
+      tbody.innerHTML = orders.map(o => `
+        <tr>
+          <td style="font-family:'Courier New',monospace;font-size:12px;color:var(--muted);">#${o.id}</td>
+          <td>
+            <div class="customer-cell">
+              <div class="customer-name">${escHtml(o.customer_name || '—')}</div>
+              <div class="customer-email">${escHtml(o.customer_email || '')}</div>
+            </div>
+          </td>
+          <td>${escHtml(o.material || '—')}</td>
+          <td>${o.quantity ?? '—'}</td>
+          <td>${fmtCurrency(o.total)}</td>
+          <td>${fulfilmentBadge(o.fulfilment_status)}</td>
+          <td>${paymentBadge(o.payment_status)}</td>
+          <td style="white-space:nowrap;">${fmtDate(o.created_at)}</td>
+          <td>
+            <button class="table-action" onclick="openOrderModal(${o.id})">View</button>
+          </td>
+        </tr>
+      `).join('');
+
+      // Pagination
+      const pag = document.getElementById('pagination');
+      pag.style.display = 'flex';
+      document.getElementById('pageLabel').textContent = `Page ${currentPage} of ${totalPages}`;
+      document.getElementById('prevPage').disabled = currentPage <= 1;
+      document.getElementById('nextPage').disabled = currentPage >= totalPages;
+
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#C0392B;font-size:13px;">Failed to load orders. Please try again.</td></tr>`;
+    }
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Filter listeners ──────────────────────────────────────────
+  let searchTimer;
+  document.getElementById('searchInput').addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => loadOrders(1), 350);
+  });
+  document.getElementById('statusFilter').addEventListener('change', () => loadOrders(1));
+  document.getElementById('dateFrom').addEventListener('change', () => loadOrders(1));
+  document.getElementById('dateTo').addEventListener('change', () => loadOrders(1));
+
+  document.getElementById('prevPage').addEventListener('click', () => { if (currentPage > 1) loadOrders(currentPage - 1); });
+  document.getElementById('nextPage').addEventListener('click', () => { if (currentPage < totalPages) loadOrders(currentPage + 1); });
+
+  // ── Export CSV ────────────────────────────────────────────────
+  document.getElementById('exportCsvBtn').addEventListener('click', () => {
+    const search = document.getElementById('searchInput').value.trim();
+    const status = document.getElementById('statusFilter').value;
+    const from   = document.getElementById('dateFrom').value;
+    const to     = document.getElementById('dateTo').value;
+    const params = new URLSearchParams({ status, search, from, to, format: 'csv' });
+    window.location.href = '/api/orders/export?' + params;
+  });
+
+  // ── Order detail modal ────────────────────────────────────────
+  async function openOrderModal(orderId) {
+    currentOrderId = orderId;
+    document.getElementById('orderModalTitle').textContent = `Order #${orderId}`;
+    document.getElementById('orderModal').classList.remove('hidden');
+    document.getElementById('modalError').style.display = 'none';
+
+    // Reset fields
+    ['detCustomerName','detEmail','detDate','detFile','detMaterial','detColour','detFinish','detQty',
+     'detSubtotal','detShipping','detTax','detTotal','detStripeId'].forEach(id => {
+      document.getElementById(id).textContent = '…';
+    });
+    document.getElementById('orderNotes').value = '';
+
+    try {
+      const r = await fetch(`/api/orders/${orderId}`);
+      if (!r.ok) throw new Error('Not found');
+      const o = await r.json();
+
+      document.getElementById('orderModalTitle').textContent = `Order #${o.id}`;
+      document.getElementById('detCustomerName').textContent = o.customer_name || '—';
+      document.getElementById('detEmail').textContent        = o.customer_email || '—';
+      document.getElementById('detDate').textContent         = fmtDate(o.created_at);
+      document.getElementById('detFile').textContent         = o.file_name || '—';
+      document.getElementById('detMaterial').textContent     = o.material || '—';
+      document.getElementById('detColour').textContent       = o.colour || '—';
+      document.getElementById('detFinish').textContent       = o.finish || '—';
+      document.getElementById('detQty').textContent          = o.quantity ?? '—';
+      document.getElementById('detSubtotal').textContent     = fmtCurrency(o.subtotal);
+      document.getElementById('detShipping').textContent     = fmtCurrency(o.shipping);
+      document.getElementById('detTax').textContent          = fmtCurrency(o.tax);
+      document.getElementById('detTotal').textContent        = fmtCurrency(o.total);
+      document.getElementById('detStripeId').textContent     = o.stripe_payment_id || '—';
+      document.getElementById('orderNotes').value     = o.notes || '';
+      document.getElementById('trackingNumber').value  = o.tracking_number || '';
+      document.getElementById('trackingUrl').value     = o.tracking_url || '';
+      document.getElementById('customerMessage').value = o.customer_message || '';
+      renderStatusPipeline(o.fulfilment_status || 'pending');
+    } catch {
+      document.getElementById('modalError').textContent = 'Could not load order details.';
+      document.getElementById('modalError').style.display = 'block';
+    }
+  }
+
+  const STATUSES = [
+    { key: 'pending',       label: 'Received' },
+    { key: 'processing',    label: 'Confirmed' },
+    { key: 'in_production', label: 'In Production' },
+    { key: 'shipped',       label: 'Shipped' },
+    { key: 'complete',      label: 'Complete' }
+  ];
+
+  let selectedStatus = 'pending';
+
+  function renderStatusPipeline(current) {
+    selectedStatus = current === 'cancelled' ? 'pending' : current;
+    const pipe = document.getElementById('statusPipeline');
+    const currentIdx = STATUSES.findIndex(s => s.key === current);
+
+    pipe.innerHTML = STATUSES.map((s, i) => {
+      const done    = i < currentIdx;
+      const active  = s.key === current;
+      const bg      = active ? 'var(--sage)' : done ? 'rgba(122,158,126,0.15)' : 'var(--white)';
+      const color   = active ? '#fff' : done ? 'var(--sage-dark)' : 'var(--muted)';
+      const border  = i < STATUSES.length - 1 ? 'border-right:1px solid var(--border)' : '';
+      return `<button type="button"
+        onclick="setStatus('${s.key}')"
+        style="flex:1;padding:9px 4px;font-size:11px;font-family:var(--font-ui);
+               font-weight:${active?'500':'400'};background:${bg};color:${color};
+               border:none;cursor:pointer;${border};transition:all 150ms;text-align:center">
+        ${active ? '● ' : done ? '✓ ' : ''}${s.label}
+      </button>`;
+    }).join('');
+
+    // Show tracking section when at shipped stage or beyond
+    const showTracking = ['shipped','complete'].includes(current) ||
+                         ['shipped','complete'].includes(selectedStatus);
+    document.getElementById('trackingSection').style.display = showTracking ? '' : 'none';
+  }
+
+  function setStatus(key) {
+    selectedStatus = key;
+    renderStatusPipeline(key);
+  }
+
+  function closeOrderModal() {
+    document.getElementById('orderModal').classList.add('hidden');
+    currentOrderId = null;
+  }
+
+  document.getElementById('closeOrderModal').addEventListener('click', closeOrderModal);
+  document.getElementById('closeOrderBtn').addEventListener('click', closeOrderModal);
+
+  document.getElementById('orderModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('orderModal')) closeOrderModal();
+  });
+
+  // Save changes
+  document.getElementById('updateOrderBtn').addEventListener('click', async () => {
+    if (!currentOrderId || updating) return;
+    updating = true;
+    const btn    = document.getElementById('updateOrderBtn');
+    const errEl  = document.getElementById('modalError');
+    const succEl = document.getElementById('modalSuccess');
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    errEl.style.display  = 'none';
+    succEl.style.display = 'none';
+
+    try {
+      const notify = document.getElementById('notifyCustomer').checked;
+      const r = await fetch(`/api/orders/${currentOrderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fulfilment_status: selectedStatus,
+          notes:            document.getElementById('orderNotes').value,
+          tracking_number:  document.getElementById('trackingNumber').value,
+          tracking_url:     document.getElementById('trackingUrl').value,
+          customer_message: document.getElementById('customerMessage').value,
+          notify_customer:  notify
+        }),
+      });
+      if (!r.ok) throw new Error('Update failed');
+      succEl.textContent = notify ? 'Order updated and customer notified.' : 'Order updated.';
+      succEl.style.display = 'block';
+      loadOrders(currentPage);
+      setTimeout(closeOrderModal, 1200);
+    } catch {
+      errEl.textContent = 'Failed to update order. Please try again.';
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save changes';
+      updating = false;
+    }
+  });
+
+  // Cancel order
+  document.getElementById('cancelOrderBtn').addEventListener('click', async () => {
+    if (!currentOrderId || updating) return;
+    if (!confirm('Are you sure you want to cancel this order? This cannot be undone.')) return;
+    updating = true;
+    const btn = document.getElementById('cancelOrderBtn');
+    const errEl = document.getElementById('modalError');
+
+    btn.disabled = true;
+    errEl.style.display = 'none';
+
+    try {
+      const r = await fetch(`/api/orders/${currentOrderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fulfilment_status: 'cancelled' }),
+      });
+      if (!r.ok) throw new Error('Cancel failed');
+      closeOrderModal();
+      loadOrders(currentPage);
+    } catch {
+      errEl.textContent = 'Failed to cancel order. Please try again.';
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      updating = false;
+    }
+  });
+
+  // Keyboard close
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeOrderModal();
+  });
+
+  // ── Init ──────────────────────────────────────────────────────
+  loadStats();
+  loadOrders(1);
+</script>
+</body>
+</html>

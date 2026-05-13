@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Customers — mahi3d Admin</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    /* Avatar */
+    .customer-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--sage-light);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-brand);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--sage-dark);
+      flex-shrink: 0;
+      letter-spacing: 0;
+    }
+    .customer-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .customer-cell .customer-name { font-weight: 500; }
+    .customer-cell .customer-email { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    /* Slide-in panel */
+    .customer-panel {
+      position: fixed;
+      top: 0;
+      right: -500px;
+      width: 480px;
+      height: 100vh;
+      background: var(--white);
+      border-left: 1.5px solid var(--border);
+      box-shadow: var(--shadow-lg);
+      z-index: 150;
+      overflow-y: auto;
+      transition: right 300ms ease-out;
+      display: flex;
+      flex-direction: column;
+    }
+    .customer-panel.open { right: 0; }
+    .panel-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(26,26,26,0.35);
+      z-index: 140;
+      display: none;
+      animation: fadeIn 200ms ease-out;
+    }
+    .panel-backdrop.visible { display: block; }
+
+    .panel-header {
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid var(--stone);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .panel-name {
+      font-family: var(--font-brand);
+      font-size: 22px;
+      font-weight: 400;
+      color: var(--ink);
+      margin-bottom: 2px;
+    }
+    .panel-email { font-size: 13px; color: var(--muted); }
+    .panel-since { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    .panel-body { padding: 20px 24px; flex: 1; }
+
+    .panel-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .panel-stat-box {
+      background: var(--off-white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+    .panel-stat-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .panel-stat-value {
+      font-family: var(--font-brand);
+      font-size: 26px;
+      font-weight: 400;
+      color: var(--ink);
+      line-height: 1;
+    }
+
+    .panel-section-title {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 18px 0 10px;
+    }
+
+    /* Mini order history table */
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .mini-table th {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 7px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--stone);
+      background: var(--off-white);
+    }
+    .mini-table td {
+      padding: 9px 10px;
+      color: var(--ink);
+      border-bottom: 1px solid #F2F1EE;
+      vertical-align: middle;
+    }
+    .mini-table tr:last-child td { border-bottom: none; }
+
+    .panel-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--stone);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* Filter row */
+    .filter-row .form-input,
+    .filter-row .form-select {
+      height: 38px;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">R</div>
+      <div class="sidebar-store-name" id="sidebarStoreName">Loading…</div>
+      <span class="sidebar-plan" id="sidebarPlan">—</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-link" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-section">Catalogue</div>
+      <a href="materials.html" class="sidebar-link" id="nav-materials">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Materials
+      </a>
+      <a href="pricing.html" class="sidebar-link" id="nav-pricing">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg>
+        Pricing
+      </a>
+      <div class="sidebar-section">Sales</div>
+      <a href="orders.html" class="sidebar-link" id="nav-orders">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Orders
+      </a>
+      <a href="customers.html" class="sidebar-link active" id="nav-customers">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Customers
+      </a>
+      <div class="sidebar-section">Store</div>
+      <a href="shipping.html" class="sidebar-link" id="nav-shipping">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m0 0h3l3 3v4h-1M15 17H9m-4 0a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Shipping
+      </a>
+      <a href="payments.html" class="sidebar-link" id="nav-payments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Payments
+      </a>
+      <a href="notifications.html" class="sidebar-link" id="nav-notifications">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </a>
+      <a href="settings.html" class="sidebar-link" id="nav-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="account.html" class="sidebar-link" id="nav-account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-signout" id="signoutBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <header class="admin-header">
+      <div class="admin-title-block">
+        <h1 class="admin-title">Customers</h1>
+        <p class="admin-subtitle">People who have placed orders with your shop</p>
+      </div>
+    </header>
+
+    <div class="admin-content">
+
+      <!-- Filter row -->
+      <div class="filter-row">
+        <input type="search" class="form-input" id="searchInput" placeholder="Search name or email…" style="max-width:260px;">
+        <select class="form-select" id="sortSelect" style="max-width:200px;">
+          <option value="newest">Newest first</option>
+          <option value="most_orders">Most orders</option>
+          <option value="highest_spend">Highest spend</option>
+        </select>
+      </div>
+
+      <!-- Customers table -->
+      <div class="section-card">
+        <table class="data-table" id="customersTable">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Orders</th>
+              <th>Total spent</th>
+              <th>Last order</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="customersBody">
+            <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">Loading customers…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Backdrop -->
+<div class="panel-backdrop" id="panelBackdrop"></div>
+
+<!-- Customer detail panel -->
+<aside class="customer-panel" id="customerPanel" role="complementary" aria-label="Customer details">
+  <div class="panel-header">
+    <div>
+      <div class="panel-name" id="panelName">—</div>
+      <div class="panel-email" id="panelEmail">—</div>
+      <div class="panel-since" id="panelSince">Member since —</div>
+    </div>
+    <button class="table-action" id="closePanelBtn" aria-label="Close panel" style="flex-shrink:0;">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="panel-body">
+
+    <!-- Stats -->
+    <div class="panel-stats">
+      <div class="panel-stat-box">
+        <div class="panel-stat-label">Orders</div>
+        <div class="panel-stat-value" id="panelOrderCount">—</div>
+      </div>
+      <div class="panel-stat-box">
+        <div class="panel-stat-label">Total spent</div>
+        <div class="panel-stat-value" id="panelTotalSpent">—</div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="panel-section-title">Notes</div>
+    <div class="form-group">
+      <textarea class="form-textarea" id="panelNotes" rows="3" placeholder="Internal notes about this customer…" style="min-height:72px;"></textarea>
+    </div>
+    <div id="notesSaveError" style="display:none;font-size:12px;color:#C0392B;margin-top:6px;"></div>
+    <button class="btn btn-outline" id="saveNotesBtn" style="height:34px;font-size:13px;padding:0 14px;margin-top:8px;">Save notes</button>
+
+    <!-- Order history -->
+    <div class="panel-section-title">Recent orders</div>
+    <div id="panelOrdersWrapper">
+      <table class="mini-table" id="panelOrdersTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Total</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="panelOrdersBody">
+          <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="panel-footer">
+    <button class="btn btn-outline" id="closePanelFooterBtn" style="height:36px;font-size:13px;padding:0 16px;">Close</button>
+  </div>
+</aside>
+
+<script>
+  // ── Auth ──────────────────────────────────────────────────────
+  (async () => {
+    try {
+      const r = await fetch('/api/auth/me');
+      if (!r.ok) { window.location.href = 'login.html'; return; }
+      const shop = await r.json();
+      document.getElementById('sidebarStoreName').textContent = shop.name;
+      document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
+      if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
+    } catch { window.location.href = 'login.html'; }
+  })();
+  document.getElementById('signoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  // ── Helpers ───────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function fmtCurrency(val) {
+    if (val == null) return '—';
+    return '£' + Number(val).toFixed(2);
+  }
+  function fmtDate(val) {
+    if (!val) return '—';
+    return new Date(val).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function initials(name) {
+    if (!name) return '?';
+    const parts = String(name).trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }
+  function fulfilmentBadge(status) {
+    const map = { pending: 'badge-stone', processing: 'badge-amber', dispatched: 'badge-sage', complete: 'badge-sage', cancelled: 'badge-red' };
+    return `<span class="badge ${map[status] || 'badge-stone'}">${escHtml(status || 'unknown')}</span>`;
+  }
+
+  // ── State ─────────────────────────────────────────────────────
+  let currentCustomerId = null;
+  let savingNotes = false;
+  let allCustomers = [];
+
+  // ── Load customers ────────────────────────────────────────────
+  async function loadCustomers() {
+    const search = document.getElementById('searchInput').value.trim();
+    const sort   = document.getElementById('sortSelect').value;
+    const tbody  = document.getElementById('customersBody');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Loading…</td></tr>';
+
+    try {
+      const params = new URLSearchParams({ search, sort });
+      const r = await fetch('/api/customers?' + params);
+      if (!r.ok) throw new Error('Server error');
+      const data = await r.json();
+      allCustomers = data.customers || data || [];
+
+      if (allCustomers.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24" style="color:var(--border);"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                <h3>No customers yet</h3>
+                <p>Orders will appear here once placed.</p>
+              </div>
+            </td>
+          </tr>`;
+        return;
+      }
+
+      tbody.innerHTML = allCustomers.map(c => `
+        <tr>
+          <td>
+            <div class="customer-cell">
+              <div class="customer-avatar" aria-hidden="true">${escHtml(initials(c.name))}</div>
+              <div>
+                <div class="customer-name">${escHtml(c.name || '—')}</div>
+                <div class="customer-email">${escHtml(c.email || '')}</div>
+              </div>
+            </div>
+          </td>
+          <td>${c.order_count ?? 0}</td>
+          <td>${fmtCurrency(c.total_spent)}</td>
+          <td style="white-space:nowrap;">${fmtDate(c.last_order_at)}</td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12px;">${escHtml(c.notes || '')}</td>
+          <td><button class="table-action" onclick="openPanel(${c.id})">View</button></td>
+        </tr>
+      `).join('');
+    } catch {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#C0392B;font-size:13px;">Failed to load customers.</td></tr>';
+    }
+  }
+
+  // ── Filter listeners ──────────────────────────────────────────
+  let searchTimer;
+  document.getElementById('searchInput').addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadCustomers, 350);
+  });
+  document.getElementById('sortSelect').addEventListener('change', loadCustomers);
+
+  // ── Panel ─────────────────────────────────────────────────────
+  async function openPanel(customerId) {
+    currentCustomerId = customerId;
+    document.getElementById('customerPanel').classList.add('open');
+    document.getElementById('panelBackdrop').classList.add('visible');
+    document.getElementById('notesSaveError').style.display = 'none';
+
+    // Reset
+    document.getElementById('panelName').textContent = '…';
+    document.getElementById('panelEmail').textContent = '…';
+    document.getElementById('panelSince').textContent = 'Member since …';
+    document.getElementById('panelOrderCount').textContent = '…';
+    document.getElementById('panelTotalSpent').textContent = '…';
+    document.getElementById('panelNotes').value = '';
+    document.getElementById('panelOrdersBody').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);">Loading…</td></tr>';
+
+    try {
+      const r = await fetch(`/api/customers/${customerId}`);
+      if (!r.ok) throw new Error('Not found');
+      const c = await r.json();
+
+      document.getElementById('panelName').textContent  = c.name || '—';
+      document.getElementById('panelEmail').textContent = c.email || '—';
+      document.getElementById('panelSince').textContent = 'Member since ' + fmtDate(c.created_at);
+      document.getElementById('panelOrderCount').textContent = c.order_count ?? '0';
+      document.getElementById('panelTotalSpent').textContent = fmtCurrency(c.total_spent);
+      document.getElementById('panelNotes').value = c.notes || '';
+
+      const orders = c.recent_orders || [];
+      if (orders.length === 0) {
+        document.getElementById('panelOrdersBody').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted);font-size:12px;">No orders yet.</td></tr>';
+      } else {
+        document.getElementById('panelOrdersBody').innerHTML = orders.slice(0, 5).map(o => `
+          <tr>
+            <td style="font-family:'Courier New',monospace;font-size:11px;color:var(--muted);">#${o.id}</td>
+            <td>${fmtDate(o.created_at)}</td>
+            <td>${fmtCurrency(o.total)}</td>
+            <td>${fulfilmentBadge(o.fulfilment_status)}</td>
+          </tr>
+        `).join('');
+      }
+    } catch {
+      document.getElementById('panelName').textContent = 'Error loading customer';
+    }
+  }
+
+  function closePanel() {
+    document.getElementById('customerPanel').classList.remove('open');
+    document.getElementById('panelBackdrop').classList.remove('visible');
+    currentCustomerId = null;
+  }
+
+  document.getElementById('closePanelBtn').addEventListener('click', closePanel);
+  document.getElementById('closePanelFooterBtn').addEventListener('click', closePanel);
+  document.getElementById('panelBackdrop').addEventListener('click', closePanel);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
+
+  // ── Save notes ────────────────────────────────────────────────
+  document.getElementById('saveNotesBtn').addEventListener('click', async () => {
+    if (!currentCustomerId || savingNotes) return;
+    savingNotes = true;
+    const btn = document.getElementById('saveNotesBtn');
+    const errEl = document.getElementById('notesSaveError');
+    const notes = document.getElementById('panelNotes').value;
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    errEl.style.display = 'none';
+
+    try {
+      const r = await fetch(`/api/customers/${currentCustomerId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes }),
+      });
+      if (!r.ok) throw new Error('Save failed');
+      btn.textContent = 'Saved';
+      // Refresh table row notes in background
+      loadCustomers();
+      setTimeout(() => { btn.textContent = 'Save notes'; }, 2000);
+    } catch {
+      errEl.textContent = 'Failed to save notes.';
+      errEl.style.display = 'block';
+      btn.textContent = 'Save notes';
+    } finally {
+      btn.disabled = false;
+      savingNotes = false;
+    }
+  });
+
+  // ── Init ──────────────────────────────────────────────────────
+  loadCustomers();
+</script>
+</body>
+</html>

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Platform Admin — Trennen</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self';">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    .platform-nav {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .platform-wordmark {
+      font-family: var(--font-brand);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .platform-nav-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .platform-badge {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--sage-dark);
+      background: rgba(122,158,126,0.12);
+      border: 1px solid var(--sage-light);
+      border-radius: var(--radius);
+      padding: 3px 10px;
+    }
+    .platform-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 32px 80px;
+    }
+    .platform-title {
+      font-family: var(--font-brand);
+      font-weight: 700;
+      font-size: 32px;
+      color: var(--ink);
+      letter-spacing: -0.03em;
+      margin-bottom: 4px;
+    }
+    .platform-subtitle {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+    .platform-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .success-box {
+      background: #EEF4EF;
+      border: 1px solid var(--sage-light);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-size: 13px;
+      color: var(--sage-dark);
+      display: none;
+      margin-top: 16px;
+    }
+    .success-box.visible { display: block; }
+    .password-reveal {
+      font-family: 'Courier New', monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--ink);
+      background: var(--stone);
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      display: inline-block;
+      margin: 8px 0;
+      letter-spacing: 0.05em;
+    }
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px 10px;
+      font-size: 12px;
+      font-family: var(--font-ui);
+      color: var(--muted);
+      cursor: pointer;
+      margin-left: 8px;
+      transition: background 150ms, color 150ms;
+    }
+    .copy-btn:hover { background: var(--off-white); color: var(--ink); }
+    .shop-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 700px) {
+      .platform-stats { grid-template-columns: 1fr 1fr; }
+      .shop-form { grid-template-columns: 1fr; }
+      .platform-nav { padding: 0 20px; }
+      .platform-content { padding: 24px 20px 60px; }
+    }
+  </style>
+</head>
+<body class="admin-body">
+
+<!-- Platform nav -->
+<nav class="platform-nav">
+  <a href="/index.html" class="platform-wordmark">Trennen</a>
+  <div class="platform-nav-right">
+    <span class="platform-badge">Platform Admin</span>
+    <a href="#" id="platformSignout" class="sidebar-signout" style="font-size:13px">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      Sign out
+    </a>
+  </div>
+</nav>
+
+<div class="platform-content">
+
+  <h1 class="platform-title">Platform Overview</h1>
+  <p class="platform-subtitle">All shops on Trennen</p>
+
+  <!-- Stats -->
+  <div class="platform-stats">
+    <div class="stat-card">
+      <div class="stat-label">Total shops</div>
+      <div class="stat-value" id="statShops">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total orders</div>
+      <div class="stat-value" id="statOrders">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Month revenue</div>
+      <div class="stat-value" id="statRevenue">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Month platform fees</div>
+      <div class="stat-value" id="statFees">—</div>
+    </div>
+  </div>
+
+  <!-- All shops table -->
+  <div class="section-card" style="margin-bottom:32px">
+    <div class="section-card-header">
+      <h2 class="section-card-title">All shops</h2>
+    </div>
+    <div style="padding:0;overflow-x:auto">
+      <table class="data-table" id="shopsTable">
+        <thead>
+          <tr>
+            <th>Shop</th>
+            <th>Plan</th>
+            <th>Owner</th>
+            <th>Orders</th>
+            <th>Revenue</th>
+            <th>Stripe</th>
+            <th>Joined</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="shopsTbody">
+          <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create shop -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <h2 class="section-card-title">Create shop</h2>
+    </div>
+    <div class="section-card-body">
+      <div id="createError" style="display:none;color:#C0392B;font-size:13px;margin-bottom:16px"></div>
+      <form id="createShopForm" novalidate>
+        <div class="shop-form">
+          <div class="form-group">
+            <label class="form-label" for="newName">Shop name</label>
+            <input class="form-input" type="text" id="newName" placeholder="Auckland Prints Co." required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newSlug">Slug <span style="color:var(--muted);font-weight: 400">(URL identifier)</span></label>
+            <input class="form-input" type="text" id="newSlug" placeholder="auckland-prints" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newEmail">Owner email</label>
+            <input class="form-input" type="email" id="newEmail" placeholder="owner@example.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newPassword">Initial password</label>
+            <input class="form-input" type="text" id="newPassword" placeholder="Temporary password (will be shown once)" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newPlan">Plan</label>
+            <select class="form-input" id="newPlan">
+              <option value="starter">Starter</option>
+              <option value="pro">Pro</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <button class="btn btn-primary" type="button" id="createShopBtn" onclick="submitCreateShop()">Create shop</button>
+        </div>
+      </form>
+
+      <div class="success-box" id="createSuccess">
+        <strong>Shop created successfully.</strong> Share this temporary password with the owner — it will only be shown once:
+        <br>
+        <span class="password-reveal" id="revealPassword"></span>
+        <button class="copy-btn" id="copyPasswordBtn">Copy</button>
+        <br>
+        <span style="font-size:12px;color:var(--muted)">The owner will be prompted to change this on first login.</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Suspend confirmation modal -->
+<div class="modal-overlay hidden" id="suspendModal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h2 class="modal-title" id="suspendTitle">Suspend shop?</h2>
+    <p class="modal-body" id="suspendBody">This will prevent the shop owner from logging in. You can restore access at any time.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cancelSuspend">Cancel</button>
+      <button class="btn btn-danger" id="confirmSuspend">Suspend</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let suspendTarget = null;
+  let suspendIsRestore = false;
+
+  // Auth guard
+  (async () => {
+    try {
+      const r = await fetch('/api/platform/me');
+      if (!r.ok) { window.location.href = '/platform/login.html'; return; }
+      loadStats();
+      loadShops();
+    } catch { window.location.href = '/platform/login.html'; }
+  })();
+
+  document.getElementById('platformSignout').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/platform/logout', { method: 'POST' });
+    window.location.href = '/platform/login.html';
+  });
+
+  async function loadStats() {
+    try {
+      const r = await fetch('/api/platform/stats');
+      const s = await r.json();
+      document.getElementById('statShops').textContent = s.shopCount;
+      document.getElementById('statOrders').textContent = s.orderCount;
+      document.getElementById('statRevenue').textContent = '$' + Number(s.monthRevenue).toFixed(2);
+      document.getElementById('statFees').textContent = '$' + Number(s.monthFees).toFixed(2);
+    } catch (err) {
+      console.error('Stats error:', err);
+    }
+  }
+
+  async function loadShops() {
+    try {
+      const r = await fetch('/api/platform/shops');
+      const shops = await r.json();
+      const tbody = document.getElementById('shopsTbody');
+
+      if (!shops.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">No shops yet</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = shops.map(s => `
+        <tr>
+          <td>
+            <div style="font-weight:500;color:var(--ink)">${esc(s.name)}</div>
+            <div style="font-size:11px;color:var(--muted)">${esc(s.slug)}</div>
+          </td>
+          <td>
+            <span class="badge ${s.plan === 'suspended' ? 'badge-warm' : s.plan === 'pro' ? 'badge-sage' : 'badge-stone'}">
+              ${esc(s.plan)}
+            </span>
+          </td>
+          <td style="font-size:12px">${esc(s.email)}</td>
+          <td>${s.order_count}</td>
+          <td>$${Number(s.revenue).toFixed(2)}</td>
+          <td>
+            ${s.stripe_account_id
+              ? '<span class="badge badge-sage">Connected</span>'
+              : '<span style="color:var(--muted)">—</span>'}
+          </td>
+          <td style="font-size:12px;color:var(--muted)">${s.created_at.split(' ')[0]}</td>
+          <td>
+            <button class="table-action" onclick="impersonate(${s.id})">Impersonate</button>
+            <button class="table-action ${s.plan === 'suspended' ? '' : 'danger'}" onclick="openSuspend(${s.id}, '${esc(s.name)}', ${s.plan === 'suspended'})">
+              ${s.plan === 'suspended' ? 'Restore' : 'Suspend'}
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      console.error('Load shops error:', err);
+    }
+  }
+
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  async function impersonate(shopId) {
+    if (!confirm('Impersonate this shop? You will be logged in as their admin.')) return;
+    const r = await fetch('/api/platform/impersonate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shopId })
+    });
+    if (r.ok) {
+      window.location.href = '/admin/dashboard.html';
+    } else {
+      alert('Failed to impersonate shop.');
+    }
+  }
+
+  function openSuspend(shopId, shopName, isRestore = false) {
+    suspendTarget = shopId;
+    suspendIsRestore = isRestore;
+    document.getElementById('suspendTitle').textContent =
+      isRestore ? `Restore ${shopName}?` : `Suspend ${shopName}?`;
+    document.getElementById('suspendBody').textContent =
+      isRestore
+        ? 'This will restore the shop owner\'s access. They will be able to log in again immediately.'
+        : 'This will prevent the shop owner from logging in. You can restore access at any time.';
+    const confirmBtn = document.getElementById('confirmSuspend');
+    confirmBtn.textContent = isRestore ? 'Restore' : 'Suspend';
+    confirmBtn.className   = isRestore ? 'btn btn-primary' : 'btn btn-danger';
+    document.getElementById('suspendModal').classList.remove('hidden');
+  }
+
+  document.getElementById('cancelSuspend').addEventListener('click', () => {
+    document.getElementById('suspendModal').classList.add('hidden');
+    suspendTarget = null;
+  });
+
+  document.getElementById('confirmSuspend').addEventListener('click', async () => {
+    if (!suspendTarget) return;
+    const btn = document.getElementById('confirmSuspend');
+    btn.disabled = true;
+    btn.textContent = suspendIsRestore ? 'Restoring…' : 'Suspending…';
+    try {
+      await fetch(`/api/platform/shops/${suspendTarget}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suspended: !suspendIsRestore })
+      });
+      document.getElementById('suspendModal').classList.add('hidden');
+      suspendTarget = null;
+      loadShops();
+      loadStats();
+    } catch {
+      alert(suspendIsRestore ? 'Failed to restore shop.' : 'Failed to suspend shop.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = suspendIsRestore ? 'Restore' : 'Suspend';
+    }
+  });
+
+  document.getElementById('suspendModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) {
+      e.currentTarget.classList.add('hidden');
+      suspendTarget = null;
+    }
+  });
+
+  // Auto-generate slug from name
+  document.getElementById('newName').addEventListener('input', e => {
+    const slug = e.target.value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    document.getElementById('newSlug').value = slug;
+  });
+
+  // Create shop
+  async function submitCreateShop() {
+    const btn = document.getElementById('createShopBtn');
+    const errEl = document.getElementById('createError');
+    errEl.style.display = 'none';
+
+    const name     = document.getElementById('newName').value.trim();
+    const slug     = document.getElementById('newSlug').value.trim();
+    const email    = document.getElementById('newEmail').value.trim();
+    const password = document.getElementById('newPassword').value;
+    const plan     = document.getElementById('newPlan').value;
+
+    if (!name || !slug || !email || !password) {
+      errEl.textContent = 'All fields are required.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+
+    try {
+      const r = await fetch('/api/platform/shops', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, slug, email, password, plan })
+      });
+
+      if (r.status === 401) {
+        window.location.href = '/platform/login.html';
+        return;
+      }
+
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed to create shop');
+
+      document.getElementById('revealPassword').textContent = password;
+      document.getElementById('createSuccess').classList.add('visible');
+      document.getElementById('createShopForm').reset();
+      loadShops();
+      loadStats();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create shop';
+    }
+  }
+
+  document.getElementById('copyPasswordBtn').addEventListener('click', () => {
+    const pw = document.getElementById('revealPassword').textContent;
+    navigator.clipboard.writeText(pw).then(() => {
+      const btn = document.getElementById('copyPasswordBtn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    });
+  });
+</script>
+</body>
+</html>
