@@ -184,19 +184,30 @@
               <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">
                 Enter your Stripe API keys below. You can find them in your
                 <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color:var(--sage-dark)">Stripe dashboard</a>.
-                Keys are stored securely on the server and never shown in full again.
+                Publishable + secret keys enable Stripe card payments. Client ID is only needed for Stripe Connect payouts.
               </div>
 
               <div id="keysError" class="inline-error" style="margin-bottom:14px"></div>
               <div id="keysSuccess" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#166534;margin-bottom:14px"></div>
 
               <div class="form-group">
+                <label class="form-label" for="inputPublishableKey">
+                  Publishable key
+                  <span style="font-weight:400;color:var(--muted)"> - starts with pk_live_ or pk_test_</span>
+                </label>
+                <input class="form-input" type="text" id="inputPublishableKey" placeholder="pk_live_..." autocomplete="off">
+                <p style="font-size:11px;color:var(--muted);margin-top:4px">
+                  Used by checkout to securely initialise Stripe Elements.
+                </p>
+              </div>
+
+              <div class="form-group">
                 <label class="form-label" for="inputSecretKey">
                   Secret key
-                  <span style="font-weight:400;color:var(--muted)"> — starts with sk_live_ or sk_test_</span>
+                  <span style="font-weight:400;color:var(--muted)"> - starts with sk_live_ or sk_test_</span>
                 </label>
                 <div style="position:relative">
-                  <input class="form-input" type="password" id="inputSecretKey" placeholder="sk_live_…" autocomplete="off">
+                  <input class="form-input" type="password" id="inputSecretKey" placeholder="sk_live_..." autocomplete="off">
                   <button type="button" id="toggleSecretKey" tabindex="-1"
                     style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px">
                     Show
@@ -209,12 +220,12 @@
 
               <div class="form-group">
                 <label class="form-label" for="inputClientId">
-                  Client ID
-                  <span style="font-weight:400;color:var(--muted)"> — starts with ca_</span>
+                  Connect Client ID
+                  <span style="font-weight:400;color:var(--muted)"> - optional, starts with ca_</span>
                 </label>
-                <input class="form-input" type="text" id="inputClientId" placeholder="ca_…" autocomplete="off">
+                <input class="form-input" type="text" id="inputClientId" placeholder="ca_..." autocomplete="off">
                 <p style="font-size:11px;color:var(--muted);margin-top:4px">
-                  From <a href="https://dashboard.stripe.com/settings/connect" target="_blank" style="color:var(--sage-dark)">Stripe Dashboard → Connect → Settings</a>
+                  Needed only if shops will connect their own Stripe accounts for payouts.
                 </p>
               </div>
 
@@ -227,6 +238,7 @@
               <div id="savedKeysDisplay" style="display:none;margin-top:20px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
                 <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px">Saved keys</div>
                 <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-family:monospace">
+                  <div><span style="color:var(--muted);font-family:var(--font-ui);min-width:120px;display:inline-block">Publishable key</span> <span id="maskedPublishableKey" style="color:var(--ink)"></span></div>
                   <div><span style="color:var(--muted);font-family:var(--font-ui);min-width:100px;display:inline-block">Secret key</span> <span id="maskedSecretKey" style="color:var(--ink)"></span></div>
                   <div><span style="color:var(--muted);font-family:var(--font-ui);min-width:100px;display:inline-block">Client ID</span> <span id="maskedClientId" style="color:var(--ink)"></span></div>
                 </div>
@@ -234,7 +246,7 @@
               </div>
 
               <div id="proceedToConnectWrap" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
-                <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Keys saved. Now connect your Stripe account to start accepting payments.</p>
+                <p style="font-size:13px;color:var(--sage-dark);margin-bottom:12px">Stripe card payments are enabled. Connect Stripe only if you want connected-account payouts.</p>
                 <button class="btn btn-primary" id="connectStripeBtn">
                   Connect with Stripe →
                 </button>
@@ -245,12 +257,12 @@
           <!-- Step 2: Already has keys, not yet connected — show Connect button directly -->
           <div id="notConnectedState" class="connect-center" style="display:none">
             <div class="stripe-logo">stripe</div>
-            <h2>Connect your Stripe account</h2>
-            <p>Your API keys are saved. Authorise the connection to start accepting payments.</p>
+            <h2>Stripe card payments enabled</h2>
+            <p>Customers can pay by card at checkout. Connect Stripe if you want payouts routed to a connected account.</p>
             <ul class="connect-checklist">
-              <li>Instant payouts to your bank</li>
+              <li>Card payments available at checkout</li>
               <li>No card data stored on our servers</li>
-              <li>Supported in 40+ countries</li>
+              <li>Optional connected-account payouts</li>
             </ul>
             <button class="btn btn-primary" id="connectStripeBtn2" style="margin-top:8px">
               Connect with Stripe
@@ -383,13 +395,13 @@
       document.getElementById('chargesEnabled').innerHTML = '<span class="badge badge-sage">Yes</span>';
       document.getElementById('payoutsCard').style.display = '';
       loadPayouts();
-    } else if (keysStatus.has_secret_key && keysStatus.has_client_id) {
-      // Keys saved, just need OAuth connect
+    } else if (keysStatus.can_accept_cards) {
+      // Card payment keys saved; Connect remains optional.
       document.getElementById('notConnectedState').style.display = '';
     } else {
       // Need to enter keys first
       document.getElementById('keysState').style.display = '';
-      if (keysStatus.has_secret_key || keysStatus.has_client_id) {
+      if (keysStatus.has_publishable_key || keysStatus.has_secret_key || keysStatus.has_client_id) {
         // Partially saved — show what we have
         renderSavedKeys();
       }
@@ -397,12 +409,13 @@
   }
 
   function renderSavedKeys() {
-    if (keysStatus.secret_key_masked || keysStatus.client_id_masked) {
+    if (keysStatus.publishable_key_masked || keysStatus.secret_key_masked || keysStatus.client_id_masked) {
       document.getElementById('savedKeysDisplay').style.display = '';
-      document.getElementById('maskedSecretKey').textContent = keysStatus.secret_key_masked || '—';
-      document.getElementById('maskedClientId').textContent  = keysStatus.client_id_masked  || '—';
+      document.getElementById('maskedPublishableKey').textContent = keysStatus.publishable_key_masked || '—';
+      document.getElementById('maskedSecretKey').textContent      = keysStatus.secret_key_masked || '—';
+      document.getElementById('maskedClientId').textContent       = keysStatus.client_id_masked  || '—';
     }
-    if (keysStatus.has_secret_key && keysStatus.has_client_id) {
+    if (keysStatus.can_accept_cards) {
       document.getElementById('proceedToConnectWrap').style.display = '';
     }
   }
@@ -423,10 +436,11 @@
     errEl.classList.remove('visible');
     successEl.style.display = 'none';
 
-    const secretKey = document.getElementById('inputSecretKey').value.trim();
-    const clientId  = document.getElementById('inputClientId').value.trim();
+    const publishableKey = document.getElementById('inputPublishableKey').value.trim();
+    const secretKey      = document.getElementById('inputSecretKey').value.trim();
+    const clientId       = document.getElementById('inputClientId').value.trim();
 
-    if (!secretKey && !clientId) {
+    if (!publishableKey && !secretKey && !clientId) {
       errEl.textContent = 'Enter at least one key to save.';
       errEl.classList.add('visible');
       return;
@@ -436,8 +450,9 @@
     btn.textContent = 'Saving…';
     try {
       const body = {};
-      if (secretKey) body.secret_key = secretKey;
-      if (clientId)  body.client_id  = clientId;
+      if (publishableKey) body.publishable_key = publishableKey;
+      if (secretKey)      body.secret_key      = secretKey;
+      if (clientId)       body.client_id       = clientId;
 
       const r = await fetch('/api/stripe/keys', {
         method: 'PUT',
@@ -448,17 +463,20 @@
       if (!r.ok) throw new Error(data.error || 'Save failed');
 
       keysStatus = data;
+      document.getElementById('inputPublishableKey').value = '';
       document.getElementById('inputSecretKey').value = '';
       document.getElementById('inputClientId').value  = '';
 
-      successEl.textContent = '✓ Keys saved securely.';
+      successEl.textContent = data.can_accept_cards
+        ? '✓ Stripe card payments are enabled.'
+        : '✓ Keys saved securely.';
       successEl.style.display = '';
       document.getElementById('keysSaved').style.display = '';
 
       renderSavedKeys();
 
-      // If both keys now set, transition to Connect button after short delay
-      if (data.has_secret_key && data.has_client_id) {
+      // If card keys are set, show the enabled state after a short delay.
+      if (data.can_accept_cards) {
         setTimeout(() => {
           document.getElementById('keysState').style.display = 'none';
           document.getElementById('notConnectedState').style.display = '';
@@ -477,7 +495,7 @@
   document.getElementById('updateKeysBtn').addEventListener('click', () => {
     document.getElementById('savedKeysDisplay').style.display = 'none';
     document.getElementById('proceedToConnectWrap').style.display = 'none';
-    document.getElementById('inputSecretKey').focus();
+    document.getElementById('inputPublishableKey').focus();
   });
 
   // "Edit keys" link from notConnectedState

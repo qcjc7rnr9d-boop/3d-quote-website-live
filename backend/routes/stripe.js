@@ -24,6 +24,12 @@ function maskKey(key) {
   const last4  = key.slice(-4);
   return `${prefix}${'*'.repeat(8)}${last4}`;
 }
+function maskPublishableKey(key) {
+  if (!key) return null;
+  const prefix = key.startsWith('pk_live_') ? 'pk_live_' : key.startsWith('pk_test_') ? 'pk_test_' : key.slice(0, 3) + '_';
+  const last4 = key.slice(-4);
+  return `${prefix}${'*'.repeat(8)}${last4}`;
+}
 function maskClientId(id) {
   if (!id) return null;
   const last4 = id.slice(-4);
@@ -64,22 +70,34 @@ export function stripeWebhookHandler(req, res) {
 // ── GET /api/stripe/keys-status (requireShopAuth) ──────────────────────────
 router.get('/keys-status', requireShopAuth, (req, res) => {
   const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
-  const secretKey  = shop.stripe_secret_key  || process.env.STRIPE_SECRET_KEY  || null;
-  const clientId   = shop.stripe_client_id   || process.env.STRIPE_CLIENT_ID   || null;
+  const publishableKey = shop.stripe_publishable_key || process.env.STRIPE_PUBLISHABLE_KEY || null;
+  const secretKey      = shop.stripe_secret_key      || process.env.STRIPE_SECRET_KEY      || null;
+  const clientId       = shop.stripe_client_id       || process.env.STRIPE_CLIENT_ID       || null;
   res.json({
-    has_secret_key: !!secretKey,
-    has_client_id:  !!clientId,
-    secret_key_masked: maskKey(secretKey),
-    client_id_masked:  maskClientId(clientId),
+    has_publishable_key: !!publishableKey,
+    has_secret_key:      !!secretKey,
+    has_client_id:       !!clientId,
+    can_accept_cards:    !!(publishableKey && secretKey),
+    publishable_key_masked: maskPublishableKey(publishableKey),
+    secret_key_masked:      maskKey(secretKey),
+    client_id_masked:       maskClientId(clientId),
     // True if keys come from DB (can be updated via UI), false if env-only
-    from_db: !!(shop.stripe_secret_key || shop.stripe_client_id),
+    from_db: !!(shop.stripe_publishable_key || shop.stripe_secret_key || shop.stripe_client_id),
   });
 });
 
 // ── PUT /api/stripe/keys (requireShopAuth) ─────────────────────────────────
 router.put('/keys', requireShopAuth, (req, res) => {
   try {
-    const { secret_key, client_id } = req.body;
+    const { publishable_key, secret_key, client_id } = req.body;
+
+    if (publishable_key !== undefined) {
+      if (publishable_key && !publishable_key.startsWith('pk_')) {
+        return res.status(400).json({ error: 'Publishable key must start with pk_live_ or pk_test_' });
+      }
+      db.prepare('UPDATE shops SET stripe_publishable_key = ? WHERE id = ?')
+        .run(publishable_key || null, req.shop.id);
+    }
 
     if (secret_key !== undefined) {
       if (secret_key && !secret_key.startsWith('sk_')) {
@@ -98,15 +116,19 @@ router.put('/keys', requireShopAuth, (req, res) => {
     }
 
     const updated = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
-    const secretKey = updated.stripe_secret_key || process.env.STRIPE_SECRET_KEY || null;
-    const clientIdVal = updated.stripe_client_id || process.env.STRIPE_CLIENT_ID || null;
+    const publishableKey = updated.stripe_publishable_key || process.env.STRIPE_PUBLISHABLE_KEY || null;
+    const secretKey      = updated.stripe_secret_key      || process.env.STRIPE_SECRET_KEY      || null;
+    const clientIdVal    = updated.stripe_client_id       || process.env.STRIPE_CLIENT_ID       || null;
 
     res.json({
       ok: true,
-      has_secret_key: !!secretKey,
-      has_client_id:  !!clientIdVal,
-      secret_key_masked: maskKey(secretKey),
-      client_id_masked:  maskClientId(clientIdVal),
+      has_publishable_key: !!publishableKey,
+      has_secret_key:      !!secretKey,
+      has_client_id:       !!clientIdVal,
+      can_accept_cards:    !!(publishableKey && secretKey),
+      publishable_key_masked: maskPublishableKey(publishableKey),
+      secret_key_masked:      maskKey(secretKey),
+      client_id_masked:       maskClientId(clientIdVal),
     });
   } catch (err) {
     console.error('Save Stripe keys error:', err);
@@ -122,14 +144,21 @@ router.get('/public-key', (req, res) => {
   const slug = req.query.shop;
   if (!slug) return res.status(400).json({ error: 'shop required' });
   const shop = db.prepare(
-    "SELECT id, stripe_account_id FROM shops WHERE slug = ? AND plan != 'suspended'"
+    "SELECT id, stripe_account_id, stripe_publishable_key, stripe_secret_key FROM shops WHERE slug = ? AND plan != 'suspended'"
   ).get(slug);
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
-  const pk = process.env.STRIPE_PUBLISHABLE_KEY || '';
+  const pk = shop.stripe_publishable_key || process.env.STRIPE_PUBLISHABLE_KEY || '';
+  const sk = shop.stripe_secret_key || process.env.STRIPE_SECRET_KEY || '';
   if (!pk) {
     return res.status(503).json({
-      error: 'Stripe is not configured — set STRIPE_PUBLISHABLE_KEY in .env',
+      error: 'Stripe is not configured — set a publishable key in admin payments or STRIPE_PUBLISHABLE_KEY in .env',
       code:  'NO_PUBLIC_KEY',
+    });
+  }
+  if (!sk) {
+    return res.status(503).json({
+      error: 'Stripe is not configured — set a secret key in admin payments or STRIPE_SECRET_KEY in .env',
+      code:  'NO_SECRET_KEY',
     });
   }
   res.json({ publishable_key: pk, has_connect: !!shop.stripe_account_id });

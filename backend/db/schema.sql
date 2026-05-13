@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS shops (
   is_temp_password INTEGER NOT NULL DEFAULT 1,
   plan             TEXT    NOT NULL DEFAULT 'starter',
   stripe_account_id  TEXT,
+  stripe_publishable_key TEXT,
   stripe_secret_key  TEXT,
   stripe_client_id   TEXT,
   created_at         TEXT    NOT NULL DEFAULT (datetime('now'))
