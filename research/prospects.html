@@ -75,8 +75,15 @@
     .top-item { width: 100%; border: 1px solid var(--line); border-radius: var(--radius); padding: 11px; background: #FAFAFA; display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: start; text-align: left; color: inherit; }
     .top-name { font-weight: 800; font-size: 13px; }
     .top-action { color: var(--accent); font-size: 12px; font-weight: 800; margin-top: 3px; }
-    .toolbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); gap: 10px; margin-bottom: 16px; }
-    .toolbar input { grid-column: span 2; min-width: 220px; }
+    .filter-panel { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-bottom: 16px; }
+    .primary-filters { display: grid; grid-template-columns: minmax(260px, 2fr) repeat(4, minmax(145px, 1fr)); gap: 10px; align-items: center; }
+    .advanced-filters { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+    .advanced-filters summary { cursor: pointer; color: var(--accent); font-size: 12px; font-weight: 850; list-style: none; }
+    .advanced-filters summary::-webkit-details-marker { display: none; }
+    .advanced-filters summary::after { content: "+"; margin-left: 8px; color: var(--muted); }
+    .advanced-filters[open] summary::after { content: "-"; }
+    .advanced-filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px; margin-top: 10px; }
+    .filter-hint { color: var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.45; }
     .discovery-panel { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 18px; }
     .discovery-row { display: grid; grid-template-columns: minmax(220px, 1fr) 170px 130px 110px 110px auto; gap: 10px; align-items: end; }
     .discovery-status { color: var(--muted); font-size: 13px; margin-top: 10px; }
@@ -190,6 +197,7 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
     .outreach-notes-panel { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: #FAFAFA; margin-top: 16px; }
     .quick-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .quick-actions .btn { min-height: 30px; padding: 0 9px; font-size: 12px; }
+    .next-action-select { margin: 8px 0; min-height: 34px; padding: 7px 9px; font-size: 12px; font-weight: 750; }
     .pipeline-tag { display: inline-flex; border: 1px solid #C9DDCF; border-radius: 999px; padding: 4px 9px; background: #EFF8F2; color: var(--accent); font-size: 12px; font-weight: 850; }
     .pipeline-tag.cold { border-color: #D1D5DB; background: #F9FAFB; color: var(--muted); }
     .pipeline-tag.warn { border-color: #FDE68A; background: var(--amber-bg); color: var(--amber); }
@@ -304,7 +312,7 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
       .topbar, .actions { flex-direction: column; align-items: stretch; }
       .cards { grid-template-columns: repeat(2, 1fr); }
       .dashboard, .chart-grid, .deck-preview, .brief-snapshot, .brief-info-grid { grid-template-columns: 1fr; }
-      .toolbar, .grid, .discovery-row { grid-template-columns: 1fr; }
+      .primary-filters, .advanced-filter-grid, .grid, .discovery-row { grid-template-columns: 1fr; }
       .wide { grid-column: auto; }
       .deck-modal { inset: 10px; }
       .outreach-modal { inset: 10px; }
@@ -384,6 +392,7 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
         <div class="meta" id="outreachStatus">Checking Resend setup...</div>
       </div>
       <div class="actions">
+        <button class="btn" id="selectAllBtn" type="button">Select all businesses</button>
         <button class="btn" id="selectVisibleBtn" type="button">Select visible</button>
         <button class="btn" id="clearSelectionBtn" type="button">Clear selection</button>
         <button class="btn" id="clearNewBtn" type="button">Mark new as seen</button>
@@ -411,89 +420,97 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
       <div class="discovery-log" id="discoveryLog" aria-live="polite"></div>
     </section>
 
-    <section class="toolbar">
-      <input id="searchInput" placeholder="Search company, website, city, notes">
-      <select id="customFdmFilter">
-        <option value="target">Target prospects</option>
-        <option value="review">Needs review</option>
-        <option value="not_target">Not target</option>
-        <option value="all">All custom FDM fit</option>
-      </select>
-      <select id="newFilter">
-        <option value="all">All additions</option>
-        <option value="new">New additions</option>
-      </select>
-      <select id="quoteFilter">
-        <option value="all">All quote systems</option>
-        <option value="manual">Manual/no instant quote</option>
-        <option value="upload">Upload workflow</option>
-        <option value="bad">Bad/basic calculator</option>
-        <option value="automated">Automated quote</option>
-        <option value="unknown">Unknown quote</option>
-      </select>
-      <select id="serviceFilter">
-        <option value="all">All service types</option>
-        <option value="service">Confirmed/likely service</option>
-        <option value="supplier">Supplier only</option>
-        <option value="premade">Premade only</option>
-        <option value="resin">Resin only</option>
-        <option value="directory">Directory</option>
-        <option value="unknown">Unknown service</option>
-      </select>
-      <select id="pricingMaturityFilter">
-        <option value="all">All pricing maturity</option>
-        <option value="manual">Manual quote</option>
-        <option value="upload">Upload/no instant price</option>
-        <option value="bad">Bad/basic calculator</option>
-        <option value="automated">Auto pricing</option>
-        <option value="unknown">Unknown pricing</option>
-      </select>
-      <select id="opportunityTypeFilter">
-        <option value="all">All opportunity types</option>
-        <option value="replace_manual_quoting">Replace manual quoting</option>
-        <option value="improve_upload_flow">Improve upload flow</option>
-        <option value="fix_bad_calculator">Fix weak calculator</option>
-        <option value="benchmark_auto_pricing">Auto-pricing benchmark</option>
-        <option value="verify_service">Verify service</option>
-        <option value="exclude_supplier">Excluded supplier</option>
-        <option value="exclude_non_service">Excluded non-service</option>
-      </select>
-      <select id="fdmFilter">
-        <option value="all">All FDM evidence</option>
-        <option value="confirmed">FDM confirmed</option>
-        <option value="likely">FDM likely</option>
-        <option value="unknown">FDM unknown</option>
-      </select>
-      <select id="pipelineFilter">
-        <option value="all">All pipeline statuses</option>
-        <option value="new_lead">New lead</option>
-        <option value="researched">Researched</option>
-        <option value="emailed">Emailed</option>
-        <option value="called">Called</option>
-        <option value="interested">Interested</option>
-        <option value="follow_up">Follow up</option>
-        <option value="not_interested">Not interested</option>
-        <option value="won">Won</option>
-        <option value="do_not_contact">Do not contact</option>
-      </select>
-      <select id="confidenceFilter">
-        <option value="all">All confidence</option>
-        <option value="observed">Observed</option>
-        <option value="estimated">Estimated</option>
-        <option value="unknown">Unknown</option>
-      </select>
-      <select id="deckFilter">
-        <option value="all">All deck status</option>
-        <option value="ready">Deck ready</option>
-        <option value="needs_evidence">Needs evidence</option>
-        <option value="needs_refresh">Needs refresh</option>
-        <option value="not_suitable">Not suitable</option>
-      </select>
-      <select id="sortSelect">
-        <option value="score">Sort by score</option>
-        <option value="company">Sort by company</option>
-        <option value="updated">Sort by updated</option>
-      </select>
+    <section class="filter-panel" aria-label="Lead filters">
+      <div class="primary-filters">
+        <input id="searchInput" placeholder="Search company, website, city, notes">
+        <select id="customFdmFilter" aria-label="Custom FDM fit">
+          <option value="target">Target prospects</option>
+          <option value="review">Needs review</option>
+          <option value="not_target">Not target</option>
+          <option value="all">All custom FDM fit</option>
+        </select>
+        <select id="pipelineFilter" aria-label="Pipeline status">
+          <option value="all">All pipeline statuses</option>
+          <option value="new_lead">New lead</option>
+          <option value="researched">Researched</option>
+          <option value="emailed">Emailed</option>
+          <option value="called">Called</option>
+          <option value="interested">Interested</option>
+          <option value="follow_up">Follow up</option>
+          <option value="not_interested">Not interested</option>
+          <option value="won">Won</option>
+          <option value="do_not_contact">Do not contact</option>
+        </select>
+        <select id="quoteFilter" aria-label="Quote system">
+          <option value="all">All quote systems</option>
+          <option value="manual">Manual/no instant quote</option>
+          <option value="upload">Upload workflow</option>
+          <option value="bad">Bad/basic calculator</option>
+          <option value="automated">Automated quote</option>
+          <option value="unknown">Unknown quote</option>
+        </select>
+        <select id="sortSelect" aria-label="Sort leads">
+          <option value="score">Sort by score</option>
+          <option value="company">Sort by company</option>
+          <option value="updated">Sort by updated</option>
+        </select>
+      </div>
+      <details class="advanced-filters">
+        <summary>More filters</summary>
+        <div class="advanced-filter-grid">
+          <select id="newFilter" aria-label="New additions">
+            <option value="all">All additions</option>
+            <option value="new">New additions</option>
+          </select>
+          <select id="serviceFilter" aria-label="Service type">
+            <option value="all">All service types</option>
+            <option value="service">Confirmed/likely service</option>
+            <option value="supplier">Supplier only</option>
+            <option value="premade">Premade only</option>
+            <option value="resin">Resin only</option>
+            <option value="directory">Directory</option>
+            <option value="unknown">Unknown service</option>
+          </select>
+          <select id="pricingMaturityFilter" aria-label="Pricing maturity">
+            <option value="all">All pricing maturity</option>
+            <option value="manual">Manual quote</option>
+            <option value="upload">Upload/no instant price</option>
+            <option value="bad">Bad/basic calculator</option>
+            <option value="automated">Auto pricing</option>
+            <option value="unknown">Unknown pricing</option>
+          </select>
+          <select id="opportunityTypeFilter" aria-label="Opportunity type">
+            <option value="all">All opportunity types</option>
+            <option value="replace_manual_quoting">Replace manual quoting</option>
+            <option value="improve_upload_flow">Improve upload flow</option>
+            <option value="fix_bad_calculator">Fix weak calculator</option>
+            <option value="benchmark_auto_pricing">Auto-pricing benchmark</option>
+            <option value="verify_service">Verify service</option>
+            <option value="exclude_supplier">Excluded supplier</option>
+            <option value="exclude_non_service">Excluded non-service</option>
+          </select>
+          <select id="fdmFilter" aria-label="FDM evidence">
+            <option value="all">All FDM evidence</option>
+            <option value="confirmed">FDM confirmed</option>
+            <option value="likely">FDM likely</option>
+            <option value="unknown">FDM unknown</option>
+          </select>
+          <select id="confidenceFilter" aria-label="Confidence">
+            <option value="all">All confidence</option>
+            <option value="observed">Observed</option>
+            <option value="estimated">Estimated</option>
+            <option value="unknown">Unknown</option>
+          </select>
+          <select id="deckFilter" aria-label="Deck status">
+            <option value="all">All deck status</option>
+            <option value="ready">Deck ready</option>
+            <option value="needs_evidence">Needs evidence</option>
+            <option value="needs_refresh">Needs refresh</option>
+            <option value="not_suitable">Not suitable</option>
+          </select>
+        </div>
+        <div class="filter-hint">Advanced filters are for cleanup and auditing. The main workflow is search, fit, pipeline, quote system, and sort.</div>
+      </details>
     </section>
 
     <section id="tableWrap"></section>
@@ -1103,14 +1120,15 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
               <td data-label="Next action">
                 <div class="top-action">${esc(recommendedAction(lead))}</div>
                 <div style="margin:6px 0">${deckBadge(lead)}</div>
-                <div class="quick-actions">
-                  <button class="btn" type="button" onclick="quickPipelineAction('${esc(lead.id)}','emailed')">Mark emailed</button>
-                  <button class="btn" type="button" onclick="quickPipelineAction('${esc(lead.id)}','called')">Mark called</button>
-                  <button class="btn" type="button" onclick="quickPipelineAction('${esc(lead.id)}','interested')">Interested</button>
-                  <button class="btn" type="button" onclick="quickPipelineAction('${esc(lead.id)}','follow_up')">Follow up</button>
-                  <button class="btn" type="button" onclick="quickPipelineAction('${esc(lead.id)}','not_interested')">Not interested</button>
-                  <button class="btn danger" type="button" onclick="quickPipelineAction('${esc(lead.id)}','do_not_contact')">Do not contact</button>
-                </div>
+                <select class="next-action-select" aria-label="Choose next action for ${esc(lead.company_name)}" onchange="changeLeadPipelineAction('${esc(lead.id)}', this)">
+                  <option value="">Choose next action</option>
+                  <option value="emailed">Mark emailed</option>
+                  <option value="called">Mark called</option>
+                  <option value="interested">Interested</option>
+                  <option value="follow_up">Follow up</option>
+                  <option value="not_interested">Not interested</option>
+                  <option value="do_not_contact">Do not contact</option>
+                </select>
                 <button class="btn" type="button" onclick="openDrawer('${esc(lead.id)}')">Open brief</button>
                 <button class="btn" type="button" onclick="openOutreachForLead('${esc(lead.id)}')">Preview email</button>
               </td>
@@ -1461,6 +1479,11 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
     $('markFollowUpBtn').addEventListener('click', () => markCurrentPipelineStatus('follow_up'));
     $('markNotInterestedBtn').addEventListener('click', () => markCurrentPipelineStatus('not_interested'));
     $('markDoNotContactBtn').addEventListener('click', markCurrentLeadDoNotContact);
+    $('selectAllBtn').addEventListener('click', () => {
+      leads.forEach(lead => selectedLeadIds.add(lead.id));
+      renderTable();
+      updateSelectionUi();
+    });
     $('selectVisibleBtn').addEventListener('click', () => {
       filteredLeads().forEach(lead => selectedLeadIds.add(lead.id));
       renderTable();
@@ -1516,6 +1539,10 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
     $('drawerBackdrop').addEventListener('click', closeDrawer);
 
     function updateSelectionUi() {
+      $('selectAllBtn').textContent = selectedLeadIds.size === leads.length && leads.length
+        ? `All selected (${selectedLeadIds.size})`
+        : 'Select all businesses';
+      $('selectAllBtn').disabled = leads.length === 0;
       $('emailSelectedBtn').textContent = selectedLeadIds.size ? `Email selected (${selectedLeadIds.size})` : 'Email selected';
       $('downloadSelectedBtn').textContent = selectedLeadIds.size ? `Download selected (${selectedLeadIds.size})` : 'Download selected';
       $('clearNewBtn').disabled = newLeadCount() === 0;
@@ -1604,6 +1631,15 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
         } catch {}
         loadOutreachStatus();
       }
+    }
+
+    async function changeLeadPipelineAction(id, selectEl) {
+      const pipelineStatus = selectEl.value;
+      if (!pipelineStatus) return;
+      selectEl.disabled = true;
+      await quickPipelineAction(id, pipelineStatus);
+      selectEl.value = '';
+      selectEl.disabled = false;
     }
 
     function markCurrentPipelineStatus(pipelineStatus) {

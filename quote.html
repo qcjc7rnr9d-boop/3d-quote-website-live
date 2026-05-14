@@ -7,7 +7,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.stripe.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans:wght@500;600&display=swap" rel="stylesheet">
 
   <style>
     /* ── Design tokens ─────────────────────────────────────────── */
@@ -35,6 +35,7 @@
 
       --font-heading: 'Space Grotesk', 'Inter', system-ui, sans-serif;
       --font-ui:      'Inter', system-ui, -apple-system, sans-serif;
+      --font-number:  'IBM Plex Sans', 'Inter', system-ui, sans-serif;
     }
 
     /* ── Reset / base ──────────────────────────────────────────── */
@@ -344,23 +345,42 @@
 
     /* Finish toggle (segmented control) */
     .seg {
-      display: inline-flex;
-      background: var(--stone);
-      border-radius: 999px;
-      padding: 3px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
     }
     .seg-btn {
-      background: transparent; border: 0;
-      padding: 6px 14px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
       font-size: 12px; font-weight: 500;
       color: var(--muted);
-      border-radius: 999px;
-      transition: background 140ms, color 140ms;
+      border-radius: var(--radius-sm);
+      transition: background 140ms, color 140ms, border-color 140ms, box-shadow 140ms;
+      min-width: 116px;
+      text-align: left;
     }
     .seg-btn.active {
-      background: var(--white);
-      color: var(--ink);
+      background: var(--sage-soft);
+      border-color: rgba(74,112,80,0.35);
+      color: var(--sage-dark);
       box-shadow: 0 1px 2px rgba(28,28,26,0.06);
+    }
+    .finish-option-name {
+      display: block;
+      font-weight: 650;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+    .seg-btn.active .finish-option-name { color: var(--sage-dark); }
+    .finish-option-meta {
+      display: block;
+      margin-top: 3px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      line-height: 1.35;
     }
 
     /* Quantity stepper */
@@ -414,15 +434,15 @@
       margin: 18px 0 4px;
     }
     .price-display {
-      font-family: var(--font-heading);
-      font-size: 44px; font-weight: 600;
-      line-height: 1.1;
-      letter-spacing: -0.02em;
+      font-family: var(--font-number);
+      font-size: 42px; font-weight: 600;
+      line-height: 1;
+      letter-spacing: -0.01em;
       color: var(--ink);
       font-variant-numeric: tabular-nums;
     }
-    .price-symbol { font-size: 26px; vertical-align: top; margin-right: 2px; opacity: 0.7; line-height: 1.6; }
-    .price-decimal { font-size: 24px; opacity: 0.6; }
+    .price-symbol { font-size: 23px; vertical-align: top; margin-right: 3px; opacity: 0.62; line-height: 1.55; }
+    .price-decimal { font-size: 22px; opacity: 0.58; }
     .price-helper {
       font-size: 12px; color: var(--muted);
       margin-top: 4px;
@@ -911,6 +931,7 @@
 
   // ── Config ──────────────────────────────────────────────────
   const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'mahi3d';
+  const SIZE_WARNING_KEY = 'material_size_warning';
 
   // Static currency conversion table (vs NZD = 1.000)
   const RATES = {
@@ -966,6 +987,17 @@
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 1900);
+  }
+
+  function redirectToMaterialSelection(message) {
+    try {
+      localStorage.setItem(SIZE_WARNING_KEY, JSON.stringify({
+        shopSlug: SHOP_SLUG,
+        materialId: selectionData?.materialId || null,
+        message: message || 'This model is too large for the selected material.',
+      }));
+    } catch {}
+    window.location.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
   }
 
   // ── Pricing ─────────────────────────────────────────────────
@@ -1087,7 +1119,7 @@
       if (seq !== quoteRequestSeq) return serverQuote;
       if (!res.ok || data.ok === false) {
         serverQuote = null;
-        if (data.code === 'MODEL_TOO_LARGE') {
+        if (data.code === 'MODEL_TOO_LARGE' || data.code === 'MODEL_DIMENSIONS_REQUIRED') {
           sizeValidation = { ok: false, message: data.error || 'This model is too large for the selected material.' };
           const warning = $('sizeWarning');
           if (warning) {
@@ -1264,12 +1296,14 @@
       selectionData.finishId = savedFinish.id || selectionData.finish;
       selectionData.finishLabel = savedFinish.name || String(savedFinish);
       selectionData.finishLayerHeight = savedFinish.layerHeight || savedFinish.layer_height || '';
+      selectionData.finishDescription = savedFinish.description || '';
       selectionData.finishMultiplier = Number(savedFinish.priceMultiplier ?? savedFinish.price_multiplier) || 1;
     } else {
       selectionData.finish = null;
       selectionData.finishId = null;
       selectionData.finishLabel = '';
       selectionData.finishLayerHeight = '';
+      selectionData.finishDescription = '';
       selectionData.finishMultiplier = 1;
     }
     renderFinishOptions(mat);
@@ -1294,6 +1328,14 @@
     if (typeof setViewerColor === 'function') setViewerColor(hex);
   }
 
+  function finishMetaText(finish) {
+    const layerHeight = finish?.layerHeight || finish?.layer_height || '';
+    const layerText = /layer/i.test(layerHeight) ? layerHeight : (layerHeight ? `${layerHeight} layer height` : '');
+    return [layerText, finish?.description || '']
+      .filter(Boolean)
+      .join(' · ');
+  }
+
   function renderFinishOptions(mat) {
     const seg = document.querySelector('.seg[role="group"][aria-label="Finish"]');
     if (!seg) return;
@@ -1306,8 +1348,10 @@
       <button type="button" class="seg-btn" data-finish="${escapeHtml(f.id || f.name || 'finish')}"
               data-label="${escapeHtml(f.name || f)}"
               data-layer="${escapeHtml(f.layerHeight || f.layer_height || '')}"
+              data-description="${escapeHtml(f.description || '')}"
               data-multiplier="${Number(f.priceMultiplier ?? f.price_multiplier) || 1}">
-        ${escapeHtml(f.name || f)}
+        <span class="finish-option-name">${escapeHtml(f.name || f)}</span>
+        ${finishMetaText(f) ? `<span class="finish-option-meta">${escapeHtml(finishMetaText(f))}</span>` : ''}
       </button>
     `).join('');
     seg.querySelectorAll('.seg-btn').forEach(b => {
@@ -1316,6 +1360,7 @@
         selectionData.finishId = b.dataset.finish;
         selectionData.finishLabel = b.dataset.label || b.textContent.trim();
         selectionData.finishLayerHeight = b.dataset.layer || '';
+        selectionData.finishDescription = b.dataset.description || '';
         selectionData.finishMultiplier = Number(b.dataset.multiplier) || 1;
         updateFinishUI(b.dataset.finish);
         saveSelection();
@@ -1337,8 +1382,9 @@
     b.addEventListener('click', () => {
       selectionData.finish = b.dataset.finish;
       selectionData.finishId = b.dataset.finish;
-      selectionData.finishLabel = b.textContent.trim();
-      selectionData.finishLayerHeight = '';
+      selectionData.finishLabel = b.dataset.label || b.textContent.trim();
+      selectionData.finishLayerHeight = b.dataset.layer || '';
+      selectionData.finishDescription = b.dataset.description || '';
       selectionData.finishMultiplier = b.dataset.finish === 'fine' ? 1.50 : 1.0;
       updateFinishUI(b.dataset.finish);
       saveSelection();
@@ -1751,12 +1797,19 @@
     const btn = $('addToCartBtn');
     if (!fileData) { showToast('Please upload a file first'); return; }
     if (!selectionData?.materialId) { showToast('Please pick a material'); return; }
-    if (!validateModelSize()) { showToast(sizeValidation.message || 'This model is too large for the selected material.'); return; }
+    if (!validateModelSize()) {
+      redirectToMaterialSelection(sizeValidation.message || 'This model is too large for the selected material.');
+      return;
+    }
 
     btn.disabled = true;
     btn.textContent = 'Checking price...';
     const quote = await refreshQuotePreview({ silent: true });
     if (!quote) {
+      if (!sizeValidation.ok) {
+        redirectToMaterialSelection(sizeValidation.message || 'This model is too large for the selected material.');
+        return;
+      }
       btn.textContent = sizeValidation.ok ? 'Add to Cart' : 'Model too large';
       btn.disabled = !sizeValidation.ok;
       showToast('Could not calculate this quote');
@@ -1783,6 +1836,7 @@
       finishId:        selected.finish?.id || selectionData.finishId || selectionData.finish || null,
       finishLabel:     selected.finish?.name || selectionData.finishLabel || selectionData.finish || '—',
       finishLayerHeight: selected.finish?.layerHeight || selectionData.finishLayerHeight || '',
+      finishDescription: selected.finish?.description || selectionData.finishDescription || '',
       infillTierId:    selected.infill?.id || selectionData.infillTierId || null,
       infillLabel:     infillLabel,
       quantity:        selected.quantity || qty,
@@ -1805,7 +1859,7 @@
 
     btn.textContent = 'Going to checkout…';
     // tiny delay so the click feedback registers
-    setTimeout(() => { location.href = 'checkout.html'; }, 150);
+    setTimeout(() => { location.href = `checkout.html?shop=${encodeURIComponent(SHOP_SLUG)}`; }, 150);
   });
 
   $('saveQuoteBtn').addEventListener('click', () => {

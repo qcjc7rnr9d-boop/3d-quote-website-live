@@ -200,6 +200,70 @@
     .editor-example {
       font-size: 11px; color: var(--muted); line-height: 1.45; margin-top: 6px;
     }
+    .finish-editor-list {
+      display: grid;
+      gap: 12px;
+    }
+    .finish-editor-card {
+      border: 1px solid var(--border-light);
+      border-radius: 14px;
+      background: var(--off-white);
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+    .finish-editor-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .finish-editor-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .finish-editor-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .finish-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      user-select: none;
+    }
+    .finish-remove {
+      border: 0;
+      background: transparent;
+      color: #C0392B;
+      font: 700 12px var(--font-ui);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 8px;
+    }
+    .finish-remove:hover { background: rgba(192,57,43,0.08); }
+    .finish-editor-grid {
+      display: grid;
+      grid-template-columns: 1fr 150px;
+      gap: 12px;
+    }
+    .finish-editor-grid .wide { grid-column: 1 / -1; }
+    .finish-empty {
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      background: var(--off-white);
+    }
     .suggest-review {
       display: none; margin-top: 12px; border: 1px solid var(--sage-light);
       border-radius: 14px; background: rgba(122,158,126,0.07); padding: 14px;
@@ -309,6 +373,7 @@
       .material-panel form { padding: 18px; }
       .panel-footer { margin: 0 -18px -18px; padding: 14px 18px; }
       .editor-section { padding: 16px; }
+      .finish-editor-grid { grid-template-columns: 1fr; }
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -621,15 +686,12 @@
         <div class="editor-section-head">
           <div>
             <div class="editor-section-title">Finishes</div>
-            <div class="editor-section-desc">Add simple finish names here. Use Advanced for layer heights, multipliers, defaults, and preview styles.</div>
+            <div class="editor-section-desc">Configure the customer-facing print quality presets for this material.</div>
           </div>
+          <button type="button" class="btn btn-outline" id="addFinishBtn" style="height:30px;font-size:12px;padding:0 12px;">Add finish</button>
         </div>
-        <div class="form-group">
-          <div class="tag-input-wrapper" id="finishesWrapper" role="group" aria-label="Finishes">
-            <input class="tag-text-input" id="finishInput" placeholder="e.g. Standard, Fine, Matte — press Enter" aria-label="Add finish">
-          </div>
-          <p class="editor-example">Example: Standard, Fine, Matte, Gloss.</p>
-        </div>
+        <div class="finish-editor-list" id="finishEditorList"></div>
+        <p class="editor-example">Example: Fine with <code>0.12 mm</code> layer height and “Better detail, smoother surface”. These details appear in the quote and checkout flow.</p>
       </div>
     </section>
 
@@ -881,7 +943,7 @@
   // ── State ─────────────────────────────────────────────────────
   let allMaterials = [];
   let colours = [];     // [{hex, name}]
-  let finishes = [];    // [string]
+  let finishes = [];    // structured finish preset objects
   let idealFor = [];    // [string]  — Learn more drawer
   let notFor   = [];    // [string]  — Learn more drawer
   let pendingDeleteId = null;
@@ -890,6 +952,7 @@
   let autoSuggestTimer = null;
   let autoSuggestSeq = 0;
   let lastAutoSuggestionKey = null;
+  let autoFilledSnapshot = null;
 
   // ── Helpers ───────────────────────────────────────────────────
   function escHtml(s) {
@@ -1132,6 +1195,7 @@
     hideSuggestionReview();
     clearTimeout(autoSuggestTimer);
     lastAutoSuggestionKey = null;
+    autoFilledSnapshot = null;
     setImagePreview('');
 
     // Sliders default
@@ -1461,9 +1525,68 @@
 
     const matchKey = match.key || match.displayName || name;
     if (lastAutoSuggestionKey === matchKey) return;
+    if (lastAutoSuggestionKey && autoFilledSnapshot) {
+      clearPreviousAutoFill();
+    }
     lastAutoSuggestionKey = matchKey;
 
     applyAiSuggestion(match, { auto: true });
+  }
+
+  function getFieldValue(id) {
+    return document.getElementById(id)?.value ?? '';
+  }
+
+  function captureAutoField(id, reset = '') {
+    return { type: 'field', id, value: getFieldValue(id), reset: String(reset) };
+  }
+
+  function captureAutoSlider(id, reset = 50) {
+    return { type: 'slider', id, value: getFieldValue(id), reset: String(reset) };
+  }
+
+  function captureAutoList(name, value) {
+    return { type: 'list', name, value: Array.isArray(value) ? [...value] : [] };
+  }
+
+  function sameListValue(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    return a.every((item, index) => item === b[index]);
+  }
+
+  function clearPreviousAutoFill() {
+    if (!autoFilledSnapshot?.fields?.length) {
+      autoFilledSnapshot = null;
+      return;
+    }
+
+    autoFilledSnapshot.fields.forEach(marker => {
+      if (marker.type === 'slider') {
+        if (getFieldValue(marker.id) === String(marker.value)) {
+          setSliderValue(marker.id, marker.reset);
+        }
+        return;
+      }
+
+      if (marker.type === 'list') {
+        if (marker.name === 'idealFor' && sameListValue(idealFor, marker.value)) {
+          idealFor = [];
+          renderIdealForTags();
+        }
+        if (marker.name === 'notFor' && sameListValue(notFor, marker.value)) {
+          notFor = [];
+          renderNotForTags();
+        }
+        return;
+      }
+
+      const input = document.getElementById(marker.id);
+      if (input && getFieldValue(marker.id) === String(marker.value)) {
+        input.value = marker.reset ?? '';
+      }
+    });
+
+    autoFilledSnapshot = null;
   }
 
   function showSuggestStatus(msg, kind) {
@@ -1624,17 +1747,24 @@
    */
   function applyAiSuggestion(sugg, { silent = false, force = false, auto = false } = {}) {
     if (!sugg) return;
+    if (!auto) autoFilledSnapshot = null;
     const suggestion = normalizeSuggestion(sugg);
     const deferred = [];
     let appliedCount = 0;
+    const appliedAutoFields = [];
     const isNew = !document.getElementById('materialId').value;
-    const applyOrDefer = ({ label, value, canApply, canAutoApply, apply }) => {
+    const applyOrDefer = ({ label, value, canApply, canAutoApply, apply, autoCapture }) => {
       const displayValue = formatSuggestionValue(value);
       if (!displayValue) return;
       const shouldApply = force || (auto && typeof canAutoApply === 'function' ? canAutoApply() : canApply());
       if (shouldApply) {
         apply();
         appliedCount += 1;
+        if (auto && typeof autoCapture === 'function') {
+          const captured = autoCapture();
+          if (Array.isArray(captured)) appliedAutoFields.push(...captured.filter(Boolean));
+          else if (captured) appliedAutoFields.push(captured);
+        }
       } else {
         deferred.push({ label, value });
       }
@@ -1646,6 +1776,7 @@
       canApply: () => isNew,
       canAutoApply: () => isNew && document.getElementById('mCategory').value === 'FDM',
       apply: () => { document.getElementById('mCategory').value = suggestion.category; },
+      autoCapture: () => captureAutoField('mCategory', 'FDM'),
     });
     applyOrDefer({
       label: 'Strength',
@@ -1653,6 +1784,7 @@
       canApply: () => isNew || Number(document.getElementById('mStrength').value) === 50,
       canAutoApply: () => Number(document.getElementById('mStrength').value) === 50,
       apply: () => setSliderValue('mStrength', suggestion.strength),
+      autoCapture: () => captureAutoSlider('mStrength', 50),
     });
     applyOrDefer({
       label: 'Flexibility',
@@ -1660,6 +1792,7 @@
       canApply: () => isNew || Number(document.getElementById('mFlexibility').value) === 50,
       canAutoApply: () => Number(document.getElementById('mFlexibility').value) === 50,
       apply: () => setSliderValue('mFlexibility', suggestion.flexibility),
+      autoCapture: () => captureAutoSlider('mFlexibility', 50),
     });
     applyOrDefer({
       label: 'Heat resistance',
@@ -1667,6 +1800,7 @@
       canApply: () => isNew || Number(document.getElementById('mHeat').value) === 50,
       canAutoApply: () => Number(document.getElementById('mHeat').value) === 50,
       apply: () => setSliderValue('mHeat', suggestion.heat),
+      autoCapture: () => captureAutoSlider('mHeat', 50),
     });
     applyOrDefer({
       label: 'Detail rating',
@@ -1674,6 +1808,7 @@
       canApply: () => isNew || Number(document.getElementById('mDetail').value) === 3,
       canAutoApply: () => Number(document.getElementById('mDetail').value) === 3,
       apply: () => { document.getElementById('mDetail').value = suggestion.detail; },
+      autoCapture: () => captureAutoField('mDetail', 3),
     });
     applyOrDefer({
       label: 'Outdoor use rating',
@@ -1681,54 +1816,63 @@
       canApply: () => isNew || Number(document.getElementById('mOutdoorUse').value) === 3,
       canAutoApply: () => Number(document.getElementById('mOutdoorUse').value) === 3,
       apply: () => { document.getElementById('mOutdoorUse').value = suggestion.outdoorUse; },
+      autoCapture: () => captureAutoField('mOutdoorUse', 3),
     });
     applyOrDefer({
       label: 'Filter tags',
       value: suggestion.tags,
       canApply: () => !document.getElementById('mTags').value.trim(),
       apply: () => { document.getElementById('mTags').value = suggestion.tags.join(', '); },
+      autoCapture: () => captureAutoField('mTags'),
     });
     applyOrDefer({
       label: 'Best-for labels',
       value: suggestion.best_for,
       canApply: () => !document.getElementById('mBestFor').value.trim(),
       apply: () => { document.getElementById('mBestFor').value = suggestion.best_for.join(', '); },
+      autoCapture: () => captureAutoField('mBestFor'),
     });
     applyOrDefer({
       label: 'Technical specs',
       value: suggestion.specs,
       canApply: () => isJsonBlank('mSpecsJson'),
       apply: () => { document.getElementById('mSpecsJson').value = JSON.stringify(suggestion.specs, null, 2); },
+      autoCapture: () => captureAutoField('mSpecsJson', '[]'),
     });
     applyOrDefer({
       label: 'Short description',
       value: suggestion.shortDescription,
       canApply: () => !document.getElementById('mDescription').value.trim(),
       apply: () => { document.getElementById('mDescription').value = suggestion.shortDescription; },
+      autoCapture: () => captureAutoField('mDescription'),
     });
     applyOrDefer({
       label: 'Long technical description',
       value: suggestion.longDescription,
       canApply: () => !document.getElementById('mLongDescription').value.trim(),
       apply: () => { document.getElementById('mLongDescription').value = suggestion.longDescription; },
+      autoCapture: () => captureAutoField('mLongDescription'),
     });
     applyOrDefer({
       label: 'Learn more copy',
       value: suggestion.learn_more,
       canApply: () => !document.getElementById('mLearnMore').value.trim(),
       apply: () => { document.getElementById('mLearnMore').value = suggestion.learn_more; },
+      autoCapture: () => captureAutoField('mLearnMore'),
     });
     applyOrDefer({
       label: 'Ideal for',
       value: suggestion.ideal_for,
       canApply: () => idealFor.length === 0,
       apply: () => { idealFor = [...suggestion.ideal_for]; renderIdealForTags(); },
+      autoCapture: () => captureAutoList('idealFor', idealFor),
     });
     applyOrDefer({
       label: 'Not recommended for',
       value: suggestion.not_for,
       canApply: () => notFor.length === 0,
       apply: () => { notFor = [...suggestion.not_for]; renderNotForTags(); },
+      autoCapture: () => captureAutoList('notFor', notFor),
     });
 
     const minIn = document.getElementById('mProdDaysMin');
@@ -1742,7 +1886,18 @@
           if (suggestion.production_days_min != null) minIn.value = suggestion.production_days_min;
           if (suggestion.production_days_max != null) maxIn.value = suggestion.production_days_max;
         },
+        autoCapture: () => [
+          captureAutoField('mProdDaysMin'),
+          captureAutoField('mProdDaysMax'),
+        ],
       });
+    }
+
+    if (auto) {
+      autoFilledSnapshot = {
+        key: suggestion.displayName,
+        fields: appliedAutoFields,
+      };
     }
 
     if (force || auto) hideSuggestionReview();
@@ -1934,15 +2089,39 @@
     document.getElementById('colourInput').focus();
   });
 
-  // ── Finish tag input ──────────────────────────────────────────
+  // ── Finish preset editor ──────────────────────────────────────
   function finishLabel(f) {
     return typeof f === 'string' ? f : (f?.name || 'Finish');
   }
 
-  function addFinishTag(finish) {
+  function finishId() {
+    return `finish_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  function normalizeFinishEditorItem(finish, index = finishes.length) {
     const item = typeof finish === 'string'
-      ? { name: finish, enabled: true, default: finishes.length === 0, sortOrder: finishes.length }
-      : { ...finish, name: finishLabel(finish) };
+      ? { name: finish }
+      : { ...(finish || {}) };
+    const rawMultiplier = item.priceMultiplier ?? item.price_multiplier;
+    return {
+      id: String(item.id || finishId()),
+      name: String(item.name || `Finish ${index + 1}`).trim(),
+      layerHeight: String(item.layerHeight || item.layer_height || '').trim(),
+      description: String(item.description || '').trim(),
+      priceMultiplier: rawMultiplier !== '' && Number.isFinite(Number(rawMultiplier))
+        ? Number(rawMultiplier)
+        : 1,
+      previewType: String(item.previewType || item.preview_type || (index === 0 ? 'standard' : 'fine')),
+      previewImageUrl: item.previewImageUrl || item.preview_image_url || '',
+      enabled: item.enabled !== false,
+      default: item.default === true,
+      sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index,
+    };
+  }
+
+  function addFinishTag(finish) {
+    const item = normalizeFinishEditorItem(finish, finishes.length);
+    if (!finishes.length) item.default = true;
     if (!finishes.some(f => finishLabel(f).toLowerCase() === item.name.toLowerCase())) {
       finishes.push(item);
       renderFinishTags();
@@ -1951,36 +2130,132 @@
 
   function removeFinishTag(idx) {
     finishes.splice(idx, 1);
+    if (finishes.length && !finishes.some(f => f.default && f.enabled !== false)) finishes[0].default = true;
     renderFinishTags();
   }
 
+  function updateFinishField(index, field, value) {
+    const item = finishes[index];
+    if (!item) return;
+    if (field === 'enabled' || field === 'default') {
+      item[field] = !!value;
+      if (field === 'default' && item.default) {
+        finishes.forEach((f, i) => { if (i !== index) f.default = false; });
+      }
+    } else if (field === 'priceMultiplier') {
+      const n = parseFloat(value);
+      item.priceMultiplier = Number.isFinite(n) && n >= 0 ? n : 1;
+    } else {
+      item[field] = String(value || '').trim();
+    }
+    item.name = item.name || `Finish ${index + 1}`;
+    item.sortOrder = index;
+    document.getElementById('mFinishesJson').value = JSON.stringify(finishes, null, 2);
+    if (field === 'enabled' || field === 'default') renderFinishTags();
+  }
+
   function renderFinishTags() {
-    const wrapper = document.getElementById('finishesWrapper');
-    const inp = document.getElementById('finishInput');
-    wrapper.querySelectorAll('.tag-item').forEach(el => el.remove());
-    finishes.forEach((f, i) => {
-      const label = finishLabel(f);
-      const tag = document.createElement('span');
-      tag.className = 'tag-item';
-      tag.innerHTML = `${escHtml(label)}<button type="button" class="tag-remove" aria-label="Remove ${escHtml(label)}">×</button>`;
-      tag.querySelector('.tag-remove').addEventListener('click', () => removeFinishTag(i));
-      wrapper.insertBefore(tag, inp);
-    });
+    const wrapper = document.getElementById('finishEditorList');
+    wrapper.innerHTML = '';
+    finishes = finishes.map((f, i) => normalizeFinishEditorItem(f, i));
+    finishes.forEach((f, i) => { f.sortOrder = i; });
+    if (finishes.length && !finishes.some(f => f.default && f.enabled !== false)) finishes[0].default = true;
+
+    if (!finishes.length) {
+      wrapper.innerHTML = '<div class="finish-empty">No finish presets yet. Add Standard, Fine, Matte, or any quality option your store offers.</div>';
+    } else {
+      finishes.forEach((f, i) => {
+        const card = document.createElement('div');
+        card.className = 'finish-editor-card';
+        card.dataset.finishIndex = String(i);
+        card.innerHTML = `
+          <div class="finish-editor-head">
+            <div class="finish-editor-title">${escHtml(f.name || `Finish ${i + 1}`)}</div>
+            <div class="finish-editor-actions">
+              <label class="finish-check"><input type="checkbox" data-finish-field="enabled" ${f.enabled !== false ? 'checked' : ''}> Enabled</label>
+              <label class="finish-check"><input type="checkbox" data-finish-field="default" ${f.default ? 'checked' : ''}> Default</label>
+              <button type="button" class="finish-remove" data-finish-remove>Remove</button>
+            </div>
+          </div>
+          <div class="finish-editor-grid">
+            <label class="form-group" style="margin-bottom:0;">
+              <span class="form-label">Name</span>
+              <input class="form-input" data-finish-field="name" value="${escHtml(f.name)}" placeholder="Fine">
+            </label>
+            <label class="form-group" style="margin-bottom:0;">
+              <span class="form-label">Layer height</span>
+              <input class="form-input" data-finish-field="layerHeight" value="${escHtml(f.layerHeight)}" placeholder="0.12 mm">
+            </label>
+            <label class="form-group wide" style="margin-bottom:0;">
+              <span class="form-label">Customer description</span>
+              <input class="form-input" data-finish-field="description" value="${escHtml(f.description)}" placeholder="Better detail, smoother surface">
+            </label>
+            <label class="form-group" style="margin-bottom:0;">
+              <span class="form-label">Price multiplier</span>
+              <input class="form-input" type="number" min="0" step="0.01" data-finish-field="priceMultiplier" value="${escHtml(f.priceMultiplier)}">
+            </label>
+            <label class="form-group" style="margin-bottom:0;">
+              <span class="form-label">Preview style</span>
+              <select class="form-input" data-finish-field="previewType">
+                <option value="standard" ${f.previewType === 'standard' ? 'selected' : ''}>Standard lines</option>
+                <option value="fine" ${f.previewType === 'fine' ? 'selected' : ''}>Fine lines</option>
+                <option value="custom" ${f.previewType === 'custom' ? 'selected' : ''}>Custom image</option>
+              </select>
+            </label>
+            <label class="form-group wide" style="margin-bottom:0;">
+              <span class="form-label">Preview image URL</span>
+              <input class="form-input" data-finish-field="previewImageUrl" value="${escHtml(f.previewImageUrl || '')}" placeholder="/uploads/material-assets/finish-preview.webp">
+            </label>
+          </div>`;
+        wrapper.appendChild(card);
+      });
+    }
     document.getElementById('mFinishesJson').value = JSON.stringify(finishes, null, 2);
   }
 
-  document.getElementById('finishInput').addEventListener('keydown', e => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    const val = e.target.value.trim();
-    if (val) {
-      addFinishTag(val);
-      e.target.value = '';
+  document.getElementById('addFinishBtn').addEventListener('click', () => {
+    const presets = [
+      { name: 'Standard', layerHeight: '0.20 mm', description: 'Balanced detail and cost', previewType: 'standard' },
+      { name: 'Fine', layerHeight: '0.12 mm', description: 'Better detail, smoother surface', previewType: 'fine' },
+    ];
+    addFinishTag(presets[finishes.length] || { name: `Finish ${finishes.length + 1}` });
+  });
+
+  document.getElementById('finishEditorList').addEventListener('input', e => {
+    const card = e.target.closest('[data-finish-index]');
+    const field = e.target.dataset.finishField;
+    if (!card || !field || e.target.type === 'checkbox') return;
+    updateFinishField(Number(card.dataset.finishIndex), field, e.target.value);
+    if (field === 'name') {
+      const title = card.querySelector('.finish-editor-title');
+      if (title) title.textContent = e.target.value.trim() || `Finish ${Number(card.dataset.finishIndex) + 1}`;
     }
   });
 
-  document.getElementById('finishesWrapper').addEventListener('click', e => {
-    document.getElementById('finishInput').focus();
+  document.getElementById('finishEditorList').addEventListener('change', e => {
+    const card = e.target.closest('[data-finish-index]');
+    const field = e.target.dataset.finishField;
+    if (!card || !field) return;
+    updateFinishField(Number(card.dataset.finishIndex), field, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
+  });
+
+  document.getElementById('finishEditorList').addEventListener('click', e => {
+    const remove = e.target.closest('[data-finish-remove]');
+    if (!remove) return;
+    const card = remove.closest('[data-finish-index]');
+    removeFinishTag(Number(card.dataset.finishIndex));
+  });
+
+  document.getElementById('mFinishesJson').addEventListener('blur', e => {
+    try {
+      const parsed = JSON.parse(e.target.value || '[]');
+      if (Array.isArray(parsed)) {
+        finishes = parsed.map((f, i) => normalizeFinishEditorItem(f, i));
+        renderFinishTags();
+      }
+    } catch {
+      // Submit validation will show the JSON error in the Advanced tab.
+    }
   });
 
   document.getElementById('mImageFile').addEventListener('change', e => {

@@ -9,7 +9,11 @@
     "migrate": "node db/migrate.js",
     "check": "node scripts/check-syntax.js",
     "security:smoke": "node scripts/security-smoke.js",
-    "platform:smoke": "node scripts/platform-reporting-smoke.js"
+    "platform:smoke": "node scripts/platform-reporting-smoke.js",
+    "materials:smoke": "node scripts/material-library-smoke.js",
+    "demo:seed:mahi3d": "ALLOW_MAHI3D_DEMO_SEED=1 node scripts/seed-mahi3d-demo.js",
+    "demo:seed:smoke": "node scripts/mahi3d-demo-seed-smoke.js",
+    "customer:smoke": "node scripts/customer-portal-smoke.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

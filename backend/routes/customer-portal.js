@@ -40,6 +40,123 @@ function ensureSupportEmailColumns() {
   }
 }
 
+class CustomerPortalError extends Error {
+  constructor(message, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function toNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function money(value) {
+  return Math.round((toNumber(value, 0) + Number.EPSILON) * 100) / 100;
+}
+
+function statusLabel(status) {
+  return {
+    pending: 'Received',
+    processing: 'Confirmed',
+    in_production: 'In Production',
+    shipped: 'Shipped',
+    complete: 'Delivered',
+    cancelled: 'Cancelled',
+  }[status] || status || 'Received';
+}
+
+function paymentLabel(status) {
+  return {
+    pending: 'Pending',
+    paid: 'Paid',
+    failed: 'Failed',
+    refunded: 'Refunded',
+  }[status] || status || 'Pending';
+}
+
+function getCustomerShop(req) {
+  const shop = db.prepare(
+    "SELECT id, name, slug FROM shops WHERE id = ? AND plan != 'suspended'"
+  ).get(req.customerAccount.shop_id);
+  if (!shop) throw new CustomerPortalError('Not authenticated', 401);
+
+  const requestedSlug = String(req.query.shop || req.query.slug || '').trim();
+  if (requestedSlug && requestedSlug !== shop.slug) {
+    throw new CustomerPortalError('This customer session belongs to another shop.', 403);
+  }
+  return shop;
+}
+
+function buildCustomerStats(shopId, email) {
+  const cfg = db.prepare('SELECT currency FROM pricing_config WHERE shop_id = ?').get(shopId) || {};
+  const row = db.prepare(`
+    SELECT
+      COUNT(*) as total_orders,
+      COALESCE(SUM(total), 0) as total_spent,
+      SUM(CASE WHEN fulfilment_status NOT IN ('complete','cancelled') THEN 1 ELSE 0 END) as active_orders,
+      SUM(CASE WHEN fulfilment_status = 'complete' THEN 1 ELSE 0 END) as delivered_orders
+    FROM orders
+    WHERE shop_id = ? AND LOWER(customer_email) = LOWER(?) AND payment_status = 'paid'
+  `).get(shopId, email) || {};
+
+  const recent = db.prepare(`
+    SELECT COUNT(*) as c FROM (
+      SELECT id
+      FROM orders
+      WHERE shop_id = ? AND LOWER(customer_email) = LOWER(?) AND payment_status = 'paid'
+      ORDER BY created_at DESC, id DESC
+      LIMIT 3
+    )
+  `).get(shopId, email) || {};
+
+  return {
+    total_orders: row.total_orders || 0,
+    active_orders: row.active_orders || 0,
+    delivered_orders: row.delivered_orders || 0,
+    total_spent: money(row.total_spent),
+    recent_order_count: recent.c || 0,
+    currency: String(cfg.currency || 'NZD').toUpperCase(),
+  };
+}
+
+function normaliseCustomerOrder(row) {
+  if (!row) return null;
+  const status = row.fulfilment_status || 'pending';
+  const paymentStatus = row.payment_status || 'pending';
+  const revealTracking = ['shipped', 'complete'].includes(status);
+  return {
+    id: row.id,
+    created_at: row.created_at,
+    fulfilment_status: status,
+    fulfilment_status_label: statusLabel(status),
+    payment_status: paymentStatus,
+    payment_status_label: paymentLabel(paymentStatus),
+    subtotal: money(row.subtotal),
+    shipping: money(row.shipping),
+    tax: money(row.tax),
+    total: money(row.total),
+    quantity: parseInt(row.quantity, 10) || 1,
+    colour: row.colour || null,
+    finish: row.finish || null,
+    file_name: row.file_name || null,
+    tracking_number: revealTracking ? (row.tracking_number || null) : null,
+    tracking_url: revealTracking ? (row.tracking_url || null) : null,
+    customer_message: revealTracking ? (row.customer_message || null) : null,
+    material_name: row.material_name || null,
+    material_category: row.material_category || null,
+  };
+}
+
+function sendCustomerPortalError(res, err) {
+  if (err instanceof CustomerPortalError) {
+    return res.status(err.status).json({ error: err.message });
+  }
+  console.error('Customer portal error:', err);
+  return res.status(500).json({ error: 'Internal server error' });
+}
+
 // ── Auth middleware for customer portal ───────────────────────
 function requireCustomerAuth(req, res, next) {
   const id = req.session && req.session.customerId;
@@ -47,6 +164,9 @@ function requireCustomerAuth(req, res, next) {
 
   const account = db.prepare('SELECT * FROM customer_accounts WHERE id = ?').get(id);
   if (!account) return res.status(401).json({ error: 'Not authenticated' });
+  if (req.session.customerShopId && Number(req.session.customerShopId) !== Number(account.shop_id)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
 
   req.customerAccount = account;
   next();
@@ -259,21 +379,23 @@ router.post('/logout', (req, res) => {
 
 // ── GET /api/customer/me ──────────────────────────────────────
 router.get('/me', requireCustomerAuth, (req, res) => {
-  const { id, name, email, created_at, shop_id } = req.customerAccount;
-
-  // Get shop info
-  const shop = db.prepare('SELECT name, slug FROM shops WHERE id = ?').get(shop_id);
-
-  // Stats
-  const stats = db.prepare(`
-    SELECT
-      COUNT(*) as order_count,
-      COALESCE(SUM(total), 0) as total_spent
-    FROM orders
-    WHERE shop_id = ? AND LOWER(customer_email) = LOWER(?) AND payment_status = 'paid'
-  `).get(shop_id, email);
-
-  res.json({ id, name, email, created_at, shop, ...stats });
+  try {
+    const { id, name, email, created_at, shop_id } = req.customerAccount;
+    const shop = getCustomerShop(req);
+    const stats = buildCustomerStats(shop_id, email);
+    res.json({
+      id,
+      name,
+      email,
+      created_at,
+      shop: { name: shop.name, slug: shop.slug },
+      stats,
+      order_count: stats.total_orders,
+      total_spent: stats.total_spent,
+    });
+  } catch (err) {
+    sendCustomerPortalError(res, err);
+  }
 });
 
 // ── PATCH /api/customer/me ────────────────────────────────────
@@ -335,27 +457,24 @@ router.post('/change-password', customerPasswordLimiter, requireCustomerAuth, as
 router.get('/orders', requireCustomerAuth, (req, res) => {
   try {
     const { email, shop_id } = req.customerAccount;
+    getCustomerShop(req);
 
     const orders = db.prepare(`
       SELECT
         o.id, o.created_at, o.fulfilment_status, o.payment_status,
         o.subtotal, o.shipping, o.tax, o.total,
         o.quantity, o.colour, o.finish, o.file_name,
-        o.tracking_number, o.tracking_url,
-        -- Only reveal customer_message when shipped/complete
-        CASE WHEN o.fulfilment_status IN ('shipped','complete')
-          THEN o.customer_message ELSE NULL END as customer_message,
-        m.name as material_name
+        o.tracking_number, o.tracking_url, o.customer_message,
+        m.name as material_name, m.category as material_category
       FROM orders o
       LEFT JOIN materials m ON m.id = o.material_id
       WHERE o.shop_id = ? AND LOWER(o.customer_email) = LOWER(?)
       ORDER BY o.created_at DESC
-    `).all(shop_id, email);
+    `).all(shop_id, email).map(normaliseCustomerOrder);
 
     res.json(orders);
   } catch (err) {
-    console.error('Customer orders error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    sendCustomerPortalError(res, err);
   }
 });
 
@@ -363,26 +482,24 @@ router.get('/orders', requireCustomerAuth, (req, res) => {
 router.get('/orders/:id', requireCustomerAuth, (req, res) => {
   try {
     const { email, shop_id } = req.customerAccount;
+    getCustomerShop(req);
 
-    const order = db.prepare(`
+    const order = normaliseCustomerOrder(db.prepare(`
       SELECT
         o.id, o.created_at, o.fulfilment_status, o.payment_status,
         o.subtotal, o.shipping, o.tax, o.total,
         o.quantity, o.colour, o.finish, o.file_name,
-        o.tracking_number, o.tracking_url,
-        CASE WHEN o.fulfilment_status IN ('shipped','complete')
-          THEN o.customer_message ELSE NULL END as customer_message,
+        o.tracking_number, o.tracking_url, o.customer_message,
         m.name as material_name, m.category as material_category
       FROM orders o
       LEFT JOIN materials m ON m.id = o.material_id
       WHERE o.id = ? AND o.shop_id = ? AND LOWER(o.customer_email) = LOWER(?)
-    `).get(req.params.id, shop_id, email);
+    `).get(req.params.id, shop_id, email));
 
     if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
   } catch (err) {
-    console.error('Customer order detail error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    sendCustomerPortalError(res, err);
   }
 });
 

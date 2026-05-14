@@ -70,6 +70,14 @@
       margin-top: 2px;
     }
 
+    .file-dimensions {
+      display: none;
+      margin-top: 3px;
+      font-size: 12px;
+      color: var(--ink-soft);
+      font-variant-numeric: tabular-nums;
+    }
+
     /* ── Detail rows ─────────────────────────────────────── */
     .detail-rows {
       display: flex;
@@ -99,6 +107,26 @@
       display: flex;
       align-items: center;
       gap: 6px;
+    }
+
+    .detail-value.stack {
+      align-items: flex-end;
+      flex-direction: column;
+      gap: 2px;
+      text-align: right;
+    }
+
+    .finish-primary {
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.25;
+    }
+
+    .finish-secondary {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+      max-width: 230px;
     }
 
     .color-swatch {
@@ -348,10 +376,12 @@
           <div class="file-meta">
             <div class="file-name" id="reviewFileName">model.stl</div>
             <div class="file-size" id="reviewFileSize">—</div>
+            <div class="file-dimensions" id="reviewFileDimensions">—</div>
           </div>
         </div>
 
-        <!-- Detail rows -->
+        <!-- Part details -->
+        <p class="overline" style="margin-bottom:14px;">Part details</p>
         <div class="detail-rows">
           <div class="detail-row">
             <span class="detail-label">Material</span>

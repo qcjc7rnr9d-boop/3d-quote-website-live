@@ -3,460 +3,1004 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>mahi3d — Materials</title>
-  <meta name="description" content="Browse all available 3D printing materials. PLA, PETG, Nylon, TPU, ASA and more with multiple colours and finishes.">
+  <title>mahi3d - Materials</title>
+  <meta name="description" content="Browse configured 3D printing materials, colours, finishes, and specs before starting a quote.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <style>
     :root {
-      --font-brand:  'Space Grotesk', system-ui, sans-serif;
-      --font-ui:     'Inter', system-ui, sans-serif;
-      --bg:          #F7F7F5;
-      --white:       #FFFFFF;
-      --ink:         #111317;
-      --muted:       #6B7280;
-      --border:      #E5E5E2;
-      --border-2:    #D4D4D1;
-      --sage:        #5A8A5E;
-      --sage-light:  #D4E6D5;
-      --sage-bg:     #EEF5EF;
-      --sage-dark:   #3D6B41;
-      --stone:       #E8E4DC;
-      --radius-sm:   6px;
-      --radius:      10px;
-      --radius-lg:   16px;
-      --radius-pill: 999px;
-      --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 4px 20px rgba(0,0,0,0.06);
-      --shadow-sm:   0 1px 3px rgba(0,0,0,0.06);
+      --font-brand: 'Space Grotesk', system-ui, sans-serif;
+      --font-ui: 'Inter', system-ui, sans-serif;
+      --white: #fff;
+      --off-white: #f7f6f3;
+      --ink: #101216;
+      --muted: #6f747c;
+      --muted-2: #8a9099;
+      --line: #e4e0d8;
+      --border: #d7d2ca;
+      --sage: #2f7d43;
+      --sage-dark: #1f6b35;
+      --sage-soft: #ecf5ed;
+      --sage-line: #bad8bf;
+      --shadow: 0 18px 45px rgba(31,37,31,0.07), 0 1px 2px rgba(31,37,31,0.06);
+      --radius: 18px;
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
+      margin: 0;
       font-family: var(--font-ui);
-      background: var(--bg);
+      background: radial-gradient(circle at 50% 0%, rgba(122,158,126,0.08), transparent 360px), var(--off-white);
       color: var(--ink);
-      line-height: 1.6;
       -webkit-font-smoothing: antialiased;
     }
+    button, a { font: inherit; }
+    a { color: inherit; }
 
-    /* ── Nav ── */
-    .nav {
+    .topbar {
       position: sticky;
-      top: 0; z-index: 100;
-      height: 54px;
-      background: rgba(247,247,245,0.92);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
+      top: 0;
+      z-index: 50;
+      min-height: 68px;
+      display: grid;
+      grid-template-columns: 180px 1fr auto;
+      align-items: center;
+      gap: 24px;
+      padding: 0 36px;
+      background: rgba(255,255,255,0.86);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+    }
+    .brand {
+      font-family: var(--font-brand);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+    .nav-links {
+      justify-self: center;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 0 36px;
+      gap: 28px;
     }
-    .nav-left { display: flex; align-items: center; gap: 28px; }
-    .wordmark {
-      font-family: var(--font-brand);
-      font-weight: 600;
-      font-size: 15px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
+    .nav-links a {
       color: var(--ink);
       text-decoration: none;
+      font-size: 13px;
+      font-weight: 750;
     }
-    .nav-links-row {
-      display: flex; gap: 2px; list-style: none;
+    .nav-links a[aria-current="page"] { color: var(--sage-dark); }
+    .nav-actions {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-    .nav-links-row a {
-      font-size: 13px; font-weight: 500; color: var(--muted);
-      text-decoration: none; padding: 6px 11px;
-      border-radius: var(--radius-sm);
-      transition: color 140ms, background 140ms;
-    }
-    .nav-links-row a:hover { color: var(--ink); background: rgba(0,0,0,0.04); }
-    .nav-links-row a.active { color: var(--ink); }
-    .btn-quote {
-      font-family: var(--font-ui);
-      font-size: 13px; font-weight: 500;
-      color: var(--white); background: var(--ink);
-      border: none; border-radius: var(--radius-sm);
-      padding: 7px 16px; text-decoration: none; cursor: pointer;
-      transition: background 140ms;
+    .btn-dark,
+    .btn-light {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-radius: 9px;
+      padding: 0 18px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
       white-space: nowrap;
     }
-    .btn-quote:hover { background: #2a2a2a; }
-
-    /* ── Page ── */
-    .page {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 56px 36px 100px;
+    .btn-dark {
+      background: var(--ink);
+      color: var(--white);
+      border: 1px solid var(--ink);
+      box-shadow: 0 10px 22px rgba(16,18,22,0.10);
     }
-
-    /* ── Header ── */
-    .page-header {
-      margin-bottom: 48px;
+    .btn-light {
+      background: rgba(255,255,255,0.76);
+      color: var(--sage-dark);
+      border: 1px solid var(--sage-line);
     }
-    .page-label {
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 0.09em; text-transform: uppercase;
-      color: var(--muted); margin-bottom: 12px;
-    }
-    .page-title {
-      font-family: var(--font-brand);
-      font-weight: 700;
-      font-size: clamp(28px, 4vw, 42px);
-      letter-spacing: -0.03em;
-      color: var(--ink);
-      margin-bottom: 10px;
-    }
-    .page-sub {
-      font-size: 15px; color: var(--muted);
-    }
-
-    /* ── Filter bar ── */
-    .filter-bar {
-      display: flex; gap: 8px; flex-wrap: wrap;
-      margin-bottom: 36px;
-    }
-    .filter-btn {
-      font-family: var(--font-ui);
-      font-size: 12px; font-weight: 500;
-      padding: 6px 14px;
-      border: 1px solid var(--border-2);
-      border-radius: var(--radius-pill);
-      background: var(--white);
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 140ms;
-    }
-    .filter-btn:hover { border-color: var(--ink); color: var(--ink); }
-    .filter-btn.active {
-      background: var(--ink); color: var(--white);
-      border-color: var(--ink);
-    }
-
-    /* ── Grid ── */
-    .mat-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-    }
-
-    /* ── Card ── */
-    .mat-card {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-card);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      transition: box-shadow 160ms, border-color 160ms;
-    }
-    .mat-card:hover {
-      box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 8px 28px rgba(0,0,0,0.09);
-      border-color: var(--border-2);
-    }
-
-    /* Colour bar at top */
-    .mat-colour-bar {
-      height: 5px;
-      display: flex;
-      overflow: hidden;
-    }
-    .mat-colour-bar span {
-      flex: 1;
-      display: block;
-    }
-
-    .mat-body { padding: 22px 22px 0; flex: 1; }
-
-    .mat-category {
-      font-size: 10px; font-weight: 600;
-      letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--muted); margin-bottom: 6px;
-    }
-    .mat-name {
-      font-family: var(--font-brand);
-      font-size: 22px; font-weight: 600;
-      color: var(--ink); letter-spacing: -0.02em;
-      line-height: 1.1; margin-bottom: 8px;
-    }
-    .mat-desc {
-      font-size: 13px; color: var(--muted);
-      line-height: 1.55; margin-bottom: 18px;
-    }
-
-    /* Swatches */
-    .mat-swatches {
-      display: flex; gap: 5px; flex-wrap: wrap;
-      margin-bottom: 18px;
-    }
-    .swatch {
-      width: 16px; height: 16px;
+    .menu-btn {
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
-      border: 1.5px solid rgba(0,0,0,0.12);
-      flex-shrink: 0;
-      title: attr(data-name);
-    }
-    .swatch-more {
-      font-size: 10px; font-weight: 600;
-      color: var(--muted); align-self: center;
-    }
-
-    /* Finishes */
-    .mat-finishes {
-      display: flex; gap: 6px; flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
-    .finish-tag {
-      font-size: 11px; font-weight: 500;
-      color: var(--muted);
-      background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 3px 9px;
+      background: var(--white);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
     }
+    .menu-btn svg { width: 20px; height: 20px; }
 
-    /* Footer row */
-    .mat-footer {
-      padding: 16px 22px;
-      border-top: 1px solid var(--border);
+    .page {
+      width: min(1440px, calc(100% - 72px));
+      margin: 0 auto;
+      padding: 34px 0 74px;
+    }
+    .hero-row {
+      display: grid;
+      grid-template-columns: 1fr minmax(300px, 440px);
+      gap: 36px;
+      align-items: start;
+      margin: 0 0 22px;
+    }
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--sage-dark);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-family: var(--font-brand);
+      font-size: clamp(42px, 5.2vw, 66px);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0;
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.65;
+    }
+    .helper {
+      display: flex;
+      gap: 14px;
+      padding: 20px 22px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.68);
+      box-shadow: 0 16px 38px rgba(31,37,31,0.04);
+    }
+    .helper-icon {
+      width: 28px;
+      height: 28px;
+      flex: 0 0 auto;
+      color: var(--sage-dark);
+    }
+    .helper strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+    .helper p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .catalog-cta {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 18px;
+      margin: 20px 0 24px;
+      padding: 16px 18px 16px 20px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.68);
+      box-shadow: 0 10px 24px rgba(31,37,31,0.045);
+    }
+    .catalog-cta p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .catalog-cta strong {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 22px 0 18px;
+    }
+    .chip {
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 17px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.72);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 800;
+      transition: border-color 160ms, background 160ms, color 160ms;
+    }
+    .chip:hover,
+    .chip.active {
+      border-color: var(--sage-dark);
+      background: var(--sage-soft);
+      color: var(--sage-dark);
+    }
+
+    .materials-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .material-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: 160px minmax(200px, 1fr) minmax(230px, 0.95fr) minmax(130px, 0.6fr) minmax(210px, 0.95fr) 124px;
+      gap: 16px;
+      align-items: stretch;
+      padding: 20px;
+      background: rgba(255,255,255,0.84);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 9px 24px rgba(31,37,31,0.045);
+      transition: border-color 160ms, box-shadow 160ms, background 160ms;
+    }
+    .material-card:hover {
+      border-color: rgba(31,107,53,0.30);
+      box-shadow: 0 14px 34px rgba(31,37,31,0.065);
+    }
+    .recommended {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 2;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: var(--sage-soft);
+      color: var(--sage-dark);
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .material-image {
+      min-height: 154px;
+      border-radius: 14px;
+      background: linear-gradient(140deg, #f9faf8, #e9ece6);
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+    }
+    .material-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .material-main {
+      padding-top: 3px;
+      min-width: 0;
+    }
+    .material-name {
+      margin: 0 0 6px;
+      font-family: var(--font-brand);
+      font-size: 27px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+    .material-desc {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .material-desc.muted { margin: 0; font-size: 12px; }
+    .best-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 13px;
+    }
+    .mini-label {
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .pill {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--sage-soft);
+      color: var(--sage-dark);
+      font-size: 11px;
+      font-weight: 750;
+    }
+    .price-card {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 9px 11px;
+      border: 1px solid var(--sage-line);
+      border-radius: 11px;
+      background: rgba(236,245,237,0.58);
+    }
+    .price-card span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+    }
+    .price-card strong {
+      color: var(--sage-dark);
+      font-size: 14px;
+      font-weight: 850;
+    }
+    .column {
+      min-width: 0;
+      border-left: 1px solid var(--line);
+      padding-left: 18px;
+    }
+    .column-title {
+      margin: 0 0 12px;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .ratings {
+      display: grid;
       gap: 10px;
     }
-    .mat-stock {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 12px; font-weight: 500;
+    .rating-row {
+      display: grid;
+      grid-template-columns: 90px minmax(0, 1fr) 36px;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 750;
     }
-    .stock-dot {
-      width: 7px; height: 7px;
+    .rating-bar {
+      height: 7px;
+      min-width: 0;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(31,37,31,0.10);
+      box-shadow: inset 0 0 0 1px rgba(31,37,31,0.04);
+    }
+    .rating-fill {
+      display: block;
+      width: var(--rating);
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--sage), var(--sage-dark));
+    }
+    .rating-percent {
+      color: var(--sage-dark);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 11px;
+      margin-bottom: 10px;
+    }
+    .swatch {
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.16);
+      background: var(--c);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.78);
     }
-    .stock-dot.in    { background: #4ade80; }
-    .stock-dot.low   { background: #f59e0b; }
-    .stock-dot.out   { background: #d1d5db; }
-    .stock-label.in  { color: var(--sage-dark); }
-    .stock-label.low { color: #92400e; }
-    .stock-label.out { color: var(--muted); }
-
-    .btn-get-quote {
-      font-size: 12px; font-weight: 500;
-      color: var(--white);
-      background: var(--sage);
-      border: none; border-radius: var(--radius-sm);
-      padding: 7px 14px;
-      text-decoration: none; cursor: pointer;
-      transition: background 140ms;
-      white-space: nowrap;
-    }
-    .btn-get-quote:hover { background: var(--sage-dark); }
-    .btn-get-quote.disabled {
-      background: var(--border); color: var(--muted); pointer-events: none;
-    }
-
-    /* Empty / loading states */
-    .state-box {
-      grid-column: 1 / -1;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 80px 24px;
+    .count-note {
       color: var(--muted);
-      gap: 12px;
+      font-size: 12px;
+      font-weight: 700;
     }
-    .state-box p { font-size: 14px; }
+    .quality-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(102px, 1fr));
+      gap: 10px;
+    }
+    .quality-card {
+      min-height: 126px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: rgba(255,255,255,0.76);
+      padding: 12px;
+      text-align: left;
+    }
+    .quality-card strong {
+      display: block;
+      margin-bottom: 2px;
+      font-size: 12px;
+    }
+    .quality-card .layer {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-size: 11px;
+    }
+    .quality-card p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .finish-preview {
+      height: 34px;
+      border-radius: 4px;
+      overflow: hidden;
+      background: repeating-linear-gradient(0deg, #bfc0bb 0 4px, #e1e0da 4px 8px);
+    }
+    .finish-preview.fine {
+      background: repeating-linear-gradient(0deg, #c8c9c4 0 2px, #e8e7e1 2px 5px);
+    }
+    .finish-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .card-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      gap: 12px;
+      padding-left: 4px;
+    }
+    .specs-btn {
+      min-height: 38px;
+      border: 1px solid var(--sage-line);
+      border-radius: 8px;
+      background: rgba(236,245,237,0.46);
+      color: var(--sage-dark);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .specs-btn[aria-expanded="true"] {
+      background: var(--sage-soft);
+      box-shadow: inset 0 0 0 1px rgba(31,107,53,0.12);
+    }
+    .card-quote {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--sage-dark);
+      border-radius: 8px;
+      background: var(--sage-dark);
+      color: var(--white);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .specs-panel {
+      grid-column: 1 / -1;
+      display: none;
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .specs-panel.open { display: block; }
+    .specs-copy {
+      max-width: 900px;
+      margin: 0 0 12px;
+    }
+    .specs-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .spec-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.62);
+      padding: 10px 12px;
+    }
+    .spec-item strong {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--ink);
+      font-size: 12px;
+    }
+    .state {
+      padding: 52px 24px;
+      text-align: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.72);
+      color: var(--muted);
+    }
+    .state strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink);
+      font-size: 18px;
+    }
     .spinner {
-      width: 28px; height: 28px;
-      border: 2.5px solid var(--border);
-      border-top-color: var(--sage);
+      width: 28px;
+      height: 28px;
+      margin: 0 auto 14px;
+      border: 3px solid rgba(31,37,31,0.12);
+      border-top-color: var(--sage-dark);
       border-radius: 50%;
-      animation: spin 700ms linear infinite;
+      animation: spin 750ms linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Footer */
-    .site-footer {
-      border-top: 1px solid var(--border);
-      padding: 28px 36px;
-      display: flex; align-items: center;
+    .footer {
+      display: flex;
+      align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap; gap: 16px;
+      gap: 26px;
+      padding: 28px 36px;
+      border-top: 1px solid var(--line);
+      background: rgba(247,246,243,0.86);
     }
     .footer-wordmark {
       font-family: var(--font-brand);
-      font-weight: 600; font-size: 13px;
-      letter-spacing: 0.06em; text-transform: uppercase;
-      color: var(--muted); text-decoration: none;
+      font-size: 20px;
+      font-weight: 700;
+      text-decoration: none;
+      text-transform: uppercase;
     }
-    .footer-copy { font-size: 12px; color: var(--muted); }
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 22px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .footer-links a:hover { color: var(--ink); }
+    .footer-copy {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
 
-    /* Responsive */
-    @media (max-width: 900px) {
-      .mat-grid { grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 1180px) {
+      .topbar { grid-template-columns: auto 1fr auto; padding: 0 20px; }
+      .nav-links { display: none; }
+      .material-card { grid-template-columns: 158px minmax(0, 1fr) minmax(0, 1fr); }
+      .column { border-left: 0; padding-left: 0; }
+      .card-actions { grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; }
+      .specs-btn, .card-quote { min-width: 150px; }
     }
-    @media (max-width: 600px) {
-      .nav { padding: 0 20px; }
-      .nav-links-row { display: none; }
-      .page { padding: 40px 20px 80px; }
-      .mat-grid { grid-template-columns: 1fr; }
-      .site-footer { padding: 24px 20px; flex-direction: column; align-items: flex-start; }
+    @media (max-width: 760px) {
+      .topbar {
+        grid-template-columns: 1fr auto;
+        padding: 12px 18px;
+      }
+      .nav-actions .btn-dark { display: none; }
+      .page {
+        width: min(100% - 32px, 560px);
+        padding: 26px 0 56px;
+      }
+      .hero-row { grid-template-columns: 1fr; gap: 18px; }
+      .catalog-cta { flex-direction: column; align-items: stretch; }
+      .material-card { grid-template-columns: 1fr; gap: 16px; padding: 16px; }
+      .material-image { min-height: 210px; }
+      .quality-grid, .specs-list { grid-template-columns: 1fr; }
+      .card-actions { flex-direction: column; align-items: stretch; }
+      .specs-btn, .card-quote { min-width: 0; }
+      .footer { align-items: flex-start; flex-direction: column; padding: 26px 20px; }
+      .footer-links { justify-content: flex-start; gap: 16px; }
+      .footer-copy { white-space: normal; }
     }
   </style>
   <script src="assets/brand.js" defer></script>
 </head>
 <body>
-
-<nav class="nav">
-  <div class="nav-left">
-    <a href="index.html" class="wordmark" id="shopWordmark">mahi3d</a>
-    <ul class="nav-links-row">
-      <li><a href="catalog.html" class="active">Materials</a></li>
-      <li><a href="index.html#how-it-works">How it works</a></li>
-    </ul>
-  </div>
-  <a href="quote.html" class="btn-quote">Get a Quote</a>
-</nav>
-
-<div class="page">
-
-  <div class="page-header">
-    <p class="page-label">Catalogue</p>
-    <h1 class="page-title">Available Materials</h1>
-    <p class="page-sub">Choose from our range of 3D printing materials, each with multiple colour and finish options.</p>
-  </div>
-
-  <div class="filter-bar" id="filterBar">
-    <button class="filter-btn active" data-cat="">All</button>
-  </div>
-
-  <div class="mat-grid" id="matGrid">
-    <div class="state-box">
-      <div class="spinner"></div>
-      <p>Loading materials…</p>
+  <header class="topbar">
+    <a class="brand" data-link="home" href="index.html?shop=mahi3d">mahi3d</a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a data-link="materials" href="catalog.html?shop=mahi3d" aria-current="page">Materials</a>
+      <a data-link="how" href="index.html?shop=mahi3d#how-it-works">How it works</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="btn-dark" data-link="quote" href="quote.html?shop=mahi3d">Start a Quote</a>
+      <button class="menu-btn" type="button" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
     </div>
-  </div>
+  </header>
 
-</div>
-
-<footer class="site-footer">
-  <a href="index.html" class="footer-wordmark" id="footerWordmark">mahi3d</a>
-  <p class="footer-copy">&copy; 2025 mahi3d. All rights reserved.</p>
-</footer>
-
-<script>
-  // Derive shop slug from URL param (?shop=X) or hostname prefix
-  const shopSlug = new URLSearchParams(window.location.search).get('shop') || 'mahi3d';
-
-  const STOCK_MAP = {
-    in_stock:      { cls: 'in',  label: 'In stock' },
-    low_stock:     { cls: 'low', label: 'Low stock' },
-    out_of_stock:  { cls: 'out', label: 'Out of stock' },
-  };
-
-  let allMaterials = [];
-  let activeFilter = '';
-
-  function renderMats(mats) {
-    const grid = document.getElementById('matGrid');
-    if (!mats.length) {
-      grid.innerHTML = `<div class="state-box"><p>No materials found.</p></div>`;
-      return;
-    }
-
-    grid.innerHTML = mats.map(m => {
-      const stock   = STOCK_MAP[m.stock_status] || STOCK_MAP.in_stock;
-      const colours = Array.isArray(m.colours) ? m.colours : [];
-      const finishes = Array.isArray(m.finishes) ? m.finishes : [];
-      const isOut   = m.stock_status === 'out_of_stock';
-
-      // Colour bar + swatches
-      const barSegments = colours.slice(0, 8).map(c =>
-        `<span style="background:${c.hex}"></span>`
-      ).join('');
-
-      const swatchItems = colours.slice(0, 7).map(c =>
-        `<span class="swatch" style="background:${c.hex}" title="${c.name}"></span>`
-      ).join('');
-      const moreCount = colours.length > 7 ? `<span class="swatch-more">+${colours.length - 7}</span>` : '';
-
-      const finishTags = finishes.map(f =>
-        `<span class="finish-tag">${f.name || f}</span>`
-      ).join('');
-
-      return `
-        <div class="mat-card" data-id="${m.id}">
-          ${colours.length ? `<div class="mat-colour-bar">${barSegments}</div>` : ''}
-          <div class="mat-body">
-            <div class="mat-category">${m.category || 'FDM'}</div>
-            <div class="mat-name">${m.name}</div>
-            ${m.description_short ? `<p class="mat-desc">${m.description_short}</p>` : ''}
-            ${colours.length ? `<div class="mat-swatches">${swatchItems}${moreCount}</div>` : ''}
-            ${finishes.length ? `<div class="mat-finishes">${finishTags}</div>` : ''}
-          </div>
-          <div class="mat-footer">
-            <div class="mat-stock">
-              <span class="stock-dot ${stock.cls}"></span>
-              <span class="stock-label ${stock.cls}">${stock.label}</span>
-            </div>
-            <a href="quote.html" class="btn-get-quote ${isOut ? 'disabled' : ''}">
-              ${isOut ? 'Unavailable' : 'Get a Quote'}
-            </a>
-          </div>
+  <main class="page">
+    <section class="hero-row" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">Materials</p>
+        <h1 id="pageTitle">Materials</h1>
+        <p class="subtitle">Browse available materials, colours, finishes, and specs before starting your quote.</p>
+      </div>
+      <aside class="helper">
+        <svg class="helper-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3l-2 5-5 2 5 2 2 5 2-5 5-2-5-2-2-5z"/><path d="M5 16l-1 3-3 1 3 1 1 3 1-3 3-1-3-1-1-3z"/></svg>
+        <div>
+          <strong>Exact options are quote-specific</strong>
+          <p>Available colours, finish presets, and pricing are loaded from this store's current quoting setup.</p>
         </div>
-      `;
-    }).join('');
-  }
+      </aside>
+    </section>
 
-  function applyFilter(cat) {
-    activeFilter = cat;
-    document.querySelectorAll('.filter-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.cat === cat)
-    );
-    renderMats(cat ? allMaterials.filter(m => m.category === cat) : allMaterials);
-  }
+    <section class="catalog-cta" aria-label="Start a quote">
+      <div>
+        <strong>Ready to price your part?</strong>
+        <p>Start the normal quote flow when you are ready to upload a file and choose options.</p>
+      </div>
+      <a class="btn-light" data-link="quote" href="quote.html?shop=mahi3d">Start a Quote &rarr;</a>
+    </section>
 
-  async function loadMaterials() {
-    try {
-      const r = await fetch(`/api/customer/catalog?shop=${encodeURIComponent(shopSlug)}`);
-      if (!r.ok) throw new Error('Failed');
-      allMaterials = await r.json();
+    <div class="filters" id="filters" aria-label="Material filters"></div>
 
-      // Build filter buttons from unique categories
-      const cats = [...new Set(allMaterials.map(m => m.category).filter(Boolean))];
-      const bar = document.getElementById('filterBar');
-      cats.forEach(c => {
-        const btn = document.createElement('button');
-        btn.className = 'filter-btn';
-        btn.dataset.cat = c;
-        btn.textContent = c;
-        btn.addEventListener('click', () => applyFilter(c));
-        bar.appendChild(btn);
-      });
+    <section class="materials-list" id="materialsList" aria-label="Materials catalogue">
+      <div class="state"><div class="spinner"></div><p>Loading materials...</p></div>
+    </section>
+  </main>
 
-      bar.querySelector('[data-cat=""]').addEventListener('click', () => applyFilter(''));
-      renderMats(allMaterials);
-    } catch {
-      document.getElementById('matGrid').innerHTML =
-        `<div class="state-box"><p>Could not load materials. Please try again later.</p></div>`;
-    }
-  }
+  <footer class="footer">
+    <a data-link="home" href="index.html?shop=mahi3d" class="footer-wordmark">mahi3d</a>
+    <ul class="footer-links">
+      <li><a data-link="materials" href="catalog.html?shop=mahi3d">Materials</a></li>
+      <li><a data-link="quote" href="quote.html?shop=mahi3d">Quote</a></li>
+      <li><a data-link="orders" href="customer/dashboard.html?shop=mahi3d#orders">My Orders</a></li>
+      <li><a data-link="help" href="customer/dashboard.html?shop=mahi3d#help">Contact</a></li>
+      <li><a data-link="help" href="customer/dashboard.html?shop=mahi3d#help">Terms</a></li>
+      <li><a data-link="help" href="customer/dashboard.html?shop=mahi3d#help">Privacy</a></li>
+    </ul>
+    <p class="footer-copy">&copy; 2026 mahi3d. All rights reserved.</p>
+  </footer>
 
-  // Populate shop wordmark
-  fetch(`/api/customer/shop-info?slug=${encodeURIComponent(shopSlug)}`)
-    .then(r => r.ok ? r.json() : null)
-    .then(d => {
-      if (d?.name) {
-        document.getElementById('shopWordmark').textContent = d.name;
-        document.getElementById('footerWordmark').textContent = d.name;
-        document.title = `${d.name} — Materials`;
+  <script>
+    const SHOP_SLUG = (() => {
+      try {
+        const fromUrl = new URLSearchParams(location.search).get('shop');
+        if (fromUrl) return fromUrl;
+      } catch {}
+      try {
+        return JSON.parse(localStorage.getItem('form_selection') || '{}').shopSlug || 'mahi3d';
+      } catch {
+        return 'mahi3d';
       }
-    }).catch(() => {});
+    })();
 
-  loadMaterials();
-</script>
+    const listEl = document.getElementById('materialsList');
+    const filtersEl = document.getElementById('filters');
+    let materials = [];
+    let settings = {};
+    let configuredFilters = [];
+    let activeFilter = 'all';
+    const openSpecs = new Set();
+
+    const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    const money = n => Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const keyFor = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const quoteHref = () => `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+
+    const MATERIAL_PLACEHOLDERS = {
+      pla: { src: 'assets/material-placeholders/pla.png', alt: 'Example decorative 3D printed part' },
+      petg: { src: 'assets/material-placeholders/petg.png', alt: 'Example functional 3D printed bracket' },
+      asa: { src: 'assets/material-placeholders/asa.png', alt: 'Example 3D printed enclosure' },
+      tpu: { src: 'assets/material-placeholders/tpu.png', alt: 'Example flexible 3D printed part' },
+      nylon: { src: 'assets/material-placeholders/nylon.png', alt: 'Example mechanical 3D printed part' },
+      abs: { src: 'assets/material-placeholders/abs.png', alt: 'Example practical 3D printed housing' },
+      resin: { src: 'assets/material-placeholders/resin.png', alt: 'Example detailed 3D printed model' },
+      generic: { src: 'assets/material-placeholders/generic.png', alt: 'Example 3D printed part' },
+    };
+
+    function safeAssetUrl(value) {
+      const url = String(value || '').trim();
+      if (!url) return '';
+      if (/^(assets\/|uploads\/|\/uploads\/|\/assets\/|https?:\/\/)/i.test(url)) return url;
+      return '';
+    }
+
+    function safeHex(value) {
+      const hex = String(value || '').trim();
+      return /^#[0-9a-fA-F]{3,8}$/.test(hex) ? hex : '#cccccc';
+    }
+
+    function normaliseMaterialName(value) {
+      return String(value || '').toLowerCase().replace(/[‐‑‒–—]/g, '-');
+    }
+
+    function placeholderForMaterial(mat) {
+      const name = normaliseMaterialName(`${mat.name || ''} ${mat.category || ''}`);
+      if (/\bpetg\b|pet-g|copolyester/.test(name)) return MATERIAL_PLACEHOLDERS.petg;
+      if (/\basa\b|acrylonitrile styrene acrylate/.test(name)) return MATERIAL_PLACEHOLDERS.asa;
+      if (/\btpu\b|\btpe\b|flexible|thermoplastic polyurethane/.test(name)) return MATERIAL_PLACEHOLDERS.tpu;
+      if (/\bnylon\b|\bpa\s*[- ]?(6|11|12)\b|\bpa6\b|\bpa11\b|\bpa12\b|polyamide/.test(name)) return MATERIAL_PLACEHOLDERS.nylon;
+      if (/\babs\b|acrylonitrile butadiene styrene/.test(name)) return MATERIAL_PLACEHOLDERS.abs;
+      if (/\bresin\b|\bsla\b|\bdlp\b|\bmsla\b|photopolymer/.test(name)) return MATERIAL_PLACEHOLDERS.resin;
+      if (/\bpla\b|polylactic/.test(name)) return MATERIAL_PLACEHOLDERS.pla;
+      return MATERIAL_PLACEHOLDERS.generic;
+    }
+
+    function materialImageMarkup(mat) {
+      const configured = safeAssetUrl(mat.image_url);
+      if (configured) {
+        return `<img src="${esc(configured)}" alt="${esc(mat.image_alt || mat.name || 'Material example')}">`;
+      }
+      const placeholder = placeholderForMaterial(mat);
+      return `<img src="${esc(placeholder.src)}" alt="${esc(placeholder.alt)}">`;
+    }
+
+    function ratingPercent(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 60;
+      const pct = n > 5 ? n : n * 20;
+      return Math.max(0, Math.min(100, Math.round(pct)));
+    }
+
+    function ratingBar(value) {
+      const pct = ratingPercent(value);
+      return `
+        <span class="rating-bar" aria-hidden="true"><span class="rating-fill" style="--rating:${pct}%"></span></span>
+        <span class="rating-percent">${pct}%</span>
+      `;
+    }
+
+    function normalizedRating(value) {
+      return ratingPercent(value);
+    }
+
+    function finishPreview(finish) {
+      const imageUrl = safeAssetUrl(finish.previewImageUrl);
+      if (imageUrl) return `<img src="${esc(imageUrl)}" alt="">`;
+      const previewClass = String(finish.previewType || finish.name || '').toLowerCase().includes('fine') ? 'fine' : '';
+      return `<div class="finish-preview ${previewClass}"></div>`;
+    }
+
+    function applyLinks() {
+      const links = {
+        home: `index.html?shop=${encodeURIComponent(SHOP_SLUG)}`,
+        materials: `catalog.html?shop=${encodeURIComponent(SHOP_SLUG)}`,
+        how: `index.html?shop=${encodeURIComponent(SHOP_SLUG)}#how-it-works`,
+        quote: quoteHref(),
+        orders: `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#orders`,
+        help: `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#help`,
+      };
+      document.querySelectorAll('[data-link]').forEach(link => {
+        const next = links[link.dataset.link];
+        if (next) link.href = next;
+      });
+    }
+
+    function normaliseCatalogue(catalog, pricing) {
+      const rows = Array.isArray(catalog) ? catalog : (catalog.materials || []);
+      settings = Array.isArray(catalog) ? {} : (catalog.settings || {});
+      configuredFilters = Array.isArray(catalog?.filters) ? catalog.filters : [];
+      const priceRows = Array.isArray(pricing?.materials) ? pricing.materials : [];
+      const priceMap = new Map(priceRows.map(row => [String(row.id), row]));
+
+      return rows
+        .filter(row => row && row.active !== false && row.enabled !== false)
+        .map(row => {
+          const price = priceMap.get(String(row.id)) || {};
+          const colours = Array.isArray(row.colours) ? row.colours.filter(c => c.enabled !== false) : [];
+          let finishes = Array.isArray(row.finishes) ? row.finishes.filter(f => f.enabled !== false) : [];
+          if (finishes.length && !finishes.some(f => f.default)) {
+            finishes = finishes.map((f, index) => ({ ...f, default: index === 0 }));
+          }
+          const properties = row.properties || {};
+          const ratings = properties.ratings || {};
+          const basePrice = Number(price.base_price ?? row.base_price ?? 0);
+          const minCharge = Number(price.min_charge ?? row.min_charge ?? row.priceFrom ?? 0);
+          return {
+            ...row,
+            colours,
+            finishes,
+            tags: Array.isArray(row.tags) ? row.tags : [],
+            bestFor: Array.isArray(row.best_for) ? row.best_for : [],
+            specs: Array.isArray(row.specs) ? row.specs : [],
+            learnMore: properties.learn_more || row.learn_more || '',
+            priceUnit: row.price_unit || 'per cm3',
+            basePrice,
+            minCharge,
+            ratings: {
+              strength: normalizedRating(ratings.strength ?? properties.strength),
+              flexibility: normalizedRating(ratings.flexibility ?? properties.flexibility),
+              heatResistance: normalizedRating(ratings.heatResistance ?? properties.heat),
+              detail: normalizedRating(ratings.detail ?? properties.detail),
+              outdoorUse: normalizedRating(ratings.outdoorUse ?? properties.outdoor_use),
+            },
+          };
+        });
+    }
+
+    function buildFilters() {
+      const map = new Map();
+      const add = label => {
+        const text = String(label || '').trim();
+        if (!text) return;
+        const key = keyFor(text);
+        if (!map.has(key)) map.set(key, text);
+      };
+      configuredFilters.forEach(add);
+      if (Array.isArray(settings.filters)) settings.filters.forEach(add);
+      materials.forEach(material => {
+        add(material.category);
+        (material.tags || []).forEach(add);
+      });
+      return [
+        { key: 'all', label: 'All' },
+        { key: 'recommended', label: 'Recommended' },
+        ...[...map.entries()].map(([key, label]) => ({ key: `tag:${key}`, label })),
+      ];
+    }
+
+    function renderFilters() {
+      const chips = buildFilters();
+      filtersEl.innerHTML = chips.map(chip => `
+        <button class="chip ${activeFilter === chip.key ? 'active' : ''}" type="button" data-filter="${esc(chip.key)}" aria-pressed="${activeFilter === chip.key}">
+          ${esc(chip.label)}
+        </button>
+      `).join('');
+      filtersEl.querySelectorAll('.chip').forEach(button => {
+        button.addEventListener('click', () => {
+          activeFilter = button.dataset.filter || 'all';
+          renderFilters();
+          renderMaterials();
+        });
+      });
+    }
+
+    function filteredMaterials() {
+      if (activeFilter === 'recommended') return materials.filter(material => material.recommended);
+      if (activeFilter.startsWith('tag:')) {
+        const target = activeFilter.slice(4);
+        return materials.filter(material => {
+          const values = [material.category, ...(material.tags || [])].map(keyFor);
+          return values.includes(target);
+        });
+      }
+      return materials;
+    }
+
+    function priceMarkup(material) {
+      const start = material.minCharge > 0 ? material.minCharge : material.basePrice;
+      const unitText = material.basePrice > 0
+        ? `Rate $${money(material.basePrice)} ${material.priceUnit}`
+        : material.priceUnit;
+      if (!start) {
+        return `<div class="price-card"><span>Starting price</span><strong>Configured by quote</strong></div>`;
+      }
+      return `<div class="price-card"><span>Starting price</span><strong>From $${money(start)}</strong><span>${esc(unitText)}</span></div>`;
+    }
+
+    function materialCard(material) {
+      const specsOpen = openSpecs.has(String(material.id));
+      const specsRows = material.specs.length
+        ? `<div class="specs-list">${material.specs.map(spec => `
+            <div class="spec-item"><strong>${esc(spec.label || spec.name || 'Spec')}</strong>${esc(spec.value || spec.text || '')}</div>
+          `).join('')}</div>`
+        : '';
+      const detailCopy = [
+        material.description_long ? `<p class="specs-copy">${esc(material.description_long)}</p>` : '',
+        material.learnMore ? `<p class="specs-copy">${esc(material.learnMore)}</p>` : '',
+      ].join('');
+      const colours = material.colours.slice(0, 10);
+      const hiddenColours = Math.max(0, material.colours.length - colours.length);
+      const finishes = material.finishes.slice(0, 4);
+      const hiddenFinishes = Math.max(0, material.finishes.length - finishes.length);
+      return `
+        <article class="material-card" data-material-id="${esc(material.id)}">
+          ${material.recommended ? '<span class="recommended">Recommended</span>' : ''}
+          <div class="material-image">${materialImageMarkup(material)}</div>
+          <div class="material-main">
+            <h2 class="material-name">${esc(material.name || 'Material')}</h2>
+            <p class="material-desc">${esc(material.description_short || 'Configured material option.')}</p>
+            ${material.bestFor.length ? `<div class="best-row"><span class="mini-label">Best for:</span>${material.bestFor.slice(0, 4).map(label => `<span class="pill">${esc(label)}</span>`).join('')}</div>` : ''}
+            ${priceMarkup(material)}
+          </div>
+          <div class="column">
+            <p class="column-title">Performance</p>
+            <div class="ratings">
+              <div class="rating-row"><span>Strength</span>${ratingBar(material.ratings.strength)}</div>
+              <div class="rating-row"><span>Flexibility</span>${ratingBar(material.ratings.flexibility)}</div>
+              <div class="rating-row"><span>Heat resistance</span>${ratingBar(material.ratings.heatResistance)}</div>
+              <div class="rating-row"><span>Detail</span>${ratingBar(material.ratings.detail)}</div>
+              <div class="rating-row"><span>Outdoor use</span>${ratingBar(material.ratings.outdoorUse)}</div>
+            </div>
+          </div>
+          <div class="column">
+            <p class="column-title">Available colours</p>
+            <div class="swatches">
+              ${colours.map(colour => `<span class="swatch" style="--c:${safeHex(colour.hex)}" title="${esc(colour.name)}" aria-label="${esc(colour.name)}"></span>`).join('') || '<span class="material-desc muted">No colours configured</span>'}
+            </div>
+            ${material.colours.length ? `<div class="count-note">${material.colours.length} colour${material.colours.length === 1 ? '' : 's'}${hiddenColours ? `, +${hiddenColours} more` : ''}</div>` : ''}
+          </div>
+          <div class="column">
+            <p class="column-title">Print quality</p>
+            <div class="quality-grid">
+              ${finishes.map(finish => `
+                <div class="quality-card">
+                  <strong>${esc(finish.name)}</strong>
+                  ${finish.layerHeight ? `<span class="layer">${esc(finish.layerHeight)}</span>` : ''}
+                  <p>${esc(finish.description || 'Configured finish option.')}</p>
+                  ${finishPreview(finish)}
+                </div>
+              `).join('') || '<span class="material-desc muted">No finish presets configured</span>'}
+            </div>
+            ${hiddenFinishes ? `<div class="count-note" style="margin-top:8px;">+${hiddenFinishes} more finish option${hiddenFinishes === 1 ? '' : 's'}</div>` : ''}
+          </div>
+          <div class="card-actions">
+            <button class="specs-btn" type="button" data-specs="${esc(material.id)}" aria-expanded="${specsOpen ? 'true' : 'false'}">${specsOpen ? 'Hide specs' : 'View specs'}</button>
+            <a class="card-quote" href="${quoteHref()}">Start a Quote</a>
+          </div>
+          <div class="specs-panel ${specsOpen ? 'open' : ''}" id="specs-${esc(material.id)}">
+            ${detailCopy}
+            ${specsRows || (!detailCopy ? '<p class="specs-copy">No detailed specs configured for this material yet.</p>' : '')}
+          </div>
+        </article>
+      `;
+    }
+
+    function renderMaterials() {
+      const rows = filteredMaterials();
+      if (!rows.length) {
+        const message = activeFilter === 'all'
+          ? (settings.emptyState || 'No materials are available right now.')
+          : 'No materials match this filter.';
+        listEl.innerHTML = `<div class="state"><strong>${esc(message)}</strong>${activeFilter !== 'all' ? '<button class="chip" type="button" data-reset-filter>Show all</button>' : ''}</div>`;
+        listEl.querySelector('[data-reset-filter]')?.addEventListener('click', () => {
+          activeFilter = 'all';
+          renderFilters();
+          renderMaterials();
+        });
+        return;
+      }
+
+      listEl.innerHTML = rows.map(materialCard).join('');
+      listEl.querySelectorAll('[data-specs]').forEach(button => {
+        button.addEventListener('click', () => {
+          const id = String(button.dataset.specs);
+          if (openSpecs.has(id)) openSpecs.delete(id);
+          else openSpecs.add(id);
+          renderMaterials();
+        });
+      });
+    }
+
+    async function init() {
+      applyLinks();
+      try {
+        const [catalogRes, pricingRes] = await Promise.all([
+          fetch(`/api/customer/catalog?shop=${encodeURIComponent(SHOP_SLUG)}`),
+          fetch(`/api/customer/pricing?shop=${encodeURIComponent(SHOP_SLUG)}`),
+        ]);
+        if (!catalogRes.ok) throw new Error('Catalog unavailable');
+        const catalog = await catalogRes.json();
+        const pricing = pricingRes.ok ? await pricingRes.json() : { materials: [] };
+        materials = normaliseCatalogue(catalog, pricing);
+        renderFilters();
+        renderMaterials();
+      } catch (err) {
+        console.error(err);
+        listEl.innerHTML = `
+          <div class="state">
+            <strong>Could not load materials.</strong>
+            <p>Please try again in a moment.</p>
+          </div>
+        `;
+      }
+    }
+
+    init();
+  </script>
 </body>
 </html>

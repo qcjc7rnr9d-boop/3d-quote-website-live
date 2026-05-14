@@ -483,6 +483,33 @@
       line-height: 1.55;
     }
     .specs-panel.open { display: block; }
+    .material-size-warning {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 11px 13px;
+      border: 1px solid rgba(190, 62, 47, 0.28);
+      border-radius: 12px;
+      background: rgba(190, 62, 47, 0.08);
+      color: #9f2f25;
+      font-size: 13px;
+      font-weight: 650;
+      line-height: 1.45;
+    }
+    .material-size-warning::before {
+      content: "!";
+      display: inline-grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(190, 62, 47, 0.14);
+      color: #9f2f25;
+      font-size: 12px;
+      flex: 0 0 auto;
+      margin-top: 1px;
+    }
     .specs-list {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -582,6 +609,22 @@
       opacity: 0.46;
       pointer-events: none;
     }
+    .summary-size-warning {
+      grid-column: 1 / -1;
+      display: none;
+      margin: 0 4px 2px;
+      padding: 10px 12px;
+      border: 1px solid rgba(190, 62, 47, 0.25);
+      border-radius: 10px;
+      background: rgba(190, 62, 47, 0.08);
+      color: #9f2f25;
+      font-size: 12px;
+      font-weight: 650;
+      line-height: 1.45;
+    }
+    .summary-size-warning.show {
+      display: block;
+    }
 
     @media (max-width: 1320px) {
       .topbar { grid-template-columns: auto 1fr auto; padding: 0 20px; }
@@ -647,8 +690,8 @@
       <div class="progress-step"><span>3</span>Quote</div>
     </div>
     <nav class="nav-actions" aria-label="Main navigation">
-      <a href="materials.html">Materials</a>
-      <a href="quote.html">Quote</a>
+      <a href="catalog.html?shop=mahi3d" data-catalog-link>Materials</a>
+      <a href="quote.html?shop=mahi3d" data-quote-link>Quote</a>
       <button class="menu-btn" type="button" aria-label="Menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
@@ -690,21 +733,94 @@
       <span class="summary-value" id="summaryFinish">-</span>
     </div>
     <a class="continue-btn" id="continueBtn" href="quote.html" aria-disabled="true">Continue to Quote <span aria-hidden="true">→</span></a>
+    <div class="summary-size-warning" id="summarySizeWarning" role="alert"></div>
   </aside>
 
   <script>
     const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'mahi3d';
+    const SIZE_WARNING_KEY = 'material_size_warning';
     const listEl = document.getElementById('materialsList');
     const filtersEl = document.getElementById('filters');
     const continueBtn = document.getElementById('continueBtn');
+    document.querySelectorAll('[data-catalog-link]').forEach(link => {
+      link.href = `catalog.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    });
+    document.querySelectorAll('[data-quote-link]').forEach(link => {
+      link.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    });
     let materials = [];
     let settings = {};
     let activeFilter = 'all';
     let selection = { materialId: null, colourId: null, finishId: null };
+    let savedSizeWarning = consumeSavedSizeWarning();
     const openSpecs = new Set();
 
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     const money = n => Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function formatMm(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '—';
+      return `${(Math.round(n * 10) / 10).toLocaleString('en-NZ')} mm`;
+    }
+
+    function normaliseDimensions(source) {
+      const d = source || {};
+      const xMm = Number(d.xMm ?? d.x_mm ?? d.x);
+      const yMm = Number(d.yMm ?? d.y_mm ?? d.y);
+      const zMm = Number(d.zMm ?? d.z_mm ?? d.z ?? d.heightMm ?? d.height);
+      if (![xMm, yMm, zMm].every(Number.isFinite)) return null;
+      return { xMm, yMm, zMm };
+    }
+
+    function readSavedModelDimensions() {
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem('form_file') || 'null'); } catch {}
+      return normaliseDimensions(saved?.dimensions || saved?.file?.dimensions || saved || null);
+    }
+
+    function consumeSavedSizeWarning() {
+      try {
+        const raw = localStorage.getItem(SIZE_WARNING_KEY);
+        if (!raw) return null;
+        localStorage.removeItem(SIZE_WARNING_KEY);
+        const data = JSON.parse(raw);
+        if (data?.shopSlug && data.shopSlug !== SHOP_SLUG) return null;
+        if (!data?.message) return null;
+        return data;
+      } catch {
+        try { localStorage.removeItem(SIZE_WARNING_KEY); } catch {}
+        return null;
+      }
+    }
+
+    function validateMaterialSize(mat) {
+      const dims = readSavedModelDimensions();
+      if (!dims || !mat) return { ok: true, message: '' };
+      const checks = [
+        { key: 'xMm', label: 'width/X', limit: Number(mat.max_x_mm) },
+        { key: 'yMm', label: 'depth/Y', limit: Number(mat.max_y_mm) },
+        { key: 'zMm', label: 'height/Z', limit: Number(mat.max_z_mm) },
+      ];
+      const failed = checks.find(c => Number.isFinite(c.limit) && c.limit > 0 && dims[c.key] > c.limit);
+      if (!failed) return { ok: true, message: '' };
+      return {
+        ok: false,
+        message: `Model ${failed.label} is ${formatMm(dims[failed.key])}, but ${mat.name} allows up to ${formatMm(failed.limit)}.`,
+      };
+    }
+
+    function materialSizeStatus(mat) {
+      const direct = validateMaterialSize(mat);
+      if (!direct.ok || !mat) return direct;
+      if (
+        savedSizeWarning?.message
+        && (!savedSizeWarning.materialId || String(savedSizeWarning.materialId) === String(mat.id))
+      ) {
+        return { ok: false, message: savedSizeWarning.message };
+      }
+      return direct;
+    }
 
     const MATERIAL_PLACEHOLDERS = {
       pla: { src: 'assets/material-placeholders/pla.png', alt: 'Example PLA decorative planter' },
@@ -869,6 +985,7 @@
       const selected = String(selection.materialId) === String(mat.id);
       const colour = selected ? currentColour(mat) : null;
       const finish = selected ? currentFinish(mat) : null;
+      const sizeStatus = selected ? materialSizeStatus(mat) : { ok: true, message: '' };
       const specsOpen = openSpecs.has(String(mat.id));
       const specs = mat.specs.length
         ? `<div class="specs-list">${mat.specs.map(s => `<div class="spec-item"><strong>${esc(s.label || s.name || 'Spec')}</strong>${esc(s.value || s.text || '')}</div>`).join('')}</div>`
@@ -923,6 +1040,7 @@
             <button class="specs-btn" type="button" data-specs="${esc(mat.id)}" aria-expanded="${specsOpen ? 'true' : 'false'}">${specsOpen ? 'Hide specs' : 'View specs'}</button>
             <button class="select-btn" type="button">${selected ? 'Selected' : 'Select'}</button>
           </div>
+          ${!sizeStatus.ok ? `<div class="material-size-warning">${esc(sizeStatus.message)}</div>` : ''}
           <div class="specs-panel ${specsOpen ? 'open' : ''}" id="specs-${esc(mat.id)}">
             ${detailCopy}
             ${specs || (!detailCopy ? '<p class="specs-copy">No detailed specs configured for this material yet.</p>' : '')}
@@ -1061,14 +1179,34 @@
       const mat = currentMaterial();
       const colour = currentColour(mat);
       const finish = currentFinish(mat);
+      const sizeStatus = materialSizeStatus(mat);
       document.getElementById('summaryMaterial').textContent = mat ? mat.name : 'Select a material';
       document.getElementById('summaryColour').textContent = colour ? colour.name : '-';
       document.getElementById('summarySwatch').style.setProperty('--c', colour?.hex || '#cccccc');
       const finishParts = [finish?.name, finish?.layerHeight].filter(Boolean);
       document.getElementById('summaryFinish').textContent = finishParts.length ? finishParts.join(' — ') : '-';
+      const summaryWarning = document.getElementById('summarySizeWarning');
+      if (summaryWarning) {
+        summaryWarning.textContent = sizeStatus.message;
+        summaryWarning.classList.toggle('show', !sizeStatus.ok);
+      }
       continueBtn.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
-      continueBtn.setAttribute('aria-disabled', mat ? 'false' : 'true');
+      continueBtn.setAttribute('aria-disabled', mat && sizeStatus.ok ? 'false' : 'true');
+      continueBtn.title = !sizeStatus.ok ? sizeStatus.message : '';
     }
+
+    continueBtn.addEventListener('click', e => {
+      const mat = currentMaterial();
+      const sizeStatus = materialSizeStatus(mat);
+      if (!mat || !sizeStatus.ok) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (sizeStatus.message) {
+          savedSizeWarning = { shopSlug: SHOP_SLUG, materialId: mat?.id || null, message: sizeStatus.message };
+          renderMaterials();
+        }
+      }
+    });
 
     async function init() {
       try {

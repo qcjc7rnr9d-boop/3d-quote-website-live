@@ -30,6 +30,7 @@ test('discovery UI asks for new stores and sends newLeadTarget with known keys',
 
 test('outreach workflow UI exposes simple pipeline actions and selected downloads', () => {
   assert.match(html, /Download selected/);
+  assert.match(html, /Select all businesses/);
   assert.match(html, /Email list CSV/);
   assert.match(html, /Call sheet CSV/);
   assert.match(html, /Outreach Notes/);
@@ -40,4 +41,17 @@ test('outreach workflow UI exposes simple pipeline actions and selected download
   assert.match(html, /Not interested/);
   assert.match(html, /Follow up/);
   assert.doesNotMatch(html, /Email-list status/);
+});
+
+test('table next action controls use a dropdown menu', () => {
+  assert.match(html, /class="next-action-select"/);
+  assert.match(html, /changeLeadPipelineAction/);
+  assert.match(html, /Choose next action/);
+});
+
+test('top filters are split into primary and advanced groups', () => {
+  assert.match(html, /class="filter-panel"/);
+  assert.match(html, /class="primary-filters"/);
+  assert.match(html, /class="advanced-filters"/);
+  assert.match(html, /More filters/);
 });

@@ -77,6 +77,7 @@ function publicFinish(finish) {
     id: finish.id,
     name: finish.name,
     layerHeight: finish.layerHeight || '',
+    description: finish.description || '',
     priceMultiplier: toNumber(finish.priceMultiplier, 1),
   };
 }

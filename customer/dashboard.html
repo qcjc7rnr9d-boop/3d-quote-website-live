@@ -57,7 +57,7 @@
       padding: 18px 20px; box-shadow: var(--shadow); min-height: 96px;
     }
     .stat-pill-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
-    .stat-pill-value { font-family: var(--font-brand); font-size: 30px; line-height: 1; font-weight: 600; }
+    .stat-pill-value { font-family: var(--font-brand); font-size: 30px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
     .stat-link { display: inline-block; margin-top: 10px; color: var(--sage-dark); font-size: 12px; text-decoration: none; }
 
     .tab-panel { display: none; }
@@ -77,10 +77,12 @@
     .order-top { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; margin-bottom: 13px; }
     .order-ref { font-size: 14px; font-weight: 700; }
     .order-date { font-size: 12px; color: var(--muted); margin-top: 3px; }
-    .order-total { font-family: var(--font-brand); font-size: 22px; font-weight: 600; white-space: nowrap; }
+    .order-summary { display: grid; justify-items: end; gap: 7px; min-width: 104px; }
+    .order-total { font-family: var(--font-brand); font-size: 22px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .order-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 15px; }
     .meta-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
     .meta-value { font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .meta-value.wrap { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.4; }
 
     .status-track { padding: 14px; background: var(--off-white); border: 1px solid var(--border); border-radius: 14px; }
     .status-steps { display: flex; align-items: flex-start; }
@@ -186,6 +188,7 @@
       .stats-strip { grid-template-columns: 1fr; }
       .tab-btn { flex: 0 0 auto; }
       .order-top { flex-direction: column; }
+      .order-summary { justify-items: start; min-width: 0; }
       .order-meta { grid-template-columns: 1fr; }
     }
   </style>
@@ -388,8 +391,9 @@
     }
 
     function loginUrl() {
-      const next = `dashboard.html?shop=${encodeURIComponent(shopSlug)}${location.hash || '#overview'}`;
-      return `login.html?shop=${encodeURIComponent(shopSlug)}&next=${encodeURIComponent(next)}`;
+      const slug = shopSlug || me?.shop?.slug || '';
+      const next = `dashboard.html?shop=${encodeURIComponent(slug)}${location.hash || '#overview'}`;
+      return `login.html?shop=${encodeURIComponent(slug)}&next=${encodeURIComponent(next)}`;
     }
 
     function fmtMoney(n) {
@@ -445,6 +449,16 @@
       </div>`;
     }
 
+    function portalStats() {
+      return me?.stats || {
+        total_orders: me?.order_count || 0,
+        active_orders: orders.filter(o => o.payment_status === 'paid' && !['complete','cancelled'].includes(o.fulfilment_status)).length,
+        delivered_orders: orders.filter(o => o.payment_status === 'paid' && o.fulfilment_status === 'complete').length,
+        total_spent: me?.total_spent || 0,
+        currency: 'NZD'
+      };
+    }
+
     function renderOrders(targetId, list) {
       const target = document.getElementById(targetId);
       if (!list.length) {
@@ -458,18 +472,18 @@
               <div class="order-ref">Order #${esc(o.id)}</div>
               <div class="order-date">${esc(fmtDate(o.created_at))}</div>
             </div>
-            <div style="text-align:right">
+            <div class="order-summary">
               <div class="order-total">${esc(fmtMoney(o.total))}</div>
-              <span class="badge ${statusBadgeClass(o.fulfilment_status)}">${esc(statusLabel(o.fulfilment_status))}</span>
+              <span class="badge ${statusBadgeClass(o.fulfilment_status)}">${esc(o.fulfilment_status_label || statusLabel(o.fulfilment_status))}</span>
             </div>
           </div>
           <div class="order-meta">
             <div><div class="meta-label">Material</div><div class="meta-value">${esc(o.material_name || '—')}</div></div>
             <div><div class="meta-label">Colour</div><div class="meta-value">${esc(o.colour || '—')}</div></div>
-            <div><div class="meta-label">Finish</div><div class="meta-value">${esc(o.finish || '—')}</div></div>
+            <div><div class="meta-label">Finish</div><div class="meta-value wrap">${esc(o.finish || '—')}</div></div>
             <div><div class="meta-label">Qty</div><div class="meta-value">${esc(o.quantity || 1)}</div></div>
           </div>
-          ${o.file_name ? `<div class="meta-value" style="margin-bottom:14px">File: ${esc(o.file_name)}</div>` : ''}
+          ${o.file_name ? `<div class="meta-value wrap" style="margin-bottom:14px">File: ${esc(o.file_name)}</div>` : ''}
           ${o.fulfilment_status !== 'cancelled' ? renderStatusTrack(o.fulfilment_status) : ''}
           ${renderTracking(o)}
         </article>
@@ -484,12 +498,11 @@
     }
 
     function renderStats() {
-      const active = orders.filter(o => !['complete','cancelled'].includes(o.fulfilment_status)).length;
-      const delivered = orders.filter(o => o.fulfilment_status === 'complete').length;
-      document.getElementById('statCount').textContent = orders.length;
-      document.getElementById('statActive').textContent = active;
-      document.getElementById('statDelivered').textContent = delivered;
-      document.getElementById('statSpent').textContent = fmtMoney(me.total_spent);
+      const stats = portalStats();
+      document.getElementById('statCount').textContent = stats.total_orders || 0;
+      document.getElementById('statActive').textContent = stats.active_orders || 0;
+      document.getElementById('statDelivered').textContent = stats.delivered_orders || 0;
+      document.getElementById('statSpent').textContent = fmtMoney(stats.total_spent);
     }
 
     function renderHelp() {
@@ -633,7 +646,10 @@
 
     (async () => {
       try {
-        const meRes = await fetch('/api/customer/me');
+        const meUrl = shopSlug
+          ? `/api/customer/me?shop=${encodeURIComponent(shopSlug)}`
+          : '/api/customer/me';
+        const meRes = await fetch(meUrl);
         if (!meRes.ok) {
           window.location.href = loginUrl();
           return;
@@ -642,7 +658,7 @@
         const resolvedSlug = shopSlug || me.shop?.slug || '';
         const [shopRes, ordersRes] = await Promise.all([
           fetch(`/api/customer/shop-info?slug=${encodeURIComponent(resolvedSlug)}`).catch(() => null),
-          fetch('/api/customer/orders'),
+          fetch(`/api/customer/orders?shop=${encodeURIComponent(resolvedSlug)}`),
         ]);
         shopInfo = shopRes && shopRes.ok ? await shopRes.json() : null;
         orders = ordersRes.ok ? await ordersRes.json() : [];

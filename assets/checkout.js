@@ -16,6 +16,31 @@
 
   // Only hide the grid when there's literally nothing to show.
   const hasData = !!(cart && (cart.materialId || cart.file || cart.itemsNzd != null));
+  const SIZE_WARNING_KEY = 'material_size_warning';
+  let savedSelection = null;
+  try { savedSelection = JSON.parse(localStorage.getItem('form_selection') || 'null'); } catch {}
+  const urlShop = new URLSearchParams(window.location.search).get('shop');
+  const shopSlug = cart?.shopSlug || urlShop || savedSelection?.shopSlug || 'mahi3d';
+
+  function shopHref(path) {
+    return `${path}?shop=${encodeURIComponent(shopSlug)}`;
+  }
+
+  function redirectToMaterialSelection(message) {
+    try {
+      localStorage.setItem(SIZE_WARNING_KEY, JSON.stringify({
+        shopSlug,
+        materialId: cart?.materialId || savedSelection?.materialId || null,
+        message: message || 'This model is too large for the selected material.',
+      }));
+    } catch {}
+    const grid = document.getElementById('checkoutGrid');
+    if (grid) grid.style.display = 'none';
+    window.location.href = shopHref('materials.html');
+  }
+
+  document.querySelectorAll('a[href="quote.html"]').forEach(link => { link.href = shopHref('quote.html'); });
+  document.querySelectorAll('a[href="materials.html"]').forEach(link => { link.href = shopHref('materials.html'); });
 
   if (!hasData) {
     console.warn('[checkout] no cart data found - showing empty state. localStorage.cart =', cart);
@@ -30,7 +55,7 @@
         localStorage.removeItem('form_selection');
       } catch {}
       clearBtn.textContent = 'Cleared - heading to quote page...';
-      setTimeout(() => { location.href = 'quote.html'; }, 700);
+      setTimeout(() => { location.href = shopHref('quote.html'); }, 700);
     });
   } else {
     console.info('[checkout] loaded cart:', cart);
@@ -41,6 +66,42 @@
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function normaliseDimensions(source) {
+    const d = source || {};
+    const xMm = Number(d.xMm ?? d.x_mm ?? d.x);
+    const yMm = Number(d.yMm ?? d.y_mm ?? d.y);
+    const zMm = Number(d.zMm ?? d.z_mm ?? d.z ?? d.heightMm ?? d.height);
+    if (![xMm, yMm, zMm].every(Number.isFinite)) return null;
+    return { xMm, yMm, zMm };
+  }
+
+  function cartDimensions() {
+    return normaliseDimensions(
+      cart?.file?.dimensions
+      || cart?.dimensions
+      || cart?.quoteSnapshot?.selected?.dimensions
+      || null
+    );
+  }
+
+  function formatDimensionValue(value) {
+    return (Math.round(Number(value) * 10) / 10).toLocaleString('en-NZ', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    });
+  }
+
+  function formatDimensions(dimensions) {
+    if (!dimensions) return '';
+    return `${formatDimensionValue(dimensions.xMm)} × ${formatDimensionValue(dimensions.yMm)} × ${formatDimensionValue(dimensions.zMm)} mm`;
+  }
+
+  function finishLayerText(layerHeight) {
+    const text = String(layerHeight || '').trim();
+    if (!text) return '';
+    return /layer/i.test(text) ? text : `${text} layer height`;
   }
 
   // All payments charge in NZD (the platform's home currency).
@@ -71,6 +132,7 @@
     if (!quote?.lineItems || !quote?.selected) return;
     const selected = quote.selected;
     const lines = quote.lineItems;
+    cart.shopSlug = shopSlug;
     cart.materialId = selected.material?.id || cart.materialId;
     cart.materialName = selected.material?.name || cart.materialName;
     cart.colorId = selected.colour?.id || cart.colorId || null;
@@ -80,6 +142,9 @@
     cart.finishId = selected.finish?.id || cart.finishId || cart.finish || null;
     cart.finishLabel = selected.finish?.name || cart.finishLabel || '—';
     cart.finishLayerHeight = selected.finish?.layerHeight || cart.finishLayerHeight || '';
+    cart.finishDescription = selected.finish?.description || cart.finishDescription || '';
+    cart.dimensions = selected.dimensions || cart.dimensions || cart.file?.dimensions || null;
+    if (cart.file && selected.dimensions && !cart.file.dimensions) cart.file.dimensions = selected.dimensions;
     cart.infillTierId = selected.infill?.id || cart.infillTierId || null;
     cart.infillLabel = selected.infill?.label || cart.infillLabel || null;
     cart.quantity = selected.quantity || cart.quantity || 1;
@@ -103,7 +168,7 @@
   function quotePayload() {
     const file = cart.file || {};
     return {
-      shopSlug: cart.shopSlug || 'mahi3d',
+      shopSlug,
       materialId: cart.materialId,
       volumeCm3: file.volumeCm3 ?? cart.volumeCm3 ?? cart.quoteSnapshot?.selected?.volumeCm3,
       dimensions: file.dimensions ?? cart.dimensions ?? cart.quoteSnapshot?.selected?.dimensions ?? null,
@@ -127,6 +192,12 @@
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.ok === false) {
+      if (data.code === 'MODEL_TOO_LARGE' || data.code === 'MODEL_DIMENSIONS_REQUIRED') {
+        redirectToMaterialSelection(data.error || 'This model is too large for the selected material.');
+        const err = new Error(data.error || 'This model is too large for the selected material.');
+        err.redirected = true;
+        throw err;
+      }
       throw new Error(data.error || 'Could not refresh checkout total.');
     }
     applyQuoteSnapshot(data);
@@ -138,6 +209,12 @@
   function renderCart() {
     document.getElementById('reviewFileName').textContent = cart.file?.name || 'model.stl';
     document.getElementById('reviewFileSize').textContent = formatBytes(cart.file?.size);
+    const dims = cartDimensions();
+    const dimsEl = document.getElementById('reviewFileDimensions');
+    if (dimsEl) {
+      dimsEl.textContent = formatDimensions(dims);
+      dimsEl.style.display = dims ? '' : 'none';
+    }
     document.getElementById('reviewMaterial').textContent = cart.materialName || '-';
 
     const swatch = document.getElementById('reviewColorSwatch');
@@ -151,12 +228,23 @@
       (cart.colorName && cart.colorName !== '') ? cart.colorName : 'No colour selected';
 
     const finishLabel = cart.finishLabel || cart.finish || 'Standard';
-    const finishBadge = document.createElement('span');
-    finishBadge.className = cart.finish === 'fine' ? 'badge badge-sage' : 'badge badge-stone';
-    finishBadge.textContent = finishLabel;
+    const finishDetails = [
+      finishLayerText(cart.finishLayerHeight),
+      cart.finishDescription || '',
+    ].filter(Boolean).join(' · ');
     const finishEl = document.getElementById('reviewFinish');
+    finishEl.classList.add('stack');
     finishEl.textContent = '';
-    finishEl.appendChild(finishBadge);
+    const finishPrimary = document.createElement('span');
+    finishPrimary.className = 'finish-primary';
+    finishPrimary.textContent = finishLabel;
+    finishEl.appendChild(finishPrimary);
+    if (finishDetails) {
+      const finishSecondary = document.createElement('span');
+      finishSecondary.className = 'finish-secondary';
+      finishSecondary.textContent = finishDetails;
+      finishEl.appendChild(finishSecondary);
+    }
 
     if (cart.infillLabel) {
       document.getElementById('reviewInfill').textContent = cart.infillLabel;
@@ -203,6 +291,7 @@
   if (hasData) {
     renderCart();
     refreshCheckoutQuote().catch(err => {
+      if (err.redirected) return;
       document.getElementById('card-errors').textContent = err.message || 'Could not refresh checkout total.';
       quoteValidated = false;
       updatePayButton('Review total unavailable');
@@ -214,7 +303,7 @@
   (async () => {
     if (!hasData) return;
     try {
-      const r = await fetch('/api/stripe/public-key?shop=' + encodeURIComponent(cart.shopSlug || 'mahi3d'));
+      const r = await fetch('/api/stripe/public-key?shop=' + encodeURIComponent(shopSlug));
       const data = await r.json();
       if (!r.ok || !data.publishable_key) {
         document.getElementById('card-errors').textContent =
@@ -291,7 +380,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           paymentMethodId: paymentMethod.id,
-          shopSlug:        cart.shopSlug || 'mahi3d',
+          shopSlug,
           amount:          totalNzd,
           currency:        'nzd',
           customerEmail:   email,
