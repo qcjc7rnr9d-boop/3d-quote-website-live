@@ -9,6 +9,7 @@ import {
   getEffectivePlatformStripeConfig,
   updatePlatformStripeConfig,
 } from '../lib/platform-payments.js';
+import { ensurePlatformAuditTable, logPlatformAudit } from '../lib/platform-audit.js';
 import {
   bootstrapPlatformAdmin,
   createPlatformResetToken,
@@ -51,6 +52,68 @@ function publicPlatformAccount(admin = getPlatformAdmin()) {
     mail_has_custom_from: mail.has_custom_from,
     mail_using_resend_test_sender: mail.using_resend_test_sender,
   };
+}
+
+ensurePlatformAuditTable();
+
+function toNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function pageParams(query) {
+  const page = Math.max(1, parseInt(query.page || '1', 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(query.limit || '25', 10) || 25));
+  return { page, limit, offset: (page - 1) * limit };
+}
+
+function statusCounts(table, column, where = '', params = []) {
+  return db.prepare(`
+    SELECT COALESCE(${column}, 'unknown') as status, COUNT(*) as count
+    FROM ${table}
+    ${where}
+    GROUP BY COALESCE(${column}, 'unknown')
+  `).all(...params).reduce((acc, row) => {
+    acc[row.status] = row.count;
+    return acc;
+  }, {});
+}
+
+function platformOverviewPayload(where = '', params = []) {
+  const feePercent = getEffectivePlatformStripeConfig().feePercent || PLATFORM_FEE_PERCENT;
+  const suffix = where ? ` ${where}` : '';
+  const scopedOrders = suffix ? `FROM orders o${suffix}` : 'FROM orders o';
+  const revenue = db.prepare(`
+    SELECT
+      COUNT(*) as total_orders,
+      SUM(CASE WHEN o.payment_status = 'paid' THEN 1 ELSE 0 END) as paid_checkouts,
+      SUM(CASE WHEN o.fulfilment_status = 'complete' THEN 1 ELSE 0 END) as delivered_orders,
+      SUM(CASE WHEN o.fulfilment_status NOT IN ('complete','cancelled') THEN 1 ELSE 0 END) as active_orders,
+      COALESCE(SUM(CASE WHEN o.payment_status = 'paid' THEN o.total ELSE 0 END), 0) as paid_revenue,
+      COALESCE(AVG(CASE WHEN o.payment_status = 'paid' THEN o.total END), 0) as average_order_value
+    ${scopedOrders}
+  `).get(...params) || {};
+
+  return {
+    total_orders: revenue.total_orders || 0,
+    paid_checkouts: revenue.paid_checkouts || 0,
+    delivered_orders: revenue.delivered_orders || 0,
+    active_orders: revenue.active_orders || 0,
+    revenue: toNumber(revenue.paid_revenue),
+    estimated_platform_fees: toNumber(revenue.paid_revenue) * feePercent / 100,
+    average_order_value: toNumber(revenue.average_order_value),
+    fee_percent: feePercent,
+  };
+}
+
+function parseCustomerTarget(raw) {
+  const text = String(raw || '');
+  const idx = text.indexOf(':');
+  if (idx <= 0) return null;
+  const shopId = parseInt(text.slice(0, idx), 10);
+  const email = text.slice(idx + 1).trim().toLowerCase();
+  if (!Number.isFinite(shopId) || !email) return null;
+  return { shopId, email };
 }
 
 // ── POST /api/platform/login ──────────────────────────────────
@@ -122,6 +185,16 @@ router.put('/account', requirePlatformAuth, async (req, res) => {
     const admin = await updatePlatformAdminAccount({
       ownerEmail: nextEmail,
       newPassword: new_password || undefined,
+    });
+
+    logPlatformAudit(req, {
+      action: 'update_platform_account',
+      targetType: 'platform_admin',
+      targetId: admin?.id || 1,
+      metadata: {
+        changed_owner_email: nextEmail !== undefined,
+        changed_password: !!new_password,
+      },
     });
 
     res.json({ ok: true, ...publicPlatformAccount(admin) });
@@ -198,6 +271,382 @@ router.get('/stats', requirePlatformAuth, (req, res) => {
   }
 });
 
+router.get('/overview', requirePlatformAuth, (req, res) => {
+  try {
+    const overview = platformOverviewPayload();
+    res.json({
+      ...overview,
+      total_shops: db.prepare('SELECT COUNT(*) as c FROM shops').get().c,
+      customer_accounts: db.prepare('SELECT COUNT(*) as c FROM customer_accounts').get().c,
+      customer_records: db.prepare('SELECT COUNT(*) as c FROM customers').get().c,
+      payment_status_counts: statusCounts('orders', 'payment_status'),
+      fulfilment_status_counts: statusCounts('orders', 'fulfilment_status'),
+      stripe_ready_shops: db.prepare(`
+        SELECT COUNT(*) as c
+        FROM shops
+        WHERE stripe_account_id IS NOT NULL
+          AND stripe_charges_enabled = 1
+          AND stripe_payouts_enabled = 1
+          AND stripe_details_submitted = 1
+      `).get().c,
+    });
+  } catch (err) {
+    console.error('Platform overview error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/shops/:id/overview', requirePlatformAuth, (req, res) => {
+  try {
+    const shopId = parseInt(req.params.id, 10);
+    const shop = db.prepare(`
+      SELECT id, name, slug, email, plan, stripe_account_id,
+             stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted,
+             created_at, updated_at
+      FROM shops
+      WHERE id = ?
+    `).get(shopId);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+
+    const overview = platformOverviewPayload('WHERE o.shop_id = ?', [shop.id]);
+    const recent_orders = db.prepare(`
+      SELECT o.id, o.created_at, o.customer_email, o.customer_name, o.file_name,
+             o.colour, o.finish, o.quantity, o.subtotal, o.tax, o.shipping, o.total,
+             o.payment_status, o.fulfilment_status, m.name as material_name
+      FROM orders o
+      LEFT JOIN materials m ON m.id = o.material_id
+      WHERE o.shop_id = ?
+      ORDER BY o.created_at DESC
+      LIMIT 10
+    `).all(shop.id);
+
+    res.json({
+      shop: {
+        ...shop,
+        stripe_ready: !!(shop.stripe_account_id && shop.stripe_charges_enabled && shop.stripe_payouts_enabled && shop.stripe_details_submitted),
+      },
+      metrics: {
+        ...overview,
+        customer_accounts: db.prepare('SELECT COUNT(*) as c FROM customer_accounts WHERE shop_id = ?').get(shop.id).c,
+        customer_records: db.prepare('SELECT COUNT(*) as c FROM customers WHERE shop_id = ?').get(shop.id).c,
+        payment_status_counts: statusCounts('orders', 'payment_status', 'WHERE shop_id = ?', [shop.id]),
+        fulfilment_status_counts: statusCounts('orders', 'fulfilment_status', 'WHERE shop_id = ?', [shop.id]),
+      },
+      recent_orders,
+    });
+  } catch (err) {
+    console.error('Platform shop overview error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/orders', requirePlatformAuth, (req, res) => {
+  try {
+    const { page, limit, offset } = pageParams(req.query);
+    const conditions = [];
+    const params = [];
+    const {
+      shop, search, payment_status, fulfilment_status,
+      from, to, min_total, max_total,
+    } = req.query;
+
+    if (shop) {
+      conditions.push('o.shop_id = ?');
+      params.push(parseInt(shop, 10));
+    }
+    if (payment_status) {
+      conditions.push('o.payment_status = ?');
+      params.push(String(payment_status));
+    }
+    if (fulfilment_status) {
+      conditions.push('o.fulfilment_status = ?');
+      params.push(String(fulfilment_status));
+    }
+    if (from) {
+      conditions.push('o.created_at >= ?');
+      params.push(String(from));
+    }
+    if (to) {
+      conditions.push('o.created_at <= ?');
+      params.push(String(to));
+    }
+    if (min_total !== undefined && min_total !== '') {
+      conditions.push('o.total >= ?');
+      params.push(Number(min_total));
+    }
+    if (max_total !== undefined && max_total !== '') {
+      conditions.push('o.total <= ?');
+      params.push(Number(max_total));
+    }
+    if (search) {
+      const term = `%${String(search).trim().toLowerCase()}%`;
+      conditions.push(`(
+        LOWER(o.customer_email) LIKE ?
+        OR LOWER(o.customer_name) LIKE ?
+        OR LOWER(COALESCE(o.file_name, '')) LIKE ?
+        OR LOWER(COALESCE(m.name, '')) LIKE ?
+        OR CAST(o.id AS TEXT) LIKE ?
+      )`);
+      params.push(term, term, term, term, term);
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const total = db.prepare(`
+      SELECT COUNT(*) as c
+      FROM orders o
+      LEFT JOIN materials m ON m.id = o.material_id
+      ${where}
+    `).get(...params).c;
+    const orders = db.prepare(`
+      SELECT o.id, o.shop_id, s.name as shop_name, s.slug as shop_slug,
+             o.created_at, o.customer_email, o.customer_name, o.file_name,
+             o.material_id, m.name as material_name, o.colour, o.finish, o.quantity,
+             o.subtotal, o.tax, o.shipping, o.total,
+             o.payment_status, o.fulfilment_status, o.tracking_number
+      FROM orders o
+      JOIN shops s ON s.id = o.shop_id
+      LEFT JOIN materials m ON m.id = o.material_id
+      ${where}
+      ORDER BY o.created_at DESC, o.id DESC
+      LIMIT ? OFFSET ?
+    `).all(...params, limit, offset);
+
+    res.json({ orders, total, page, pages: Math.ceil(total / limit), limit });
+  } catch (err) {
+    console.error('Platform orders list error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/orders/:id', requirePlatformAuth, (req, res) => {
+  try {
+    const order = db.prepare(`
+      SELECT o.id, o.shop_id, o.created_at, o.customer_email, o.customer_name,
+             o.file_name, o.material_id, o.colour, o.finish, o.quantity,
+             o.subtotal, o.tax, o.shipping, o.total, o.payment_status,
+             o.fulfilment_status, o.tracking_number, o.tracking_url,
+             o.customer_message, o.notes, o.stripe_payment_id,
+             s.name as shop_name, s.slug as shop_slug, s.email as shop_email,
+             m.name as material_name, m.category as material_category,
+             ca.id as customer_account_id, ca.created_at as customer_account_created_at
+      FROM orders o
+      JOIN shops s ON s.id = o.shop_id
+      LEFT JOIN materials m ON m.id = o.material_id
+      LEFT JOIN customer_accounts ca ON ca.shop_id = o.shop_id AND LOWER(ca.email) = LOWER(o.customer_email)
+      WHERE o.id = ?
+    `).get(req.params.id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    logPlatformAudit(req, {
+      action: 'view_order_detail',
+      targetType: 'order',
+      targetId: order.id,
+      shopId: order.shop_id,
+    });
+
+    res.json({
+      id: order.id,
+      created_at: order.created_at,
+      file_name: order.file_name,
+      material: order.material_id ? {
+        id: order.material_id,
+        name: order.material_name,
+        category: order.material_category,
+      } : null,
+      colour: order.colour,
+      finish: order.finish,
+      quantity: order.quantity,
+      subtotal: order.subtotal,
+      tax: order.tax,
+      shipping: order.shipping,
+      total: order.total,
+      payment_status: order.payment_status,
+      fulfilment_status: order.fulfilment_status,
+      tracking_number: order.tracking_number,
+      tracking_url: order.tracking_url,
+      customer_message: order.customer_message,
+      notes: order.notes,
+      stripe_payment_id: order.stripe_payment_id,
+      shop: {
+        id: order.shop_id,
+        name: order.shop_name,
+        slug: order.shop_slug,
+        email: order.shop_email,
+      },
+      customer: {
+        email: order.customer_email,
+        name: order.customer_name,
+        account_id: order.customer_account_id,
+        account_created_at: order.customer_account_created_at,
+      },
+    });
+  } catch (err) {
+    console.error('Platform order detail error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/customers', requirePlatformAuth, (req, res) => {
+  try {
+    const { page, limit, offset } = pageParams(req.query);
+    const conditions = [];
+    const params = [];
+    if (req.query.shop) {
+      conditions.push('d.shop_id = ?');
+      params.push(parseInt(req.query.shop, 10));
+    }
+    if (req.query.search) {
+      const term = `%${String(req.query.search).trim().toLowerCase()}%`;
+      conditions.push('(LOWER(d.email) LIKE ? OR LOWER(COALESCE(d.name, "")) LIKE ? OR LOWER(s.name) LIKE ?)');
+      params.push(term, term, term);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const baseSql = `
+      WITH people AS (
+        SELECT shop_id, email, name, created_at, 1 as has_customer_record, 0 as has_account
+        FROM customers
+        UNION ALL
+        SELECT shop_id, email, name, created_at, 0 as has_customer_record, 1 as has_account
+        FROM customer_accounts
+      ),
+      deduped AS (
+        SELECT shop_id, LOWER(email) as email_key, MAX(email) as email,
+               COALESCE(
+                 MAX(CASE WHEN has_account = 1 THEN name END),
+                 MAX(CASE WHEN has_customer_record = 1 THEN name END)
+               ) as name,
+               MIN(CASE WHEN has_customer_record = 1 THEN created_at END) as customer_created_at,
+               MIN(CASE WHEN has_account = 1 THEN created_at END) as account_created_at,
+               MAX(has_customer_record) as has_customer_record,
+               MAX(has_account) as has_account
+        FROM people
+        GROUP BY shop_id, LOWER(email)
+      )
+    `;
+    const total = db.prepare(`
+      ${baseSql}
+      SELECT COUNT(*) as c
+      FROM deduped d
+      JOIN shops s ON s.id = d.shop_id
+      ${where}
+    `).get(...params).c;
+    const customers = db.prepare(`
+      ${baseSql}
+      SELECT d.shop_id, s.name as shop_name, s.slug as shop_slug,
+             d.email, d.name, d.customer_created_at, d.account_created_at,
+             d.has_customer_record, d.has_account,
+             COUNT(o.id) as order_count,
+             COALESCE(SUM(CASE WHEN o.payment_status = 'paid' THEN o.total ELSE 0 END), 0) as total_spent,
+             MAX(o.created_at) as last_order_at
+      FROM deduped d
+      JOIN shops s ON s.id = d.shop_id
+      LEFT JOIN orders o ON o.shop_id = d.shop_id AND LOWER(o.customer_email) = d.email_key
+      ${where}
+      GROUP BY d.shop_id, d.email_key
+      ORDER BY COALESCE(MAX(o.created_at), d.account_created_at, d.customer_created_at) DESC
+      LIMIT ? OFFSET ?
+    `).all(...params, limit, offset).map(c => ({
+      ...c,
+      id: `${c.shop_id}:${c.email}`,
+      has_customer_record: !!c.has_customer_record,
+      has_account: !!c.has_account,
+    }));
+    res.json({ customers, total, page, pages: Math.ceil(total / limit), limit });
+  } catch (err) {
+    console.error('Platform customers list error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/customers/:id', requirePlatformAuth, (req, res) => {
+  try {
+    const target = parseCustomerTarget(req.params.id);
+    if (!target) return res.status(400).json({ error: 'Invalid customer id' });
+    const shop = db.prepare('SELECT id, name, slug FROM shops WHERE id = ?').get(target.shopId);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+
+    const customer = db.prepare(`
+      SELECT c.id, c.email, c.name, c.notes, c.created_at,
+             ca.id as account_id, ca.name as account_name, ca.created_at as account_created_at
+      FROM (
+        SELECT ? as shop_id, ? as email
+      ) target
+      LEFT JOIN customers c ON c.shop_id = target.shop_id AND LOWER(c.email) = LOWER(target.email)
+      LEFT JOIN customer_accounts ca ON ca.shop_id = target.shop_id AND LOWER(ca.email) = LOWER(target.email)
+    `).get(target.shopId, target.email);
+
+    if (!customer?.id && !customer?.account_id) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+
+    const orders = db.prepare(`
+      SELECT o.id, o.created_at, o.file_name, o.colour, o.finish, o.quantity,
+             o.subtotal, o.tax, o.shipping, o.total, o.payment_status, o.fulfilment_status,
+             m.name as material_name
+      FROM orders o
+      LEFT JOIN materials m ON m.id = o.material_id
+      WHERE o.shop_id = ? AND LOWER(o.customer_email) = LOWER(?)
+      ORDER BY o.created_at DESC
+      LIMIT 25
+    `).all(target.shopId, target.email);
+
+    logPlatformAudit(req, {
+      action: 'view_customer_detail',
+      targetType: 'customer',
+      targetId: `${target.shopId}:${target.email}`,
+      shopId: target.shopId,
+    });
+
+    res.json({
+      shop,
+      customer: {
+        id: customer.id,
+        email: customer.email || target.email,
+        name: customer.account_name || customer.name || null,
+        notes: customer.notes || null,
+        customer_created_at: customer.created_at || null,
+        account_id: customer.account_id || null,
+        account_created_at: customer.account_created_at || null,
+        has_account: !!customer.account_id,
+      },
+      metrics: {
+        order_count: orders.length,
+        paid_orders: orders.filter(o => o.payment_status === 'paid').length,
+        total_spent: orders.reduce((sum, o) => sum + (o.payment_status === 'paid' ? toNumber(o.total) : 0), 0),
+      },
+      orders,
+    });
+  } catch (err) {
+    console.error('Platform customer detail error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/audit-events', requirePlatformAuth, (req, res) => {
+  try {
+    const { limit, offset, page } = pageParams(req.query);
+    const total = db.prepare('SELECT COUNT(*) as c FROM platform_audit_events').get().c;
+    const events = db.prepare(`
+      SELECT e.id, e.platform_admin_id, e.action, e.target_type, e.target_id,
+             e.shop_id, s.name as shop_name, s.slug as shop_slug,
+             e.ip, e.user_agent, e.metadata, e.created_at
+      FROM platform_audit_events e
+      LEFT JOIN shops s ON s.id = e.shop_id
+      ORDER BY e.created_at DESC, e.id DESC
+      LIMIT ? OFFSET ?
+    `).all(limit, offset).map(e => ({
+      ...e,
+      metadata: (() => {
+        try { return JSON.parse(e.metadata || '{}'); } catch { return {}; }
+      })(),
+    }));
+    res.json({ events, total, page, pages: Math.ceil(total / limit), limit });
+  } catch (err) {
+    console.error('Platform audit events error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ── GET /api/platform/shops ───────────────────────────────────
 router.get('/shops', requirePlatformAuth, (req, res) => {
   try {
@@ -251,6 +700,18 @@ router.put('/payments', requirePlatformAuth, (req, res) => {
       platformFeePercent: platform_fee_percent,
     });
 
+    logPlatformAudit(req, {
+      action: 'update_stripe_config',
+      targetType: 'platform_settings',
+      targetId: '1',
+      metadata: {
+        changed_publishable_key: publishable_key !== undefined && !!publishable_key,
+        changed_secret_key: secret_key !== undefined && !!secret_key,
+        changed_client_id: client_id !== undefined && !!client_id,
+        changed_fee_percent: platform_fee_percent !== undefined,
+      },
+    });
+
     res.json({ ok: true, ...result });
   } catch (err) {
     console.error('Save platform payments config error:', err);
@@ -283,6 +744,14 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
       'SELECT id, name, slug, email, plan, is_temp_password, created_at FROM shops WHERE id = ?'
     ).get(shopId);
 
+    logPlatformAudit(req, {
+      action: 'create_shop',
+      targetType: 'shop',
+      targetId: shopId,
+      shopId,
+      metadata: { plan: shop.plan },
+    });
+
     res.status(201).json(shop);
   } catch (err) {
     if (err.message && err.message.includes('UNIQUE')) {
@@ -308,6 +777,13 @@ router.patch('/shops/:id', requirePlatformAuth, (req, res) => {
     }
 
     db.prepare('UPDATE shops SET plan = ? WHERE id = ?').run(newPlan, req.params.id);
+    logPlatformAudit(req, {
+      action: newPlan === 'suspended' ? 'suspend_shop' : 'restore_shop',
+      targetType: 'shop',
+      targetId: req.params.id,
+      shopId: shop.id,
+      metadata: { previous_plan: shop.plan, next_plan: newPlan },
+    });
     res.json({ ok: true });
   } catch (err) {
     console.error('Update shop error:', err);
@@ -328,6 +804,12 @@ router.post('/impersonate', requirePlatformAuth, (req, res) => {
   }
 
   req.session.shopId = shop.id;
+  logPlatformAudit(req, {
+    action: 'impersonate_shop',
+    targetType: 'shop',
+    targetId: shop.id,
+    shopId: shop.id,
+  });
   res.json({ ok: true });
 });
 

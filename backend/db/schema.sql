@@ -52,6 +52,20 @@ CREATE TABLE IF NOT EXISTS platform_reset_tokens (
   FOREIGN KEY (admin_id) REFERENCES platform_admins(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS platform_audit_events (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform_admin_id    INTEGER,
+  action               TEXT NOT NULL,
+  target_type          TEXT,
+  target_id            TEXT,
+  shop_id              INTEGER,
+  ip                   TEXT,
+  user_agent           TEXT,
+  metadata             TEXT NOT NULL DEFAULT '{}',
+  created_at           TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE SET NULL
+);
+
 -- ── Materials ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS materials (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,6 +114,9 @@ CREATE TABLE IF NOT EXISTS orders (
   fulfilment_status   TEXT    NOT NULL DEFAULT 'pending',
   payment_status      TEXT    NOT NULL DEFAULT 'pending',
   notes               TEXT,
+  tracking_number     TEXT,
+  tracking_url        TEXT,
+  customer_message    TEXT,
   created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (shop_id)    REFERENCES shops(id) ON DELETE CASCADE,
   FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE SET NULL
@@ -113,6 +130,17 @@ CREATE TABLE IF NOT EXISTS customers (
   name       TEXT,
   notes      TEXT,
   created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (shop_id, email),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS customer_accounts (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id       INTEGER NOT NULL,
+  email         TEXT    NOT NULL COLLATE NOCASE,
+  name          TEXT    NOT NULL,
+  password_hash TEXT    NOT NULL,
+  created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
   UNIQUE (shop_id, email),
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
 );
@@ -198,9 +226,13 @@ CREATE INDEX IF NOT EXISTS idx_orders_shop     ON orders(shop_id);
 CREATE INDEX IF NOT EXISTS idx_orders_email    ON orders(customer_email);
 CREATE INDEX IF NOT EXISTS idx_materials_shop  ON materials(shop_id);
 CREATE INDEX IF NOT EXISTS idx_customers_shop  ON customers(shop_id);
+CREATE INDEX IF NOT EXISTS idx_customer_accounts_email ON customer_accounts(shop_id, email);
 CREATE INDEX IF NOT EXISTS idx_sessions_token  ON sessions(token);
 CREATE INDEX IF NOT EXISTS idx_reset_token     ON reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_platform_reset_token ON platform_reset_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_platform_audit_created ON platform_audit_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_platform_audit_shop ON platform_audit_events(shop_id);
+CREATE INDEX IF NOT EXISTS idx_platform_audit_action ON platform_audit_events(action);
 
 CREATE TABLE IF NOT EXISTS app_sessions (
   sid TEXT PRIMARY KEY,

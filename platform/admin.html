@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Platform Admin — Trennen</title>
+  <title>Platform Admin - Trennen</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self';">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,8 +14,8 @@
     .platform-nav {
       background: var(--white);
       border-bottom: 1px solid var(--border);
-      padding: 0 40px;
-      height: 56px;
+      padding: 0 32px;
+      min-height: 58px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -26,64 +26,191 @@
     .platform-wordmark {
       font-family: var(--font-brand);
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--ink);
       text-decoration: none;
       letter-spacing: 0.06em;
       text-transform: uppercase;
     }
-    .platform-nav-right {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
+    .platform-nav-right { display: flex; align-items: center; gap: 14px; }
     .platform-badge {
       font-size: 10px;
-      font-weight: 500;
+      font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--sage-dark);
       background: rgba(122,158,126,0.12);
       border: 1px solid var(--sage-light);
-      border-radius: var(--radius);
-      padding: 3px 10px;
+      border-radius: 999px;
+      padding: 4px 10px;
     }
-    .platform-content {
-      max-width: 1100px;
+    .platform-shell {
+      max-width: 1240px;
       margin: 0 auto;
-      padding: 40px 32px 80px;
+      padding: 34px 28px 72px;
+    }
+    .platform-heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
     }
     .platform-title {
       font-family: var(--font-brand);
-      font-weight: 700;
-      font-size: 32px;
-      color: var(--ink);
-      letter-spacing: -0.03em;
-      margin-bottom: 4px;
+      font-size: 34px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      margin: 0 0 6px;
     }
-    .platform-subtitle {
-      font-size: 13px;
-      font-weight: 400;
+    .platform-subtitle { color: var(--muted); font-size: 13px; margin: 0; line-height: 1.6; }
+    .platform-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      padding-bottom: 0;
+    }
+    .platform-tab {
+      border: 0;
+      background: transparent;
       color: var(--muted);
-      margin-bottom: 32px;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 13px 15px;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
     }
-    .platform-stats {
+    .platform-tab.active {
+      color: var(--sage-dark);
+      border-color: var(--sage);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .kpi-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: var(--shadow-sm);
+    }
+    .kpi-label {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 9px;
+      font-weight: 700;
+    }
+    .kpi-value {
+      font-family: var(--font-brand);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+    }
+    .kpi-sub { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .panel-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      gap: 18px;
+    }
+    .soft-panel {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .soft-panel-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       gap: 16px;
-      margin-bottom: 32px;
+    }
+    .soft-panel-title { margin: 0; font-size: 15px; font-weight: 700; color: var(--ink); }
+    .soft-panel-body { padding: 20px; }
+    .breakdown-list { display: grid; gap: 10px; }
+    .breakdown-row {
+      display: grid;
+      grid-template-columns: minmax(100px, 1fr) minmax(120px, 2fr) 42px;
+      gap: 12px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .breakdown-label { color: var(--ink); font-weight: 600; text-transform: capitalize; }
+    .bar-track {
+      height: 7px;
+      background: var(--stone);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill { height: 100%; background: var(--sage); border-radius: 999px; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .toolbar .form-group { margin: 0; min-width: 150px; }
+    .toolbar .search-field { min-width: 240px; flex: 1; }
+    .data-table td { vertical-align: middle; }
+    .table-action {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--white);
+      color: var(--ink);
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 10px;
+      cursor: pointer;
+      margin: 2px;
+    }
+    .table-action:hover { border-color: var(--sage); color: var(--sage-dark); }
+    .table-action.danger:hover { border-color: #D98989; color: #B13D3D; }
+    .muted { color: var(--muted); }
+    .mini-text { color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
     }
     .success-box {
       background: #EEF4EF;
       border: 1px solid var(--sage-light);
       border-radius: var(--radius);
-      padding: 16px 20px;
+      padding: 13px 15px;
       font-size: 13px;
       color: var(--sage-dark);
       display: none;
-      margin-top: 16px;
+      margin-bottom: 16px;
     }
     .success-box.visible { display: block; }
+    .error-box {
+      display: none;
+      color: #B13D3D;
+      background: #FFF5F4;
+      border: 1px solid #E5B8B2;
+      border-radius: var(--radius);
+      padding: 13px 15px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .error-box.visible { display: block; }
     .password-reveal {
       font-family: 'Courier New', monospace;
       font-size: 15px;
@@ -96,48 +223,82 @@
       margin: 8px 0;
       letter-spacing: 0.05em;
     }
-    .copy-btn {
-      background: none;
+    .detail-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 20, 20, 0.24);
+      display: none;
+      z-index: 90;
+    }
+    .detail-overlay.open { display: block; }
+    .detail-drawer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: min(620px, 100%);
+      height: 100%;
+      background: var(--white);
+      border-left: 1px solid var(--border);
+      box-shadow: -20px 0 50px rgba(0,0,0,0.12);
+      display: flex;
+      flex-direction: column;
+    }
+    .detail-head {
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .detail-title { margin: 0; font-family: var(--font-brand); font-size: 24px; letter-spacing: -0.03em; }
+    .detail-body { padding: 22px; overflow: auto; display: grid; gap: 18px; }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .detail-item {
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 4px 10px;
-      font-size: 12px;
-      font-family: var(--font-ui);
+      border-radius: 12px;
+      padding: 12px;
+      background: var(--bg);
+    }
+    .detail-label {
+      font-size: 10px;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
       color: var(--muted);
-      cursor: pointer;
-      margin-left: 8px;
-      transition: background 150ms, color 150ms;
+      font-weight: 700;
+      margin-bottom: 6px;
     }
-    .copy-btn:hover { background: var(--off-white); color: var(--ink); }
-    .shop-form {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
+    .detail-value { font-size: 13px; color: var(--ink); line-height: 1.45; word-break: break-word; }
+    .note-panel {
+      background: rgba(122,158,126,0.07);
+      border: 1px solid var(--sage-light);
+      color: var(--sage-dark);
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 13px;
+      line-height: 1.65;
     }
-    .platform-form {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
+    @media (max-width: 860px) {
+      .platform-nav { padding: 0 18px; }
+      .platform-shell { padding: 24px 18px 56px; }
+      .platform-heading { align-items: flex-start; flex-direction: column; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .panel-grid { grid-template-columns: 1fr; }
+      .field-grid { grid-template-columns: 1fr; }
     }
-    .config-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-top: 20px;
-    }
-    @media (max-width: 700px) {
-      .platform-stats { grid-template-columns: 1fr 1fr; }
-      .shop-form { grid-template-columns: 1fr; }
-      .platform-form { grid-template-columns: 1fr; }
-      .config-grid { grid-template-columns: 1fr; }
-      .platform-nav { padding: 0 20px; }
-      .platform-content { padding: 24px 20px 60px; }
+    @media (max-width: 560px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+      .toolbar .form-group, .toolbar .search-field { min-width: 100%; }
+      .detail-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body class="admin-body">
 
-<!-- Platform nav -->
 <nav class="platform-nav">
   <a href="/index.html" class="platform-wordmark">Trennen</a>
   <div class="platform-nav-right">
@@ -149,204 +310,191 @@
   </div>
 </nav>
 
-<div class="platform-content">
-
-  <h1 class="platform-title">Platform Overview</h1>
-  <p class="platform-subtitle">All shops on Trennen</p>
-
-  <!-- Stats -->
-  <div class="platform-stats">
-    <div class="stat-card">
-      <div class="stat-label">Total shops</div>
-      <div class="stat-value" id="statShops">—</div>
+<main class="platform-shell">
+  <div class="platform-heading">
+    <div>
+      <h1 class="platform-title">Platform Dashboard</h1>
+      <p class="platform-subtitle">Read-only operational reporting across stores, orders, customers, payments, and security events.</p>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Total orders</div>
-      <div class="stat-value" id="statOrders">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Month revenue</div>
-      <div class="stat-value" id="statRevenue">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Month platform fees</div>
-      <div class="stat-value" id="statFees">—</div>
+    <div class="note-panel" style="max-width:410px">
+      Platform owner access should be disclosed in your merchant terms and admin agreement. Views are audit-logged; stores do not get real-time notifications for each platform-owner view.
     </div>
   </div>
 
-  <div class="section-card" style="margin-bottom:32px">
-    <div class="section-card-header">
-      <h2 class="section-card-title">Platform security</h2>
+  <div class="platform-tabs" role="tablist">
+    <button class="platform-tab active" data-tab="overview" type="button">Overview</button>
+    <button class="platform-tab" data-tab="stores" type="button">Stores</button>
+    <button class="platform-tab" data-tab="orders" type="button">Orders</button>
+    <button class="platform-tab" data-tab="customers" type="button">Customers</button>
+    <button class="platform-tab" data-tab="payments" type="button">Payments</button>
+    <button class="platform-tab" data-tab="security" type="button">Security</button>
+  </div>
+
+  <section id="panel-overview" class="tab-panel active">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Stores</div><div class="kpi-value" id="kpiShops">-</div><div class="kpi-sub">All platform shops</div></div>
+      <div class="kpi-card"><div class="kpi-label">Users</div><div class="kpi-value" id="kpiUsers">-</div><div class="kpi-sub">Customer accounts</div></div>
+      <div class="kpi-card"><div class="kpi-label">Completed checkouts</div><div class="kpi-value" id="kpiPaid">-</div><div class="kpi-sub">Paid orders</div></div>
+      <div class="kpi-card"><div class="kpi-label">Deliveries</div><div class="kpi-value" id="kpiDelivered">-</div><div class="kpi-sub">Fulfilment complete</div></div>
+      <div class="kpi-card"><div class="kpi-label">Revenue</div><div class="kpi-value" id="kpiRevenue">-</div><div class="kpi-sub">Paid order total</div></div>
+      <div class="kpi-card"><div class="kpi-label">Platform fees</div><div class="kpi-value" id="kpiFees">-</div><div class="kpi-sub" id="kpiFeeRate">Estimated</div></div>
+      <div class="kpi-card"><div class="kpi-label">Average order</div><div class="kpi-value" id="kpiAov">-</div><div class="kpi-sub">Paid orders</div></div>
+      <div class="kpi-card"><div class="kpi-label">Stripe-ready stores</div><div class="kpi-value" id="kpiStripeReady">-</div><div class="kpi-sub">Connected and enabled</div></div>
     </div>
-    <div class="section-card-body">
-      <div id="accountError" style="display:none;color:#C0392B;font-size:13px;margin-bottom:16px"></div>
-      <div class="success-box" id="accountSuccess" style="margin-top:0;margin-bottom:16px">Security settings saved.</div>
-      <div class="platform-form">
-        <div class="form-group">
-          <label class="form-label" for="ownerEmail">Owner reset email</label>
-          <input class="form-input" type="email" id="ownerEmail" placeholder="you@example.com" autocomplete="email">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="currentPlatformPassword">Current password</label>
-          <input class="form-input" type="password" id="currentPlatformPassword" autocomplete="current-password">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="newPlatformPassword">New password</label>
-          <input class="form-input" type="password" id="newPlatformPassword" autocomplete="new-password" placeholder="Optional">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="confirmPlatformPassword">Confirm new password</label>
-          <input class="form-input" type="password" id="confirmPlatformPassword" autocomplete="new-password" placeholder="Optional">
-        </div>
+
+    <div class="panel-grid">
+      <div class="soft-panel">
+        <div class="soft-panel-header"><h2 class="soft-panel-title">Fulfilment status</h2></div>
+        <div class="soft-panel-body"><div id="fulfilmentBreakdown" class="breakdown-list"></div></div>
       </div>
-      <div style="margin-top:20px">
-        <button class="btn btn-primary" type="button" id="saveAccountBtn">Save security settings</button>
+      <div class="soft-panel">
+        <div class="soft-panel-header"><h2 class="soft-panel-title">Payment status</h2></div>
+        <div class="soft-panel-body"><div id="paymentBreakdown" class="breakdown-list"></div></div>
       </div>
-      <div class="config-grid">
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px">Owner account</div>
-          <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
-            <div><strong>Owner email:</strong> <span id="ownerEmailStatus">—</span></div>
-            <div><strong>Password source:</strong> <span id="ownerPasswordStatus">—</span></div>
-            <div><strong>Email provider:</strong> <span id="mailProviderStatus">—</span></div>
-            <div><strong>From address:</strong> <span id="mailFromStatus">—</span></div>
+    </div>
+  </section>
+
+  <section id="panel-stores" class="tab-panel">
+    <div class="soft-panel" style="margin-bottom:20px">
+      <div class="soft-panel-header">
+        <h2 class="soft-panel-title">Stores</h2>
+        <button class="btn btn-primary" type="button" onclick="setTab('stores-create')">Create store</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Store</th><th>Plan</th><th>Owner</th><th>Orders</th><th>Revenue</th><th>Stripe</th><th>Joined</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="shopsTbody"><tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="soft-panel" id="storeCreatePanel">
+      <div class="soft-panel-header"><h2 class="soft-panel-title">Create store</h2></div>
+      <div class="soft-panel-body">
+        <div class="error-box" id="createError"></div>
+        <div class="success-box" id="createSuccess">
+          <strong>Store created.</strong> Temporary password:
+          <span class="password-reveal" id="revealPassword"></span>
+          <button class="table-action" type="button" id="copyPasswordBtn">Copy</button>
+          <div class="mini-text">The owner will be prompted to change this on first login.</div>
+        </div>
+        <form id="createShopForm" novalidate>
+          <div class="field-grid">
+            <div class="form-group"><label class="form-label" for="newName">Store name</label><input class="form-input" type="text" id="newName" required></div>
+            <div class="form-group"><label class="form-label" for="newSlug">Slug</label><input class="form-input" type="text" id="newSlug" required></div>
+            <div class="form-group"><label class="form-label" for="newEmail">Owner email</label><input class="form-input" type="email" id="newEmail" required></div>
+            <div class="form-group"><label class="form-label" for="newPassword">Initial password</label><input class="form-input" type="text" id="newPassword" required></div>
+            <div class="form-group"><label class="form-label" for="newPlan">Plan</label><select class="form-input" id="newPlan"><option value="starter">Starter</option><option value="pro">Pro</option></select></div>
           </div>
-        </div>
-        <div style="background:rgba(122,158,126,0.06);border:1px solid var(--sage-light);border-radius:var(--radius);padding:16px;font-size:13px;color:var(--sage-dark);line-height:1.7">
-          The forgot-password link is sent only to this owner email. This portal controls platform-wide Stripe keys, fees, stores, and impersonation.
-        </div>
+          <button class="btn btn-primary" type="button" id="createShopBtn" onclick="submitCreateShop()">Create store</button>
+        </form>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="section-card" style="margin-bottom:32px">
-    <div class="section-card-header">
-      <h2 class="section-card-title">Platform payments</h2>
-    </div>
-    <div class="section-card-body">
-      <div id="paymentsError" style="display:none;color:#C0392B;font-size:13px;margin-bottom:16px"></div>
-      <div class="success-box" id="paymentsSuccess" style="margin-top:0;margin-bottom:16px">Payments config saved.</div>
-      <div class="platform-form">
-        <div class="form-group">
-          <label class="form-label" for="platformPublishableKey">Publishable key</label>
-          <input class="form-input" type="text" id="platformPublishableKey" placeholder="pk_live_...">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="platformClientId">Connect client ID</label>
-          <input class="form-input" type="text" id="platformClientId" placeholder="ca_...">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="platformSecretKey">Secret key</label>
-          <input class="form-input" type="password" id="platformSecretKey" placeholder="sk_live_...">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="platformFeePercent">Platform fee percent</label>
-          <input class="form-input" type="number" min="0" max="100" step="0.01" id="platformFeePercent" placeholder="5.00">
+  <section id="panel-orders" class="tab-panel">
+    <div class="soft-panel">
+      <div class="soft-panel-header"><h2 class="soft-panel-title">All orders</h2></div>
+      <div class="soft-panel-body">
+        <div class="toolbar">
+          <div class="form-group search-field"><label class="form-label" for="orderSearch">Search</label><input class="form-input" id="orderSearch" placeholder="Email, name, file, material, order ID"></div>
+          <div class="form-group"><label class="form-label" for="orderShop">Store</label><select class="form-input" id="orderShop"><option value="">All stores</option></select></div>
+          <div class="form-group"><label class="form-label" for="orderPayment">Payment</label><select class="form-input" id="orderPayment"><option value="">All</option><option value="paid">Paid</option><option value="pending">Pending</option><option value="failed">Failed</option></select></div>
+          <div class="form-group"><label class="form-label" for="orderFulfilment">Fulfilment</label><select class="form-input" id="orderFulfilment"><option value="">All</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="in_production">In production</option><option value="shipped">Shipped</option><option value="complete">Complete</option><option value="cancelled">Cancelled</option></select></div>
+          <div class="form-group"><label class="form-label" for="orderFrom">From</label><input class="form-input" type="date" id="orderFrom"></div>
+          <div class="form-group"><label class="form-label" for="orderTo">To</label><input class="form-input" type="date" id="orderTo"></div>
+          <button class="btn btn-primary" type="button" id="applyOrderFilters">Apply</button>
         </div>
       </div>
-      <div style="margin-top:20px">
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Order</th><th>Store</th><th>Customer</th><th>Material</th><th>Total</th><th>Payment</th><th>Fulfilment</th><th>Actions</th></tr></thead>
+          <tbody id="ordersTbody"><tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-customers" class="tab-panel">
+    <div class="soft-panel">
+      <div class="soft-panel-header"><h2 class="soft-panel-title">Customers</h2></div>
+      <div class="soft-panel-body">
+        <div class="toolbar">
+          <div class="form-group search-field"><label class="form-label" for="customerSearch">Search</label><input class="form-input" id="customerSearch" placeholder="Email, name, store"></div>
+          <div class="form-group"><label class="form-label" for="customerShop">Store</label><select class="form-input" id="customerShop"><option value="">All stores</option></select></div>
+          <button class="btn btn-primary" type="button" id="applyCustomerFilters">Apply</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Customer</th><th>Store</th><th>Account</th><th>Orders</th><th>Total spent</th><th>Last order</th><th>Actions</th></tr></thead>
+          <tbody id="customersTbody"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-payments" class="tab-panel">
+    <div class="soft-panel">
+      <div class="soft-panel-header"><h2 class="soft-panel-title">Platform payments</h2></div>
+      <div class="soft-panel-body">
+        <div class="error-box" id="paymentsError"></div>
+        <div class="success-box" id="paymentsSuccess">Payments config saved.</div>
+        <div class="field-grid">
+          <div class="form-group"><label class="form-label" for="platformPublishableKey">Publishable key</label><input class="form-input" type="text" id="platformPublishableKey" placeholder="pk_live_..."></div>
+          <div class="form-group"><label class="form-label" for="platformClientId">Connect client ID</label><input class="form-input" type="text" id="platformClientId" placeholder="ca_..."></div>
+          <div class="form-group"><label class="form-label" for="platformSecretKey">Secret key</label><input class="form-input" type="password" id="platformSecretKey" placeholder="sk_live_..."></div>
+          <div class="form-group"><label class="form-label" for="platformFeePercent">Platform fee percent</label><input class="form-input" type="number" min="0" max="100" step="0.01" id="platformFeePercent"></div>
+        </div>
         <button class="btn btn-primary" type="button" id="savePaymentsBtn">Save payments config</button>
-      </div>
-      <div class="config-grid">
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px">Active Stripe config</div>
-          <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
-            <div><strong>Publishable key:</strong> <span id="platformMaskedPk">—</span></div>
-            <div><strong>Secret key:</strong> <span id="platformMaskedSk">—</span></div>
-            <div><strong>Client ID:</strong> <span id="platformMaskedClientId">—</span></div>
-            <div><strong>Webhook secret:</strong> <span id="platformWebhookStatus">—</span></div>
-            <div><strong>Cards enabled:</strong> <span id="platformCardsStatus">—</span></div>
-          </div>
-        </div>
-        <div style="background:rgba(122,158,126,0.06);border:1px solid var(--sage-light);border-radius:var(--radius);padding:16px;font-size:13px;color:var(--sage-dark);line-height:1.7">
-          These are the master Stripe keys for Trennen. Shops connect their own Stripe Express account for payouts, but they never manage or see the platform secret key.
+        <div class="detail-grid" style="margin-top:18px">
+          <div class="detail-item"><div class="detail-label">Publishable key</div><div class="detail-value" id="platformMaskedPk">-</div></div>
+          <div class="detail-item"><div class="detail-label">Secret key</div><div class="detail-value" id="platformMaskedSk">-</div></div>
+          <div class="detail-item"><div class="detail-label">Connect client ID</div><div class="detail-value" id="platformMaskedClientId">-</div></div>
+          <div class="detail-item"><div class="detail-label">Card payment status</div><div class="detail-value" id="platformCardsStatus">-</div></div>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- All shops table -->
-  <div class="section-card" style="margin-bottom:32px">
-    <div class="section-card-header">
-      <h2 class="section-card-title">All shops</h2>
-    </div>
-    <div style="padding:0;overflow-x:auto">
-      <table class="data-table" id="shopsTable">
-        <thead>
-          <tr>
-            <th>Shop</th>
-            <th>Plan</th>
-            <th>Owner</th>
-            <th>Orders</th>
-            <th>Revenue</th>
-            <th>Stripe</th>
-            <th>Joined</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="shopsTbody">
-          <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Create shop -->
-  <div class="section-card">
-    <div class="section-card-header">
-      <h2 class="section-card-title">Create shop</h2>
-    </div>
-    <div class="section-card-body">
-      <div id="createError" style="display:none;color:#C0392B;font-size:13px;margin-bottom:16px"></div>
-      <form id="createShopForm" novalidate>
-        <div class="shop-form">
-          <div class="form-group">
-            <label class="form-label" for="newName">Shop name</label>
-            <input class="form-input" type="text" id="newName" placeholder="Auckland Prints Co." required>
+  <section id="panel-security" class="tab-panel">
+    <div class="panel-grid">
+      <div class="soft-panel">
+        <div class="soft-panel-header"><h2 class="soft-panel-title">Owner account</h2></div>
+        <div class="soft-panel-body">
+          <div class="error-box" id="accountError"></div>
+          <div class="success-box" id="accountSuccess">Security settings saved.</div>
+          <div class="field-grid">
+            <div class="form-group"><label class="form-label" for="ownerEmail">Owner reset email</label><input class="form-input" type="email" id="ownerEmail" autocomplete="email"></div>
+            <div class="form-group"><label class="form-label" for="currentPlatformPassword">Current password</label><input class="form-input" type="password" id="currentPlatformPassword" autocomplete="current-password"></div>
+            <div class="form-group"><label class="form-label" for="newPlatformPassword">New password</label><input class="form-input" type="password" id="newPlatformPassword" autocomplete="new-password" placeholder="Optional"></div>
+            <div class="form-group"><label class="form-label" for="confirmPlatformPassword">Confirm new password</label><input class="form-input" type="password" id="confirmPlatformPassword" autocomplete="new-password" placeholder="Optional"></div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="newSlug">Slug <span style="color:var(--muted);font-weight: 400">(URL identifier)</span></label>
-            <input class="form-input" type="text" id="newSlug" placeholder="auckland-prints" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="newEmail">Owner email</label>
-            <input class="form-input" type="email" id="newEmail" placeholder="owner@example.com" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="newPassword">Initial password</label>
-            <input class="form-input" type="text" id="newPassword" placeholder="Temporary password (will be shown once)" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="newPlan">Plan</label>
-            <select class="form-input" id="newPlan">
-              <option value="starter">Starter</option>
-              <option value="pro">Pro</option>
-            </select>
+          <button class="btn btn-primary" type="button" id="saveAccountBtn">Save security settings</button>
+          <div class="detail-grid" style="margin-top:18px">
+            <div class="detail-item"><div class="detail-label">Owner email</div><div class="detail-value" id="ownerEmailStatus">-</div></div>
+            <div class="detail-item"><div class="detail-label">Password source</div><div class="detail-value" id="ownerPasswordStatus">-</div></div>
+            <div class="detail-item"><div class="detail-label">Email provider</div><div class="detail-value" id="mailProviderStatus">-</div></div>
+            <div class="detail-item"><div class="detail-label">From address</div><div class="detail-value" id="mailFromStatus">-</div></div>
           </div>
         </div>
-        <div style="margin-top:20px">
-          <button class="btn btn-primary" type="button" id="createShopBtn" onclick="submitCreateShop()">Create shop</button>
-        </div>
-      </form>
-
-      <div class="success-box" id="createSuccess">
-        <strong>Shop created successfully.</strong> Share this temporary password with the owner — it will only be shown once:
-        <br>
-        <span class="password-reveal" id="revealPassword"></span>
-        <button class="copy-btn" id="copyPasswordBtn">Copy</button>
-        <br>
-        <span style="font-size:12px;color:var(--muted)">The owner will be prompted to change this on first login.</span>
+      </div>
+      <div class="soft-panel">
+        <div class="soft-panel-header"><h2 class="soft-panel-title">Audit trail</h2></div>
+        <div class="soft-panel-body"><div id="auditList" class="breakdown-list"></div></div>
       </div>
     </div>
-  </div>
+  </section>
+</main>
 
-</div>
-
-<!-- Suspend confirmation modal -->
 <div class="modal-overlay hidden" id="suspendModal" role="dialog" aria-modal="true">
   <div class="modal">
-    <h2 class="modal-title" id="suspendTitle">Suspend shop?</h2>
-    <p class="modal-body" id="suspendBody">This will prevent the shop owner from logging in. You can restore access at any time.</p>
+    <h2 class="modal-title" id="suspendTitle">Suspend store?</h2>
+    <p class="modal-body" id="suspendBody">This will prevent the store owner from logging in. You can restore access at any time.</p>
     <div class="modal-actions">
       <button class="btn btn-outline" id="cancelSuspend">Cancel</button>
       <button class="btn btn-danger" id="confirmSuspend">Suspend</button>
@@ -354,364 +502,482 @@
   </div>
 </div>
 
+<div class="detail-overlay" id="detailOverlay">
+  <aside class="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <div class="detail-head">
+      <div>
+        <h2 class="detail-title" id="detailTitle">Details</h2>
+        <p class="platform-subtitle" id="detailSubtitle"></p>
+      </div>
+      <button class="table-action" type="button" id="closeDetail">Close</button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </aside>
+</div>
+
 <script>
+  const state = {
+    shops: [],
+    overview: null,
+    ordersPage: 1,
+    customersPage: 1,
+  };
   let suspendTarget = null;
   let suspendIsRestore = false;
 
-  // Auth guard
-  (async () => {
-    try {
-      const r = await fetch('/api/platform/me');
-      if (!r.ok) { window.location.href = '/platform/login.html'; return; }
-      loadAccount();
-      loadStats();
-      loadPayments();
-      loadShops();
-    } catch { window.location.href = '/platform/login.html'; }
-  })();
-
-  document.getElementById('platformSignout').addEventListener('click', async e => {
-    e.preventDefault();
-    await fetch('/api/platform/logout', { method: 'POST' });
-    window.location.href = '/platform/login.html';
-  });
-
-  async function loadStats() {
-    try {
-      const r = await fetch('/api/platform/stats');
-      const s = await r.json();
-      document.getElementById('statShops').textContent = s.shopCount;
-      document.getElementById('statOrders').textContent = s.orderCount;
-      document.getElementById('statRevenue').textContent = '$' + Number(s.monthRevenue).toFixed(2);
-      document.getElementById('statFees').textContent = '$' + Number(s.monthFees).toFixed(2);
-    } catch (err) {
-      console.error('Stats error:', err);
-    }
+  function esc(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
-
-  async function loadAccount() {
-    try {
-      const r = await fetch('/api/platform/account');
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Failed to load platform account');
-
-      document.getElementById('ownerEmail').value = data.owner_email || '';
-      document.getElementById('ownerEmailStatus').textContent = data.owner_email || 'Not set';
-      document.getElementById('ownerPasswordStatus').innerHTML = data.has_password
-        ? '<span class="badge badge-sage">Hashed account password</span>'
-        : '<span class="badge badge-warm">Using .env bootstrap password</span>';
-      document.getElementById('mailProviderStatus').textContent =
-        data.mail_provider === 'dev' ? 'Dev preview' : data.mail_provider.toUpperCase();
-      document.getElementById('mailFromStatus').textContent = data.mail_from || 'Not configured';
-      if (data.mail_using_resend_test_sender) {
-        document.getElementById('mailFromStatus').textContent += ' (Resend test sender)';
-      }
-    } catch (err) {
-      console.error('Platform account error:', err);
-    }
+  function money(n) { return '$' + (Number(n) || 0).toFixed(2); }
+  function shortDate(value) {
+    if (!value) return '-';
+    return String(value).split(' ')[0];
   }
-
-  async function loadPayments() {
-    try {
-      const r = await fetch('/api/platform/payments');
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Failed to load platform payments');
-
-      document.getElementById('platformFeePercent').value = Number(data.platform_fee_percent || 0).toFixed(2);
-      document.getElementById('platformMaskedPk').textContent = data.publishable_key_masked || '—';
-      document.getElementById('platformMaskedSk').textContent = data.secret_key_masked || '—';
-      document.getElementById('platformMaskedClientId').textContent = data.client_id_masked || '—';
-      document.getElementById('platformWebhookStatus').textContent = data.webhook_configured ? 'Configured' : 'Missing from .env';
-      document.getElementById('platformCardsStatus').innerHTML = data.can_accept_cards
-        ? '<span class="badge badge-sage">Enabled</span>'
-        : '<span class="badge badge-warm">Not ready</span>';
-    } catch (err) {
-      console.error('Platform payments error:', err);
+  function badge(text, type = 'stone') {
+    return `<span class="badge badge-${type}">${esc(text || '-')}</span>`;
+  }
+  function statusBadge(value) {
+    const v = String(value || 'pending');
+    if (['paid', 'complete', 'shipped'].includes(v)) return badge(v, 'sage');
+    if (['failed', 'cancelled'].includes(v)) return badge(v, 'warm');
+    return badge(v, 'stone');
+  }
+  function jsString(value) {
+    return esc(JSON.stringify(String(value ?? '')));
+  }
+  async function api(path, options = {}) {
+    const res = await fetch(path, options);
+    if (res.status === 401) {
+      window.location.href = '/platform/login.html';
+      throw new Error('Not authenticated');
     }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+  function setTab(tab) {
+    const next = tab === 'stores-create' ? 'stores' : tab;
+    document.querySelectorAll('.platform-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === next));
+    document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.toggle('active', panel.id === `panel-${next}`));
+    if (next !== location.hash.slice(1)) history.replaceState(null, '', `#${next}`);
+    if (tab === 'stores-create') document.getElementById('storeCreatePanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function showBox(id, message = '') {
+    const el = document.getElementById(id);
+    if (message) el.textContent = message;
+    el.classList.add('visible');
+  }
+  function hideBox(id) { document.getElementById(id).classList.remove('visible'); }
+
+  async function loadOverview() {
+    const data = await api('/api/platform/overview');
+    state.overview = data;
+    document.getElementById('kpiShops').textContent = data.total_shops || 0;
+    document.getElementById('kpiUsers').textContent = data.customer_accounts || 0;
+    document.getElementById('kpiPaid').textContent = data.paid_checkouts || 0;
+    document.getElementById('kpiDelivered').textContent = data.delivered_orders || 0;
+    document.getElementById('kpiRevenue').textContent = money(data.revenue);
+    document.getElementById('kpiFees').textContent = money(data.estimated_platform_fees);
+    document.getElementById('kpiFeeRate').textContent = `${Number(data.fee_percent || 0).toFixed(2)}% platform fee`;
+    document.getElementById('kpiAov').textContent = money(data.average_order_value);
+    document.getElementById('kpiStripeReady').textContent = data.stripe_ready_shops || 0;
+    renderBreakdown('fulfilmentBreakdown', data.fulfilment_status_counts || {});
+    renderBreakdown('paymentBreakdown', data.payment_status_counts || {});
+  }
+  function renderBreakdown(id, counts) {
+    const target = document.getElementById(id);
+    const entries = Object.entries(counts);
+    const total = entries.reduce((sum, [, n]) => sum + Number(n || 0), 0) || 1;
+    if (!entries.length) {
+      target.innerHTML = '<div class="mini-text">No orders yet.</div>';
+      return;
+    }
+    target.innerHTML = entries.map(([key, count]) => {
+      const pct = Math.round((Number(count) / total) * 100);
+      return `<div class="breakdown-row">
+        <div class="breakdown-label">${esc(key.replace(/_/g, ' '))}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div>${count}</div>
+      </div>`;
+    }).join('');
   }
 
   async function loadShops() {
-    try {
-      const r = await fetch('/api/platform/shops');
-      const shops = await r.json();
-      const tbody = document.getElementById('shopsTbody');
-
-      if (!shops.length) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">No shops yet</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = shops.map(s => `
-        <tr>
-          <td>
-            <div style="font-weight:500;color:var(--ink)">${esc(s.name)}</div>
-            <div style="font-size:11px;color:var(--muted)">${esc(s.slug)}</div>
-          </td>
-          <td>
-            <span class="badge ${s.plan === 'suspended' ? 'badge-warm' : s.plan === 'pro' ? 'badge-sage' : 'badge-stone'}">
-              ${esc(s.plan)}
-            </span>
-          </td>
-          <td style="font-size:12px">${esc(s.email)}</td>
-          <td>${s.order_count}</td>
-          <td>$${Number(s.revenue).toFixed(2)}</td>
-          <td>${stripeBadge(s)}</td>
-          <td style="font-size:12px;color:var(--muted)">${s.created_at.split(' ')[0]}</td>
-          <td>
-            <button class="table-action" onclick="impersonate(${s.id})">Impersonate</button>
-            <button class="table-action ${s.plan === 'suspended' ? '' : 'danger'}" onclick="openSuspend(${s.id}, '${esc(s.name)}', ${s.plan === 'suspended'})">
-              ${s.plan === 'suspended' ? 'Restore' : 'Suspend'}
-            </button>
-          </td>
-        </tr>
-      `).join('');
-    } catch (err) {
-      console.error('Load shops error:', err);
-    }
+    state.shops = await api('/api/platform/shops');
+    renderShops();
+    renderShopSelects();
   }
-
+  function renderShopSelects() {
+    const options = '<option value="">All stores</option>' + state.shops.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+    document.getElementById('orderShop').innerHTML = options;
+    document.getElementById('customerShop').innerHTML = options;
+  }
+  function renderShops() {
+    const tbody = document.getElementById('shopsTbody');
+    if (!state.shops.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">No stores yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = state.shops.map(s => `
+      <tr>
+        <td><strong>${esc(s.name)}</strong><div class="mini-text">${esc(s.slug)}</div></td>
+        <td>${statusBadge(s.plan)}</td>
+        <td>${esc(s.email)}</td>
+        <td>${Number(s.order_count || 0)}</td>
+        <td>${money(s.revenue)}</td>
+        <td>${stripeBadge(s)}</td>
+        <td class="mini-text">${shortDate(s.created_at)}</td>
+        <td>
+          <button class="table-action" type="button" onclick="viewStore(${s.id})">View data</button>
+          <button class="table-action" type="button" onclick="impersonate(${s.id})">Impersonate</button>
+          <button class="table-action ${s.plan === 'suspended' ? '' : 'danger'}" type="button" onclick="openSuspend(${s.id}, ${jsString(s.name)}, ${s.plan === 'suspended'})">${s.plan === 'suspended' ? 'Restore' : 'Suspend'}</button>
+        </td>
+      </tr>
+    `).join('');
+  }
   function stripeBadge(shop) {
-    if (!shop.stripe_account_id) return '<span style="color:var(--muted)">Not connected</span>';
-    if (shop.stripe_charges_enabled && shop.stripe_payouts_enabled && shop.stripe_details_submitted) {
-      return '<span class="badge badge-sage">Ready</span>';
-    }
-    return '<span class="badge badge-warm">Action needed</span>';
+    if (!shop.stripe_account_id) return '<span class="muted">Not connected</span>';
+    if (shop.stripe_charges_enabled && shop.stripe_payouts_enabled && shop.stripe_details_submitted) return badge('Ready', 'sage');
+    return badge('Action needed', 'warm');
   }
 
-  function esc(str) {
-    return String(str || '')
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;');
+  function orderFilterQuery() {
+    const qs = new URLSearchParams({ page: String(state.ordersPage), limit: '25' });
+    const fields = {
+      search: 'orderSearch',
+      shop: 'orderShop',
+      payment_status: 'orderPayment',
+      fulfilment_status: 'orderFulfilment',
+      from: 'orderFrom',
+      to: 'orderTo',
+    };
+    for (const [key, id] of Object.entries(fields)) {
+      const value = document.getElementById(id).value.trim();
+      if (value) qs.set(key, value);
+    }
+    return qs.toString();
+  }
+  async function loadOrders() {
+    const data = await api('/api/platform/orders?' + orderFilterQuery());
+    renderOrders(data);
+  }
+  function renderOrders(data) {
+    const tbody = document.getElementById('ordersTbody');
+    if (!data.orders.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">No orders found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.orders.map(o => `
+      <tr>
+        <td><strong>#${esc(o.id)}</strong><div class="mini-text">${shortDate(o.created_at)}</div></td>
+        <td>${esc(o.shop_name)}<div class="mini-text">${esc(o.shop_slug)}</div></td>
+        <td>${esc(o.customer_name || '-')}<div class="mini-text">${esc(o.customer_email)}</div></td>
+        <td>${esc(o.material_name || '-')}<div class="mini-text">${esc([o.colour, o.finish].filter(Boolean).join(' / '))}</div></td>
+        <td>${money(o.total)}</td>
+        <td>${statusBadge(o.payment_status)}</td>
+        <td>${statusBadge(o.fulfilment_status)}</td>
+        <td><button class="table-action" type="button" onclick="viewOrder(${o.id})">View order</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function customerFilterQuery() {
+    const qs = new URLSearchParams({ page: String(state.customersPage), limit: '25' });
+    const search = document.getElementById('customerSearch').value.trim();
+    const shop = document.getElementById('customerShop').value.trim();
+    if (search) qs.set('search', search);
+    if (shop) qs.set('shop', shop);
+    return qs.toString();
+  }
+  async function loadCustomers() {
+    const data = await api('/api/platform/customers?' + customerFilterQuery());
+    renderCustomers(data);
+  }
+  function renderCustomers(data) {
+    const tbody = document.getElementById('customersTbody');
+    if (!data.customers.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No customers found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.customers.map(c => `
+      <tr>
+        <td><strong>${esc(c.name || '-')}</strong><div class="mini-text">${esc(c.email)}</div></td>
+        <td>${esc(c.shop_name)}<div class="mini-text">${esc(c.shop_slug)}</div></td>
+        <td>${c.has_account ? badge('Account created', 'sage') : badge('Checkout record', 'stone')}</td>
+        <td>${Number(c.order_count || 0)}</td>
+        <td>${money(c.total_spent)}</td>
+        <td class="mini-text">${shortDate(c.last_order_at)}</td>
+        <td><button class="table-action" type="button" onclick="viewCustomer(${jsString(c.id)})">View customer</button></td>
+      </tr>
+    `).join('');
+  }
+
+  async function viewStore(id) {
+    const data = await api(`/api/platform/shops/${id}/overview`);
+    openDetail(data.shop.name, `${data.shop.slug} - store data`, `
+      <div class="detail-grid">
+        ${detailItem('Users', data.metrics.customer_accounts)}
+        ${detailItem('Customer records', data.metrics.customer_records)}
+        ${detailItem('Completed checkouts', data.metrics.paid_checkouts)}
+        ${detailItem('Deliveries', data.metrics.delivered_orders)}
+        ${detailItem('Active orders', data.metrics.active_orders)}
+        ${detailItem('Revenue', money(data.metrics.revenue))}
+        ${detailItem('Stripe readiness', data.shop.stripe_ready ? 'Ready' : 'Action needed')}
+        ${detailItem('Owner email', data.shop.email)}
+      </div>
+      <div class="soft-panel">
+        <div class="soft-panel-header"><h3 class="soft-panel-title">Recent orders</h3></div>
+        <div class="soft-panel-body">${data.recent_orders.length ? data.recent_orders.map(o => `<button class="table-action" type="button" onclick="viewOrder(${o.id})">#${esc(o.id)} - ${esc(o.customer_email)} - ${money(o.total)}</button>`).join('') : '<div class="mini-text">No recent orders.</div>'}</div>
+      </div>
+    `);
+  }
+  async function viewOrder(id) {
+    const o = await api(`/api/platform/orders/${id}`);
+    openDetail(`Order #${o.id}`, `${o.shop.name} - ${o.customer.email}`, `
+      <div class="detail-grid">
+        ${detailItem('Store', `${o.shop.name} (${o.shop.slug})`)}
+        ${detailItem('Customer', `${esc(o.customer.name || '-')}<br>${esc(o.customer.email)}`, true)}
+        ${detailItem('File', o.file_name || '-')}
+        ${detailItem('Material', o.material ? `${o.material.name || '-'} (${o.material.category || '-'})` : '-')}
+        ${detailItem('Colour', o.colour || '-')}
+        ${detailItem('Finish', o.finish || '-')}
+        ${detailItem('Quantity', o.quantity)}
+        ${detailItem('Subtotal', money(o.subtotal))}
+        ${detailItem('Tax', money(o.tax))}
+        ${detailItem('Shipping', money(o.shipping))}
+        ${detailItem('Total', money(o.total))}
+        ${detailItem('Payment', o.payment_status)}
+        ${detailItem('Fulfilment', o.fulfilment_status)}
+        ${detailItem('Tracking', [o.tracking_number, o.tracking_url].filter(Boolean).map(esc).join('<br>') || '-', true)}
+        ${detailItem('Stripe payment ID', o.stripe_payment_id || '-')}
+        ${detailItem('Created', o.created_at)}
+      </div>
+      ${o.notes || o.customer_message ? `<div class="detail-item"><div class="detail-label">Notes and customer message</div><div class="detail-value">${esc([o.notes, o.customer_message].filter(Boolean).join('\\n\\n')).replace(/\\n/g, '<br>')}</div></div>` : ''}
+    `);
+    loadAudit();
+  }
+  async function viewCustomer(id) {
+    const data = await api(`/api/platform/customers/${encodeURIComponent(id)}`);
+    openDetail(data.customer.name || data.customer.email, `${data.shop.name} - customer`, `
+      <div class="detail-grid">
+        ${detailItem('Store', `${data.shop.name} (${data.shop.slug})`)}
+        ${detailItem('Email', data.customer.email)}
+        ${detailItem('Name', data.customer.name || '-')}
+        ${detailItem('Account created', data.customer.account_created_at || '-')}
+        ${detailItem('Customer record', data.customer.customer_created_at || '-')}
+        ${detailItem('Order count', data.metrics.order_count)}
+        ${detailItem('Paid orders', data.metrics.paid_orders)}
+        ${detailItem('Total spent', money(data.metrics.total_spent))}
+      </div>
+      <div class="soft-panel">
+        <div class="soft-panel-header"><h3 class="soft-panel-title">Related orders</h3></div>
+        <div class="soft-panel-body">${data.orders.length ? data.orders.map(o => `<button class="table-action" type="button" onclick="viewOrder(${o.id})">#${esc(o.id)} - ${esc(o.material_name || '-')} - ${money(o.total)}</button>`).join('') : '<div class="mini-text">No orders yet.</div>'}</div>
+      </div>
+    `);
+    loadAudit();
+  }
+  function detailItem(label, value, html = false) {
+    const safeValue = html ? String(value == null || value === '' ? '-' : value) : esc(value == null || value === '' ? '-' : value);
+    return `<div class="detail-item"><div class="detail-label">${esc(label)}</div><div class="detail-value">${safeValue}</div></div>`;
+  }
+  function openDetail(title, subtitle, body) {
+    document.getElementById('detailTitle').textContent = title;
+    document.getElementById('detailSubtitle').textContent = subtitle || '';
+    document.getElementById('detailBody').innerHTML = body;
+    document.getElementById('detailOverlay').classList.add('open');
+  }
+  function closeDetail() { document.getElementById('detailOverlay').classList.remove('open'); }
+
+  async function loadAccount() {
+    const data = await api('/api/platform/account');
+    document.getElementById('ownerEmail').value = data.owner_email || '';
+    document.getElementById('ownerEmailStatus').textContent = data.owner_email || 'Not set';
+    document.getElementById('ownerPasswordStatus').innerHTML = data.has_password ? badge('Hashed password', 'sage') : badge('Using .env fallback', 'warm');
+    document.getElementById('mailProviderStatus').textContent = data.mail_provider === 'dev' ? 'Dev preview' : String(data.mail_provider || '-').toUpperCase();
+    document.getElementById('mailFromStatus').textContent = (data.mail_from || '-') + (data.mail_using_resend_test_sender ? ' (Resend test sender)' : '');
+  }
+  async function loadPayments() {
+    const data = await api('/api/platform/payments');
+    document.getElementById('platformFeePercent').value = Number(data.platform_fee_percent || 0).toFixed(2);
+    document.getElementById('platformMaskedPk').textContent = data.publishable_key_masked || '-';
+    document.getElementById('platformMaskedSk').textContent = data.secret_key_masked || '-';
+    document.getElementById('platformMaskedClientId').textContent = data.client_id_masked || '-';
+    document.getElementById('platformCardsStatus').innerHTML = data.can_accept_cards ? badge('Enabled', 'sage') : badge('Not ready', 'warm');
+  }
+  async function loadAudit() {
+    const data = await api('/api/platform/audit-events?limit=30');
+    document.getElementById('auditList').innerHTML = data.events.length ? data.events.map(e => `
+      <div class="detail-item">
+        <div class="detail-label">${esc(e.action.replace(/_/g, ' '))}</div>
+        <div class="detail-value">${esc(e.target_type || '-')} ${esc(e.target_id || '')}<br><span class="mini-text">${esc(e.shop_name || 'Platform')} - ${esc(e.created_at)}</span></div>
+      </div>
+    `).join('') : '<div class="mini-text">No audit events yet.</div>';
   }
 
   async function impersonate(shopId) {
-    if (!confirm('Impersonate this shop? You will be logged in as their admin.')) return;
+    if (!confirm('Impersonate this store? This action is audit-logged.')) return;
     const r = await fetch('/api/platform/impersonate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ shopId })
     });
-    if (r.ok) {
-      window.location.href = '/admin/dashboard.html';
-    } else {
-      alert('Failed to impersonate shop.');
-    }
+    if (r.ok) window.location.href = '/admin/dashboard.html';
+    else alert('Failed to impersonate store.');
   }
-
   function openSuspend(shopId, shopName, isRestore = false) {
     suspendTarget = shopId;
     suspendIsRestore = isRestore;
-    document.getElementById('suspendTitle').textContent =
-      isRestore ? `Restore ${shopName}?` : `Suspend ${shopName}?`;
-    document.getElementById('suspendBody').textContent =
-      isRestore
-        ? 'This will restore the shop owner\'s access. They will be able to log in again immediately.'
-        : 'This will prevent the shop owner from logging in. You can restore access at any time.';
-    const confirmBtn = document.getElementById('confirmSuspend');
-    confirmBtn.textContent = isRestore ? 'Restore' : 'Suspend';
-    confirmBtn.className   = isRestore ? 'btn btn-primary' : 'btn btn-danger';
+    document.getElementById('suspendTitle').textContent = isRestore ? `Restore ${shopName}?` : `Suspend ${shopName}?`;
+    document.getElementById('suspendBody').textContent = isRestore
+      ? 'This restores the store owner login immediately.'
+      : 'This prevents the store owner from logging in until restored.';
+    const btn = document.getElementById('confirmSuspend');
+    btn.textContent = isRestore ? 'Restore' : 'Suspend';
+    btn.className = isRestore ? 'btn btn-primary' : 'btn btn-danger';
     document.getElementById('suspendModal').classList.remove('hidden');
   }
-
-  document.getElementById('cancelSuspend').addEventListener('click', () => {
-    document.getElementById('suspendModal').classList.add('hidden');
-    suspendTarget = null;
-  });
-
-  document.getElementById('confirmSuspend').addEventListener('click', async () => {
+  async function confirmSuspend() {
     if (!suspendTarget) return;
     const btn = document.getElementById('confirmSuspend');
     btn.disabled = true;
-    btn.textContent = suspendIsRestore ? 'Restoring…' : 'Suspending…';
     try {
-      await fetch(`/api/platform/shops/${suspendTarget}`, {
+      await api(`/api/platform/shops/${suspendTarget}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ suspended: !suspendIsRestore })
       });
       document.getElementById('suspendModal').classList.add('hidden');
       suspendTarget = null;
-      loadShops();
-      loadStats();
-    } catch {
-      alert(suspendIsRestore ? 'Failed to restore shop.' : 'Failed to suspend shop.');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = suspendIsRestore ? 'Restore' : 'Suspend';
-    }
-  });
-
-  document.getElementById('suspendModal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) {
-      e.currentTarget.classList.add('hidden');
-      suspendTarget = null;
-    }
-  });
-
-  // Auto-generate slug from name
-  document.getElementById('newName').addEventListener('input', e => {
-    const slug = e.target.value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    document.getElementById('newSlug').value = slug;
-  });
-
-  // Create shop
-  async function submitCreateShop() {
-    const btn = document.getElementById('createShopBtn');
-    const errEl = document.getElementById('createError');
-    errEl.style.display = 'none';
-
-    const name     = document.getElementById('newName').value.trim();
-    const slug     = document.getElementById('newSlug').value.trim();
-    const email    = document.getElementById('newEmail').value.trim();
-    const password = document.getElementById('newPassword').value;
-    const plan     = document.getElementById('newPlan').value;
-
-    if (!name || !slug || !email || !password) {
-      errEl.textContent = 'All fields are required.';
-      errEl.style.display = 'block';
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Creating…';
-
-    try {
-      const r = await fetch('/api/platform/shops', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, slug, email, password, plan })
-      });
-
-      if (r.status === 401) {
-        window.location.href = '/platform/login.html';
-        return;
-      }
-
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Failed to create shop');
-
-      document.getElementById('revealPassword').textContent = password;
-      document.getElementById('createSuccess').classList.add('visible');
-      document.getElementById('createShopForm').reset();
-      loadShops();
-      loadStats();
+      await Promise.all([loadShops(), loadOverview(), loadAudit()]);
     } catch (err) {
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
+      alert(err.message || 'Could not update store.');
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Create shop';
     }
   }
 
+  async function submitCreateShop() {
+    hideBox('createError');
+    hideBox('createSuccess');
+    const payload = {
+      name: document.getElementById('newName').value.trim(),
+      slug: document.getElementById('newSlug').value.trim(),
+      email: document.getElementById('newEmail').value.trim(),
+      password: document.getElementById('newPassword').value,
+      plan: document.getElementById('newPlan').value,
+    };
+    if (!payload.name || !payload.slug || !payload.email || !payload.password) {
+      showBox('createError', 'All fields are required.');
+      return;
+    }
+    const btn = document.getElementById('createShopBtn');
+    btn.disabled = true;
+    try {
+      await api('/api/platform/shops', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      document.getElementById('revealPassword').textContent = payload.password;
+      document.getElementById('createShopForm').reset();
+      showBox('createSuccess');
+      await Promise.all([loadShops(), loadOverview(), loadAudit()]);
+    } catch (err) {
+      showBox('createError', err.message || 'Failed to create store.');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('platformSignout').addEventListener('click', async e => {
+    e.preventDefault();
+    await fetch('/api/platform/logout', { method: 'POST' });
+    window.location.href = '/platform/login.html';
+  });
+  document.querySelectorAll('.platform-tab').forEach(btn => btn.addEventListener('click', () => setTab(btn.dataset.tab)));
+  document.getElementById('closeDetail').addEventListener('click', closeDetail);
+  document.getElementById('detailOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDetail(); });
+  document.getElementById('applyOrderFilters').addEventListener('click', () => { state.ordersPage = 1; loadOrders(); });
+  document.getElementById('applyCustomerFilters').addEventListener('click', () => { state.customersPage = 1; loadCustomers(); });
+  document.getElementById('cancelSuspend').addEventListener('click', () => document.getElementById('suspendModal').classList.add('hidden'));
+  document.getElementById('confirmSuspend').addEventListener('click', confirmSuspend);
+  document.getElementById('newName').addEventListener('input', e => {
+    document.getElementById('newSlug').value = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  });
   document.getElementById('copyPasswordBtn').addEventListener('click', () => {
-    const pw = document.getElementById('revealPassword').textContent;
-    navigator.clipboard.writeText(pw).then(() => {
-      const btn = document.getElementById('copyPasswordBtn');
-      btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
-    });
+    navigator.clipboard.writeText(document.getElementById('revealPassword').textContent || '');
   });
 
   document.getElementById('saveAccountBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('saveAccountBtn');
-    const errEl = document.getElementById('accountError');
-    const okEl = document.getElementById('accountSuccess');
+    hideBox('accountError');
+    hideBox('accountSuccess');
     const newPassword = document.getElementById('newPlatformPassword').value;
     const confirmPassword = document.getElementById('confirmPlatformPassword').value;
-
-    errEl.style.display = 'none';
-    okEl.classList.remove('visible');
-
     if (newPassword && newPassword !== confirmPassword) {
-      errEl.textContent = 'New passwords do not match.';
-      errEl.style.display = 'block';
+      showBox('accountError', 'New passwords do not match.');
       return;
     }
-
-    btn.disabled = true;
-    btn.textContent = 'Saving…';
-
+    const payload = { owner_email: document.getElementById('ownerEmail').value.trim() };
+    if (newPassword) {
+      payload.current_password = document.getElementById('currentPlatformPassword').value;
+      payload.new_password = newPassword;
+    }
     try {
-      const payload = {
-        owner_email: document.getElementById('ownerEmail').value.trim(),
-      };
-      if (newPassword) {
-        payload.current_password = document.getElementById('currentPlatformPassword').value;
-        payload.new_password = newPassword;
-      }
-
-      const r = await fetch('/api/platform/account', {
+      await api('/api/platform/account', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Failed to save security settings');
-
       document.getElementById('currentPlatformPassword').value = '';
       document.getElementById('newPlatformPassword').value = '';
       document.getElementById('confirmPlatformPassword').value = '';
-      okEl.classList.add('visible');
-      loadAccount();
+      showBox('accountSuccess');
+      await Promise.all([loadAccount(), loadAudit()]);
     } catch (err) {
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Save security settings';
+      showBox('accountError', err.message || 'Failed to save security settings.');
     }
   });
 
   document.getElementById('savePaymentsBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('savePaymentsBtn');
-    const errEl = document.getElementById('paymentsError');
-    const okEl = document.getElementById('paymentsSuccess');
-    errEl.style.display = 'none';
-    okEl.classList.remove('visible');
-
-    btn.disabled = true;
-    btn.textContent = 'Saving…';
-
+    hideBox('paymentsError');
+    hideBox('paymentsSuccess');
+    const payload = { platform_fee_percent: document.getElementById('platformFeePercent').value.trim() };
+    const publishableKey = document.getElementById('platformPublishableKey').value.trim();
+    const secretKey = document.getElementById('platformSecretKey').value.trim();
+    const clientId = document.getElementById('platformClientId').value.trim();
+    if (publishableKey) payload.publishable_key = publishableKey;
+    if (secretKey) payload.secret_key = secretKey;
+    if (clientId) payload.client_id = clientId;
     try {
-      const payload = {
-        platform_fee_percent: document.getElementById('platformFeePercent').value.trim(),
-      };
-      const publishableKey = document.getElementById('platformPublishableKey').value.trim();
-      const secretKey = document.getElementById('platformSecretKey').value.trim();
-      const clientId = document.getElementById('platformClientId').value.trim();
-      if (publishableKey) payload.publishable_key = publishableKey;
-      if (secretKey) payload.secret_key = secretKey;
-      if (clientId) payload.client_id = clientId;
-
-      const r = await fetch('/api/platform/payments', {
+      await api('/api/platform/payments', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Failed to save payments config');
-
       document.getElementById('platformPublishableKey').value = '';
       document.getElementById('platformSecretKey').value = '';
       document.getElementById('platformClientId').value = '';
-      okEl.classList.add('visible');
-      loadPayments();
-      loadStats();
+      showBox('paymentsSuccess');
+      await Promise.all([loadPayments(), loadOverview(), loadAudit()]);
     } catch (err) {
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Save payments config';
+      showBox('paymentsError', err.message || 'Failed to save payments config.');
     }
   });
+
+  (async () => {
+    try {
+      await api('/api/platform/me');
+      await Promise.all([loadOverview(), loadShops(), loadOrders(), loadCustomers(), loadPayments(), loadAccount(), loadAudit()]);
+      setTab(location.hash.slice(1) || 'overview');
+    } catch {
+      window.location.href = '/platform/login.html';
+    }
+  })();
 </script>
 </body>
 </html>
