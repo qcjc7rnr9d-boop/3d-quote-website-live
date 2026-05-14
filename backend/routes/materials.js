@@ -5,7 +5,7 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { db, requireShopAuth } from '../middleware/auth.js';
-import { MATERIAL_LIBRARY, findMaterialMatch } from '../lib/material-library.js';
+import { MATERIAL_LIBRARY, enrichMaterialSuggestion, findMaterialMatch } from '../lib/material-library.js';
 import { aiLookupMaterial } from '../lib/material-ai.js';
 import {
   normalizeMaterialPayload,
@@ -38,7 +38,7 @@ function verifiedImageExtension(file) {
 // ── Material library (curated reference data — used by the admin
 //     panel's "Suggest from library" feature) ──────────────────
 router.get('/library', requireShopAuth, (req, res) => {
-  res.json({ materials: MATERIAL_LIBRARY });
+  res.json({ materials: MATERIAL_LIBRARY.map(enrichMaterialSuggestion) });
 });
 
 // Optional server-side suggestion lookup — handy for scripting/tests
@@ -46,7 +46,7 @@ router.get('/library/suggest', requireShopAuth, (req, res) => {
   const { name } = req.query;
   const match = findMaterialMatch(name);
   if (!match) return res.status(404).json({ error: 'No close match found', query: name });
-  res.json({ match, query: name, source: 'library' });
+  res.json({ match: enrichMaterialSuggestion(match), query: name, source: 'library' });
 });
 
 // ── AI material lookup — used as a fallback when the curated

@@ -157,6 +157,8 @@ CREATE TABLE IF NOT EXISTS store_settings (
   about          TEXT,
   phone          TEXT,
   address        TEXT,
+  support_email_mode TEXT NOT NULL DEFAULT 'signup',
+  support_email  TEXT,
   logo_url       TEXT,
   gst_number     TEXT,
   invoice_footer TEXT,

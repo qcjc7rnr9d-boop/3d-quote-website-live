@@ -1,11 +1,44 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
 import { db } from '../middleware/auth.js';
-import { BCRYPT_ROUNDS } from '../config.js';
+import { BCRYPT_ROUNDS, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES } from '../config.js';
 import { parseInfillTiers } from '../lib/infill-tiers.js';
 import { parseMaterialRow, safeJson } from '../lib/material-config.js';
+import { calculateQuoteForShopSlug, PricingError } from '../lib/pricing-engine.js';
 
 const router = Router();
+const customerLoginLimiter = rateLimit({
+  windowMs: LOGIN_WINDOW_MINUTES * 60 * 1000,
+  max: LOGIN_MAX_ATTEMPTS,
+  message: { error: 'Too many login attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const customerRegisterLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many account attempts, please try again shortly.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const customerPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: { error: 'Too many password attempts, please try again shortly.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+function ensureSupportEmailColumns() {
+  const cols = db.prepare('PRAGMA table_info(store_settings)').all().map(c => c.name);
+  if (!cols.includes('support_email_mode')) {
+    db.exec("ALTER TABLE store_settings ADD COLUMN support_email_mode TEXT NOT NULL DEFAULT 'signup'");
+  }
+  if (!cols.includes('support_email')) {
+    db.exec('ALTER TABLE store_settings ADD COLUMN support_email TEXT');
+  }
+}
 
 // ── Auth middleware for customer portal ───────────────────────
 function requireCustomerAuth(req, res, next) {
@@ -21,18 +54,21 @@ function requireCustomerAuth(req, res, next) {
 
 // ── GET /api/customer/shop-info?slug=X  (public) ─────────────
 router.get('/shop-info', (req, res) => {
+  ensureSupportEmailColumns();
   // Accept ?slug=mahi3d  OR  ?shop=mahi3d (both used across customer pages)
   const slug = req.query.slug || req.query.shop;
   if (!slug) return res.status(400).json({ error: 'slug required' });
   const shop = db.prepare(
-    "SELECT id, name, slug FROM shops WHERE slug = ? AND plan != 'suspended'"
+    "SELECT id, name, slug, email FROM shops WHERE slug = ? AND plan != 'suspended'"
   ).get(slug);
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
   // Pull branding fields from the shop's store_settings row (all optional)
   const s = db.prepare(
-    'SELECT tagline, about, phone, address, logo_url FROM store_settings WHERE shop_id = ?'
+    'SELECT tagline, about, phone, address, support_email_mode, support_email, logo_url FROM store_settings WHERE shop_id = ?'
   ).get(shop.id) || {};
+  const supportMode = s.support_email_mode === 'custom' ? 'custom' : 'signup';
+  const supportEmail = supportMode === 'custom' && s.support_email ? s.support_email : shop.email;
 
   res.json({
     name:     shop.name,
@@ -42,6 +78,8 @@ router.get('/shop-info', (req, res) => {
     logo_url: s.logo_url || null,
     phone:    s.phone    || null,
     address:  s.address  || null,
+    support_email: supportEmail || null,
+    support_email_mode: supportMode,
   });
 });
 
@@ -107,7 +145,9 @@ router.get('/catalog', (req, res) => {
      ORDER BY sort_order, name`
   ).all(shop.id);
   const materials = rows.map(r => parseMaterialRow(r, { stableIds: true, publicOnly: true }));
-  const filters = [...new Set(materials.flatMap(m => m.tags || []))];
+  const filters = [...new Set(materials.flatMap(m => [m.category, ...(m.tags || [])])
+    .map(v => String(v || '').trim())
+    .filter(Boolean))];
   res.json({
     settings: {
       heading: 'Choose your material',
@@ -123,8 +163,29 @@ router.get('/catalog', (req, res) => {
   });
 });
 
+// ── POST /api/customer/quote-preview  (public pricing source) ──
+router.post('/quote-preview', (req, res) => {
+  try {
+    const { shopSlug, shop, ...input } = req.body || {};
+    const slug = shopSlug || shop;
+    const quote = calculateQuoteForShopSlug(db, slug, { ...input, shopSlug: slug });
+    res.json(quote);
+  } catch (err) {
+    if (err instanceof PricingError) {
+      return res.status(err.status).json({
+        ok: false,
+        code: err.code,
+        error: err.message,
+        quote: err.quote || null,
+      });
+    }
+    console.error('Quote preview error:', err);
+    res.status(500).json({ ok: false, error: 'Could not calculate quote.' });
+  }
+});
+
 // ── POST /api/customer/register ───────────────────────────────
-router.post('/register', async (req, res) => {
+router.post('/register', customerRegisterLimiter, async (req, res) => {
   try {
     const { shopSlug, name, email, password } = req.body;
     if (!shopSlug || !name || !email || !password) {
@@ -161,7 +222,7 @@ router.post('/register', async (req, res) => {
 });
 
 // ── POST /api/customer/login ──────────────────────────────────
-router.post('/login', async (req, res) => {
+router.post('/login', customerLoginLimiter, async (req, res) => {
   try {
     const { shopSlug, email, password } = req.body;
     if (!shopSlug || !email || !password) {
@@ -213,6 +274,61 @@ router.get('/me', requireCustomerAuth, (req, res) => {
   `).get(shop_id, email);
 
   res.json({ id, name, email, created_at, shop, ...stats });
+});
+
+// ── PATCH /api/customer/me ────────────────────────────────────
+router.patch('/me', requireCustomerAuth, (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (!name || name.length < 2) {
+      return res.status(400).json({ error: 'Enter your name.' });
+    }
+    if (name.length > 120) {
+      return res.status(400).json({ error: 'Name is too long.' });
+    }
+
+    db.prepare(`
+      UPDATE customer_accounts
+      SET name = ?
+      WHERE id = ?
+    `).run(name, req.customerAccount.id);
+
+    res.json({ ok: true, name });
+  } catch (err) {
+    console.error('Customer profile update error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── POST /api/customer/change-password ────────────────────────
+router.post('/change-password', customerPasswordLimiter, requireCustomerAuth, async (req, res) => {
+  try {
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword = String(req.body?.newPassword || '');
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current and new password are required.' });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+    }
+
+    const valid = await bcrypt.compare(currentPassword, req.customerAccount.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
+    }
+
+    const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    db.prepare(`
+      UPDATE customer_accounts
+      SET password_hash = ?
+      WHERE id = ?
+    `).run(hash, req.customerAccount.id);
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Customer password change error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // ── GET /api/customer/orders ──────────────────────────────────

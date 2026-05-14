@@ -68,6 +68,108 @@
       font-weight: 400;
       line-height: 1.6;
     }
+    .support-panel {
+      display: grid;
+      gap: 16px;
+    }
+    .support-panel-intro {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 16px;
+      border: 1px solid rgba(74,112,80,0.20);
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(74,112,80,0.08), rgba(255,255,255,0.78));
+    }
+    .support-panel-intro strong {
+      display: block;
+      font-size: 14px;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+    .support-panel-intro span {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .support-email-pill {
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--white);
+      color: var(--sage-dark);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 6px 10px;
+      white-space: nowrap;
+    }
+    .support-email-choice {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .support-email-option {
+      position: relative;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--white);
+      cursor: pointer;
+      transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+    }
+    .support-email-option:hover {
+      border-color: rgba(74,112,80,0.35);
+      box-shadow: 0 8px 22px rgba(17,19,23,0.06);
+    }
+    .support-email-option.selected {
+      border-color: var(--sage);
+      background: rgba(74,112,80,0.06);
+      box-shadow: 0 10px 28px rgba(74,112,80,0.10);
+    }
+    .support-email-option input { margin-top: 3px; accent-color: var(--sage-dark); }
+    .support-email-option strong { display: block; font-size: 13px; color: var(--ink); margin-bottom: 3px; }
+    .support-email-option span { display: block; font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .support-email-current {
+      display: inline-flex;
+      max-width: 100%;
+      margin-top: 9px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: var(--off-white);
+      color: var(--ink);
+      font-size: 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .support-email-custom {
+      display: grid;
+      gap: 7px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--off-white);
+    }
+    .support-email-custom.active {
+      background: var(--white);
+      border-color: rgba(74,112,80,0.28);
+    }
+    .support-email-summary {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    @media (max-width: 760px) {
+      .support-panel-intro { flex-direction: column; }
+      .support-email-choice { grid-template-columns: 1fr; }
+    }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .fade-in { animation: fadeIn 300ms ease-out; }
@@ -215,6 +317,49 @@
         </div>
       </div>
 
+      <!-- Customer support email -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Support contact</span>
+        </div>
+        <div class="section-card-body">
+          <div class="support-panel">
+            <div class="support-panel-intro">
+              <div>
+                <strong>Choose where customer help requests should go.</strong>
+                <span>This email appears in the customer portal Help &amp; Contact tab. It can match your signup email or point customers to a dedicated support inbox.</span>
+              </div>
+              <div class="support-email-pill" id="supportEmailModePill">Signup email</div>
+            </div>
+
+            <div class="support-email-choice">
+              <label class="support-email-option" id="supportSignupCard">
+                <input type="radio" name="supportEmailMode" id="supportEmailSignup" value="signup" checked>
+                <span>
+                  <strong>Use signup email</strong>
+                  <span>Best if one inbox handles admin access and customer questions.</span>
+                  <span class="support-email-current" id="supportSignupPreview">Loading email...</span>
+                </span>
+              </label>
+              <label class="support-email-option" id="supportCustomCard">
+                <input type="radio" name="supportEmailMode" id="supportEmailCustomMode" value="custom">
+                <span>
+                  <strong>Use help-specific email</strong>
+                  <span>Best if customer messages should go to a separate support inbox.</span>
+                  <span class="support-email-current" id="supportCustomPreview">help@example.com</span>
+                </span>
+              </label>
+            </div>
+
+            <div class="support-email-custom" id="supportEmailCustomPanel">
+              <label class="form-label" for="supportEmail">Help-specific email</label>
+              <input type="email" class="form-input" id="supportEmail" placeholder="help@example.com" autocomplete="email">
+              <span class="support-email-summary" id="supportEmailSummary">Customers will currently see your signup email.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Invoice -->
       <div class="section-card">
         <div class="section-card-header">
@@ -321,6 +466,35 @@
     window.location.href = 'login.html';
   });
 
+  function getSupportEmailMode() {
+    return document.querySelector('input[name="supportEmailMode"]:checked')?.value === 'custom' ? 'custom' : 'signup';
+  }
+
+  function syncSupportEmailInput() {
+    const custom = getSupportEmailMode() === 'custom';
+    const input = document.getElementById('supportEmail');
+    const signupEmail = document.getElementById('shopEmail').value || 'your signup email';
+    const customEmail = input.value.trim() || 'help@example.com';
+    document.getElementById('supportSignupCard').classList.toggle('selected', !custom);
+    document.getElementById('supportCustomCard').classList.toggle('selected', custom);
+    document.getElementById('supportEmailCustomPanel').classList.toggle('active', custom);
+    document.getElementById('supportEmailModePill').textContent = custom ? 'Help inbox' : 'Signup email';
+    document.getElementById('supportSignupPreview').textContent = signupEmail;
+    document.getElementById('supportCustomPreview').textContent = customEmail;
+    document.getElementById('supportEmailSummary').textContent = custom
+      ? `Customers will see ${customEmail} in their Help & Contact tab.`
+      : `Customers will see ${signupEmail} in their Help & Contact tab.`;
+    input.disabled = !custom;
+    input.style.background = custom ? '' : 'var(--off-white)';
+    input.style.color = custom ? '' : 'var(--muted)';
+  }
+
+  document.querySelectorAll('input[name="supportEmailMode"]').forEach(input => {
+    input.addEventListener('change', syncSupportEmailInput);
+  });
+  document.getElementById('supportEmail').addEventListener('input', syncSupportEmailInput);
+  syncSupportEmailInput();
+
   // ── Load settings ──────────────────────────────────────────
   (async () => {
     try {
@@ -332,6 +506,9 @@
       if (s.tagline)         document.getElementById('shopTagline').value  = s.tagline;
       if (s.phone)           document.getElementById('shopPhone').value    = s.phone;
       if (s.address)         document.getElementById('shopAddress').value  = s.address;
+      document.getElementById(s.support_email_mode === 'custom' ? 'supportEmailCustomMode' : 'supportEmailSignup').checked = true;
+      document.getElementById('supportEmail').value = s.support_email || '';
+      syncSupportEmailInput();
       if (s.gst_number)      document.getElementById('shopGST').value      = s.gst_number;
       if (s.invoice_footer)  {
         document.getElementById('invoiceFooter').value    = s.invoice_footer;
@@ -400,6 +577,8 @@
         tagline:        document.getElementById('shopTagline').value.trim(),
         phone:          document.getElementById('shopPhone').value.trim(),
         address:        document.getElementById('shopAddress').value.trim(),
+        support_email_mode: getSupportEmailMode(),
+        support_email:  document.getElementById('supportEmail').value.trim(),
         gst_number:     document.getElementById('shopGST').value.trim(),
         invoice_footer: invoiceFooterVal,
         invoice_prefix: document.getElementById('invoicePrefix').value.trim(),

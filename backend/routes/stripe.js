@@ -7,8 +7,12 @@ import {
   getMaskedPlatformStripeConfig,
   updateShopStripeReadiness,
 } from '../lib/platform-payments.js';
-import { parseInfillTiers } from '../lib/infill-tiers.js';
-import { parseMaterialRow, safeJson } from '../lib/material-config.js';
+import {
+  assertClaimedTotalMatches,
+  buildQuoteRequestFromCart,
+  calculateQuoteForShop,
+  PricingError,
+} from '../lib/pricing-engine.js';
 
 const router = Router();
 const paymentIntentLimiter = rateLimit({
@@ -63,105 +67,6 @@ function shopReadinessPayload(shop, account = null) {
 
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
-}
-
-function getValidatedOrderQuote(shop, orderData = {}, claimedAmount) {
-  const material = parseMaterialRow(db.prepare(`
-    SELECT *
-    FROM materials
-    WHERE id = ? AND shop_id = ? AND active = 1
-  `).get(orderData.materialId, shop.id), { stableIds: true, publicOnly: true });
-  if (!material) {
-    const err = new Error('Selected material is not available.');
-    err.status = 400;
-    throw err;
-  }
-
-  const qty = Math.max(1, Math.min(999, parseInt(orderData.quantity, 10) || 1));
-  const volumeCm3 = Number(orderData.volumeCm3);
-  if (!Number.isFinite(volumeCm3) || volumeCm3 <= 0) {
-    const err = new Error('Model volume is missing or invalid.');
-    err.status = 400;
-    throw err;
-  }
-
-  const colour = material.colours.find(c => String(c.id) === String(orderData.colourId))
-    || material.colours.find(c => c.name === orderData.colour)
-    || material.colours[0]
-    || null;
-  if (material.colours.length && !colour) {
-    const err = new Error('Selected colour is not available.');
-    err.status = 400;
-    throw err;
-  }
-
-  const finish = material.finishes.find(f => String(f.id) === String(orderData.finishId || orderData.finish))
-    || material.finishes.find(f => f.name === orderData.finish)
-    || material.finishes.find(f => f.default)
-    || material.finishes[0]
-    || null;
-  if (material.finishes.length && !finish) {
-    const err = new Error('Selected finish is not available.');
-    err.status = 400;
-    throw err;
-  }
-
-  const pricing = db.prepare('SELECT infill_tiers FROM pricing_config WHERE shop_id = ?').get(shop.id) || {};
-  const infillTiers = parseInfillTiers(pricing.infill_tiers);
-  const activeInfill = infillTiers.filter(t => t.active !== false);
-  const infill = activeInfill.find(t => t.id === orderData.infillTierId)
-    || activeInfill.find(t => t.is_default)
-    || activeInfill[0]
-    || null;
-
-  const rate = Number(material.base_price) || 0;
-  const minCharge = Number(material.min_charge) || 0;
-  const finishMultiplier = Number(finish?.priceMultiplier) || 1;
-  const infillMultiplier = Number(infill?.multiplier) || 1;
-  const unit = Math.max(volumeCm3 * rate * finishMultiplier * infillMultiplier, minCharge);
-  const subtotal = unit * qty;
-
-  let shipping = 0;
-  let shippingLabel = null;
-  if (orderData.shippingId) {
-    const settings = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
-    const zones = safeJson(settings.shipping_zones, []).filter(z => z.active !== false);
-    const zone = zones.find(z => String(z.id || `${z.courier || z.name}-${z.service || ''}`) === String(orderData.shippingId));
-    if (!zone) {
-      const err = new Error('Selected shipping option is not available.');
-      err.status = 400;
-      throw err;
-    }
-    shipping = Number(zone.price ?? zone.rate ?? 0) || 0;
-    shippingLabel = [zone.courier || zone.name, zone.service].filter(Boolean).join(' · ') || 'Shipping';
-  } else if (Number(orderData.shipping || 0) > 0) {
-    const err = new Error('Shipping option must be selected from this store.');
-    err.status = 400;
-    throw err;
-  }
-
-  const tax = 0;
-  const total = subtotal + shipping + tax;
-  const claimed = Number(claimedAmount);
-  if (!Number.isFinite(claimed) || Math.abs(claimed - total) > 0.01) {
-    const err = new Error('Checkout total changed. Please refresh your quote and try again.');
-    err.status = 409;
-    throw err;
-  }
-
-  return {
-    material,
-    colour,
-    finish,
-    qty,
-    unit,
-    subtotal,
-    shipping,
-    shippingLabel,
-    tax,
-    total,
-    infill,
-  };
 }
 
 export function stripeWebhookHandler(req, res) {
@@ -282,8 +187,13 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
 
     const stripe = ensurePlatformStripe();
     const { feePercent } = getEffectivePlatformStripeConfig();
-    const quote = getValidatedOrderQuote(shop, orderData, amount);
-    const amountCents = Math.round(quote.total * 100);
+    const quote = calculateQuoteForShop(db, shop, {
+      ...buildQuoteRequestFromCart(orderData),
+      ...orderData,
+      shopSlug,
+    });
+    assertClaimedTotalMatches(quote, amount);
+    const amountCents = quote.totalCents;
     const feeCents = Math.round(amountCents * feePercent / 100);
 
     const intent = await stripe.paymentIntents.create({
@@ -300,7 +210,8 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
         shopSlug: shop.slug,
         customerEmail: customerEmail || '',
         customerName: customerName || '',
-        materialId: String(quote.material.id),
+        materialId: String(quote.selected.material.id),
+        pricingVersion: quote.pricingVersion,
       },
     });
 
@@ -316,16 +227,23 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       shop.id, (customerEmail || '').toLowerCase(), customerName || '',
-      orderData?.fileName || null, quote.material.id,
-      quote.colour?.name || null, quote.finish?.name || null,
-      quote.qty,
-      quote.subtotal, quote.tax, quote.shipping,
-      quote.total, intent.id,
+      orderData?.fileName || null, quote.selected.material.id,
+      quote.selected.colour?.name || null, quote.selected.finish?.name || null,
+      quote.selected.quantity,
+      quote.lineItems.itemSubtotal, quote.lineItems.tax, quote.lineItems.shipping,
+      quote.lineItems.total, intent.id,
     );
 
     res.json({ clientSecret: intent.client_secret, orderId: order.lastInsertRowid, status: intent.status });
   } catch (err) {
     console.error('Create payment intent error:', err);
+    if (err instanceof PricingError) {
+      return res.status(err.status).json({
+        error: err.message || 'Payment failed',
+        code: err.code,
+        quote: err.quote || null,
+      });
+    }
     res.status(err.status || 500).json({ error: err.message || 'Payment failed' });
   }
 });

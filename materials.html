@@ -203,13 +203,13 @@
     .materials-list {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 14px;
     }
     .material-card {
       position: relative;
       display: grid;
-      grid-template-columns: 176px minmax(190px, 1.1fr) minmax(190px, 0.88fr) minmax(220px, 1fr) minmax(250px, 1.15fr) 150px;
-      gap: 22px;
+      grid-template-columns: 168px minmax(210px, 1.05fr) minmax(190px, 0.85fr) minmax(210px, 0.9fr) minmax(260px, 1.15fr) 132px;
+      gap: 18px;
       align-items: stretch;
       padding: 20px;
       background: rgba(255,255,255,0.82);
@@ -217,6 +217,11 @@
       border-radius: var(--radius);
       box-shadow: 0 9px 24px rgba(31,37,31,0.045);
       transition: border-color 160ms, background 160ms, box-shadow 160ms;
+      cursor: pointer;
+    }
+    .material-card:hover {
+      border-color: rgba(31,107,53,0.32);
+      box-shadow: 0 14px 34px rgba(31,37,31,0.065);
     }
     .material-card.selected {
       border-color: var(--sage);
@@ -236,7 +241,7 @@
       font-weight: 800;
     }
     .material-image {
-      min-height: 142px;
+      min-height: 154px;
       border-radius: 14px;
       background: linear-gradient(140deg, #f9faf8, #e9ece6);
       overflow: hidden;
@@ -271,6 +276,7 @@
       font-size: 13px;
       line-height: 1.5;
     }
+    .material-desc.muted { margin: 0; font-size: 12px; }
     .best-row {
       display: flex;
       align-items: center;
@@ -298,7 +304,8 @@
     }
     .column {
       border-left: 1px solid var(--line);
-      padding-left: 22px;
+      padding-left: 18px;
+      min-width: 0;
     }
     .column-title {
       margin: 0 0 12px;
@@ -308,36 +315,42 @@
     }
     .ratings {
       display: grid;
-      gap: 8px;
+      gap: 10px;
     }
     .rating-row {
       display: grid;
-      grid-template-columns: 100px 1fr;
+      grid-template-columns: 94px minmax(0, 1fr) 38px;
       align-items: center;
       gap: 8px;
       font-size: 12px;
       font-weight: 700;
     }
-    .dots {
-      display: flex;
-      gap: 8px;
+    .rating-bar {
+      height: 7px;
+      min-width: 0;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(31,37,31,0.10);
+      box-shadow: inset 0 0 0 1px rgba(31,37,31,0.04);
     }
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      border: 1px solid #bac1ba;
-      background: transparent;
+    .rating-fill {
+      display: block;
+      width: var(--rating);
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--sage), var(--sage-dark));
     }
-    .dot.on {
-      border-color: var(--sage-dark);
-      background: var(--sage-dark);
+    .rating-percent {
+      color: var(--sage-dark);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
     }
     .swatches {
       display: flex;
       flex-wrap: wrap;
       gap: 11px;
-      margin-bottom: 18px;
+      margin-bottom: 0;
     }
     .swatch-btn {
       width: 20px;
@@ -356,34 +369,13 @@
       border: 1.5px solid var(--sage-dark);
       border-radius: 50%;
     }
-    .finish-buttons {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .finish-pill {
-      height: 28px;
-      padding: 0 18px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--white);
-      color: var(--ink);
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .finish-pill.selected {
-      border-color: var(--sage);
-      background: var(--sage-soft);
-      color: var(--sage-dark);
-    }
     .quality-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(118px, 1fr));
       gap: 10px;
     }
     .quality-card {
-      min-height: 112px;
+      min-height: 126px;
       border: 1px solid var(--line);
       border-radius: 9px;
       background: rgba(255,255,255,0.76);
@@ -391,10 +383,12 @@
       cursor: pointer;
       text-align: left;
       position: relative;
+      transition: border-color 160ms, background 160ms, box-shadow 160ms;
     }
     .quality-card.selected {
       border-color: var(--sage);
       background: var(--sage-soft);
+      box-shadow: inset 0 0 0 1px rgba(31,107,53,0.14);
     }
     .quality-card strong {
       display: block;
@@ -432,9 +426,9 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      justify-content: space-between;
-      gap: 18px;
-      padding-left: 6px;
+      justify-content: flex-start;
+      gap: 12px;
+      padding-left: 4px;
     }
     .selected-badge {
       align-self: flex-end;
@@ -452,13 +446,19 @@
     }
     .material-card.selected .selected-badge { opacity: 1; }
     .specs-btn {
-      align-self: flex-end;
-      border: 0;
-      background: none;
+      align-self: stretch;
+      min-height: 36px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
       color: var(--sage-dark);
       cursor: pointer;
       font-size: 12px;
       font-weight: 800;
+    }
+    .specs-btn[aria-expanded="true"] {
+      border-color: var(--sage-line);
+      background: var(--sage-soft);
     }
     .select-btn {
       height: 42px;
@@ -477,7 +477,7 @@
       grid-column: 1 / -1;
       display: none;
       border-top: 1px solid var(--line);
-      padding-top: 16px;
+      padding-top: 18px;
       color: var(--muted);
       font-size: 13px;
       line-height: 1.55;
@@ -488,6 +488,10 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
       margin-top: 10px;
+    }
+    .specs-copy {
+      max-width: 880px;
+      margin: 0 0 12px;
     }
     .spec-item {
       border: 1px solid var(--line);
@@ -583,11 +587,14 @@
       .topbar { grid-template-columns: auto 1fr auto; padding: 0 20px; }
       .nav-actions a { display: none; }
       .material-card {
-        grid-template-columns: 150px 1fr 1fr;
+        grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr);
       }
       .column { border-left: 0; padding-left: 0; }
-      .card-actions { grid-column: 1 / -1; flex-direction: row; align-items: center; }
+      .card-actions { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: flex-end; }
+      .selected-badge { align-self: center; }
+      .specs-btn, .select-btn { min-width: 150px; }
       .summary-bar { grid-template-columns: 1fr 1fr; row-gap: 12px; }
+      .summary-item:nth-child(2) { border-right: 0; }
       .continue-btn { grid-column: 1 / -1; }
     }
     @media (max-width: 760px) {
@@ -608,11 +615,12 @@
       .progress-line { min-width: 20px; }
       .page { width: min(100% - 32px, 560px); padding-bottom: 190px; }
       .hero-row { grid-template-columns: 1fr; gap: 18px; }
-      .material-card { grid-template-columns: 1fr; }
+      .material-card { grid-template-columns: 1fr; gap: 16px; padding: 16px; }
       .material-image { min-height: 210px; }
       .quality-grid, .specs-list { grid-template-columns: 1fr; }
       .card-actions { flex-direction: column; align-items: stretch; }
-      .specs-btn, .selected-badge { align-self: flex-start; }
+      .specs-btn, .select-btn { min-width: 0; }
+      .selected-badge { align-self: flex-start; }
       .summary-bar {
         width: calc(100% - 24px);
         bottom: 12px;
@@ -693,17 +701,65 @@
     let settings = {};
     let activeFilter = 'all';
     let selection = { materialId: null, colourId: null, finishId: null };
+    const openSpecs = new Set();
 
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     const money = n => Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    function iconCube() {
-      return `<svg class="image-placeholder" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M32 6l23 13v26L32 58 9 45V19L32 6z"/><path d="M9 19l23 13 23-13M32 32v26"/></svg>`;
+    const MATERIAL_PLACEHOLDERS = {
+      pla: { src: 'assets/material-placeholders/pla.png', alt: 'Example PLA decorative planter' },
+      petg: { src: 'assets/material-placeholders/petg.png', alt: 'Example PETG functional bracket' },
+      asa: { src: 'assets/material-placeholders/asa.png', alt: 'Example ASA outdoor enclosure' },
+      tpu: { src: 'assets/material-placeholders/tpu.png', alt: 'Example TPU flexible phone case' },
+      nylon: { src: 'assets/material-placeholders/nylon.png', alt: 'Example Nylon mechanical gear' },
+      abs: { src: 'assets/material-placeholders/abs.png', alt: 'Example ABS practical enclosure' },
+      resin: { src: 'assets/material-placeholders/resin.png', alt: 'Example resin detailed model' },
+      generic: { src: 'assets/material-placeholders/generic.png', alt: 'Example 3D printed part' },
+    };
+
+    function normaliseMaterialName(value) {
+      return String(value || '').toLowerCase().replace(/[‐‑‒–—]/g, '-');
     }
 
-    function ratingDots(value) {
-      const v = Math.max(1, Math.min(5, Number(value) || 3));
-      return `<span class="dots">${[1,2,3,4,5].map(i => `<span class="dot ${i <= v ? 'on' : ''}"></span>`).join('')}</span>`;
+    function placeholderForMaterial(mat) {
+      const name = normaliseMaterialName(`${mat.name || ''} ${mat.category || ''}`);
+      if (/\bpetg\b|pet-g|copolyester/.test(name)) return MATERIAL_PLACEHOLDERS.petg;
+      if (/\basa\b|acrylonitrile styrene acrylate/.test(name)) return MATERIAL_PLACEHOLDERS.asa;
+      if (/\btpu\b|\btpe\b|flexible|thermoplastic polyurethane/.test(name)) return MATERIAL_PLACEHOLDERS.tpu;
+      if (/\bnylon\b|\bpa\s*[- ]?(6|11|12)\b|\bpa6\b|\bpa11\b|\bpa12\b|polyamide/.test(name)) return MATERIAL_PLACEHOLDERS.nylon;
+      if (/\babs\b|acrylonitrile butadiene styrene/.test(name)) return MATERIAL_PLACEHOLDERS.abs;
+      if (/\bresin\b|\bsla\b|\bdlp\b|\bmsla\b|photopolymer/.test(name)) return MATERIAL_PLACEHOLDERS.resin;
+      if (/\bpla\b|polylactic/.test(name)) return MATERIAL_PLACEHOLDERS.pla;
+      return MATERIAL_PLACEHOLDERS.generic;
+    }
+
+    function materialImageMarkup(mat) {
+      if (mat.image_url) {
+        return `<img src="${esc(mat.image_url)}" alt="${esc(mat.image_alt || mat.name)}">`;
+      }
+      const placeholder = placeholderForMaterial(mat);
+      return `<img src="${esc(placeholder.src)}" alt="${esc(placeholder.alt)}">`;
+    }
+
+    function ratingPercent(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 60;
+      const pct = n > 5 ? n : n * 20;
+      return Math.max(0, Math.min(100, Math.round(pct)));
+    }
+
+    function ratingBar(value) {
+      const pct = ratingPercent(value);
+      return `
+        <span class="rating-bar" aria-hidden="true"><span class="rating-fill" style="--rating:${pct}%"></span></span>
+        <span class="rating-percent">${pct}%</span>
+      `;
+    }
+
+    function normalizeRating(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 60;
+      return Math.max(0, Math.min(100, n > 5 ? Math.round(n) : Math.round(n * 20)));
     }
 
     function finishPreview(finish) {
@@ -715,6 +771,9 @@
       const rows = Array.isArray(payload) ? payload : (payload.materials || []);
       const pMap = Object.fromEntries((pricing.materials || []).map(m => [m.id, m]));
       settings = Array.isArray(payload) ? {} : (payload.settings || {});
+      if (!Array.isArray(settings.filters) && Array.isArray(payload.filters)) {
+        settings.filters = payload.filters;
+      }
       return rows.map(m => {
         const pm = pMap[m.id] || {};
         const colours = Array.isArray(m.colours) ? m.colours.filter(c => c.enabled !== false) : [];
@@ -727,10 +786,17 @@
           priceUnit: m.price_unit || 'per cm³',
           colours,
           finishes,
-          ratings: m.properties?.ratings || {},
+          ratings: {
+            strength: normalizeRating(m.properties?.ratings?.strength ?? m.properties?.strength),
+            flexibility: normalizeRating(m.properties?.ratings?.flexibility ?? m.properties?.flexibility),
+            heatResistance: normalizeRating(m.properties?.ratings?.heatResistance ?? m.properties?.heat),
+            detail: normalizeRating(m.properties?.ratings?.detail ?? m.properties?.detail),
+            outdoorUse: normalizeRating(m.properties?.ratings?.outdoorUse ?? m.properties?.outdoor_use),
+          },
           tags: Array.isArray(m.tags) ? m.tags : [],
           bestFor: Array.isArray(m.best_for) ? m.best_for : [],
           specs: Array.isArray(m.specs) ? m.specs : [],
+          learnMore: m.properties?.learn_more || '',
         };
       });
     }
@@ -744,11 +810,22 @@
     }
 
     function renderFilters() {
-      const tags = [...new Set(materials.flatMap(m => m.tags || []))];
+      const filterMap = new Map();
+      const addFilter = label => {
+        const cleaned = String(label || '').trim();
+        if (!cleaned) return;
+        const key = cleaned.toLowerCase();
+        if (!filterMap.has(key)) filterMap.set(key, cleaned);
+      };
+      (settings.filters || []).forEach(addFilter);
+      materials.forEach(m => {
+        addFilter(m.category);
+        (m.tags || []).forEach(addFilter);
+      });
       const chips = [
         { id: 'all', label: 'All' },
         { id: 'recommended', label: 'Recommended' },
-        ...tags.map(t => ({ id: `tag:${t}`, label: t })),
+        ...[...filterMap.entries()].map(([key, label]) => ({ id: `tag:${key}`, label })),
       ];
       filtersEl.innerHTML = chips.map(c => `
         <button class="chip ${activeFilter === c.id ? 'active' : ''}" type="button" data-filter="${esc(c.id)}" role="tab" aria-selected="${activeFilter === c.id}">
@@ -768,7 +845,10 @@
       if (activeFilter === 'recommended') return materials.filter(m => m.recommended);
       if (activeFilter.startsWith('tag:')) {
         const tag = activeFilter.slice(4);
-        return materials.filter(m => (m.tags || []).includes(tag));
+        return materials.filter(m => {
+          const values = [m.category, ...(m.tags || [])].map(v => String(v || '').trim().toLowerCase());
+          return values.includes(tag);
+        });
       }
       return materials;
     }
@@ -787,16 +867,21 @@
 
     function materialCard(mat) {
       const selected = String(selection.materialId) === String(mat.id);
-      const colour = currentColour(mat);
-      const finish = currentFinish(mat);
+      const colour = selected ? currentColour(mat) : null;
+      const finish = selected ? currentFinish(mat) : null;
+      const specsOpen = openSpecs.has(String(mat.id));
       const specs = mat.specs.length
         ? `<div class="specs-list">${mat.specs.map(s => `<div class="spec-item"><strong>${esc(s.label || s.name || 'Spec')}</strong>${esc(s.value || s.text || '')}</div>`).join('')}</div>`
         : '';
+      const detailCopy = [
+        mat.description_long ? `<p class="specs-copy">${esc(mat.description_long)}</p>` : '',
+        mat.learnMore ? `<p class="specs-copy">${esc(mat.learnMore)}</p>` : '',
+      ].join('');
       return `
         <article class="material-card ${selected ? 'selected' : ''}" data-material-id="${esc(mat.id)}">
           ${mat.recommended ? '<span class="recommended">Recommended</span>' : ''}
           <div class="material-image">
-            ${mat.image_url ? `<img src="${esc(mat.image_url)}" alt="${esc(mat.image_alt || mat.name)}">` : iconCube()}
+            ${materialImageMarkup(mat)}
           </div>
           <div class="material-main">
             <h2 class="material-name">${esc(mat.name)}</h2>
@@ -807,21 +892,17 @@
           <div class="column">
             <p class="column-title">Performance</p>
             <div class="ratings">
-              <div class="rating-row"><span>Strength</span>${ratingDots(mat.ratings.strength)}</div>
-              <div class="rating-row"><span>Flexibility</span>${ratingDots(mat.ratings.flexibility)}</div>
-              <div class="rating-row"><span>Heat resistance</span>${ratingDots(mat.ratings.heatResistance)}</div>
-              <div class="rating-row"><span>Detail</span>${ratingDots(mat.ratings.detail)}</div>
-              <div class="rating-row"><span>Outdoor use</span>${ratingDots(mat.ratings.outdoorUse)}</div>
+              <div class="rating-row"><span>Strength</span>${ratingBar(mat.ratings.strength)}</div>
+              <div class="rating-row"><span>Flexibility</span>${ratingBar(mat.ratings.flexibility)}</div>
+              <div class="rating-row"><span>Heat resistance</span>${ratingBar(mat.ratings.heatResistance)}</div>
+              <div class="rating-row"><span>Detail</span>${ratingBar(mat.ratings.detail)}</div>
+              <div class="rating-row"><span>Outdoor use</span>${ratingBar(mat.ratings.outdoorUse)}</div>
             </div>
           </div>
           <div class="column">
             <p class="column-title">Available colours</p>
             <div class="swatches">
-              ${mat.colours.map((c, i) => `<button class="swatch-btn ${colour && String(colour.id) === String(c.id) ? 'selected' : ''}" type="button" style="--c:${esc(c.hex)}" data-colour-id="${esc(c.id)}" title="${esc(c.name)}" aria-label="${esc(c.name)}"></button>`).join('') || '<span class="material-desc">No colours configured</span>'}
-            </div>
-            <p class="column-title">Finish</p>
-            <div class="finish-buttons">
-              ${mat.finishes.map(f => `<button class="finish-pill ${finish && String(finish.id) === String(f.id) ? 'selected' : ''}" type="button" data-finish-id="${esc(f.id)}">${esc(f.name)}</button>`).join('') || '<span class="material-desc">No finishes configured</span>'}
+              ${mat.colours.map((c, i) => `<button class="swatch-btn ${colour && String(colour.id) === String(c.id) ? 'selected' : ''}" type="button" style="--c:${esc(c.hex || '#cccccc')}" data-colour-id="${esc(c.id)}" title="${esc(c.name)}" aria-label="${esc(c.name)}"></button>`).join('') || '<span class="material-desc muted">No colours configured</span>'}
             </div>
           </div>
           <div class="column">
@@ -830,21 +911,21 @@
               ${mat.finishes.map(f => `
                 <button class="quality-card ${finish && String(finish.id) === String(f.id) ? 'selected' : ''}" type="button" data-finish-id="${esc(f.id)}">
                   <strong>${esc(f.name)}</strong>
-                  <span class="layer">${esc(f.layerHeight || '')}</span>
-                  <p>${esc(f.description || '')}</p>
+                  ${f.layerHeight ? `<span class="layer">${esc(f.layerHeight)}</span>` : ''}
+                  ${f.description ? `<p>${esc(f.description)}</p>` : '<p>Configured print quality option.</p>'}
                   ${finishPreview(f)}
                 </button>
-              `).join('') || '<span class="material-desc">Add finish presets in the admin portal.</span>'}
+              `).join('') || '<span class="material-desc muted">Add finish presets in the admin portal.</span>'}
             </div>
           </div>
           <div class="card-actions">
             <span class="selected-badge">Selected ✓</span>
-            <button class="specs-btn" type="button" data-specs="${esc(mat.id)}">View specs⌄</button>
+            <button class="specs-btn" type="button" data-specs="${esc(mat.id)}" aria-expanded="${specsOpen ? 'true' : 'false'}">${specsOpen ? 'Hide specs' : 'View specs'}</button>
             <button class="select-btn" type="button">${selected ? 'Selected' : 'Select'}</button>
           </div>
-          <div class="specs-panel" id="specs-${esc(mat.id)}">
-            ${mat.description_long ? `<p>${esc(mat.description_long)}</p>` : ''}
-            ${specs || '<p>No detailed specs configured for this material yet.</p>'}
+          <div class="specs-panel ${specsOpen ? 'open' : ''}" id="specs-${esc(mat.id)}">
+            ${detailCopy}
+            ${specs || (!detailCopy ? '<p class="specs-copy">No detailed specs configured for this material yet.</p>' : '')}
           </div>
         </article>
       `;
@@ -878,14 +959,24 @@
     }
 
     function setColour(materialId, colourId) {
-      if (String(selection.materialId) !== String(materialId)) selectMaterial(materialId);
+      if (String(selection.materialId) !== String(materialId)) {
+        const mat = materials.find(m => String(m.id) === String(materialId));
+        if (!mat) return;
+        selection.materialId = mat.id;
+        selection.finishId = currentFinish(mat)?.id || null;
+      }
       selection.colourId = colourId;
       saveSelection();
       renderMaterials();
     }
 
     function setFinish(materialId, finishId) {
-      if (String(selection.materialId) !== String(materialId)) selectMaterial(materialId);
+      if (String(selection.materialId) !== String(materialId)) {
+        const mat = materials.find(m => String(m.id) === String(materialId));
+        if (!mat) return;
+        selection.materialId = mat.id;
+        selection.colourId = currentColour(mat)?.id || null;
+      }
       selection.finishId = finishId;
       saveSelection();
       renderMaterials();
@@ -894,7 +985,14 @@
     function bindCardEvents() {
       listEl.querySelectorAll('.material-card').forEach(card => {
         const materialId = card.dataset.materialId;
-        card.querySelector('.select-btn')?.addEventListener('click', () => selectMaterial(materialId));
+        card.addEventListener('click', e => {
+          if (e.target.closest('button, a, input, select, textarea')) return;
+          selectMaterial(materialId);
+        });
+        card.querySelector('.select-btn')?.addEventListener('click', e => {
+          e.stopPropagation();
+          selectMaterial(materialId);
+        });
         card.querySelectorAll('[data-colour-id]').forEach(btn => btn.addEventListener('click', e => {
           e.stopPropagation();
           setColour(materialId, btn.dataset.colourId);
@@ -905,8 +1003,9 @@
         }));
         card.querySelector('.specs-btn')?.addEventListener('click', e => {
           e.stopPropagation();
-          const panel = document.getElementById(`specs-${materialId}`);
-          panel?.classList.toggle('open');
+          if (openSpecs.has(String(materialId))) openSpecs.delete(String(materialId));
+          else openSpecs.add(String(materialId));
+          renderMaterials();
         });
       });
     }
@@ -919,12 +1018,16 @@
       const payload = {
         materialId: mat.id,
         materialName: mat.name,
+        material: mat.name,
         ratePerCm3: mat.ratePerCm3,
         minCharge: mat.minCharge,
         colorId: colour?.id || null,
         colorIndex: Math.max(0, mat.colours.findIndex(c => String(c.id) === String(colour?.id))),
         colorHex: colour?.hex || null,
         colorName: colour?.name || '',
+        colourId: colour?.id || null,
+        colourHex: colour?.hex || null,
+        colourName: colour?.name || '',
         finish: finish?.id || null,
         finishId: finish?.id || null,
         finishLabel: finish?.name || '',

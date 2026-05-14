@@ -1345,10 +1345,10 @@
   <ul class="footer-links">
     <li><a href="catalog.html">Materials</a></li>
     <li><a href="quote.html">Quote</a></li>
-    <li><a href="customer/login.html">My Orders</a></li>
-    <li><a href="#">Contact</a></li>
-    <li><a href="#">Terms</a></li>
-    <li><a href="#">Privacy</a></li>
+    <li><a href="customer/dashboard.html?shop=mahi3d#orders" data-pv-tab="orders">My Orders</a></li>
+    <li><a href="customer/dashboard.html?shop=mahi3d#help" data-pv-tab="help">Contact</a></li>
+    <li><a href="customer/dashboard.html?shop=mahi3d#help" data-pv-tab="help">Terms</a></li>
+    <li><a href="customer/dashboard.html?shop=mahi3d#help" data-pv-tab="help">Privacy</a></li>
   </ul>
   <p class="footer-copy">&copy; 2026 mahi3d. All rights reserved.</p>
 </footer>
@@ -1411,7 +1411,7 @@
 
         <p class="pv-auth-foot">
           Don't have an account?
-          <a href="customer/login.html" class="pv-link">Create one →</a>
+          <a href="customer/login.html?shop=mahi3d&next=dashboard.html%3Fshop%3Dmahi3d%23overview" class="pv-link" data-pv-login>Create one →</a>
         </p>
       </div>
     </div>
@@ -1430,22 +1430,22 @@
         <div class="stat-card" role="listitem">
           <span class="stat-label">Total Orders</span>
           <span class="stat-value" id="pvStatTotal">—</span>
-          <a href="#pvOrdersList" class="stat-link">View all →</a>
+          <a href="customer/dashboard.html?shop=mahi3d#orders" class="stat-link" data-pv-tab="orders">View all →</a>
         </div>
         <div class="stat-card" role="listitem">
           <span class="stat-label">In Progress</span>
           <span class="stat-value" id="pvStatProgress">—</span>
-          <a href="#pvOrdersList" class="stat-link">View all →</a>
+          <a href="customer/dashboard.html?shop=mahi3d#orders" class="stat-link" data-pv-tab="orders">View all →</a>
         </div>
         <div class="stat-card" role="listitem">
           <span class="stat-label">Delivered</span>
           <span class="stat-value" id="pvStatDone">—</span>
-          <a href="#pvOrdersList" class="stat-link">View all →</a>
+          <a href="customer/dashboard.html?shop=mahi3d#orders" class="stat-link" data-pv-tab="orders">View all →</a>
         </div>
         <div class="stat-card" role="listitem">
           <span class="stat-label">Total Spent</span>
           <span class="stat-value" id="pvStatSpent" style="font-size:17px;letter-spacing:-0.02em">—</span>
-          <a href="#pvOrdersList" class="stat-link">View all →</a>
+          <a href="customer/dashboard.html?shop=mahi3d#orders" class="stat-link" data-pv-tab="orders">View all →</a>
         </div>
       </div>
 
@@ -1453,7 +1453,7 @@
       <div class="portal-card" role="region" aria-label="Recent orders">
         <div class="portal-card-header">
           <span class="portal-card-title">Recent Orders</span>
-          <a href="customer/dashboard.html" class="portal-card-link">View all →</a>
+          <a href="customer/dashboard.html?shop=mahi3d#orders" class="portal-card-link" data-pv-tab="orders">View all →</a>
         </div>
         <div id="pvOrdersList" aria-live="polite"></div>
       </div>
@@ -1464,7 +1464,7 @@
           <span class="portal-card-title">Account</span>
         </div>
 
-        <a href="customer/dashboard.html" class="account-row" aria-label="Profile and Settings">
+        <a href="customer/dashboard.html?shop=mahi3d#account" class="account-row" aria-label="Profile and Settings" data-pv-tab="account">
           <div class="account-row-icon" aria-hidden="true">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <circle cx="7" cy="4.5" r="2.5" stroke="currentColor" stroke-width="1.3"/>
@@ -1480,7 +1480,7 @@
           </span>
         </a>
 
-        <a href="customer/dashboard.html" class="account-row" aria-label="My Orders">
+        <a href="customer/dashboard.html?shop=mahi3d#orders" class="account-row" aria-label="My Orders" data-pv-tab="orders">
           <div class="account-row-icon" aria-hidden="true">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <rect x="2" y="1.5" width="10" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
@@ -1496,7 +1496,7 @@
           </span>
         </a>
 
-        <a href="quote.html" class="account-row" aria-label="Get a Quote">
+        <a href="quote.html?shop=mahi3d" class="account-row" aria-label="Get a Quote" data-pv-quote>
           <div class="account-row-icon" aria-hidden="true">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M2.5 1.5h9v9.5l-1.5-1-1.5 1-1.5-1-1.5 1-1.5-1-1.5 1V1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
@@ -1517,7 +1517,7 @@
       <!-- Help -->
       <div class="portal-help">
         <p class="portal-help-main">
-          Need help? <a href="#" class="pv-link">Contact us</a> and we'll be happy to assist.
+          Need help? <a href="customer/dashboard.html?shop=mahi3d#help" class="pv-link" data-pv-tab="help">Contact us</a> and we'll be happy to assist.
         </p>
         <p class="portal-help-sub">We'll get back to you within one business day.</p>
       </div>
@@ -1705,6 +1705,28 @@
     catch { return 'mahi3d'; }
   })();
 
+  function pvPortalHref(tab = 'overview') {
+    return `customer/dashboard.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}#${tab}`;
+  }
+
+  function pvLoginHref(tab = 'overview') {
+    const next = `dashboard.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}#${tab}`;
+    return `customer/login.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}&next=${encodeURIComponent(next)}`;
+  }
+
+  function pvApplyPortalLinks() {
+    document.querySelectorAll('[data-pv-tab]').forEach(a => {
+      a.href = pvPortalHref(a.dataset.pvTab || 'overview');
+    });
+    document.querySelectorAll('[data-pv-login]').forEach(a => {
+      a.href = pvLoginHref('overview');
+    });
+    document.querySelectorAll('[data-pv-quote]').forEach(a => {
+      a.href = `quote.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`;
+    });
+  }
+  pvApplyPortalLinks();
+
   let _pvUser      = null;   // { id, name, email, shop, order_count, total_spent }
   let _pvOrders    = [];     // full orders array
   let _pvChecked   = false;  // true once /me has resolved at least once
@@ -1795,7 +1817,7 @@
       listEl.innerHTML = recent.map(o => {
         const sub = [o.material_name, o.colour, o.quantity > 1 ? `×${o.quantity}` : null]
           .filter(Boolean).join(' · ');
-        return `<div class="order-row" tabindex="0" role="row">
+        return `<a class="order-row" href="${pvPortalHref('orders')}" role="row">
           <div class="order-item-cell">
             <div class="order-thumb" aria-hidden="true">${pvCubeIcon()}</div>
             <div>
@@ -1807,7 +1829,7 @@
           <span class="order-date">${pvFmtDate(o.created_at)}</span>
           <span class="order-total">${pvFmtMoney(o.total)}</span>
           ${pvChevron()}
-        </div>`;
+        </a>`;
       }).join('');
     }
 

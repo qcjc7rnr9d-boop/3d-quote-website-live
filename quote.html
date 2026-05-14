@@ -269,6 +269,25 @@
       margin-top: 2px;
       font-variant-numeric: tabular-nums;
     }
+    .file-dimensions {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+    .size-warning {
+      display: none;
+      margin: 10px 0 0;
+      padding: 10px 12px;
+      border: 1px solid rgba(192,57,43,0.28);
+      border-radius: var(--radius-sm);
+      background: rgba(192,57,43,0.08);
+      color: #a13224;
+      font-size: 12px;
+      line-height: 1.45;
+      font-weight: 500;
+    }
+    .size-warning.show { display: block; }
     .btn-link {
       background: transparent; border: 0;
       color: var(--sage);
@@ -728,6 +747,8 @@
       <div class="file-meta">
         <div class="file-name" id="fileName">No file selected</div>
         <div class="file-size" id="fileSize">—</div>
+        <div class="file-dimensions" id="fileDimensions">—</div>
+        <div class="size-warning" id="sizeWarning" role="alert"></div>
       </div>
       <button class="btn-link" id="replaceBtn" type="button">Replace file</button>
       <input type="file" id="fileInput" class="hidden-input" accept=".stl,.obj">
@@ -909,6 +930,10 @@
   let currency         = 'NZD';
   let shippingOptions  = [];     // top 3 returned from /api/shipping/rates
   let selectedShipping = null;   // the option the customer is currently on
+  let serverQuote      = null;   // authoritative quote from /api/customer/quote-preview
+  let quoteTimer       = null;
+  let quoteRequestSeq  = 0;
+  let sizeValidation   = { ok: true, message: '' };
 
   try { fileData      = JSON.parse(localStorage.getItem('form_file')      || 'null'); } catch {}
   try { selectionData = JSON.parse(localStorage.getItem('form_selection') || 'null'); } catch {}
@@ -954,18 +979,6 @@
     return tier ? Number(tier.multiplier) || 1.0 : 1.0;
   }
 
-  function computeUnitNzd() {
-    if (!fileData || !selectionData) return 0;
-    const vol  = Number(fileData.volumeCm3) || 0;
-    const rate = Number(selectionData.ratePerCm3) || 0;
-    const min  = Number(selectionData.minCharge) || 0;
-    const finishMult = Number(selectionData.finishMultiplier) || 1.0;
-    const infillMult = infillMultiplier();
-    let p = vol * rate * finishMult * infillMult;
-    if (p < min) p = min;
-    return p;
-  }
-
   function convert(nzd) {
     const r = RATES[currency] || RATES.NZD;
     return nzd * r.rate;
@@ -975,12 +988,142 @@
     return value.toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function fmtMm(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return `${(Math.round(n * 10) / 10).toLocaleString('en-NZ')} mm`;
+  }
+
+  function currentMaterial() {
+    return catalog.find(m => String(m.id) === String(selectionData.materialId)) || null;
+  }
+
+  function modelDimensions() {
+    const d = fileData?.dimensions || {};
+    const xMm = Number(d.xMm ?? d.x_mm ?? d.x);
+    const yMm = Number(d.yMm ?? d.y_mm ?? d.y);
+    const zMm = Number(d.zMm ?? d.z_mm ?? d.z ?? d.heightMm ?? d.height);
+    if (![xMm, yMm, zMm].every(Number.isFinite)) return null;
+    return { xMm, yMm, zMm };
+  }
+
+  function updateAddToCartState() {
+    const btn = $('addToCartBtn');
+    if (!btn) return;
+    btn.disabled = !sizeValidation.ok;
+    if (sizeValidation.ok && btn.textContent === 'Model too large') {
+      btn.textContent = 'Add to Cart';
+    }
+    if (!sizeValidation.ok) btn.textContent = 'Model too large';
+  }
+
+  function validateModelSize() {
+    const warning = $('sizeWarning');
+    const dims = modelDimensions();
+    const mat = currentMaterial();
+    sizeValidation = { ok: true, message: '' };
+
+    if (dims && mat) {
+      const checks = [
+        { key: 'xMm', label: 'width/X', limit: Number(mat.max_x_mm) },
+        { key: 'yMm', label: 'depth/Y', limit: Number(mat.max_y_mm) },
+        { key: 'zMm', label: 'height/Z', limit: Number(mat.max_z_mm) },
+      ];
+      const failed = checks.find(c => Number.isFinite(c.limit) && c.limit > 0 && dims[c.key] > c.limit);
+      if (failed) {
+        sizeValidation = {
+          ok: false,
+          message: `Model ${failed.label} is ${fmtMm(dims[failed.key])}, but ${mat.name} allows up to ${fmtMm(failed.limit)}.`,
+        };
+      }
+    }
+
+    if (warning) {
+      warning.textContent = sizeValidation.message;
+      warning.classList.toggle('show', !sizeValidation.ok);
+    }
+    updateAddToCartState();
+    return sizeValidation.ok;
+  }
+
+  function quotePayload() {
+    return {
+      shopSlug: SHOP_SLUG,
+      materialId: selectionData.materialId,
+      volumeCm3: fileData?.volumeCm3,
+      dimensions: modelDimensions(),
+      colourId: selectionData.colorId || null,
+      finishId: selectionData.finishId || selectionData.finish || null,
+      infillTierId: selectionData.infillTierId || null,
+      quantity: qty,
+      shippingId: selectedShipping?.id || null,
+    };
+  }
+
+  async function refreshQuotePreview({ silent = false } = {}) {
+    if (!validateModelSize()) {
+      serverQuote = null;
+      renderPrice();
+      return null;
+    }
+    if (!fileData?.volumeCm3 || !selectionData?.materialId) {
+      serverQuote = null;
+      renderPrice();
+      return null;
+    }
+
+    const seq = ++quoteRequestSeq;
+    if (!silent) {
+      $('priceHelper').textContent = 'Updating price...';
+    }
+
+    try {
+      const res = await fetch('/api/customer/quote-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quotePayload()),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (seq !== quoteRequestSeq) return serverQuote;
+      if (!res.ok || data.ok === false) {
+        serverQuote = null;
+        if (data.code === 'MODEL_TOO_LARGE') {
+          sizeValidation = { ok: false, message: data.error || 'This model is too large for the selected material.' };
+          const warning = $('sizeWarning');
+          if (warning) {
+            warning.textContent = sizeValidation.message;
+            warning.classList.add('show');
+          }
+          updateAddToCartState();
+        }
+        if (!silent) showToast(data.error || 'Could not calculate this quote');
+        renderPrice();
+        return null;
+      }
+      serverQuote = data;
+      renderPrice();
+      return data;
+    } catch (err) {
+      if (seq !== quoteRequestSeq) return serverQuote;
+      serverQuote = null;
+      if (!silent) showToast('Could not calculate this quote');
+      renderPrice();
+      return null;
+    }
+  }
+
+  function scheduleQuotePreview() {
+    clearTimeout(quoteTimer);
+    quoteTimer = setTimeout(() => { refreshQuotePreview({ silent: true }); }, 120);
+  }
+
   function renderPrice() {
     const sym         = RATES[currency].symbol;
-    const unitNzd     = computeUnitNzd();
-    const itemsNzd    = unitNzd * qty;
-    const shippingNzd = selectedShipping ? (Number(selectedShipping.price) || 0) : 0;
-    const totalNzd    = itemsNzd + shippingNzd;
+    const lines       = serverQuote?.lineItems || {};
+    const unitNzd     = Number(lines.unit) || 0;
+    const itemsNzd    = Number(lines.itemSubtotal) || 0;
+    const shippingNzd = Number(lines.shipping) || 0;
+    const totalNzd    = Number(lines.total) || 0;
     const unitDisp    = convert(unitNzd);
     const itemsDisp   = convert(itemsNzd);
     const totalDisp   = convert(totalNzd);
@@ -1007,9 +1150,9 @@
     const helper = $('priceHelper');
     if (helper) {
       const qtyHint = qty > 1 ? `total for ${qty} units` : 'total';
-      helper.textContent = selectedShipping
+      helper.textContent = serverQuote && selectedShipping
         ? `${qtyHint} · incl. shipping`
-        : `${qtyHint} · excluding shipping`;
+        : (serverQuote ? `${qtyHint} · excluding shipping` : 'Waiting for quote details');
     }
   }
 
@@ -1133,7 +1276,8 @@
     updateFinishUI(selectionData.finishId || selectionData.finish);
 
     if (save) saveSelection();
-    renderPrice();
+    validateModelSize();
+    scheduleQuotePreview();
   }
 
   function onColourChange(save = true) {
@@ -1175,7 +1319,7 @@
         selectionData.finishMultiplier = Number(b.dataset.multiplier) || 1;
         updateFinishUI(b.dataset.finish);
         saveSelection();
-        renderPrice();
+        scheduleQuotePreview();
       });
     });
   }
@@ -1198,7 +1342,7 @@
       selectionData.finishMultiplier = b.dataset.finish === 'fine' ? 1.50 : 1.0;
       updateFinishUI(b.dataset.finish);
       saveSelection();
-      renderPrice();
+      scheduleQuotePreview();
     });
   });
 
@@ -1235,7 +1379,7 @@
   infillSelect.addEventListener('change', () => {
     selectionData.infillTierId = infillSelect.value;
     saveSelection();
-    renderPrice();
+    scheduleQuotePreview();
   });
 
   function setQty(n) {
@@ -1243,7 +1387,7 @@
     $('qtyVal').value = qty;
     $('qtyMinus').disabled = qty <= 1;
     saveSelection();
-    renderPrice();
+    scheduleQuotePreview();
   }
   $('qtyMinus').addEventListener('click', () => setQty(qty - 1));
   $('qtyPlus').addEventListener('click',  () => setQty(qty + 1));
@@ -1268,6 +1412,11 @@
   function applyFileMeta() {
     $('fileName').textContent = fileData?.name || 'No file selected';
     $('fileSize').textContent = fileData?.size ? fmtBytes(fileData.size) : '—';
+    const dims = modelDimensions();
+    $('fileDimensions').textContent = dims
+      ? `Dimensions: ${fmtMm(dims.xMm)} × ${fmtMm(dims.yMm)} × ${fmtMm(dims.zMm)}`
+      : 'Dimensions: —';
+    validateModelSize();
   }
   applyFileMeta();
 
@@ -1372,6 +1521,16 @@
     homeTarget = controls.target.clone();
   }
 
+  function dimensionsFromObject(object) {
+    const box = new THREE.Box3().setFromObject(object);
+    const size = box.getSize(new THREE.Vector3());
+    return {
+      xMm: Math.max(0, size.x),
+      yMm: Math.max(0, size.y),
+      zMm: Math.max(0, size.z),
+    };
+  }
+
   function placePlaceholder() {
     // Simple rounded box as a friendly placeholder
     disposeMesh();
@@ -1388,8 +1547,10 @@
     geom.computeVertexNormals?.();
     currentMesh = new THREE.Mesh(geom, modelMaterial);
     scene.add(currentMesh);
+    const dimensions = dimensionsFromObject(currentMesh);
     fitTo(currentMesh);
     emptyEl.style.display = 'none';
+    return dimensions;
   }
 
   function placeGroup(group) {
@@ -1400,8 +1561,10 @@
     });
     currentMesh = group;
     scene.add(currentMesh);
+    const dimensions = dimensionsFromObject(currentMesh);
     fitTo(currentMesh);
     emptyEl.style.display = 'none';
+    return dimensions;
   }
 
   // STL/OBJ loading helpers
@@ -1411,15 +1574,16 @@
         const loader = new OBJLoader();
         const text   = new TextDecoder().decode(new Uint8Array(buffer));
         const group  = loader.parse(text);
-        placeGroup(group);
+        return placeGroup(group);
       } else {
         const loader = new STLLoader();
         const geom   = loader.parse(buffer);
-        placeGeometry(geom);
+        return placeGeometry(geom);
       }
     } catch (e) {
       console.warn('Model parse failed', e);
       placePlaceholder();
+      return null;
     }
   }
 
@@ -1454,7 +1618,12 @@
     try {
       const entry = await idbGet('current_model');
       if (entry && entry.buffer && entry.ext) {
-        loadFromBuffer(entry.buffer, entry.ext);
+        const dimensions = loadFromBuffer(entry.buffer, entry.ext);
+        if (dimensions && fileData && !modelDimensions()) {
+          fileData.dimensions = dimensions;
+          saveFileMeta();
+          applyFileMeta();
+        }
         emptyEl.style.display = 'none';
         return true;
       }
@@ -1549,17 +1718,18 @@
       return;
     }
     const buf = await f.arrayBuffer();
-    loadFromBuffer(buf, ext);
+    const dimensions = loadFromBuffer(buf, ext);
     // Persist
     await idbPut('current_model', { buffer: buf, ext });
     fileData = {
       name:      f.name,
       size:      f.size,
       volumeCm3: ext === 'stl' ? stlVolumeCm3(buf) : (fileData?.volumeCm3 || 0),
+      dimensions,
     };
     saveFileMeta();
     applyFileMeta();
-    renderPrice();
+    refreshQuotePreview({ silent: true });
   });
 
   // ── Init the viewer ────────────────────────────────────────
@@ -1577,51 +1747,62 @@
   // ── Add to Cart / Save Quote ───────────────────────────────
   // "Add to Cart" → snapshot the full order into localStorage, then
   // navigate to checkout.html which reads it and shows a Stripe form.
-  $('addToCartBtn').addEventListener('click', () => {
+  $('addToCartBtn').addEventListener('click', async () => {
     const btn = $('addToCartBtn');
     if (!fileData) { showToast('Please upload a file first'); return; }
     if (!selectionData?.materialId) { showToast('Please pick a material'); return; }
+    if (!validateModelSize()) { showToast(sizeValidation.message || 'This model is too large for the selected material.'); return; }
 
-    // Persist the full order snapshot for the checkout page
-    const unitNzd     = computeUnitNzd();
-    const itemsNzd    = unitNzd * qty;
-    const shippingNzd = selectedShipping ? (Number(selectedShipping.price) || 0) : 0;
-    const totalNzd    = itemsNzd + shippingNzd;
+    btn.disabled = true;
+    btn.textContent = 'Checking price...';
+    const quote = await refreshQuotePreview({ silent: true });
+    if (!quote) {
+      btn.textContent = sizeValidation.ok ? 'Add to Cart' : 'Model too large';
+      btn.disabled = !sizeValidation.ok;
+      showToast('Could not calculate this quote');
+      return;
+    }
 
     // Resolve a human label for the chosen infill tier so checkout doesn't
     // need to re-fetch the pricing API.
     const infillOpt = infillSelect.options[infillSelect.selectedIndex];
-    const infillLabel = infillOpt ? infillOpt.text : null;
+    const infillLabel = quote.selected?.infill?.label || (infillOpt ? infillOpt.text : null);
+    const selected = quote.selected || {};
+    const lines = quote.lineItems || {};
 
     // Material's pricing model (per_cm3 etc.) for the order record
     const cart = {
       shopSlug:        SHOP_SLUG,
       file:            { ...fileData },
-      materialId:      selectionData.materialId,
-      materialName:    selectionData.materialName,
-      colorId:         selectionData.colorId || null,
-      colorName:       selectionData.colorName  || '—',
-      colorHex:        selectionData.colorHex   || null,
-      finish:          selectionData.finishId || selectionData.finish || null,
-      finishLabel:     selectionData.finishLabel || selectionData.finish || '—',
-      finishLayerHeight: selectionData.finishLayerHeight || '',
-      infillTierId:    selectionData.infillTierId  || null,
+      materialId:      selected.material?.id || selectionData.materialId,
+      materialName:    selected.material?.name || selectionData.materialName,
+      colorId:         selected.colour?.id || selectionData.colorId || null,
+      colorName:       selected.colour?.name || selectionData.colorName || '—',
+      colorHex:        selected.colour?.hex || selectionData.colorHex || null,
+      finish:          selected.finish?.id || selectionData.finishId || selectionData.finish || null,
+      finishId:        selected.finish?.id || selectionData.finishId || selectionData.finish || null,
+      finishLabel:     selected.finish?.name || selectionData.finishLabel || selectionData.finish || '—',
+      finishLayerHeight: selected.finish?.layerHeight || selectionData.finishLayerHeight || '',
+      infillTierId:    selected.infill?.id || selectionData.infillTierId || null,
       infillLabel:     infillLabel,
-      quantity:        qty,
+      quantity:        selected.quantity || qty,
       currency,
-      unitNzd, itemsNzd, shippingNzd, totalNzd,
-      shipping:        selectedShipping ? {
-        id:     selectedShipping.id,
-        label:  (selectedShipping.carrier && selectedShipping.service && selectedShipping.carrier !== selectedShipping.service)
-                  ? `${selectedShipping.carrier} · ${selectedShipping.service}`
-                  : (selectedShipping.carrier || selectedShipping.service || 'Standard'),
-        price:  Number(selectedShipping.price) || 0,
+      unitNzd:         Number(lines.unit) || 0,
+      itemsNzd:        Number(lines.itemSubtotal) || 0,
+      shippingNzd:     Number(lines.shipping) || 0,
+      taxNzd:          Number(lines.tax) || 0,
+      totalNzd:        Number(lines.total) || 0,
+      totalCents:      quote.totalCents,
+      quoteSnapshot:   quote,
+      shipping:        selected.shipping ? {
+        id:     selected.shipping.id,
+        label:  selected.shipping.label || 'Shipping',
+        price:  Number(selected.shipping.finalPrice ?? selected.shipping.price) || 0,
       } : null,
       savedAt:         new Date().toISOString(),
     };
     try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
 
-    btn.disabled = true;
     btn.textContent = 'Going to checkout…';
     // tiny delay so the click feedback registers
     setTimeout(() => { location.href = 'checkout.html'; }, 150);
@@ -1634,7 +1815,7 @@
         savedAt:    new Date().toISOString(),
         file:       fileData ? { ...fileData } : null,
         selection:  { ...selectionData },
-        priceNzd:   computeUnitNzd() * qty,
+        priceNzd:   serverQuote?.lineItems?.total || 0,
       });
       localStorage.setItem('saved_quotes', JSON.stringify(list.slice(0, 50)));
       showToast('Quote saved');
@@ -1668,7 +1849,7 @@
       optsEl.style.display  = 'none';
       emptyEl.style.display = '';
       selectedShipping = null;
-      renderPrice();
+      refreshQuotePreview({ silent: true });
       return;
     }
 
@@ -1711,7 +1892,7 @@
         saveSelection();
         optsEl.querySelectorAll('.ship-opt').forEach((el, j) =>
           el.classList.toggle('selected', j === i));
-        renderPrice();
+        refreshQuotePreview({ silent: true });
       });
     });
 
@@ -1722,7 +1903,7 @@
       selectionData.shippingOptionPrice = selectedShipping.price;
       saveSelection();
     }
-    renderPrice();
+    refreshQuotePreview({ silent: true });
   }
 
   async function loadShippingOptions() {
@@ -1748,7 +1929,7 @@
   }
 
   // ── Boot ────────────────────────────────────────────────────
-  loadCatalog().then(renderPrice);
+  loadCatalog().then(() => refreshQuotePreview({ silent: true }));
   loadShippingOptions();
 </script>
 </body>

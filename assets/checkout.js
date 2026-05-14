@@ -48,7 +48,94 @@
   const fmtNzd = n => '$' + (Number(n) || 0).toFixed(2);
 
   let totalNzd = 0;
-  if (hasData) {
+  let quoteValidated = false;
+  let stripeReady = false;
+
+  function updatePayButton(message) {
+    const payBtn = document.getElementById('payBtn');
+    if (!payBtn) return;
+    if (totalNzd > 0) {
+      payBtn.textContent = message || 'Pay ' + fmtNzd(totalNzd);
+      payBtn.disabled = !(quoteValidated && stripeReady);
+      payBtn.style.opacity = payBtn.disabled ? '0.7' : '';
+      payBtn.style.cursor = payBtn.disabled ? 'not-allowed' : '';
+    } else {
+      payBtn.textContent = 'No price set - contact the shop';
+      payBtn.disabled = true;
+      payBtn.style.opacity = '0.6';
+      payBtn.style.cursor = 'not-allowed';
+    }
+  }
+
+  function applyQuoteSnapshot(quote) {
+    if (!quote?.lineItems || !quote?.selected) return;
+    const selected = quote.selected;
+    const lines = quote.lineItems;
+    cart.materialId = selected.material?.id || cart.materialId;
+    cart.materialName = selected.material?.name || cart.materialName;
+    cart.colorId = selected.colour?.id || cart.colorId || null;
+    cart.colorName = selected.colour?.name || cart.colorName || '—';
+    cart.colorHex = selected.colour?.hex || cart.colorHex || null;
+    cart.finish = selected.finish?.id || cart.finish || null;
+    cart.finishId = selected.finish?.id || cart.finishId || cart.finish || null;
+    cart.finishLabel = selected.finish?.name || cart.finishLabel || '—';
+    cart.finishLayerHeight = selected.finish?.layerHeight || cart.finishLayerHeight || '';
+    cart.infillTierId = selected.infill?.id || cart.infillTierId || null;
+    cart.infillLabel = selected.infill?.label || cart.infillLabel || null;
+    cart.quantity = selected.quantity || cart.quantity || 1;
+    cart.unitNzd = Number(lines.unit) || 0;
+    cart.itemsNzd = Number(lines.itemSubtotal) || 0;
+    cart.shippingNzd = Number(lines.shipping) || 0;
+    cart.taxNzd = Number(lines.tax) || 0;
+    cart.totalNzd = Number(lines.total) || 0;
+    cart.totalCents = quote.totalCents;
+    cart.quoteSnapshot = quote;
+    if (selected.shipping) {
+      cart.shipping = {
+        id: selected.shipping.id,
+        label: selected.shipping.label || 'Shipping',
+        price: Number(selected.shipping.finalPrice ?? selected.shipping.price) || 0,
+      };
+    }
+    try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
+  }
+
+  function quotePayload() {
+    const file = cart.file || {};
+    return {
+      shopSlug: cart.shopSlug || 'mahi3d',
+      materialId: cart.materialId,
+      volumeCm3: file.volumeCm3 ?? cart.volumeCm3 ?? cart.quoteSnapshot?.selected?.volumeCm3,
+      dimensions: file.dimensions ?? cart.dimensions ?? cart.quoteSnapshot?.selected?.dimensions ?? null,
+      colourId: cart.colorId || null,
+      colour: cart.colorName || null,
+      finishId: cart.finishId || null,
+      finish: cart.finishLabel || cart.finish || null,
+      infillTierId: cart.infillTierId || null,
+      quantity: cart.quantity,
+      shippingId: cart.shipping?.id || null,
+    };
+  }
+
+  async function refreshCheckoutQuote() {
+    quoteValidated = false;
+    updatePayButton('Validating price...');
+    const res = await fetch('/api/customer/quote-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(quotePayload()),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.error || 'Could not refresh checkout total.');
+    }
+    applyQuoteSnapshot(data);
+    quoteValidated = true;
+    renderCart();
+    return data;
+  }
+
+  function renderCart() {
     document.getElementById('reviewFileName').textContent = cart.file?.name || 'model.stl';
     document.getElementById('reviewFileSize').textContent = formatBytes(cart.file?.size);
     document.getElementById('reviewMaterial').textContent = cart.materialName || '-';
@@ -79,10 +166,11 @@
     const qty = Math.max(1, parseInt(cart.quantity, 10) || 1);
     document.getElementById('reviewQty').textContent = 'x ' + qty;
 
-    const unitPriceNzd = Number(cart.unitNzd)     || 0;
-    const subtotalNzd  = Number(cart.itemsNzd)    || (unitPriceNzd * qty);
+    const unitPriceNzd = Number(cart.unitNzd) || 0;
+    const subtotalNzd  = Number(cart.itemsNzd) || (unitPriceNzd * qty);
     const shippingNzd  = Number(cart.shippingNzd) || 0;
-    totalNzd           = Number(cart.totalNzd)    || (subtotalNzd + shippingNzd);
+    const taxNzd       = Number(cart.taxNzd) || 0;
+    totalNzd           = Number(cart.totalNzd) || (subtotalNzd + shippingNzd + taxNzd);
 
     const unitRow = document.getElementById('priceUnitRow');
     if (qty > 1 && unitPriceNzd > 0) {
@@ -100,18 +188,25 @@
       (shippingNzd > 0 && shipLbl) ? `Shipping - ${shipLbl}` : 'Shipping';
     document.getElementById('priceShipping').textContent = shippingNzd > 0 ? fmtNzd(shippingNzd) : 'Free';
 
+    const taxRow = document.getElementById('priceTaxRow');
+    if (taxNzd > 0) {
+      document.getElementById('priceTax').textContent = fmtNzd(taxNzd);
+      taxRow.style.display = '';
+    } else {
+      taxRow.style.display = 'none';
+    }
+
     document.getElementById('priceTotal').textContent = fmtNzd(totalNzd);
 
-    const payBtn = document.getElementById('payBtn');
-    if (totalNzd > 0) {
-      payBtn.textContent = 'Pay ' + fmtNzd(totalNzd);
-      payBtn.disabled = false;
-    } else {
-      payBtn.textContent = 'No price set - contact the shop';
-      payBtn.disabled = true;
-      payBtn.style.opacity = '0.6';
-      payBtn.style.cursor = 'not-allowed';
-    }
+    updatePayButton();
+  }
+  if (hasData) {
+    renderCart();
+    refreshCheckoutQuote().catch(err => {
+      document.getElementById('card-errors').textContent = err.message || 'Could not refresh checkout total.';
+      quoteValidated = false;
+      updatePayButton('Review total unavailable');
+    });
   }
 
   // Stripe init (publishable key fetched from backend)
@@ -137,6 +232,8 @@
         hidePostalCode: true,
       });
       cardEl.mount('#card-element');
+      stripeReady = true;
+      updatePayButton();
 
       const wrapper = document.getElementById('card-element-wrapper');
       cardEl.on('focus', () => { wrapper.style.borderColor = '#7A9E7E'; wrapper.style.boxShadow = '0 0 0 3px rgba(122,158,126,0.15)'; });
@@ -145,6 +242,7 @@
         document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
       });
     } catch (e) {
+      stripeReady = false;
       document.getElementById('card-errors').textContent = 'Could not initialise card form: ' + e.message;
       document.getElementById('payBtn').disabled = true;
     }
@@ -167,7 +265,11 @@
       errEl.textContent = 'Please enter the name on your card.';
       return;
     }
-    if (!stripe || !cardEl) {
+    if (!quoteValidated) {
+      errEl.textContent = 'Checkout total is still being validated. Please try again in a moment.';
+      return;
+    }
+    if (!stripe || !cardEl || !stripeReady) {
       errEl.textContent = 'Card form is still loading - please try again in a moment.';
       return;
     }
@@ -196,12 +298,13 @@
           customerName:    name,
           orderData: {
             fileName:   cart.file?.name,
-            volumeCm3:  cart.file?.volumeCm3,
+            volumeCm3:  cart.file?.volumeCm3 ?? cart.volumeCm3 ?? cart.quoteSnapshot?.selected?.volumeCm3,
+            dimensions: cart.file?.dimensions ?? cart.dimensions ?? cart.quoteSnapshot?.selected?.dimensions ?? null,
             materialId: cart.materialId,
             colour:     cart.colorName,
             colourId:   cart.colorId,
-            finish:     cart.finish,
-            finishId:   cart.finish,
+            finish:     cart.finishLabel || cart.finish,
+            finishId:   cart.finishId || null,
             infillTierId: cart.infillTierId,
             quantity:   cart.quantity,
             subtotal:   cart.itemsNzd,
@@ -212,6 +315,11 @@
         }),
       });
       const data = await res.json();
+      if (res.status === 409 && data.code === 'PRICE_CHANGED' && data.quote) {
+        applyQuoteSnapshot(data.quote);
+        renderCart();
+        throw new Error('The price changed. Please review the updated total, then click Pay again.');
+      }
       if (!res.ok || data.error) throw new Error(data.error || 'Payment failed');
 
       if (data.status === 'requires_action' && data.clientSecret) {

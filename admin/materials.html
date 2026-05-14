@@ -132,17 +132,19 @@
     .panel-overlay.open { display: block; }
 
     .material-panel {
-      position: fixed; top: 0; right: -540px; width: 520px; height: 100vh;
+      position: fixed; top: 0; right: -760px; width: min(760px, 100vw); height: 100vh;
       background: var(--white); border-left: 1.5px solid var(--border);
       box-shadow: -4px 0 24px rgba(0,0,0,0.10); z-index: 300;
-      overflow-y: auto; padding: 32px;
+      overflow-y: auto; padding: 0;
       transition: right 300ms ease-out;
     }
     .material-panel.open { right: 0; }
 
     .panel-header {
+      position: sticky; top: 0; z-index: 4; background: rgba(255,255,255,0.96);
+      border-bottom: 1px solid var(--border-light); padding: 24px 28px 16px;
       display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 24px;
+      margin-bottom: 0; backdrop-filter: blur(12px);
     }
     .panel-title {
       font-family: var(--font-brand);
@@ -157,10 +159,69 @@
     .panel-close:hover { background: var(--off-white); color: var(--ink); }
 
     .panel-footer {
+      position: sticky; bottom: 0; z-index: 4; background: rgba(255,255,255,0.96);
       display: flex; gap: 10px; justify-content: flex-end;
-      padding-top: 20px; margin-top: 20px;
-      border-top: 1px solid var(--stone);
+      padding: 16px 28px; margin: 0 -28px -28px;
+      border-top: 1px solid var(--border-light); backdrop-filter: blur(12px);
     }
+    .material-panel form { padding: 20px 28px 28px; }
+    .material-editor-tabs {
+      position: sticky; top: 73px; z-index: 3;
+      display: flex; gap: 6px; overflow-x: auto; padding: 10px 28px;
+      background: rgba(255,255,255,0.96); border-bottom: 1px solid var(--border-light);
+      backdrop-filter: blur(12px);
+    }
+    .material-tab {
+      border: 1px solid transparent; border-radius: 999px; background: transparent;
+      color: var(--muted); font: 600 12px var(--font-ui); padding: 8px 12px;
+      cursor: pointer; white-space: nowrap;
+    }
+    .material-tab.active {
+      background: var(--ink); border-color: var(--ink); color: var(--white);
+    }
+    .material-tab-panel { display: none; }
+    .material-tab-panel.active { display: block; }
+    .editor-section {
+      border: 1px solid var(--border-light); border-radius: 16px; background: var(--white);
+      padding: 18px; margin-bottom: 16px;
+    }
+    .editor-section.soft { background: var(--off-white); }
+    .editor-section-head {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+      margin-bottom: 16px;
+    }
+    .editor-section-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+    .editor-section-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 3px; }
+    .editor-note {
+      font-size: 12px; color: var(--muted); background: rgba(122,158,126,0.06);
+      border: 1px solid var(--sage-light); border-radius: 12px; padding: 10px 12px;
+      line-height: 1.5; margin-bottom: 16px;
+    }
+    .editor-example {
+      font-size: 11px; color: var(--muted); line-height: 1.45; margin-top: 6px;
+    }
+    .suggest-review {
+      display: none; margin-top: 12px; border: 1px solid var(--sage-light);
+      border-radius: 14px; background: rgba(122,158,126,0.07); padding: 14px;
+    }
+    .suggest-review.visible { display: block; }
+    .suggest-review-head {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+      margin-bottom: 10px;
+    }
+    .suggest-review-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+    .suggest-review-subtitle { font-size: 11px; color: var(--muted); line-height: 1.45; margin-top: 2px; }
+    .suggest-review-list {
+      display: grid; gap: 6px; max-height: 170px; overflow: auto; margin-bottom: 12px;
+    }
+    .suggest-review-item {
+      display: flex; justify-content: space-between; gap: 12px;
+      border: 1px solid rgba(122,158,126,0.16); background: rgba(255,255,255,0.78);
+      border-radius: 10px; padding: 8px 10px; font-size: 12px; line-height: 1.4;
+    }
+    .suggest-review-label { font-weight: 600; color: var(--ink); }
+    .suggest-review-value { color: var(--muted); text-align: right; }
+    .suggest-review-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 
     /* Colour swatch tag */
     .colour-swatch {
@@ -240,6 +301,14 @@
       font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
       text-transform: uppercase; color: var(--muted);
       margin: 20px 0 12px; display: block;
+    }
+    @media (max-width: 760px) {
+      .material-panel { border-left: 0; }
+      .panel-header { padding: 20px 18px 14px; }
+      .material-editor-tabs { top: 67px; padding: 10px 18px; }
+      .material-panel form { padding: 18px; }
+      .panel-footer { margin: 0 -18px -18px; padding: 14px 18px; }
+      .editor-section { padding: 16px; }
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -398,272 +467,378 @@
 
   <div class="panel-error" id="panelError"></div>
 
+  <nav class="material-editor-tabs" aria-label="Material editor sections">
+    <button type="button" class="material-tab active" data-material-tab="basics">Basics</button>
+    <button type="button" class="material-tab" data-material-tab="media">Media</button>
+    <button type="button" class="material-tab" data-material-tab="options">Options</button>
+    <button type="button" class="material-tab" data-material-tab="specs">Specs</button>
+    <button type="button" class="material-tab" data-material-tab="advanced">Advanced</button>
+  </nav>
+
   <form id="materialForm" novalidate>
     <input type="hidden" id="materialId">
 
-    <div style="font-size:12px;color:var(--muted);background:rgba(122,158,126,0.06);border:1px solid var(--sage-light);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px">
-      💡 Pricing rates (base price, min charge, volume tiers) are now managed on the <a href="pricing.html" style="color:var(--sage-dark)">Pricing page</a>.
-    </div>
-
-    <div class="form-grid-2">
-      <div class="form-group col-span-2">
-        <label class="form-label" for="mName">Material name <span style="color:#C0392B">*</span></label>
-        <input class="form-input" type="text" id="mName" name="name" required placeholder="e.g. PLA Standard">
+    <section class="material-tab-panel active" data-material-tab-panel="basics">
+      <div class="editor-note">
+        Pricing rates, minimum charges, and volume tiers are managed on the <a href="pricing.html" style="color:var(--sage-dark)">Pricing page</a>.
       </div>
 
-      <div class="form-group">
-        <label class="form-label" for="mCategory">Category</label>
-        <select class="form-input" id="mCategory" name="category">
-          <option value="FDM">FDM</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="mStockStatus">Stock status</label>
-        <select class="form-input" id="mStockStatus" name="stock_status">
-          <option value="in_stock">In stock</option>
-          <option value="low_stock">Low stock</option>
-          <option value="out_of_stock">Out of stock</option>
-        </select>
-      </div>
-
-      <div class="form-group col-span-2">
-        <label class="form-label">Production time</label>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <input type="number" class="form-input" id="mProdDaysMin"
-                 min="0" max="60" step="1" placeholder="Min"
-                 style="flex:1;max-width:120px;" aria-label="Minimum production days">
-          <span style="color:var(--muted);font-size:13px;">to</span>
-          <input type="number" class="form-input" id="mProdDaysMax"
-                 min="0" max="60" step="1" placeholder="Max"
-                 style="flex:1;max-width:120px;" aria-label="Maximum production days">
-          <span style="color:var(--muted);font-size:13px;">business days</span>
-        </div>
-        <p style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;">
-          How long parts take to print &amp; finish in this material.
-          Shown to customers in the material's "Learn more" drawer and used for delivery ETAs.
-          Use the same number for both for an exact time, or leave both blank if not applicable.
-        </p>
-      </div>
-
-      <div class="form-group col-span-2">
-        <label class="form-label">Size limits (mm)</label>
-        <div class="size-limits">
-          <div class="size-row">
-            <span class="size-row-label">Minimum</span>
-            <span class="size-axis">X</span>
-            <input type="number" class="form-input size-input" id="mMinX" min="0" step="0.1" placeholder="5">
-            <span class="size-axis">Y</span>
-            <input type="number" class="form-input size-input" id="mMinY" min="0" step="0.1" placeholder="5">
-            <span class="size-axis">Z</span>
-            <input type="number" class="form-input size-input" id="mMinZ" min="0" step="0.1" placeholder="5">
-          </div>
-          <div class="size-row">
-            <span class="size-row-label">Maximum</span>
-            <span class="size-axis">X</span>
-            <input type="number" class="form-input size-input" id="mMaxX" min="0" step="0.1" placeholder="–">
-            <span class="size-axis">Y</span>
-            <input type="number" class="form-input size-input" id="mMaxY" min="0" step="0.1" placeholder="–">
-            <span class="size-axis">Z</span>
-            <input type="number" class="form-input size-input" id="mMaxZ" min="0" step="0.1" placeholder="–">
+      <div class="editor-section">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Identity</div>
+            <div class="editor-section-desc">Name the material and decide whether it is available to customers.</div>
           </div>
         </div>
-        <p style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;">
-          The smallest and largest part dimensions this material can reliably print.
-          <strong>5 mm per axis</strong> is the recommended minimum baseline — parts smaller than this
-          often lose detail or fail to print. Leave any maximum field blank to mean no upper limit.
-        </p>
-      </div>
-
-      <div class="form-group col-span-2">
-        <label class="form-label" for="mDescription">Short description</label>
-        <input class="form-input" type="text" id="mDescription" name="description" placeholder="e.g. Cost-effective for prototypes and display models">
-      </div>
-
-      <div class="form-group col-span-2">
-        <label class="form-label" for="mLongDescription">Long technical description</label>
-        <textarea class="form-input" id="mLongDescription" rows="4" style="resize:vertical;min-height:88px;font-family:var(--font-ui);line-height:1.55;" placeholder="Detailed specs or guidance shown inside View specs."></textarea>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="mPriceUnit">Pricing unit label</label>
-        <input class="form-input" type="text" id="mPriceUnit" placeholder="per cm³">
-      </div>
-
-      <div class="form-group" style="justify-content:flex-start;flex-direction:row;align-items:center;gap:12px">
-        <label class="form-label" style="margin:0">Recommended/default</label>
-        <label class="toggle">
-          <input type="checkbox" id="mRecommended">
-          <span class="toggle-track"></span>
-        </label>
-      </div>
-
-      <div class="form-group col-span-2">
-        <label class="form-label" for="mImageFile">Material image</label>
-        <input class="form-input" type="file" id="mImageFile" accept="image/*">
-        <input class="form-input" type="url" id="mImageUrl" placeholder="/uploads/material-assets/..." style="margin-top:8px;">
-        <input class="form-input" type="text" id="mImageAlt" placeholder="Image alt text" style="margin-top:8px;">
-        <div class="asset-preview" id="mImagePreview">Recommended: clear object photo, wide card-friendly crop.</div>
-      </div>
-
-      <div class="form-group col-span-2">
-        <label class="form-label" for="mTags">Filter tags/categories</label>
-        <input class="form-input" type="text" id="mTags" placeholder="Recommended, Low cost, Strong, Engineering">
-        <p style="font-size:11px;color:var(--muted);margin-top:4px;">Comma-separated. These generate the customer-facing filter chips.</p>
-      </div>
-
-      <div class="form-group col-span-2">
-        <label class="form-label" for="mBestFor">Best-for labels</label>
-        <input class="form-input" type="text" id="mBestFor" placeholder="Functional parts, Brackets & clips">
-      </div>
-
-      <div class="form-group col-span-2" style="justify-content:flex-start;flex-direction:row;align-items:center;gap:12px">
-        <label class="form-label" style="margin:0">Active</label>
-        <label class="toggle">
-          <input type="checkbox" id="mActive" name="active" checked>
-          <span class="toggle-track"></span>
-        </label>
-      </div>
-    </div>
-
-    <!-- Colours -->
-    <span class="panel-section-label">Colours</span>
-    <div class="form-group">
-      <div class="tag-input-wrapper" id="coloursWrapper" role="group" aria-label="Colours">
-        <input class="tag-text-input" id="colourInput" placeholder="Type hex (e.g. #FF5733) then name, press Enter" aria-label="Add colour">
-      </div>
-      <p style="font-size:11px;color:var(--muted);margin-top:4px">Format: #RRGGBB Name (e.g. <code>#FFFFFF White</code>)</p>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label" for="mColoursJson">Advanced colour data</label>
-      <textarea class="form-input json-input" id="mColoursJson" spellcheck="false"></textarea>
-      <p style="font-size:11px;color:var(--muted);margin-top:4px;">JSON array. Supports id, name, hex, textureUrl, enabled, sortOrder.</p>
-    </div>
-
-    <!-- Finishes -->
-    <span class="panel-section-label">Finishes</span>
-    <div class="form-group">
-      <div class="tag-input-wrapper" id="finishesWrapper" role="group" aria-label="Finishes">
-        <input class="tag-text-input" id="finishInput" placeholder="e.g. Matte, Gloss — press Enter to add" aria-label="Add finish">
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label" for="mFinishesJson">Print quality / finish presets</label>
-      <textarea class="form-input json-input" id="mFinishesJson" spellcheck="false"></textarea>
-      <p style="font-size:11px;color:var(--muted);margin-top:4px;">JSON array. Supports id, name, layerHeight, description, priceMultiplier, previewType, previewImageUrl, enabled, default, sortOrder.</p>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label" for="mSpecsJson">Technical specs</label>
-      <textarea class="form-input json-input" id="mSpecsJson" spellcheck="false" placeholder='[{"label":"Tolerance","value":"Configured by your store"}]'></textarea>
-    </div>
-
-    <!-- ── "Learn more" drawer content ──────────────────────────── -->
-    <span class="panel-section-label">"Learn more" drawer</span>
-    <p style="font-size:12px;color:var(--muted);margin:-2px 0 14px;line-height:1.55;">
-      Shown when a customer expands this material's card on the materials page.
-      Use the sliders to set the property bars and add bullet lists of typical uses.
-    </p>
-
-    <!-- Property suggestion banner -->
-    <div class="ai-suggest-card">
-      <div class="ai-suggest-head">
-        <span class="ai-suggest-title">Property suggestions</span>
-        <div class="ai-suggest-actions">
-          <button type="button" class="btn btn-outline" id="aiSuggestBtn" style="height:30px;font-size:12px;padding:0 14px;">
-            Suggest from library
-          </button>
+        <div class="form-grid-2">
+          <div class="form-group col-span-2">
+            <label class="form-label" for="mName">Material name <span style="color:#C0392B">*</span></label>
+            <input class="form-input" type="text" id="mName" name="name" required placeholder="e.g. PLA Standard">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="mCategory">Category</label>
+            <select class="form-input" id="mCategory" name="category">
+              <option value="FDM">FDM</option>
+              <option value="Resin">Resin</option>
+              <option value="SLS">SLS</option>
+              <option value="Specialty">Specialty</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="mStockStatus">Stock status</label>
+            <select class="form-input" id="mStockStatus" name="stock_status">
+              <option value="in_stock">In stock</option>
+              <option value="low_stock">Low stock</option>
+              <option value="out_of_stock">Out of stock</option>
+            </select>
+          </div>
+          <div class="form-group" style="justify-content:flex-start;flex-direction:row;align-items:center;gap:12px">
+            <label class="form-label" style="margin:0">Recommended/default</label>
+            <label class="toggle">
+              <input type="checkbox" id="mRecommended">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="form-group" style="justify-content:flex-start;flex-direction:row;align-items:center;gap:12px">
+            <label class="form-label" style="margin:0">Active</label>
+            <label class="toggle">
+              <input type="checkbox" id="mActive" name="active" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
         </div>
       </div>
-      <details class="ai-suggest-info">
-        <summary>How this works</summary>
-        <p>
-          Enter a material name (e.g. <em>PLA</em>, <em>PETG-CF</em>, <em>Tough Resin</em>, <em>Nylon</em>)
-          and click Suggest to auto-fill the sliders and bullet lists.
-          The system checks the curated library of 36 common materials first; if there is no close match
-          it will offer to look the material up online for obscure or brand-specific filaments.
-          Every field remains editable after the suggestion is applied.
-        </p>
-      </details>
-      <div id="aiSuggestStatus" class="ai-suggest-status" style="display:none;"></div>
-    </div>
 
-    <!-- Property sliders -->
-    <p style="font-size:11px;color:var(--muted);margin:-4px 0 10px;line-height:1.55;">
-      0–100 perceptual scale. Tier labels and approximate real-world units are shown live as you drag —
-      use them as a sanity check (e.g. PLA ≈ Standard, ~50 MPa tensile).
-    </p>
-    <div class="form-grid-2" style="gap:14px 18px;margin-bottom:14px;">
-      <div class="form-group" style="margin-bottom:0;">
-        <label class="form-label" for="mStrength" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-          <span>Strength <em style="color:var(--muted);font-style:normal;font-weight:400;font-size:11px;">(MPa)</em></span>
-          <span style="text-align:right;">
-            <span id="mStrengthVal" style="font-weight:600;color:var(--sage-dark);font-variant-numeric:tabular-nums;">62</span>
-            <span id="mStrengthTier" class="prop-tier-hint">— Standard · ~40–60 MPa</span>
-          </span>
-        </label>
-        <input type="range" id="mStrength" min="0" max="100" value="62" step="1" class="prop-slider">
+      <div class="editor-section">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Customer copy</div>
+            <div class="editor-section-desc">Short text appears on cards; long text appears in the customer specs drawer.</div>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group col-span-2">
+            <label class="form-label" for="mDescription">Short description</label>
+            <input class="form-input" type="text" id="mDescription" name="description" placeholder="e.g. Cost-effective for prototypes and display models">
+          </div>
+          <div class="form-group col-span-2">
+            <label class="form-label" for="mLongDescription">Long technical description</label>
+            <textarea class="form-input" id="mLongDescription" rows="4" style="resize:vertical;min-height:88px;font-family:var(--font-ui);line-height:1.55;" placeholder="Detailed specs or guidance shown inside View specs."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="mPriceUnit">Pricing unit label</label>
+            <input class="form-input" type="text" id="mPriceUnit" placeholder="per cm³">
+          </div>
+        </div>
       </div>
-      <div class="form-group" style="margin-bottom:0;">
-        <label class="form-label" for="mFlexibility" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-          <span>Flexibility <em style="color:var(--muted);font-style:normal;font-weight:400;font-size:11px;">(% elongation)</em></span>
-          <span style="text-align:right;">
-            <span id="mFlexibilityVal" style="font-weight:600;color:var(--sage-dark);font-variant-numeric:tabular-nums;">20</span>
-            <span id="mFlexibilityTier" class="prop-tier-hint">— Rigid · &lt;10%</span>
-          </span>
-        </label>
-        <input type="range" id="mFlexibility" min="0" max="100" value="20" step="1" class="prop-slider">
-      </div>
-      <div class="form-group col-span-2" style="margin-bottom:0;">
-        <label class="form-label" for="mHeat" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-          <span>Heat resistance <em style="color:var(--muted);font-style:normal;font-weight:400;font-size:11px;">(continuous-use °C)</em></span>
-          <span style="text-align:right;">
-            <span id="mHeatVal" style="font-weight:600;color:var(--sage-dark);font-variant-numeric:tabular-nums;">30</span>
-            <span id="mHeatTier" class="prop-tier-hint">— Low · up to ~55 °C</span>
-          </span>
-        </label>
-        <input type="range" id="mHeat" min="0" max="100" value="30" step="1" class="prop-slider">
-      </div>
-      <div class="form-group" style="margin-bottom:0;">
-        <label class="form-label" for="mDetail">Detail rating (1-5)</label>
-        <input type="number" class="form-input" id="mDetail" min="1" max="5" step="1" value="3">
-      </div>
-      <div class="form-group" style="margin-bottom:0;">
-        <label class="form-label" for="mOutdoorUse">Outdoor use rating (1-5)</label>
-        <input type="number" class="form-input" id="mOutdoorUse" min="1" max="5" step="1" value="3">
-      </div>
-    </div>
+    </section>
 
-    <!-- Ideal for tag input -->
-    <div class="form-group" style="margin-bottom:14px;">
-      <label class="form-label" for="idealForInput">Ideal for</label>
-      <div class="tag-input-wrapper" id="idealForWrapper" role="group" aria-label="Ideal for">
-        <input class="tag-text-input" id="idealForInput"
-               placeholder="e.g. Prototypes & concept models — press Enter to add" aria-label="Add ideal-for use">
+    <section class="material-tab-panel" data-material-tab-panel="media">
+      <div class="editor-section">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Material image</div>
+            <div class="editor-section-desc">Use a clear object photo or render that helps customers recognise this material.</div>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="mImageFile">Upload image</label>
+            <input class="form-input" type="file" id="mImageFile" accept="image/*">
+            <p class="editor-example">PNG, JPEG, WebP, or GIF. Wide card-friendly crops work best.</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="mImageUrl">Image URL</label>
+            <input class="form-input" type="url" id="mImageUrl" placeholder="/uploads/material-assets/...">
+            <p class="editor-example">Uploading a file fills this automatically after save.</p>
+          </div>
+          <div class="form-group col-span-2">
+            <label class="form-label" for="mImageAlt">Alt text</label>
+            <input class="form-input" type="text" id="mImageAlt" placeholder="Image alt text">
+            <div class="asset-preview" id="mImagePreview">Recommended: clear object photo, wide card-friendly crop.</div>
+          </div>
+        </div>
       </div>
-      <p style="font-size:11px;color:var(--muted);margin-top:4px;">Bullet items showing where this material excels.</p>
-    </div>
+    </section>
 
-    <!-- Not for tag input -->
-    <div class="form-group" style="margin-bottom:14px;">
-      <label class="form-label" for="notForInput">Not recommended for</label>
-      <div class="tag-input-wrapper" id="notForWrapper" role="group" aria-label="Not for">
-        <input class="tag-text-input" id="notForInput"
-               placeholder="e.g. Outdoor UV exposure — press Enter to add" aria-label="Add not-for use">
+    <section class="material-tab-panel" data-material-tab-panel="options">
+      <div class="editor-section">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Filters and labels</div>
+            <div class="editor-section-desc">These help customers filter and understand the material quickly.</div>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group col-span-2">
+            <label class="form-label" for="mTags">Filter tags/categories</label>
+            <input class="form-input" type="text" id="mTags" placeholder="Recommended, Low cost, Strong, Engineering">
+            <p class="editor-example">Comma-separated. These generate customer-facing filter chips.</p>
+          </div>
+          <div class="form-group col-span-2">
+            <label class="form-label" for="mBestFor">Best-for labels</label>
+            <input class="form-input" type="text" id="mBestFor" placeholder="Functional parts, Brackets & clips">
+          </div>
+        </div>
       </div>
-      <p style="font-size:11px;color:var(--muted);margin-top:4px;">Bullet items warning customers when to avoid this material.</p>
-    </div>
 
-    <!-- Learn more long-form text -->
-    <div class="form-group" style="margin-bottom:16px;">
-      <label class="form-label" for="mLearnMore">Learn more (extra detail)</label>
-      <textarea class="form-input" id="mLearnMore" rows="4"
-                placeholder="Optional. A paragraph or two of background — printing tips, surface finish notes, recyclability, anything else worth saying."
-                style="resize:vertical;min-height:90px;font-family:var(--font-ui);line-height:1.55;"></textarea>
-      <p style="font-size:11px;color:var(--muted);margin-top:4px;">Plain text. Line breaks are preserved.</p>
-    </div>
+      <div class="editor-section">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Colours</div>
+            <div class="editor-section-desc">Add quick colour swatches here, or use Advanced for texture URLs and ordering.</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="tag-input-wrapper" id="coloursWrapper" role="group" aria-label="Colours">
+            <input class="tag-text-input" id="colourInput" placeholder="Type #RRGGBB Name, then press Enter" aria-label="Add colour">
+          </div>
+          <p class="editor-example">Example: <code>#FFFFFF White</code> or <code>#111111 Black</code>.</p>
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Finishes</div>
+            <div class="editor-section-desc">Add simple finish names here. Use Advanced for layer heights, multipliers, defaults, and preview styles.</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="tag-input-wrapper" id="finishesWrapper" role="group" aria-label="Finishes">
+            <input class="tag-text-input" id="finishInput" placeholder="e.g. Standard, Fine, Matte — press Enter" aria-label="Add finish">
+          </div>
+          <p class="editor-example">Example: Standard, Fine, Matte, Gloss.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="material-tab-panel" data-material-tab-panel="specs">
+      <div class="editor-section">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Production and size limits</div>
+            <div class="editor-section-desc">Optional constraints shown to customers where relevant.</div>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group col-span-2">
+            <label class="form-label">Production time</label>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <input type="number" class="form-input" id="mProdDaysMin" min="0" max="60" step="1" placeholder="Min" style="flex:1;max-width:120px;" aria-label="Minimum production days">
+              <span style="color:var(--muted);font-size:13px;">to</span>
+              <input type="number" class="form-input" id="mProdDaysMax" min="0" max="60" step="1" placeholder="Max" style="flex:1;max-width:120px;" aria-label="Maximum production days">
+              <span style="color:var(--muted);font-size:13px;">business days</span>
+            </div>
+            <p class="editor-example">Use the same number for an exact time, or leave blank if not applicable.</p>
+          </div>
+          <div class="form-group col-span-2">
+            <label class="form-label">Size limits (mm)</label>
+            <div class="size-limits">
+              <div class="size-row">
+                <span class="size-row-label">Minimum</span>
+                <span class="size-axis">X</span>
+                <input type="number" class="form-input size-input" id="mMinX" min="0" step="0.1" placeholder="5">
+                <span class="size-axis">Y</span>
+                <input type="number" class="form-input size-input" id="mMinY" min="0" step="0.1" placeholder="5">
+                <span class="size-axis">Z</span>
+                <input type="number" class="form-input size-input" id="mMinZ" min="0" step="0.1" placeholder="5">
+              </div>
+              <div class="size-row">
+                <span class="size-row-label">Maximum</span>
+                <span class="size-axis">X</span>
+                <input type="number" class="form-input size-input" id="mMaxX" min="0" step="0.1" placeholder="–">
+                <span class="size-axis">Y</span>
+                <input type="number" class="form-input size-input" id="mMaxY" min="0" step="0.1" placeholder="–">
+                <span class="size-axis">Z</span>
+                <input type="number" class="form-input size-input" id="mMaxZ" min="0" step="0.1" placeholder="–">
+              </div>
+            </div>
+            <p class="editor-example">Recommended minimum baseline is 5 mm per axis. Leave maximum fields blank for no upper limit.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Technical specs</div>
+            <div class="editor-section-desc">Specs are edited as structured data in Advanced for now.</div>
+          </div>
+          <button type="button" class="btn btn-outline" data-material-tab-jump="advanced" style="height:30px;font-size:12px;padding:0 12px;">Open Advanced</button>
+        </div>
+        <p class="editor-example">Use Advanced to add rows like tolerance, density, temperature resistance, or compliance notes.</p>
+      </div>
+
+      <div class="editor-section">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Property suggestions</div>
+            <div class="editor-section-desc">Use the material library or online lookup to fill ratings, specs, tags, and suggested use cases.</div>
+          </div>
+        </div>
+        <div class="ai-suggest-card">
+          <div class="ai-suggest-head">
+            <span class="ai-suggest-title">Suggestion helper</span>
+            <div class="ai-suggest-actions">
+              <button type="button" class="btn btn-outline" id="aiSuggestBtn" style="height:30px;font-size:12px;padding:0 14px;">
+                Suggest from library
+              </button>
+            </div>
+          </div>
+          <details class="ai-suggest-info">
+            <summary>How this works</summary>
+            <p>
+              New materials auto-fill from the local library as you type names like <em>PLA</em>, <em>PETG-CF</em>,
+              <em>TPU 95A</em>, <em>AMS TPU</em>, or <em>Nylon PA6</em>.
+              Click Suggest to intentionally refresh populated fields or look up obscure materials online.
+              The system checks common material and additive manufacturing wording first, including AM, FDM/FFF,
+              SLA, SLS, MJF, powder bed fusion, filament, powder, resin, and regional spellings like fibre/fiber.
+              If there is no close match it will offer to look the material up online for obscure or brand-specific materials.
+              Every field remains editable after the suggestion is applied.
+            </p>
+          </details>
+          <div id="aiSuggestStatus" class="ai-suggest-status" style="display:none;"></div>
+          <div id="suggestReview" class="suggest-review" aria-live="polite">
+            <div class="suggest-review-head">
+              <div>
+                <div class="suggest-review-title">Suggested updates ready</div>
+                <div class="suggest-review-subtitle" id="suggestReviewSummary">Blank fields were filled. Review the remaining suggested values before applying.</div>
+              </div>
+            </div>
+            <div class="suggest-review-list" id="suggestReviewList"></div>
+            <div class="suggest-review-actions">
+              <button type="button" class="btn btn-outline" id="suggestDismissBtn" style="height:30px;font-size:12px;padding:0 12px;">Dismiss</button>
+              <button type="button" class="btn btn-primary" id="suggestApplyBtn" style="height:30px;font-size:12px;padding:0 12px;">Apply all suggestions</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Performance ratings</div>
+            <div class="editor-section-desc">0-100 sliders power customer-facing percentage bars; 1-5 ratings are converted to percentages.</div>
+          </div>
+        </div>
+        <p class="editor-example" style="margin-bottom:12px;">Tier labels and approximate real-world units update as you drag.</p>
+        <div class="form-grid-2" style="gap:14px 18px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="mStrength" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+              <span>Strength <em style="color:var(--muted);font-style:normal;font-weight:400;font-size:11px;">(MPa)</em></span>
+              <span style="text-align:right;">
+                <span id="mStrengthVal" style="font-weight:600;color:var(--sage-dark);font-variant-numeric:tabular-nums;">62</span>
+                <span id="mStrengthTier" class="prop-tier-hint">— Standard · ~40–60 MPa</span>
+              </span>
+            </label>
+            <input type="range" id="mStrength" min="0" max="100" value="62" step="1" class="prop-slider">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="mFlexibility" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+              <span>Flexibility <em style="color:var(--muted);font-style:normal;font-weight:400;font-size:11px;">(% elongation)</em></span>
+              <span style="text-align:right;">
+                <span id="mFlexibilityVal" style="font-weight:600;color:var(--sage-dark);font-variant-numeric:tabular-nums;">20</span>
+                <span id="mFlexibilityTier" class="prop-tier-hint">— Rigid · &lt;10%</span>
+              </span>
+            </label>
+            <input type="range" id="mFlexibility" min="0" max="100" value="20" step="1" class="prop-slider">
+          </div>
+          <div class="form-group col-span-2" style="margin-bottom:0;">
+            <label class="form-label" for="mHeat" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+              <span>Heat resistance <em style="color:var(--muted);font-style:normal;font-weight:400;font-size:11px;">(continuous-use °C)</em></span>
+              <span style="text-align:right;">
+                <span id="mHeatVal" style="font-weight:600;color:var(--sage-dark);font-variant-numeric:tabular-nums;">30</span>
+                <span id="mHeatTier" class="prop-tier-hint">— Low · up to ~55 °C</span>
+              </span>
+            </label>
+            <input type="range" id="mHeat" min="0" max="100" value="30" step="1" class="prop-slider">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="mDetail">Detail rating (1-5)</label>
+            <input type="number" class="form-input" id="mDetail" min="1" max="5" step="1" value="3">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="mOutdoorUse">Outdoor use rating (1-5)</label>
+            <input type="number" class="form-input" id="mOutdoorUse" min="1" max="5" step="1" value="3">
+          </div>
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Learn more drawer</div>
+            <div class="editor-section-desc">Shown when a customer expands this material's card.</div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="idealForInput">Ideal for</label>
+          <div class="tag-input-wrapper" id="idealForWrapper" role="group" aria-label="Ideal for">
+            <input class="tag-text-input" id="idealForInput" placeholder="e.g. Prototypes & concept models — press Enter" aria-label="Add ideal-for use">
+          </div>
+          <p class="editor-example">Bullet items showing where this material excels.</p>
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="notForInput">Not recommended for</label>
+          <div class="tag-input-wrapper" id="notForWrapper" role="group" aria-label="Not for">
+            <input class="tag-text-input" id="notForInput" placeholder="e.g. Outdoor UV exposure — press Enter" aria-label="Add not-for use">
+          </div>
+          <p class="editor-example">Bullet items warning customers when to avoid this material.</p>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" for="mLearnMore">Learn more (extra detail)</label>
+          <textarea class="form-input" id="mLearnMore" rows="4" placeholder="Optional. A paragraph or two of background — printing tips, surface finish notes, recyclability, anything else worth saying." style="resize:vertical;min-height:90px;font-family:var(--font-ui);line-height:1.55;"></textarea>
+          <p class="editor-example">Plain text. Line breaks are preserved.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="material-tab-panel" data-material-tab-panel="advanced">
+      <div class="editor-section soft">
+        <div class="editor-section-head">
+          <div>
+            <div class="editor-section-title">Advanced structured data</div>
+            <div class="editor-section-desc">Use these fields for richer colours, finish presets, texture URLs, technical spec rows, ordering, and enabled/default states.</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="mColoursJson">Advanced colour data</label>
+          <textarea class="form-input json-input" id="mColoursJson" spellcheck="false"></textarea>
+          <p class="editor-example">JSON array. Supports id, name, hex, textureUrl, enabled, sortOrder.</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="mFinishesJson">Print quality / finish presets</label>
+          <textarea class="form-input json-input" id="mFinishesJson" spellcheck="false"></textarea>
+          <p class="editor-example">JSON array. Supports id, name, layerHeight, description, priceMultiplier, previewType, previewImageUrl, enabled, default, sortOrder.</p>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" for="mSpecsJson">Technical specs</label>
+          <textarea class="form-input json-input" id="mSpecsJson" spellcheck="false" placeholder='[{"label":"Tolerance","value":"Configured by your store"}]'></textarea>
+          <p class="editor-example">JSON array. Supports rows like label/value pairs shown in the customer specs drawer.</p>
+        </div>
+      </div>
+    </section>
 
     <div class="panel-footer">
       <button type="button" class="btn btn-outline" id="panelCancelBtn">Cancel</button>
@@ -711,6 +886,10 @@
   let notFor   = [];    // [string]  — Learn more drawer
   let pendingDeleteId = null;
   let materialLibrary = [];   // Loaded once from /api/materials/library
+  let pendingSuggestion = null;
+  let autoSuggestTimer = null;
+  let autoSuggestSeq = 0;
+  let lastAutoSuggestionKey = null;
 
   // ── Helpers ───────────────────────────────────────────────────
   function escHtml(s) {
@@ -950,6 +1129,9 @@
     document.getElementById('mSpecsJson').value = '[]';
     document.getElementById('mDetail').value = 3;
     document.getElementById('mOutdoorUse').value = 3;
+    hideSuggestionReview();
+    clearTimeout(autoSuggestTimer);
+    lastAutoSuggestionKey = null;
     setImagePreview('');
 
     // Sliders default
@@ -1030,10 +1212,14 @@
       document.getElementById('panelTitle').textContent = 'Add material';
     }
 
+    renderColourTags();
+    renderFinishTags();
     renderIdealForTags();
     renderNotForTags();
+    setMaterialEditorTab('basics');
     document.getElementById('panelOverlay').classList.add('open');
     document.getElementById('materialPanel').classList.add('open');
+    document.getElementById('materialPanel').scrollTop = 0;
     document.getElementById('mName').focus();
   }
 
@@ -1167,29 +1353,117 @@
    * Same algorithm as backend lib/material-library.js#findMaterialMatch so
    * results are identical whether matched server- or client-side.
    */
+  const SEARCH_SYNONYM_REPLACEMENTS = [
+    [/\badditive manufacturing\b/g, '3d printing'],
+    [/\badditive manufactured\b/g, '3d printing'],
+    [/\badditive manufacture\b/g, '3d printing'],
+    [/\bam material(s)?\b/g, '3d printing material'],
+    [/\bam polymer(s)?\b/g, '3d printing polymer'],
+    [/\bam plastic(s)?\b/g, '3d printing plastic'],
+    [/\bfused filament fabrication\b/g, 'fff'],
+    [/\bfused deposition modeling\b/g, 'fdm'],
+    [/\bfused deposition modelling\b/g, 'fdm'],
+    [/\bmaterial extrusion\b/g, 'fdm'],
+    [/\bvat photopolymerization\b/g, 'resin'],
+    [/\bvat photopolymerisation\b/g, 'resin'],
+    [/\bphotopolymerization\b/g, 'resin'],
+    [/\bphotopolymerisation\b/g, 'resin'],
+    [/\bpowder bed fusion\b/g, 'sls'],
+    [/\bselective laser sintering\b/g, 'sls'],
+    [/\bmulti jet fusion\b/g, 'mjf'],
+    [/\bmultijet fusion\b/g, 'mjf'],
+    [/\bcarbon fibre\b/g, 'carbon fiber'],
+    [/\bglass fibre\b/g, 'glass fiber'],
+  ];
+  const SEARCH_NOISE_WORDS = new Set([
+    '3d', 'print', 'printing', 'printer', 'printed', 'printable',
+    'material', 'materials', 'polymer', 'polymers', 'plastic', 'plastics',
+    'filament', 'filaments', 'resin', 'resins', 'powder', 'powders',
+    'additive', 'manufacturing', 'manufacture', 'manufactured',
+    'rapid', 'prototyping', 'prototype', 'industrial', 'commercial',
+    'service', 'services', 'process', 'processes', 'technology', 'grade',
+    'for', 'and', 'or', 'with', 'using', 'use',
+  ]);
+  function normaliseSearchText(value) {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/[‐‑‒–—]/g, '-')
+      .replace(/[^a-z0-9+.#-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  function materialSearchVariants(name) {
+    const base = normaliseSearchText(name);
+    if (!base) return [];
+    let expanded = base;
+    for (const [pattern, replacement] of SEARCH_SYNONYM_REPLACEMENTS) {
+      expanded = expanded.replace(pattern, replacement);
+    }
+    const compact = expanded
+      .split(' ')
+      .filter(token => !SEARCH_NOISE_WORDS.has(token))
+      .join(' ')
+      .trim();
+    const joinedCodes = expanded
+      .replace(/\bpa\s*[- ]?\s*(6|11|12)\b/g, 'pa$1')
+      .replace(/\btpu\s*[- ]?\s*(70a|80a|85a|90a|95a|98a)\b/g, 'tpu $1')
+      .replace(/\bpla\s*[- ]?\s*cf\b/g, 'pla-cf')
+      .replace(/\bpetg\s*[- ]?\s*cf\b/g, 'petg-cf')
+      .replace(/\bnylon\s*[- ]?\s*cf\b/g, 'nylon-cf')
+      .replace(/\bnylon\s*[- ]?\s*gf\b/g, 'nylon-gf')
+      .trim();
+    return [...new Set([base, expanded, joinedCodes, compact].filter(Boolean))];
+  }
   function findMatchInLibrary(name) {
     if (!name || !materialLibrary.length) return null;
-    const norm = String(name).toLowerCase().trim();
-    if (!norm) return null;
+    const variants = materialSearchVariants(name);
+    if (!variants.length) return null;
 
     // 1. Exact displayName
     for (const m of materialLibrary) {
-      if (m.displayName.toLowerCase() === norm) return m;
+      if (variants.includes(normaliseSearchText(m.displayName))) return m;
     }
     // 1b. Exact alias
     for (const m of materialLibrary) {
-      if ((m.aliases || []).some(a => a.toLowerCase() === norm)) return m;
+      if ((m.aliases || []).some(a => variants.includes(normaliseSearchText(a)))) return m;
     }
     // 2. Longest-substring match
     let best = null, bestLen = 0;
     for (const m of materialLibrary) {
-      const candidates = [m.displayName.toLowerCase(), ...(m.aliases || []).map(a => a.toLowerCase())];
+      const candidates = [normaliseSearchText(m.displayName), ...(m.aliases || []).map(a => normaliseSearchText(a))];
       for (const c of candidates) {
         if (c.length < 3) continue;
-        if (norm.includes(c) && c.length > bestLen) { best = m; bestLen = c.length; }
+        if (variants.some(v => v.includes(c)) && c.length > bestLen) { best = m; bestLen = c.length; }
       }
     }
     return best;
+  }
+
+  function scheduleAutoMaterialSuggestion() {
+    clearTimeout(autoSuggestTimer);
+    const name = document.getElementById('mName').value.trim();
+    const isEditingExisting = !!document.getElementById('materialId').value;
+    if (isEditingExisting || name.length < 2) return;
+    autoSuggestTimer = setTimeout(autoApplyMaterialSuggestion, 350);
+  }
+
+  async function autoApplyMaterialSuggestion() {
+    const seq = ++autoSuggestSeq;
+    const name = document.getElementById('mName').value.trim();
+    const isEditingExisting = !!document.getElementById('materialId').value;
+    if (isEditingExisting || name.length < 2) return;
+
+    await loadMaterialLibrary();
+    if (seq !== autoSuggestSeq) return;
+
+    const match = findMatchInLibrary(name);
+    if (!match) return;
+
+    const matchKey = match.key || match.displayName || name;
+    if (lastAutoSuggestionKey === matchKey) return;
+    lastAutoSuggestionKey = matchKey;
+
+    applyAiSuggestion(match, { auto: true });
   }
 
   function showSuggestStatus(msg, kind) {
@@ -1201,36 +1475,295 @@
     el.style.display = '';
   }
 
+  function cleanSuggestionArray(value, max = 8) {
+    return Array.isArray(value)
+      ? value.map(v => String(v || '').trim()).filter(Boolean).slice(0, max)
+      : [];
+  }
+
+  function cleanSuggestionSpecs(value) {
+    return Array.isArray(value)
+      ? value.map(row => ({
+          label: String(row?.label || '').trim(),
+          value: String(row?.value || '').trim(),
+        })).filter(row => row.label && row.value).slice(0, 8)
+      : [];
+  }
+
+  function clampRating(value, fallback = 3) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(1, Math.min(5, n > 5 ? Math.round(n / 20) : Math.round(n)));
+  }
+
+  function inferOutdoorRating(sugg) {
+    const text = [
+      sugg.displayName,
+      sugg.category,
+      ...(sugg.aliases || []),
+      ...(sugg.ideal_for || []),
+      ...(sugg.not_for || []),
+    ].join(' ').toLowerCase();
+    if (/\basa\b|uv-stable|weather|weather-resistant|outdoor enclosures|weather-exposed/.test(text)) return 5;
+    if (/\bpetg\b|\bpp\b|polypropylene|\bsls\b|\bmjf\b|\bpa11\b|\bpa12\b|nylon/.test(text)) return 4;
+    if (/outdoor uv exposure|uv-exposed|long-term outdoor|yellows|becomes brittle/.test(text)) return 2;
+    return Number(sugg.heat) >= 75 ? 3 : 2;
+  }
+
+  function normalizeSuggestion(sugg) {
+    const strength = Number.isFinite(Number(sugg.strength)) ? Number(sugg.strength) : 50;
+    const flexibility = Number.isFinite(Number(sugg.flexibility)) ? Number(sugg.flexibility) : 50;
+    const heat = Number.isFinite(Number(sugg.heat)) ? Number(sugg.heat) : 50;
+    const ratings = sugg.ratings || {};
+    const category = sugg.category || 'FDM';
+    const detail = clampRating(sugg.detail ?? ratings.detail ?? (category === 'Resin' ? 5 : category === 'SLS' ? 4 : 3));
+    const outdoorUse = clampRating(sugg.outdoorUse ?? ratings.outdoorUse ?? inferOutdoorRating(sugg));
+    const ideal = cleanSuggestionArray(sugg.ideal_for, 5);
+    const avoid = cleanSuggestionArray(sugg.not_for, 4);
+    let tags = cleanSuggestionArray(sugg.tags, 6);
+    if (!tags.length) {
+      if (strength >= 75) tags.push('Strong');
+      if (flexibility >= 75) tags.push('Flexible');
+      if (outdoorUse >= 4) tags.push('Outdoor');
+      if (detail >= 4) tags.push('Smooth finish');
+      if (strength >= 80 || heat >= 75 || category === 'SLS') tags.push('Engineering');
+      if (['PLA', 'PLA+', 'PETG'].includes(sugg.displayName)) tags.push('Low cost');
+    }
+    const bestFor = cleanSuggestionArray(sugg.best_for, 4).length
+      ? cleanSuggestionArray(sugg.best_for, 4)
+      : ideal.slice(0, 3);
+    const specs = cleanSuggestionSpecs(sugg.specs).length
+      ? cleanSuggestionSpecs(sugg.specs)
+      : [
+          { label: 'Process', value: category },
+          { label: 'Strength rating', value: `${clampRating(strength)}/5` },
+          { label: 'Flexibility rating', value: `${clampRating(flexibility)}/5` },
+          { label: 'Heat resistance rating', value: `${clampRating(heat)}/5` },
+          { label: 'Detail rating', value: `${detail}/5` },
+          { label: 'Outdoor use rating', value: `${outdoorUse}/5` },
+        ];
+    const longDescription = String(sugg.longDescription || sugg.description_long || sugg.learn_more || '').trim()
+      || `${sugg.displayName || 'This material'} is commonly used for ${ideal.slice(0, 3).join(', ') || '3D printed parts'}. Suggested ratings: strength ${clampRating(strength)}/5, flexibility ${clampRating(flexibility)}/5, heat resistance ${clampRating(heat)}/5, detail ${detail}/5, outdoor use ${outdoorUse}/5.`;
+    const shortDescription = String(sugg.shortDescription || sugg.description_short || '').trim()
+      || (bestFor.length ? `Commonly used for ${bestFor.slice(0, 2).join(', ')}.` : `${sugg.displayName || 'This material'} for configurable quoting.`);
+
+    return {
+      displayName: sugg.displayName || sugg.name || 'material',
+      category,
+      strength,
+      flexibility,
+      heat,
+      detail,
+      outdoorUse,
+      tags: [...new Set(tags)],
+      best_for: [...new Set(bestFor)],
+      specs,
+      shortDescription,
+      longDescription,
+      learn_more: String(sugg.learn_more || longDescription).trim(),
+      ideal_for: ideal,
+      not_for: avoid,
+      production_days_min: sugg.production_days_min,
+      production_days_max: sugg.production_days_max,
+      confidence: sugg.confidence,
+      notes: sugg.notes,
+    };
+  }
+
+  function isJsonBlank(id) {
+    const raw = document.getElementById(id).value.trim();
+    if (!raw) return true;
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length === 0;
+    } catch {
+      return false;
+    }
+  }
+
+  function formatSuggestionValue(value) {
+    if (Array.isArray(value)) {
+      if (!value.length) return '';
+      if (typeof value[0] === 'object') {
+        return value.map(row => `${row.label}: ${row.value}`).join(', ');
+      }
+      return value.join(', ');
+    }
+    return String(value ?? '');
+  }
+
+  function hideSuggestionReview() {
+    pendingSuggestion = null;
+    const review = document.getElementById('suggestReview');
+    if (review) review.classList.remove('visible');
+  }
+
+  function renderSuggestionReview(suggestion, deferred, appliedCount) {
+    const review = document.getElementById('suggestReview');
+    const list = document.getElementById('suggestReviewList');
+    const summary = document.getElementById('suggestReviewSummary');
+    if (!review || !list || !summary) return;
+    pendingSuggestion = suggestion;
+    list.innerHTML = '';
+    deferred.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'suggest-review-item';
+      row.innerHTML = `<span class="suggest-review-label">${escHtml(item.label)}</span><span class="suggest-review-value">${escHtml(formatSuggestionValue(item.value))}</span>`;
+      list.appendChild(row);
+    });
+    summary.textContent = deferred.length
+      ? `${appliedCount} blank/default fields were filled. ${deferred.length} populated fields have suggested updates waiting.`
+      : `${appliedCount} fields were filled from the suggestion.`;
+    review.classList.toggle('visible', deferred.length > 0);
+  }
+
   /**
    * Apply a library/AI entry to the open material form.
-   * Sliders + ideal_for + not_for are overwritten. Production time is filled
-   * only if currently blank (so an admin's explicit value isn't clobbered).
+   * Blank/default fields are filled immediately. Existing values are held in
+   * the review panel until the admin chooses to apply them.
    */
-  function applyAiSuggestion(sugg, { silent = false } = {}) {
+  function applyAiSuggestion(sugg, { silent = false, force = false, auto = false } = {}) {
     if (!sugg) return;
-    setSliderValue('mStrength',    sugg.strength    ?? 50);
-    setSliderValue('mFlexibility', sugg.flexibility ?? 50);
-    setSliderValue('mHeat',        sugg.heat        ?? 50);
+    const suggestion = normalizeSuggestion(sugg);
+    const deferred = [];
+    let appliedCount = 0;
+    const isNew = !document.getElementById('materialId').value;
+    const applyOrDefer = ({ label, value, canApply, canAutoApply, apply }) => {
+      const displayValue = formatSuggestionValue(value);
+      if (!displayValue) return;
+      const shouldApply = force || (auto && typeof canAutoApply === 'function' ? canAutoApply() : canApply());
+      if (shouldApply) {
+        apply();
+        appliedCount += 1;
+      } else {
+        deferred.push({ label, value });
+      }
+    };
 
-    idealFor = Array.isArray(sugg.ideal_for) ? [...sugg.ideal_for] : [];
-    notFor   = Array.isArray(sugg.not_for)   ? [...sugg.not_for]   : [];
-    renderIdealForTags();
-    renderNotForTags();
+    applyOrDefer({
+      label: 'Category',
+      value: suggestion.category,
+      canApply: () => isNew,
+      canAutoApply: () => isNew && document.getElementById('mCategory').value === 'FDM',
+      apply: () => { document.getElementById('mCategory').value = suggestion.category; },
+    });
+    applyOrDefer({
+      label: 'Strength',
+      value: `${suggestion.strength}/100`,
+      canApply: () => isNew || Number(document.getElementById('mStrength').value) === 50,
+      canAutoApply: () => Number(document.getElementById('mStrength').value) === 50,
+      apply: () => setSliderValue('mStrength', suggestion.strength),
+    });
+    applyOrDefer({
+      label: 'Flexibility',
+      value: `${suggestion.flexibility}/100`,
+      canApply: () => isNew || Number(document.getElementById('mFlexibility').value) === 50,
+      canAutoApply: () => Number(document.getElementById('mFlexibility').value) === 50,
+      apply: () => setSliderValue('mFlexibility', suggestion.flexibility),
+    });
+    applyOrDefer({
+      label: 'Heat resistance',
+      value: `${suggestion.heat}/100`,
+      canApply: () => isNew || Number(document.getElementById('mHeat').value) === 50,
+      canAutoApply: () => Number(document.getElementById('mHeat').value) === 50,
+      apply: () => setSliderValue('mHeat', suggestion.heat),
+    });
+    applyOrDefer({
+      label: 'Detail rating',
+      value: `${suggestion.detail}/5`,
+      canApply: () => isNew || Number(document.getElementById('mDetail').value) === 3,
+      canAutoApply: () => Number(document.getElementById('mDetail').value) === 3,
+      apply: () => { document.getElementById('mDetail').value = suggestion.detail; },
+    });
+    applyOrDefer({
+      label: 'Outdoor use rating',
+      value: `${suggestion.outdoorUse}/5`,
+      canApply: () => isNew || Number(document.getElementById('mOutdoorUse').value) === 3,
+      canAutoApply: () => Number(document.getElementById('mOutdoorUse').value) === 3,
+      apply: () => { document.getElementById('mOutdoorUse').value = suggestion.outdoorUse; },
+    });
+    applyOrDefer({
+      label: 'Filter tags',
+      value: suggestion.tags,
+      canApply: () => !document.getElementById('mTags').value.trim(),
+      apply: () => { document.getElementById('mTags').value = suggestion.tags.join(', '); },
+    });
+    applyOrDefer({
+      label: 'Best-for labels',
+      value: suggestion.best_for,
+      canApply: () => !document.getElementById('mBestFor').value.trim(),
+      apply: () => { document.getElementById('mBestFor').value = suggestion.best_for.join(', '); },
+    });
+    applyOrDefer({
+      label: 'Technical specs',
+      value: suggestion.specs,
+      canApply: () => isJsonBlank('mSpecsJson'),
+      apply: () => { document.getElementById('mSpecsJson').value = JSON.stringify(suggestion.specs, null, 2); },
+    });
+    applyOrDefer({
+      label: 'Short description',
+      value: suggestion.shortDescription,
+      canApply: () => !document.getElementById('mDescription').value.trim(),
+      apply: () => { document.getElementById('mDescription').value = suggestion.shortDescription; },
+    });
+    applyOrDefer({
+      label: 'Long technical description',
+      value: suggestion.longDescription,
+      canApply: () => !document.getElementById('mLongDescription').value.trim(),
+      apply: () => { document.getElementById('mLongDescription').value = suggestion.longDescription; },
+    });
+    applyOrDefer({
+      label: 'Learn more copy',
+      value: suggestion.learn_more,
+      canApply: () => !document.getElementById('mLearnMore').value.trim(),
+      apply: () => { document.getElementById('mLearnMore').value = suggestion.learn_more; },
+    });
+    applyOrDefer({
+      label: 'Ideal for',
+      value: suggestion.ideal_for,
+      canApply: () => idealFor.length === 0,
+      apply: () => { idealFor = [...suggestion.ideal_for]; renderIdealForTags(); },
+    });
+    applyOrDefer({
+      label: 'Not recommended for',
+      value: suggestion.not_for,
+      canApply: () => notFor.length === 0,
+      apply: () => { notFor = [...suggestion.not_for]; renderNotForTags(); },
+    });
 
-    // Only fill production days if both fields are blank
     const minIn = document.getElementById('mProdDaysMin');
     const maxIn = document.getElementById('mProdDaysMax');
-    if (!minIn.value.trim() && !maxIn.value.trim()) {
-      if (sugg.production_days_min != null) minIn.value = sugg.production_days_min;
-      if (sugg.production_days_max != null) maxIn.value = sugg.production_days_max;
+    if (suggestion.production_days_min != null || suggestion.production_days_max != null) {
+      applyOrDefer({
+        label: 'Production time',
+        value: `${suggestion.production_days_min ?? suggestion.production_days_max} to ${suggestion.production_days_max ?? suggestion.production_days_min} business days`,
+        canApply: () => !minIn.value.trim() && !maxIn.value.trim(),
+        apply: () => {
+          if (suggestion.production_days_min != null) minIn.value = suggestion.production_days_min;
+          if (suggestion.production_days_max != null) maxIn.value = suggestion.production_days_max;
+        },
+      });
     }
 
+    if (force || auto) hideSuggestionReview();
+    else renderSuggestionReview(suggestion, deferred, appliedCount);
+
     if (!silent) {
-      showSuggestStatus(
-        `Suggestions applied from "${sugg.displayName}" (${sugg.category}). All fields remain editable.`,
-        'ok'
-      );
+      if (auto) {
+        showSuggestStatus(
+          `Auto-filled ${appliedCount} blank/default fields from "${suggestion.displayName}" (${suggestion.category}). Review and edit anything before saving.`,
+          'ok'
+        );
+      } else {
+        const reviewText = deferred.length ? ` ${deferred.length} populated fields are ready to review below.` : '';
+        showSuggestStatus(
+          `Suggestions applied from "${suggestion.displayName}" (${suggestion.category}).${reviewText} All fields remain editable.`,
+          'ok'
+        );
+      }
     }
+
+    return { suggestion, appliedCount, deferredCount: deferred.length };
   }
 
   // Fall back to the internet/AI lookup when the curated library has no match.
@@ -1271,12 +1804,12 @@
       if (e.code === 'NO_API_KEY') {
         showSuggestStatus(
           `Online lookup is disabled on this server. Add ANTHROPIC_API_KEY to the backend .env file to enable it. ` +
-          `For now, try a more standard name (PLA, PETG, ABS, Nylon, TPU, Resin, and so on).`,
+          `For now, try a base material or process name (PLA, PETG, ABS, Nylon, PA12, TPU, Resin, SLS, MJF, and so on).`,
           'warn'
         );
       } else {
         showSuggestStatus(
-          `Could not look up "${name}" online: ${e.message}. Try again, or use a more standard name.`,
+          `Could not look up "${name}" online: ${e.message}. Try again, or use a base material or additive manufacturing process name.`,
           'warn'
         );
       }
@@ -1311,8 +1844,8 @@
     );
     if (!wantsOnline) {
       showSuggestStatus(
-        `No match found for "${name}" in the local library. Try a more standard name ` +
-        `(PLA, PETG, ABS, Nylon, TPU, Resin, and so on), or click Suggest again to look it up online.`,
+        `No match found for "${name}" in the local library. Try a base material or additive manufacturing term ` +
+        `(PLA, PETG, ABS, Nylon, PA12, TPU, Resin, SLS, MJF, and so on), or click Suggest again to look it up online.`,
         'warn'
       );
       return;
@@ -1322,18 +1855,46 @@
   });
 
   function closePanel() {
+    clearTimeout(autoSuggestTimer);
     document.getElementById('panelOverlay').classList.remove('open');
     document.getElementById('materialPanel').classList.remove('open');
   }
 
+  function setMaterialEditorTab(tab) {
+    const next = tab || 'basics';
+    document.querySelectorAll('[data-material-tab]').forEach(btn => {
+      const active = btn.dataset.materialTab === next;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-material-tab-panel]').forEach(panel => {
+      panel.classList.toggle('active', panel.dataset.materialTabPanel === next);
+    });
+    const panel = document.getElementById('materialPanel');
+    if (panel) panel.scrollTop = 0;
+  }
+
   document.getElementById('addMaterialBtn').addEventListener('click', () => openPanel());
+  document.getElementById('mName').addEventListener('input', scheduleAutoMaterialSuggestion);
   document.getElementById('panelCloseBtn').addEventListener('click', closePanel);
   document.getElementById('panelCancelBtn').addEventListener('click', closePanel);
   document.getElementById('panelOverlay').addEventListener('click', closePanel);
+  document.getElementById('suggestApplyBtn').addEventListener('click', () => {
+    if (!pendingSuggestion) return;
+    applyAiSuggestion(pendingSuggestion, { force: true });
+    showSuggestStatus('All suggested material specs were applied. Review and save when ready.', 'ok');
+  });
+  document.getElementById('suggestDismissBtn').addEventListener('click', hideSuggestionReview);
+  document.querySelectorAll('[data-material-tab]').forEach(btn => {
+    btn.addEventListener('click', () => setMaterialEditorTab(btn.dataset.materialTab));
+  });
+  document.querySelectorAll('[data-material-tab-jump]').forEach(btn => {
+    btn.addEventListener('click', () => setMaterialEditorTab(btn.dataset.materialTabJump));
+  });
 
   // ── Colour tag input ──────────────────────────────────────────
   function addColourTag(hex, name) {
-    colours.push({ hex, name });
+    colours.push({ hex, name, enabled: true, sortOrder: colours.length });
     renderColourTags();
   }
 
@@ -1355,6 +1916,7 @@
       tag.querySelector('.tag-remove').addEventListener('click', () => removeColourTag(i));
       wrapper.insertBefore(tag, inp);
     });
+    document.getElementById('mColoursJson').value = JSON.stringify(colours, null, 2);
   }
 
   document.getElementById('colourInput').addEventListener('keydown', e => {
@@ -1373,9 +1935,16 @@
   });
 
   // ── Finish tag input ──────────────────────────────────────────
-  function addFinishTag(name) {
-    if (!finishes.includes(name)) {
-      finishes.push(name);
+  function finishLabel(f) {
+    return typeof f === 'string' ? f : (f?.name || 'Finish');
+  }
+
+  function addFinishTag(finish) {
+    const item = typeof finish === 'string'
+      ? { name: finish, enabled: true, default: finishes.length === 0, sortOrder: finishes.length }
+      : { ...finish, name: finishLabel(finish) };
+    if (!finishes.some(f => finishLabel(f).toLowerCase() === item.name.toLowerCase())) {
+      finishes.push(item);
       renderFinishTags();
     }
   }
@@ -1390,12 +1959,14 @@
     const inp = document.getElementById('finishInput');
     wrapper.querySelectorAll('.tag-item').forEach(el => el.remove());
     finishes.forEach((f, i) => {
+      const label = finishLabel(f);
       const tag = document.createElement('span');
       tag.className = 'tag-item';
-      tag.innerHTML = `${escHtml(f)}<button type="button" class="tag-remove" aria-label="Remove ${escHtml(f)}">×</button>`;
+      tag.innerHTML = `${escHtml(label)}<button type="button" class="tag-remove" aria-label="Remove ${escHtml(label)}">×</button>`;
       tag.querySelector('.tag-remove').addEventListener('click', () => removeFinishTag(i));
       wrapper.insertBefore(tag, inp);
     });
+    document.getElementById('mFinishesJson').value = JSON.stringify(finishes, null, 2);
   }
 
   document.getElementById('finishInput').addEventListener('keydown', e => {
@@ -1435,6 +2006,7 @@
     if (!name) {
       errEl.textContent = 'Material name is required.';
       errEl.classList.add('visible');
+      setMaterialEditorTab('basics');
       document.getElementById('mName').focus();
       return;
     }
@@ -1454,6 +2026,7 @@
     } catch (err) {
       errEl.textContent = err.message;
       errEl.classList.add('visible');
+      setMaterialEditorTab('advanced');
       return;
     }
 

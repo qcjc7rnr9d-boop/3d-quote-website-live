@@ -211,42 +211,11 @@ router.delete('/discounts/:id', requireShopAuth, (req, res) => {
 
 // POST /api/pricing/validate-discount  (public — customer checkout)
 router.post('/validate-discount', (req, res) => {
-  try {
-    const { code, shopSlug, orderTotal } = req.body;
-    if (!code || !shopSlug) {
-      return res.status(400).json({ valid: false, error: 'Code and shopSlug required' });
-    }
-
-    const shop = db.prepare('SELECT id FROM shops WHERE slug = ?').get(shopSlug);
-    if (!shop) {
-      return res.status(404).json({ valid: false, error: 'Shop not found' });
-    }
-
-    const discount = db.prepare(`
-      SELECT * FROM discount_codes
-      WHERE shop_id = ?
-        AND LOWER(code) = LOWER(?)
-        AND active = 1
-        AND (expires_at IS NULL OR expires_at > datetime('now'))
-        AND (one_time = 0 OR used_count = 0)
-    `).get(shop.id, code.trim());
-
-    if (!discount) {
-      return res.json({ valid: false, error: 'Invalid or expired code' });
-    }
-
-    if ((orderTotal || 0) < discount.min_order) {
-      return res.json({
-        valid: false,
-        error: `Minimum order of $${discount.min_order.toFixed(2)} required`
-      });
-    }
-
-    res.json({ valid: true, type: discount.type, value: discount.value });
-  } catch (err) {
-    console.error('Validate discount error:', err);
-    res.status(500).json({ valid: false, error: 'Internal server error' });
-  }
+  res.status(409).json({
+    valid: false,
+    code: 'DISCOUNTS_DEFERRED',
+    error: 'Discount codes are not applied to live checkout in Pricing V1.',
+  });
 });
 
 export default router;

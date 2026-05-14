@@ -1,0 +1,2163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Prospect Research Tool</title>
+  <script src="./prospect-research-core.js"></script>
+  <style>
+    :root {
+      --ink: #111827;
+      --muted: #667085;
+      --line: #E5E7EB;
+      --soft: #F7F8FA;
+      --white: #FFFFFF;
+      --green: #166534;
+      --green-bg: #DCFCE7;
+      --amber: #92400E;
+      --amber-bg: #FEF3C7;
+      --red: #991B1B;
+      --red-bg: #FEE2E2;
+      --accent: #315C49;
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #F3F4F6; color: var(--ink); }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .shell { max-width: 1280px; margin: 0 auto; padding: 28px 28px 56px; }
+    .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+    h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: -0.02em; }
+    .subtitle { margin: 0; color: var(--muted); font-size: 14px; max-width: 780px; line-height: 1.5; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--white);
+      color: var(--ink);
+      border-radius: var(--radius);
+      min-height: 38px;
+      padding: 0 13px;
+      font-weight: 650;
+      font-size: 13px;
+    }
+    .btn.primary { background: var(--ink); border-color: var(--ink); color: var(--white); }
+    .btn.danger { color: var(--red); }
+    .inline-check { min-height: 38px; display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 750; text-transform: none; letter-spacing: 0; }
+    .inline-check input { width: auto; min-height: auto; padding: 0; }
+    .cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }
+    .card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+    .card-label { color: var(--muted); font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .card-value { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
+    .dashboard { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 14px; margin-bottom: 18px; }
+    .panel { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; min-width: 0; }
+    .panel-title { font-size: 15px; font-weight: 850; margin-bottom: 5px; letter-spacing: -0.01em; }
+    .panel-subtitle { color: var(--muted); font-size: 12px; line-height: 1.45; margin-bottom: 12px; }
+    .chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .chart-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; background: #FAFAFA; min-width: 0; }
+    .chart-title { font-size: 12px; font-weight: 850; margin-bottom: 10px; }
+    .bar-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(90px, 1.2fr) 34px; gap: 9px; align-items: center; margin: 9px 0; }
+    .bar-label { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    .bar-track { height: 9px; border-radius: 999px; background: #E5E7EB; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 999px; background: var(--accent); }
+    .bar-fill.green { background: #16A34A; }
+    .bar-fill.amber { background: #D97706; }
+    .bar-fill.red { background: #DC2626; }
+    .bar-value { color: var(--muted); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+    .stacked { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: #E5E7EB; margin-bottom: 12px; }
+    .stacked span { min-width: 2px; }
+    .component-row { display: grid; grid-template-columns: minmax(118px, 1fr) minmax(105px, 1fr) 44px; gap: 10px; align-items: center; margin: 8px 0; }
+    .component-label { font-size: 12px; color: var(--muted); }
+    .component-note { color: var(--muted); font-size: 11px; line-height: 1.35; }
+    .score-note { background: #F8FAFC; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 12px; }
+    .top-list { display: grid; gap: 9px; }
+    .top-item { width: 100%; border: 1px solid var(--line); border-radius: var(--radius); padding: 11px; background: #FAFAFA; display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: start; text-align: left; color: inherit; }
+    .top-name { font-weight: 800; font-size: 13px; }
+    .top-action { color: var(--accent); font-size: 12px; font-weight: 800; margin-top: 3px; }
+    .toolbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .toolbar input { grid-column: span 2; min-width: 220px; }
+    .discovery-panel { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 18px; }
+    .discovery-row { display: grid; grid-template-columns: minmax(220px, 1fr) 170px 130px 110px 110px auto; gap: 10px; align-items: end; }
+    .discovery-status { color: var(--muted); font-size: 13px; margin-top: 10px; }
+    .discovery-log { margin-top: 12px; max-height: 128px; overflow: auto; background: #111827; color: #E5E7EB; border-radius: var(--radius); padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.45; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    label { color: var(--muted); font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.05em; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+      color: var(--ink);
+      min-height: 38px;
+      padding: 9px 11px;
+      font-size: 13px;
+    }
+    textarea { min-height: 82px; resize: vertical; line-height: 1.45; }
+    table { width: 100%; border-collapse: collapse; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+    th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 12px 14px; vertical-align: top; font-size: 13px; }
+    th { background: #FAFAFA; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+    tr:last-child td { border-bottom: 0; }
+    tr.new-row td { background: #FFFBEB; }
+    tr.new-row td:first-child { box-shadow: inset 4px 0 0 #D97706; }
+    .lead-name { font-weight: 750; }
+    .meta { color: var(--muted); font-size: 12px; margin-top: 3px; line-height: 1.45; }
+    .score {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 30px;
+      border-radius: 999px;
+      font-weight: 800;
+    }
+    .score.high { color: var(--green); background: var(--green-bg); }
+    .score.mid { color: var(--amber); background: var(--amber-bg); }
+    .score.low { color: var(--red); background: var(--red-bg); }
+    .tag { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; color: var(--muted); font-size: 12px; background: var(--soft); }
+    .tag.target { color: var(--green); background: var(--green-bg); border-color: #BBF7D0; }
+    .tag.likely { color: var(--accent); background: #E7F1EB; border-color: #C9DDCF; }
+    .tag.review { color: var(--amber); background: var(--amber-bg); border-color: #FDE68A; }
+    .tag.skip { color: var(--red); background: var(--red-bg); border-color: #FECACA; }
+    .tag.deck-ready { color: var(--green); background: var(--green-bg); border-color: #BBF7D0; }
+    .tag.deck-evidence, .tag.deck-refresh { color: var(--amber); background: var(--amber-bg); border-color: #FDE68A; }
+    .tag.deck-unsuitable { color: var(--red); background: var(--red-bg); border-color: #FECACA; }
+    .tag.new { color: var(--amber); background: #FFFBEB; border-color: #FBBF24; font-weight: 850; }
+    .empty { padding: 36px; text-align: center; color: var(--muted); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); }
+    .drawer-backdrop { display: none; position: fixed; inset: 0; background: rgba(17,24,39,0.35); z-index: 20; }
+    .drawer-backdrop.open { display: block; }
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: -680px;
+      width: 660px;
+      max-width: 100vw;
+      height: 100vh;
+      background: var(--white);
+      z-index: 30;
+      box-shadow: -24px 0 60px rgba(17,24,39,0.18);
+      transition: right 180ms ease-out;
+      overflow-y: auto;
+    }
+    .drawer.open { right: 0; }
+    .drawer-head { position: sticky; top: 0; background: var(--white); border-bottom: 1px solid var(--line); padding: 20px 22px; display: flex; justify-content: space-between; gap: 12px; z-index: 1; }
+    .drawer-title { font-weight: 850; font-size: 22px; letter-spacing: -0.02em; }
+    .drawer-body { padding: 20px 22px 28px; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .wide { grid-column: 1 / -1; }
+    .form-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
+    .brief-panel { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 18px; }
+    .brief-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; }
+    .brief-title { font-weight: 850; font-size: 16px; }
+    .brief-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.brief-preview { display: grid; gap: 12px; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: #F8FAFC; color: var(--ink); font-size: 13px; line-height: 1.5; }
+.brief-preview h3 { margin: 3px 0 8px; font-size: 18px; line-height: 1.2; overflow-wrap: anywhere; }
+.brief-preview h4 { margin: 0 0 9px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.brief-preview p { margin: 0 0 9px; overflow-wrap: anywhere; }
+.brief-section-label { color: var(--muted); font-size: 11px; font-weight: 850; letter-spacing: 0.06em; text-transform: uppercase; }
+.brief-snapshot { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.brief-snapshot-item { min-width: 0; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; }
+.brief-snapshot-item span { display: block; color: var(--muted); font-size: 11px; font-weight: 750; margin-bottom: 5px; }
+.brief-snapshot-item strong { display: block; font-size: 14px; line-height: 1.25; overflow-wrap: anywhere; }
+.brief-angle-card { background: #F4F1E8; border: 1px solid #E4D8B5; border-left: 5px solid #B68A2D; border-radius: var(--radius); padding: 14px; }
+.brief-angle-card .brief-next-step { background: rgba(255,255,255,0.72); border: 1px solid rgba(182,138,45,0.28); border-radius: 8px; padding: 9px 10px; margin-top: 10px; }
+.brief-angle-card .brief-next-step strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #76612C; margin-bottom: 4px; }
+.brief-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.brief-info-card { min-width: 0; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+.brief-info-card strong { overflow-wrap: anywhere; }
+.brief-chip-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.brief-chip { border: 1px solid var(--line); border-radius: 999px; background: #F8FAFC; color: var(--ink); font-size: 11px; font-weight: 750; padding: 5px 8px; overflow-wrap: anywhere; }
+.brief-chip.green { border-color: #BFD9CA; background: #EFF8F2; color: #17613B; }
+.brief-chip.gold { border-color: #E4D8B5; background: #FBF6E8; color: #76612C; }
+.brief-list { display: grid; gap: 7px; list-style: none; margin: 0; padding: 0; }
+.brief-list li { position: relative; padding-left: 16px; overflow-wrap: anywhere; }
+.brief-list li::before { content: ""; position: absolute; left: 0; top: 0.7em; width: 6px; height: 6px; border-radius: 999px; background: var(--accent); }
+.brief-evidence-list { display: grid; gap: 8px; margin-top: 8px; }
+.brief-evidence-item { border: 1px solid var(--line); border-radius: 8px; background: #F8FAFC; padding: 9px 10px; overflow-wrap: anywhere; }
+.brief-warning { border: 1px solid #F3D58A; background: #FFF7DF; color: #7A5414; border-radius: 8px; padding: 8px 10px; margin-top: 8px; font-weight: 750; overflow-wrap: anywhere; }
+details.evidence-details { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+details.evidence-details summary { cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 800; }
+    .deck-panel { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 18px; }
+    .deck-summary { border: 1px solid #DED6C8; border-radius: var(--radius); background: #F6F2EB; padding: 14px; margin-bottom: 12px; }
+    .deck-summary-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+    .deck-headline { font-weight: 850; font-size: 16px; line-height: 1.3; }
+    .deck-status-block { background: #123F33; color: #F7F2EA; border-radius: var(--radius); padding: 14px; min-width: 136px; text-align: right; }
+    .deck-status-block strong { display: block; font-size: 18px; margin-top: 3px; }
+    .deck-status-block span { display: block; color: #C8954A; font-size: 10px; font-weight: 850; text-transform: uppercase; letter-spacing: 0.06em; }
+    .warning-list { margin: 8px 0 0 18px; padding: 0; color: var(--amber); font-size: 12px; line-height: 1.45; }
+    .outreach-panel { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 16px; margin-bottom: 18px; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .outreach-panel strong { display: block; font-size: 13px; margin-bottom: 3px; }
+    .outreach-notes-panel { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: #FAFAFA; margin-top: 16px; }
+    .quick-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .quick-actions .btn { min-height: 30px; padding: 0 9px; font-size: 12px; }
+    .pipeline-tag { display: inline-flex; border: 1px solid #C9DDCF; border-radius: 999px; padding: 4px 9px; background: #EFF8F2; color: var(--accent); font-size: 12px; font-weight: 850; }
+    .pipeline-tag.cold { border-color: #D1D5DB; background: #F9FAFB; color: var(--muted); }
+    .pipeline-tag.warn { border-color: #FDE68A; background: var(--amber-bg); color: var(--amber); }
+    .pipeline-tag.stop { border-color: #FECACA; background: var(--red-bg); color: var(--red); }
+    .outreach-modal {
+      display: none;
+      position: fixed;
+      inset: 28px;
+      background: var(--white);
+      border-radius: var(--radius);
+      z-index: 55;
+      box-shadow: 0 24px 70px rgba(17,24,39,0.26);
+      overflow: auto;
+    }
+    .outreach-modal.open { display: block; }
+    .outreach-body { padding: 18px; display: grid; gap: 12px; background: #F6F2EB; }
+    .outreach-card { background: var(--white); border: 1px solid #DED6C8; border-radius: var(--radius); padding: 14px; display: grid; gap: 10px; }
+    .outreach-card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .outreach-email { white-space: pre-wrap; background: #FFFDF8; border: 1px solid #DED6C8; border-radius: var(--radius); padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.5; color: #2F2A22; }
+    .outreach-card-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+    .outreach-status { font-size: 12px; color: var(--muted); line-height: 1.4; }
+    .select-cell { width: 42px; }
+    .select-cell input { width: auto; min-height: auto; }
+    .slide-list { display: grid; gap: 8px; margin: 10px 0 14px; }
+    .slide-chip { border: 1px solid #DED6C8; border-radius: var(--radius); background: #FFFDF8; padding: 10px; }
+    .slide-chip strong { display: block; font-size: 13px; margin-bottom: 3px; }
+    .slide-chip span { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .evidence-ledger { border: 1px solid #DED6C8; border-radius: var(--radius); overflow: hidden; background: #FFFDF8; }
+    .evidence-row { display: grid; grid-template-columns: 108px 92px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.4; }
+    .evidence-row:last-child { border-bottom: 0; }
+    .evidence-source { color: var(--accent); font-weight: 850; }
+    .evidence-confidence { color: var(--muted); font-weight: 750; }
+    .evidence-claim strong { display: block; color: var(--ink); margin-bottom: 2px; }
+    .deck-backdrop { display: none; position: fixed; inset: 0; background: rgba(17,24,39,0.42); z-index: 40; }
+    .deck-backdrop.open { display: block; }
+    .deck-modal {
+      display: none;
+      position: fixed;
+      inset: 22px;
+      background: var(--white);
+      border-radius: var(--radius);
+      z-index: 50;
+      box-shadow: 0 24px 70px rgba(17,24,39,0.24);
+      overflow: auto;
+    }
+    .deck-modal.open { display: block; }
+    .deck-toolbar { position: sticky; top: 0; background: var(--white); border-bottom: 1px solid var(--line); padding: 14px 16px; display: flex; justify-content: space-between; gap: 12px; align-items: center; z-index: 1; }
+    .deck-title { font-weight: 850; letter-spacing: -0.01em; }
+    .deck-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .deck-preview { padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; background: #ECE8E1; }
+    .deck-slide { --deck-bg:#F6F2EB; --deck-ink:#171717; --deck-muted:#6F6A60; --deck-green:#123F33; --deck-mint:#BFD9CD; --deck-gold:#C8954A; --deck-card:#FFFDF8; --deck-line:#DED6C8; aspect-ratio: 16 / 9; background: var(--deck-bg); border: 1px solid var(--deck-line); border-radius: 0; padding: 20px 28px; display: flex; flex-direction: column; position: relative; overflow: hidden; color: var(--deck-ink); }
+    .deck-slide::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--deck-green); }
+    .deck-slide-top { display: flex; justify-content: space-between; align-items: flex-start; color: var(--deck-green); font-size: 8px; font-weight: 850; letter-spacing: 0.04em; }
+    .deck-slide-number { color: var(--deck-muted); font-weight: 500; }
+    .deck-slide-kicker { color: var(--deck-gold); font-size: 9px; font-weight: 850; text-transform: uppercase; letter-spacing: 0.06em; margin: 16px 0 8px; }
+    .deck-slide h2 { font-size: clamp(28px, 3.3vw, 44px); line-height: 1.04; letter-spacing: 0; margin: 0 0 10px; max-width: 820px; }
+    .deck-slide p { color: var(--deck-muted); font-size: 12px; line-height: 1.32; margin: 0 0 10px; }
+    .deck-slide ul { margin: 0; padding: 0; display: grid; gap: 6px; line-height: 1.38; font-size: 11px; list-style: none; }
+    .deck-slide li::before { content: ""; display: inline-block; width: 4px; height: 4px; background: var(--deck-gold); border-radius: 50%; margin: 0 8px 2px 0; }
+    .deck-footer { margin-top: auto; color: var(--deck-muted); font-size: 7px; line-height: 1.35; }
+    .deck-audit-strip { border-left: 4px solid var(--deck-gold, #C8954A); background: #EEE7D8; color: #3B3934; padding: 10px 12px; border-radius: 6px; font-size: 10px; line-height: 1.34; margin: 10px 0 12px; }
+    .deck-audit-strip strong { color: var(--deck-green, #123F33); display: block; margin-bottom: 4px; }
+    .deck-cover-grid { display: grid; grid-template-columns: 1fr 0.48fr; gap: 28px; align-items: stretch; flex: 1; }
+    .deck-company { color: var(--deck-green); font-size: 24px; font-weight: 900; letter-spacing: 0; margin: 14px 0 8px; }
+    .deck-badges { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px; max-width: 620px; }
+    .deck-badge { background: #EEE7D8; color: var(--deck-green); border-radius: 6px; padding: 11px 12px; font-weight: 850; font-size: 11px; }
+    .deck-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .deck-metric { background: var(--deck-card); border: 1px solid var(--deck-line); border-radius: 7px; padding: 12px 12px; min-height: 76px; }
+    .deck-metric-label { color: var(--deck-muted); text-transform: uppercase; font-weight: 850; font-size: 8px; margin-bottom: 7px; }
+    .deck-metric-value { color: var(--deck-green); font-size: 22px; font-weight: 900; line-height: 1; }
+    .deck-metric-detail { color: var(--deck-muted); font-size: 8px; margin-top: 7px; line-height: 1.25; }
+    .guided-panel { background: var(--deck-green); border-radius: 10px; padding: 26px 24px; display: flex; align-items: center; justify-content: center; }
+    .guided-card { background: var(--deck-bg); border-radius: 8px; padding: 20px 18px; width: 100%; max-width: 290px; }
+    .guided-card h3 { margin: 0 0 14px; font-size: 22px; line-height: 1.05; }
+    .guided-step { background: var(--deck-card); border: 1px solid var(--deck-line); border-radius: 5px; padding: 8px 10px; font-size: 10px; margin-bottom: 8px; }
+    .guided-step:first-of-type { background: var(--deck-mint); border-color: var(--deck-mint); font-weight: 850; }
+    .guided-cta { color: var(--deck-gold); text-align: center; font-weight: 900; font-size: 13px; }
+    .deck-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; align-items: stretch; flex: 1; }
+    .deck-card { background: var(--deck-card); border: 1px solid var(--deck-line); border-radius: 7px; padding: 22px; }
+    .deck-card.green { background: var(--deck-green); color: #F7F2EA; border-color: var(--deck-green); }
+    .deck-card.green p, .deck-card.green li, .deck-card.green .deck-card-title { color: #F7F2EA; }
+    .deck-card-title { font-weight: 900; font-size: 14px; margin-bottom: 10px; }
+    .deck-card .gold { color: var(--deck-gold); font-weight: 850; }
+    .deck-card.compact { padding: 18px; }
+    .deck-card.compact ul { gap: 6px; font-size: 11px; }
+    .calculator-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0 10px; }
+    .formula-line { background: var(--deck-green); color: #F7F2EA; border-radius: 7px; padding: 11px 14px; font-weight: 850; font-size: 11px; line-height: 1.35; margin: 10px 0; }
+    .impact-grid { display: grid; grid-template-columns: 1fr 0.68fr; gap: 16px; margin-top: 8px; }
+    .path-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; align-items: center; margin: 26px 0; }
+    .path-step { background: var(--deck-card); border: 1px solid var(--deck-line); border-radius: 7px; padding: 16px 12px; min-height: 70px; position: relative; font-size: 11px; font-weight: 850; }
+    .path-step:first-child { background: var(--deck-green); color: #F7F2EA; }
+    .path-step:not(:last-child)::after { content: ">"; position: absolute; right: -16px; top: 50%; transform: translateY(-50%); color: var(--deck-gold); font-size: 22px; font-weight: 900; }
+    .benefit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+    .ask-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; flex: 1; align-items: stretch; }
+    .ask-number { color: var(--deck-gold); font-weight: 900; font-size: 22px; margin-bottom: 18px; }
+    .ask-card:nth-child(3) { background: var(--deck-green); color: #F7F2EA; }
+    .ask-card:nth-child(3) p, .ask-card:nth-child(3) .deck-card-title { color: #F7F2EA; }
+    .appendix-table { background: var(--deck-card); border: 1px solid var(--deck-line); border-radius: 5px; overflow: hidden; margin-top: 14px; }
+    .appendix-row { display: grid; grid-template-columns: 0.8fr 2fr 0.8fr; gap: 10px; padding: 7px 12px; border-bottom: 1px solid #ECE4D6; font-size: 8px; line-height: 1.25; }
+    .appendix-row.header { color: var(--deck-gold); font-weight: 850; }
+    .appendix-row:last-child { border-bottom: 0; }
+    .deck-disclaimer { background: #EEE7D8; color: var(--deck-muted); border-radius: 5px; padding: 12px 14px; margin-top: 18px; font-size: 9px; line-height: 1.35; }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 8px; }
+    .notice { display: none; padding: 11px 12px; border-radius: var(--radius); font-size: 13px; margin-bottom: 14px; }
+    .notice.show { display: block; }
+    .notice.ok { background: var(--green-bg); color: var(--green); }
+    .notice.err { background: var(--red-bg); color: var(--red); }
+    #csvFile { display: none; }
+
+    @media (max-width: 900px) {
+      .shell { padding: 20px 16px 48px; }
+      .topbar, .actions { flex-direction: column; align-items: stretch; }
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .dashboard, .chart-grid, .deck-preview, .brief-snapshot, .brief-info-grid { grid-template-columns: 1fr; }
+      .toolbar, .grid, .discovery-row { grid-template-columns: 1fr; }
+      .wide { grid-column: auto; }
+      .deck-modal { inset: 10px; }
+      .outreach-modal { inset: 10px; }
+      .outreach-panel { flex-direction: column; align-items: stretch; }
+      .deck-slide { min-height: auto; }
+      table, thead, tbody, tr, th, td { display: block; }
+      thead { display: none; }
+      tr { border: 1px solid var(--line); margin-bottom: 10px; background: var(--white); border-radius: var(--radius); overflow: hidden; }
+      td { border-bottom: 1px solid var(--line); }
+      td::before { content: attr(data-label); display: block; color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+    }
+
+    @media print {
+      body.printing-deck .shell,
+      body.printing-deck .drawer-backdrop,
+      body.printing-deck .drawer,
+      body.printing-deck .deck-toolbar,
+      body.printing-deck .deck-backdrop {
+        display: none !important;
+      }
+      body.printing-deck { background: #FFFFFF; }
+      body.printing-deck .deck-modal,
+      body.printing-deck .deck-modal.open {
+        display: block;
+        position: static;
+        inset: auto;
+        box-shadow: none;
+        border-radius: 0;
+        overflow: visible;
+      }
+      body.printing-deck .deck-preview {
+        display: block;
+        background: #FFFFFF;
+        padding: 0;
+      }
+      body.printing-deck .deck-slide {
+        width: 100vw;
+        min-height: 100vh;
+        border: 0;
+        border-radius: 0;
+        page-break-after: always;
+        padding: 34px 46px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="topbar">
+      <div>
+        <h1>Prospect Research</h1>
+        <p class="subtitle">A standalone lead list for NZ 3D printing businesses. Score how Trennen could help each business turn traffic into quote requests, then export an outreach-ready CSV.</p>
+      </div>
+      <div class="actions">
+        <button class="btn" id="importBtn" type="button">Import CSV / discovery JSON</button>
+        <select id="downloadType" aria-label="Download type">
+          <option value="email">Email list CSV</option>
+          <option value="call">Call sheet CSV</option>
+          <option value="pitch">Pitch CSV</option>
+          <option value="deck">Deck notes Markdown</option>
+        </select>
+        <button class="btn primary" id="downloadSelectedBtn" type="button">Download selected</button>
+        <button class="btn primary" id="emailSelectedBtn" type="button">Email selected</button>
+        <label class="inline-check"><input id="includeReviewExport" type="checkbox"> Include review</label>
+        <button class="btn primary" id="newLeadBtn" type="button">Add business</button>
+        <input id="csvFile" type="file" accept=".csv,.json,application/json,text/csv">
+      </div>
+    </section>
+
+    <section class="cards" id="statsCards"></section>
+
+    <section class="dashboard" id="dashboardInsights"></section>
+
+    <section class="outreach-panel">
+      <div>
+        <strong>Outreach sending</strong>
+        <div class="meta" id="outreachStatus">Checking Resend setup...</div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="selectVisibleBtn" type="button">Select visible</button>
+        <button class="btn" id="clearSelectionBtn" type="button">Clear selection</button>
+        <button class="btn" id="clearNewBtn" type="button">Mark new as seen</button>
+      </div>
+    </section>
+
+    <section class="discovery-panel">
+      <div class="discovery-row">
+        <div class="field"><label for="discoveryCities">Discovery cities</label><input id="discoveryCities" value="Auckland,Wellington,Christchurch"></div>
+        <div class="field"><label for="prospectScope">Prospect scope</label><select id="prospectScope">
+          <option value="target_review">Target + review</option>
+          <option value="target_only">Target only</option>
+        </select></div>
+        <div class="field"><label for="newLeadTarget">New stores to find</label><input id="newLeadTarget" type="number" min="1" max="100" value="10"></div>
+        <div class="field"><label for="maxResults">Results/query</label><input id="maxResults" type="number" min="1" max="20" value="10"></div>
+        <div class="field"><label for="maxPages">Pages/site</label><input id="maxPages" type="number" min="1" max="10" value="5"></div>
+        <button class="btn primary" id="startDiscoveryBtn" type="button">Start discovery</button>
+      </div>
+      <div class="field wide" style="margin-top:12px">
+        <label for="seedWebsites">Seed website audit</label>
+        <textarea id="seedWebsites" placeholder="Paste service websites here, one per line. Example: Davis Customs - https://daviscustom3dprints.com/pages/custom-orders"></textarea>
+        <div class="hint">Seed audit crawls these websites directly. It can run without Google Places and will skip printer/filament-only stores from the main list.</div>
+      </div>
+      <div class="discovery-status" id="discoveryStatus">Checking discovery bridge...</div>
+      <div class="discovery-log" id="discoveryLog" aria-live="polite"></div>
+    </section>
+
+    <section class="toolbar">
+      <input id="searchInput" placeholder="Search company, website, city, notes">
+      <select id="customFdmFilter">
+        <option value="target">Target prospects</option>
+        <option value="review">Needs review</option>
+        <option value="not_target">Not target</option>
+        <option value="all">All custom FDM fit</option>
+      </select>
+      <select id="newFilter">
+        <option value="all">All additions</option>
+        <option value="new">New additions</option>
+      </select>
+      <select id="quoteFilter">
+        <option value="all">All quote systems</option>
+        <option value="manual">Manual/no instant quote</option>
+        <option value="upload">Upload workflow</option>
+        <option value="bad">Bad/basic calculator</option>
+        <option value="automated">Automated quote</option>
+        <option value="unknown">Unknown quote</option>
+      </select>
+      <select id="serviceFilter">
+        <option value="all">All service types</option>
+        <option value="service">Confirmed/likely service</option>
+        <option value="supplier">Supplier only</option>
+        <option value="premade">Premade only</option>
+        <option value="resin">Resin only</option>
+        <option value="directory">Directory</option>
+        <option value="unknown">Unknown service</option>
+      </select>
+      <select id="pricingMaturityFilter">
+        <option value="all">All pricing maturity</option>
+        <option value="manual">Manual quote</option>
+        <option value="upload">Upload/no instant price</option>
+        <option value="bad">Bad/basic calculator</option>
+        <option value="automated">Auto pricing</option>
+        <option value="unknown">Unknown pricing</option>
+      </select>
+      <select id="opportunityTypeFilter">
+        <option value="all">All opportunity types</option>
+        <option value="replace_manual_quoting">Replace manual quoting</option>
+        <option value="improve_upload_flow">Improve upload flow</option>
+        <option value="fix_bad_calculator">Fix weak calculator</option>
+        <option value="benchmark_auto_pricing">Auto-pricing benchmark</option>
+        <option value="verify_service">Verify service</option>
+        <option value="exclude_supplier">Excluded supplier</option>
+        <option value="exclude_non_service">Excluded non-service</option>
+      </select>
+      <select id="fdmFilter">
+        <option value="all">All FDM evidence</option>
+        <option value="confirmed">FDM confirmed</option>
+        <option value="likely">FDM likely</option>
+        <option value="unknown">FDM unknown</option>
+      </select>
+      <select id="pipelineFilter">
+        <option value="all">All pipeline statuses</option>
+        <option value="new_lead">New lead</option>
+        <option value="researched">Researched</option>
+        <option value="emailed">Emailed</option>
+        <option value="called">Called</option>
+        <option value="interested">Interested</option>
+        <option value="follow_up">Follow up</option>
+        <option value="not_interested">Not interested</option>
+        <option value="won">Won</option>
+        <option value="do_not_contact">Do not contact</option>
+      </select>
+      <select id="confidenceFilter">
+        <option value="all">All confidence</option>
+        <option value="observed">Observed</option>
+        <option value="estimated">Estimated</option>
+        <option value="unknown">Unknown</option>
+      </select>
+      <select id="deckFilter">
+        <option value="all">All deck status</option>
+        <option value="ready">Deck ready</option>
+        <option value="needs_evidence">Needs evidence</option>
+        <option value="needs_refresh">Needs refresh</option>
+        <option value="not_suitable">Not suitable</option>
+      </select>
+      <select id="sortSelect">
+        <option value="score">Sort by score</option>
+        <option value="company">Sort by company</option>
+        <option value="updated">Sort by updated</option>
+      </select>
+    </section>
+
+    <section id="tableWrap"></section>
+  </main>
+
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <div>
+        <div class="drawer-title" id="drawerTitle">Add business</div>
+        <div class="meta" id="drawerMeta">Saved in this browser only.</div>
+      </div>
+      <button class="btn" id="closeDrawer" type="button">Close</button>
+    </div>
+    <div class="drawer-body">
+      <div class="notice ok" id="okNotice"></div>
+      <div class="notice err" id="errNotice"></div>
+      <form id="leadForm">
+        <input type="hidden" id="leadId">
+        <input type="hidden" id="status" value="research">
+        <div class="grid">
+          <div class="field wide"><label for="companyName">Business name</label><input id="companyName" required></div>
+          <div class="field"><label for="website">Website</label><input id="website" placeholder="https://example.co.nz"></div>
+          <div class="field"><label for="contactEmail">Email</label><input id="contactEmail" type="email"></div>
+          <div class="field"><label for="contactName">Contact name</label><input id="contactName"></div>
+          <div class="field"><label for="contactPhone">Phone</label><input id="contactPhone"></div>
+          <div class="field"><label for="city">City</label><input id="city"></div>
+          <div class="field"><label for="region">Region</label><input id="region" value="New Zealand"></div>
+          <div class="field"><label for="services">Services</label><input id="services" placeholder="FDM, resin, prototyping"></div>
+          <div class="field"><label for="pipelineStatus">Pipeline status</label><select id="pipelineStatus">
+            <option value="new_lead">New lead</option>
+            <option value="researched">Researched</option>
+            <option value="emailed">Emailed</option>
+            <option value="called">Called</option>
+            <option value="interested">Interested</option>
+            <option value="follow_up">Follow up</option>
+            <option value="not_interested">Not interested</option>
+            <option value="won">Won</option>
+            <option value="do_not_contact">Do not contact</option>
+          </select></div>
+          <div class="field"><label for="confidence">Metric confidence</label><select id="confidence">
+            <option value="unknown">Unknown</option>
+            <option value="estimated">Estimated</option>
+            <option value="observed">Observed</option>
+          </select></div>
+          <div class="field"><label for="discoveryConfidence">Discovery confidence</label><select id="discoveryConfidence">
+            <option value="unknown">Unknown</option>
+            <option value="estimated">Estimated</option>
+            <option value="observed">Observed</option>
+          </select></div>
+          <div class="field"><label for="fdmStatus">FDM status</label><select id="fdmStatus">
+            <option value="unknown">Unknown</option>
+            <option value="fdm_likely">FDM likely</option>
+            <option value="fdm_confirmed">FDM confirmed</option>
+            <option value="not_fdm">Not FDM</option>
+          </select></div>
+          <div class="field"><label for="customFdmStatus">Custom FDM fit</label><select id="customFdmStatus">
+            <option value="review_needed">Needs review</option>
+            <option value="target_confirmed">Target confirmed</option>
+            <option value="target_likely">Target likely</option>
+            <option value="not_target">Not target</option>
+          </select></div>
+          <div class="field"><label for="serviceModel">Service model</label><select id="serviceModel">
+            <option value="unknown">Unknown</option>
+            <option value="custom_fdm_service">Custom FDM service</option>
+            <option value="miniatures_custom_service">Minis + custom service</option>
+            <option value="fdm_likely_service">FDM likely service</option>
+            <option value="supplier_store">Supplier store</option>
+            <option value="premade_products_only">Premade products only</option>
+            <option value="resin_only">Resin only</option>
+            <option value="marketplace_or_directory">Marketplace/directory</option>
+            <option value="generic_3d_printing">Generic 3D printing</option>
+          </select></div>
+          <div class="field"><label for="servicePresenceStatus">Service status</label><select id="servicePresenceStatus">
+            <option value="unknown">Unknown</option>
+            <option value="service_confirmed">Service confirmed</option>
+            <option value="service_likely">Service likely</option>
+            <option value="supplier_only">Supplier only</option>
+            <option value="premade_only">Premade only</option>
+            <option value="resin_only">Resin only</option>
+            <option value="directory">Directory</option>
+          </select></div>
+          <div class="field"><label for="quoteSystem">Quote system</label><select id="quoteSystem">
+            <option value="unknown">Unknown</option>
+            <option value="no_quote_system">No quote system</option>
+            <option value="manual_email_quote">Manual email quote</option>
+            <option value="manual_form">Manual form</option>
+            <option value="upload_no_instant_price">Upload, no instant price</option>
+            <option value="bad_calculator">Bad calculator</option>
+            <option value="automated_quote">Automated quote</option>
+          </select></div>
+          <div class="field"><label for="pricingSignal">Pricing flow</label><select id="pricingSignal">
+            <option value="unknown">Unknown</option>
+            <option value="no_instant_quote">No instant quote</option>
+            <option value="manual_form">Manual form</option>
+            <option value="bad_calculator">Bad calculator</option>
+            <option value="unclear_pricing">Unclear pricing</option>
+            <option value="good_calculator">Good calculator</option>
+          </select></div>
+          <div class="field"><label for="pricingMaturity">Pricing maturity</label><select id="pricingMaturity">
+            <option value="unknown">Unknown</option>
+            <option value="manual_quote">Manual quote</option>
+            <option value="upload_no_instant_price">Upload/no instant price</option>
+            <option value="bad_calculator">Bad/basic calculator</option>
+            <option value="automated_basic">Automated basic</option>
+            <option value="automated_strong">Automated strong</option>
+          </select></div>
+          <div class="field"><label for="opportunityType">Opportunity type</label><select id="opportunityType">
+            <option value="verify_service">Verify service</option>
+            <option value="replace_manual_quoting">Replace manual quoting</option>
+            <option value="improve_upload_flow">Improve upload flow</option>
+            <option value="fix_bad_calculator">Fix weak calculator</option>
+            <option value="improve_auto_pricing">Improve auto pricing</option>
+            <option value="benchmark_auto_pricing">Auto-pricing benchmark</option>
+            <option value="verify_pricing">Verify pricing</option>
+            <option value="exclude_supplier">Exclude supplier</option>
+            <option value="exclude_non_service">Exclude non-service</option>
+          </select></div>
+          <div class="field"><label for="trafficBand">Traffic / demand estimate</label><select id="trafficBand">
+            <option value="unknown">Unknown</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select></div>
+          <div class="field"><label for="conversionLeakScore">Conversion leak</label><input id="conversionLeakScore" type="number" min="0" max="100" value="50"></div>
+          <div class="field"><label for="businessFitScore">Business fit</label><input id="businessFitScore" type="number" min="0" max="100" value="50"></div>
+          <div class="field"><label for="contactabilityScore">Contactability</label><input id="contactabilityScore" type="number" min="0" max="100" value="50"></div>
+          <div class="field"><label for="source">Source</label><input id="source" placeholder="Google, Maps, directory"></div>
+          <div class="field"><label for="googleRating">Google rating</label><input id="googleRating" type="number" min="0" max="5" step="0.1"></div>
+          <div class="field"><label for="googleReviewCount">Google review count</label><input id="googleReviewCount" type="number" min="0" step="1"></div>
+          <div class="field wide"><label for="googlePlaceId">Google Place ID</label><input id="googlePlaceId"></div>
+          <section class="wide outreach-notes-panel">
+            <div class="brief-title">Outreach Notes</div>
+            <div class="meta">Track what happened with this lead without digging through the research fields.</div>
+            <div class="grid" style="margin-top:12px">
+              <div class="field"><label for="lastContactedAt">Last contacted</label><input id="lastContactedAt" type="datetime-local"></div>
+              <div class="field"><label for="nextFollowUpAt">Next follow-up</label><input id="nextFollowUpAt" type="date"></div>
+              <div class="field wide"><label for="contactNotes">Contact notes</label><textarea id="contactNotes" placeholder="Called, emailed, left voicemail, keen, not keen, asked to follow up next week..."></textarea></div>
+            </div>
+            <div class="quick-actions">
+              <button class="btn" id="markEmailedBtn" type="button">Mark emailed</button>
+              <button class="btn" id="markCalledBtn" type="button">Mark called</button>
+              <button class="btn" id="markInterestedBtn" type="button">Interested</button>
+              <button class="btn" id="markFollowUpBtn" type="button">Follow up</button>
+              <button class="btn" id="markNotInterestedBtn" type="button">Not interested</button>
+              <button class="btn danger" id="markDoNotContactBtn" type="button">Do not contact</button>
+            </div>
+          </section>
+          <div class="field wide"><label for="targetReason">Targeting reason</label><textarea id="targetReason" placeholder="Why this is a custom FDM target, review item, or skipped non-target"></textarea></div>
+          <div class="field wide"><label for="painPoint">Pain point / conversion leak</label><textarea id="painPoint" placeholder="Where customers likely drop off"></textarea></div>
+          <div class="field wide"><label for="salesBoostSummary">How Trennen can help boost sales</label><textarea id="salesBoostSummary"></textarea><div class="hint">Leave blank to auto-generate a cautious, metric-based summary.</div></div>
+          <div class="field wide"><label for="pitchAngle">Personalised pitch angle</label><textarea id="pitchAngle" placeholder="One sentence you can use in an outreach email"></textarea></div>
+          <div class="field wide"><label for="trafficNotes">Traffic / demand notes</label><textarea id="trafficNotes" placeholder="Review count, search visibility, market signals, or external estimates"></textarea></div>
+          <div class="field wide"><label for="evidence">Evidence</label><textarea id="evidence" placeholder="One observation per line"></textarea></div>
+          <div class="field wide"><label for="notes">Internal notes</label><textarea id="notes"></textarea></div>
+        </div>
+        <section class="brief-panel">
+          <div class="brief-head">
+            <div>
+              <div class="brief-title">Company Brief</div>
+              <div class="meta">Presentation-safe notes generated from observed and estimated evidence.</div>
+            </div>
+            <div class="brief-actions">
+              <button class="btn" id="previewDeckBtn" type="button">Open pitch deck</button>
+              <button class="btn" id="refreshDeckBtn" type="button">Refresh evidence</button>
+              <button class="btn" id="markDeckReadyBtn" type="button">Mark deck ready</button>
+              <button class="btn" id="printDeckBtn" type="button">Print / Save PDF</button>
+              <button class="btn primary" id="emailThisBtn" type="button">Email this company</button>
+              <button class="btn" id="previewEmailBtn" type="button">Preview email</button>
+              <button class="btn danger" id="doNotContactBtn" type="button">Unsubscribe / do not contact</button>
+              <button class="btn" id="copyEmailIntroBtn" type="button">Copy email intro</button>
+              <button class="btn" id="copyBriefBtn" type="button">Copy brief</button>
+              <button class="btn" id="copySlideBtn" type="button">Copy slide notes</button>
+            </div>
+          </div>
+          <div class="brief-preview" id="briefPreview"></div>
+        </section>
+        <section class="deck-panel">
+          <div class="brief-head">
+            <div>
+              <div class="brief-title">Pitch deck</div>
+              <div class="meta">Company-specific deck, evidence ledger, warnings, and source confidence.</div>
+            </div>
+          </div>
+          <div id="pitchDeckPanel"></div>
+        </section>
+        <div class="form-actions">
+          <button class="btn danger" id="deleteBtn" type="button">Delete</button>
+          <div style="display:flex;gap:10px">
+            <button class="btn" id="copySummaryBtn" type="button">Copy summary</button>
+            <button class="btn primary" type="submit">Save business</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </aside>
+
+  <div class="deck-backdrop" id="deckBackdrop"></div>
+  <section class="deck-modal" id="deckModal" aria-hidden="true">
+    <div class="deck-toolbar">
+      <div>
+        <div class="deck-title" id="deckModalTitle">Pitch deck preview</div>
+        <div class="meta">Designed to print or save as PDF for a cold outreach attachment, with evidence and warnings visible.</div>
+      </div>
+      <div class="deck-actions">
+        <button class="btn" id="deckCopyEmailBtn" type="button">Copy email intro</button>
+        <button class="btn primary" id="deckPrintBtn" type="button">Print / Save PDF</button>
+        <button class="btn" id="deckCloseBtn" type="button">Close</button>
+      </div>
+    </div>
+    <div class="deck-preview" id="deckPreview"></div>
+  </section>
+
+  <section class="outreach-modal" id="outreachModal" aria-hidden="true">
+    <div class="deck-toolbar">
+      <div>
+        <div class="deck-title" id="outreachModalTitle">Review outreach emails</div>
+        <div class="meta">Every send attaches that company’s PDF deck and BCCs your archive email automatically.</div>
+      </div>
+      <div class="deck-actions">
+        <button class="btn primary" id="sendAllOutreachBtn" type="button">Send all eligible</button>
+        <button class="btn" id="outreachCloseBtn" type="button">Close</button>
+      </div>
+    </div>
+    <div class="outreach-body" id="outreachQueue"></div>
+  </section>
+
+  <script>
+    const STORAGE_KEY = 'trennen.prospectResearch.v1';
+    const SUPPRESSION_STORAGE_KEY = 'trennen.prospectResearch.suppression.v1';
+    const core = window.ProspectResearch;
+    let leads = loadLeads();
+    saveLeads();
+    let currentId = null;
+    let selectedLeadIds = new Set();
+    let outreachQueue = [];
+    let suppressionKeys = loadSuppressionKeys();
+    let lastDiscoveryEventId = 0;
+    let discoveryPollTimer = null;
+    let discoveryBridgeHasKey = false;
+    let currentDiscoveryBatch = '';
+
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    function loadLeads() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').map(core.normaliseLead);
+      } catch {
+        return [];
+      }
+    }
+
+    function saveLeads() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
+    }
+
+    function newLeadCount() {
+      return leads.filter(isNewLead).length;
+    }
+
+    function isNewLead(lead) {
+      return Boolean(lead && lead.newly_added_at);
+    }
+
+    function loadSuppressionKeys() {
+      try {
+        return core.sanitizeIdentityKeys(JSON.parse(localStorage.getItem(SUPPRESSION_STORAGE_KEY) || '[]'));
+      } catch {
+        return [];
+      }
+    }
+
+    function saveSuppressionKeys() {
+      suppressionKeys = core.sanitizeIdentityKeys(suppressionKeys);
+      localStorage.setItem(SUPPRESSION_STORAGE_KEY, JSON.stringify(suppressionKeys));
+    }
+
+    function render() {
+      renderStats();
+      renderDashboard();
+      renderTable();
+      updateSelectionUi();
+    }
+
+    async function loadDiscoveryStatus() {
+      try {
+        const r = await fetch('/api/discovery/status');
+        if (!r.ok) throw new Error('bridge unavailable');
+        const status = await r.json();
+        discoveryBridgeHasKey = Boolean(status.hasKey);
+        $('discoveryStatus').textContent = status.hasKey
+          ? status.running ? 'Discovery is running.' : 'Discovery bridge ready.'
+          : 'Discovery bridge ready for seed website audit. Add Google Places key for city search.';
+        refreshDiscoveryStartState(status.running);
+        if (status.running) startPollingDiscovery();
+      } catch {
+        $('discoveryStatus').textContent = 'Open this page through node research/discovery-server.mjs to enable live auto-import.';
+        $('startDiscoveryBtn').disabled = true;
+      }
+    }
+
+    function refreshDiscoveryStartState(running = false) {
+      const hasSeeds = Boolean($('seedWebsites').value.trim());
+      $('startDiscoveryBtn').disabled = running || (!discoveryBridgeHasKey && !hasSeeds);
+    }
+
+    function appendDiscoveryLog(message) {
+      const line = document.createElement('div');
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      $('discoveryLog').appendChild(line);
+      $('discoveryLog').scrollTop = $('discoveryLog').scrollHeight;
+    }
+
+    async function startDiscovery() {
+      $('startDiscoveryBtn').disabled = true;
+      const knownLeadKeys = core.knownLeadKeys(leads);
+      const seedText = $('seedWebsites').value.trim();
+      const newLeadTarget = $('newLeadTarget').value || 10;
+      currentDiscoveryBatch = `discovery-${Date.now()}`;
+      appendDiscoveryLog(`Starting ${seedText ? 'seed + Places' : 'Places'} discovery for ${newLeadTarget} new businesses; skipping ${leads.length} already-added business(es) before crawling.`);
+      appendDiscoveryLog(`requested ${newLeadTarget} new businesses; completion will show new businesses added, already-added skips, non-target skips, and searches attempted.`);
+      lastDiscoveryEventId = 0;
+      const r = await fetch('/api/discovery/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cities: $('discoveryCities').value,
+          targetScope: $('prospectScope').value,
+          newLeadTarget: $('newLeadTarget').value,
+          maxResults: $('maxResults').value,
+          maxPages: $('maxPages').value,
+          knownLeadKeys,
+          seedText,
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data.ok) {
+        $('startDiscoveryBtn').disabled = false;
+        appendDiscoveryLog(data.error || 'Discovery could not start.');
+        return;
+      }
+      $('discoveryStatus').textContent = 'Discovery is running. Leads will auto-import below.';
+      startPollingDiscovery();
+    }
+
+    function startPollingDiscovery() {
+      if (discoveryPollTimer) return;
+      discoveryPollTimer = setInterval(pollDiscoveryEvents, 1200);
+      pollDiscoveryEvents();
+    }
+
+    async function pollDiscoveryEvents() {
+      try {
+        const r = await fetch(`/api/discovery/events?after=${lastDiscoveryEventId}`);
+        const data = await r.json();
+        if (!r.ok || !data.ok) return;
+        for (const event of data.events) {
+          lastDiscoveryEventId = Math.max(lastDiscoveryEventId, event.id);
+          if (event.type === 'lead' && event.lead) {
+            const incoming = core.markNewLeads(leads, [core.normaliseLead(event.lead)], {
+              now: event.at || new Date().toISOString(),
+              source: 'Discovery',
+              batch: currentDiscoveryBatch,
+            })[0];
+            const wasNew = isNewLead(incoming);
+            leads = core.mergeLeadLists(leads, [core.normaliseLead(incoming)]);
+            saveLeads();
+            render();
+            appendDiscoveryLog(`${wasNew ? 'New' : 'Updated'} ${event.lead.company_name || 'business'}: ${event.lead.target_reason || label(event.lead.custom_fdm_status || 'review needed')}.`);
+          } else if (event.message) {
+            appendDiscoveryLog(event.message);
+          } else if (event.type === 'progress') {
+            appendDiscoveryLog(event.company_name ? `Scanned ${event.company_name}` : `${event.stage}: ${event.found || 0} result(s)`);
+          }
+        }
+        if (!data.running && data.events.some(event => event.type === 'done' || event.type === 'error')) {
+          clearInterval(discoveryPollTimer);
+          discoveryPollTimer = null;
+          loadDiscoveryStatus();
+        }
+      } catch {
+        clearInterval(discoveryPollTimer);
+        discoveryPollTimer = null;
+        $('discoveryStatus').textContent = 'Discovery bridge connection lost.';
+      }
+    }
+
+    function filteredLeads() {
+      const q = $('searchInput').value.trim().toLowerCase();
+      const customFdm = $('customFdmFilter').value;
+      const newFilter = $('newFilter').value;
+      const quote = $('quoteFilter').value;
+      const service = $('serviceFilter').value;
+      const pricingMaturity = $('pricingMaturityFilter').value;
+      const opportunityType = $('opportunityTypeFilter').value;
+      const fdm = $('fdmFilter').value;
+      const pipelineStatus = $('pipelineFilter').value;
+      const confidence = $('confidenceFilter').value;
+      const deckStatus = $('deckFilter').value;
+      const sort = $('sortSelect').value;
+
+      const rows = leads.filter(lead => {
+        const blob = [lead.company_name, lead.website, lead.city, lead.region, lead.notes, lead.contact_notes, lead.pain_point, lead.sales_boost_summary, lead.target_reason, lead.service_model, lead.service_presence_status, lead.pricing_maturity, lead.opportunity_type].join(' ').toLowerCase();
+        return (!q || blob.includes(q)) &&
+          customFdmMatches(lead, customFdm) &&
+          (newFilter === 'all' || isNewLead(lead)) &&
+          quoteMatches(lead, quote) &&
+          serviceMatches(lead, service) &&
+          pricingMaturityMatches(lead, pricingMaturity) &&
+          (opportunityType === 'all' || lead.opportunity_type === opportunityType) &&
+          fdmMatches(lead, fdm) &&
+          (pipelineStatus === 'all' || lead.pipeline_status === pipelineStatus) &&
+          (confidence === 'all' || lead.confidence === confidence) &&
+          (deckStatus === 'all' || (lead.deck_status || core.deckReadiness(lead).status) === deckStatus);
+      });
+
+      rows.sort((a, b) => {
+        if (sort === 'company') return a.company_name.localeCompare(b.company_name);
+        if (sort === 'updated') return String(b.updated_at).localeCompare(String(a.updated_at));
+        return Number(b.opportunity_score) - Number(a.opportunity_score);
+      });
+      return rows;
+    }
+
+    function customFdmMatches(lead, filter) {
+      const value = lead.custom_fdm_status || 'review_needed';
+      if (filter === 'all') return true;
+      if (filter === 'target') return value === 'target_confirmed' || value === 'target_likely';
+      if (filter === 'review') return value === 'review_needed';
+      if (filter === 'not_target') return value === 'not_target';
+      return true;
+    }
+
+    function quoteMatches(lead, filter) {
+      const value = lead.quote_system || 'unknown';
+      if (filter === 'all') return true;
+      if (filter === 'manual') return ['no_quote_system', 'manual_email_quote', 'manual_form', 'bad_calculator'].includes(value);
+      if (filter === 'upload') return value === 'upload_no_instant_price';
+      if (filter === 'bad') return value === 'bad_calculator';
+      if (filter === 'automated') return value === 'automated_quote';
+      if (filter === 'unknown') return value === 'unknown';
+      return true;
+    }
+
+    function serviceMatches(lead, filter) {
+      const value = lead.service_presence_status || 'unknown';
+      if (filter === 'all') return true;
+      if (filter === 'service') return value === 'service_confirmed' || value === 'service_likely';
+      if (filter === 'supplier') return value === 'supplier_only';
+      if (filter === 'premade') return value === 'premade_only';
+      if (filter === 'resin') return value === 'resin_only';
+      if (filter === 'directory') return value === 'directory';
+      if (filter === 'unknown') return value === 'unknown';
+      return true;
+    }
+
+    function pricingMaturityMatches(lead, filter) {
+      const value = lead.pricing_maturity || 'unknown';
+      if (filter === 'all') return true;
+      if (filter === 'manual') return value === 'manual_quote';
+      if (filter === 'upload') return value === 'upload_no_instant_price';
+      if (filter === 'bad') return value === 'bad_calculator';
+      if (filter === 'automated') return value === 'automated_basic' || value === 'automated_strong';
+      if (filter === 'unknown') return value === 'unknown';
+      return true;
+    }
+
+    function fdmMatches(lead, filter) {
+      const value = lead.fdm_status || 'unknown';
+      if (filter === 'all') return true;
+      if (filter === 'confirmed') return value === 'fdm_confirmed';
+      if (filter === 'likely') return value === 'fdm_likely';
+      if (filter === 'unknown') return value === 'unknown';
+      return true;
+    }
+
+    function renderStats() {
+      const insights = core.generateDashboardInsights(leads);
+      $('statsCards').innerHTML = [
+        ['Target FDM leads', insights.stats.targetLeads],
+        ['New additions', newLeadCount()],
+        ['Confirmed services', insights.stats.serviceConfirmed],
+        ['Needs review', insights.stats.needsReview],
+        ['Auto-pricing benchmarks', insights.stats.automatedBenchmarks],
+        ['Excluded non-services', insights.stats.excludedNonServices],
+        ['Email-ready', insights.stats.emailReady],
+        ['High opportunity', insights.stats.highOpportunity],
+      ].map(([label, value]) => `<div class="card"><div class="card-label">${label}</div><div class="card-value">${value}</div></div>`).join('');
+    }
+
+    function renderDashboard() {
+      const insights = core.generateDashboardInsights(leads);
+      const formula = core.generateScoreExplanation(core.normaliseLead({ company_name: 'Example lead' }));
+      const topList = insights.topProspects.length
+        ? insights.topProspects.map(item => `
+          <button class="top-item" type="button" onclick="openDrawer('${esc(item.id)}')">
+            <span class="score ${esc(item.tier.class_name)}">${item.score}</span>
+            <span>
+              <span class="top-name">${esc(item.company_name)}</span>
+              <span class="meta">${esc(label(item.quote_system))} · ${esc(item.opportunity_lever)}</span>
+              <span class="top-action">${esc(item.recommended_action)}</span>
+            </span>
+          </button>
+        `).join('')
+        : '<div class="empty" style="padding:18px">No target prospects yet.</div>';
+
+      $('dashboardInsights').innerHTML = `
+        <div class="panel">
+          <div class="panel-title">What the score means</div>
+          <div class="panel-subtitle">This is an opportunity score for your Trennen pitch. It is not a claim about their real traffic, sales, conversion rate, or business quality.</div>
+          ${formula.components.map(component => `
+            <div class="component-row">
+              <div>
+                <div class="component-label">${esc(component.label)}</div>
+                <div class="component-note">${esc(component.description)}</div>
+              </div>
+              <div class="bar-track"><div class="bar-fill" style="width:${component.weight}%"></div></div>
+              <div class="bar-value">${component.weight}%</div>
+            </div>
+          `).join('')}
+          <div class="score-note"><strong>Read it like this:</strong> 75 to 100 is a strong outreach opportunity, 50 to 74 is worth reviewing, and below 50 means lower priority or incomplete evidence.</div>
+          <div class="chart-grid" style="margin-top:14px">
+            ${renderChartCard('Quote systems', insights.quoteSystem)}
+            ${renderChartCard('Custom FDM fit', insights.customFdmFit)}
+            ${renderChartCard('Service type', insights.servicePresence)}
+            ${renderChartCard('Pricing maturity', insights.pricingMaturity)}
+            ${renderChartCard('Score tiers', insights.scoreTiers)}
+            ${renderTwoMetricCard('Demand vs contactability', [
+              { label: 'Demand proxy', value: insights.demandContactability.averageDemandScore },
+              { label: 'Contactability', value: insights.demandContactability.averageContactabilityScore },
+              { label: 'Pricing friction', value: insights.frictionLeak.averagePricingFriction },
+              { label: 'Quote-flow leak', value: insights.frictionLeak.averageConversionLeak },
+            ])}
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Top target prospects</div>
+          <div class="panel-subtitle">Highest scoring custom FDM targets, sorted by where a Trennen quote-flow pitch looks most useful.</div>
+          <div class="top-list">${topList}</div>
+        </div>
+      `;
+    }
+
+    function renderChartCard(title, items) {
+      const total = Math.max(1, items.reduce((sum, item) => sum + item.count, 0));
+      return `
+        <div class="chart-card">
+          <div class="chart-title">${esc(title)}</div>
+          <div class="stacked">${items.map(item => `<span class="${esc(chartClass(item.key))}" style="width:${Math.max(0, item.count / total * 100)}%;background:${chartColor(item.key)}"></span>`).join('')}</div>
+          ${items.map(item => renderBarRow(item.label, item.count, total, chartClass(item.key))).join('')}
+        </div>
+      `;
+    }
+
+    function renderTwoMetricCard(title, items) {
+      return `
+        <div class="chart-card">
+          <div class="chart-title">${esc(title)}</div>
+          ${items.map(item => renderBarRow(item.label, item.value, 100, item.value >= 75 ? 'green' : item.value >= 50 ? 'amber' : 'red')).join('')}
+        </div>
+      `;
+    }
+
+    function renderBarRow(labelText, value, max, className = '') {
+      const pct = max ? Math.min(100, Math.max(0, Number(value) / max * 100)) : 0;
+      return `
+        <div class="bar-row">
+          <div class="bar-label">${esc(labelText)}</div>
+          <div class="bar-track"><div class="bar-fill ${esc(className)}" style="width:${pct}%"></div></div>
+          <div class="bar-value">${esc(value)}</div>
+        </div>
+      `;
+    }
+
+    function renderTable() {
+      const rows = filteredLeads();
+      if (!rows.length) {
+        $('tableWrap').innerHTML = '<div class="empty">No businesses yet. Import a CSV or add your first prospect.</div>';
+        return;
+      }
+
+      $('tableWrap').innerHTML = `
+        <table>
+          <thead><tr>
+            <th class="select-cell">Select</th><th>Business</th><th>Pipeline status</th><th>Contact details</th><th>Score</th><th>Pitch / pain point</th><th>Next action</th>
+          </tr></thead>
+          <tbody>${rows.map(lead => `
+            <tr class="${isNewLead(lead) ? 'new-row' : ''}">
+              <td class="select-cell" data-label="Select"><input type="checkbox" ${selectedLeadIds.has(lead.id) ? 'checked' : ''} onchange="toggleLeadSelection('${esc(lead.id)}', this.checked)" aria-label="Select ${esc(lead.company_name)} for outreach"></td>
+              <td data-label="Business"><div class="lead-name">${esc(lead.company_name)} ${newBadge(lead)}</div><div class="meta">${esc([lead.city, lead.website].filter(Boolean).join(' · '))}</div></td>
+              <td data-label="Pipeline status">
+                ${pipelineBadge(lead)}
+                <div class="meta">${lead.last_contacted_at ? `Last: ${esc(formatDate(lead.last_contacted_at))}` : 'No contact logged yet'}</div>
+                <div class="meta">${lead.next_follow_up_at ? `Follow up: ${esc(formatDate(lead.next_follow_up_at))}` : ''}</div>
+              </td>
+              <td data-label="Contact details">
+                <div>${esc(lead.contact_name || 'No named contact')}</div>
+                <div class="meta">${esc(lead.contact_email || 'No email')}</div>
+                <div class="meta">${esc(lead.contact_phone || 'No phone')}</div>
+              </td>
+              <td data-label="Score"><span class="score ${scoreClass(lead.opportunity_score)}">${lead.opportunity_score}</span><div class="meta">${esc(core.generateScoreExplanation(lead).tier.short_label)} · ${esc(lead.confidence)}</div></td>
+              <td data-label="Pitch / pain point">
+                <div>${esc(lead.pitch_angle || primaryPainPoint(lead))}</div>
+                <div class="meta">${targetBadge(lead)} ${esc(label(lead.quote_system || 'unknown'))} · ${esc(label(lead.opportunity_type || 'unknown'))}</div>
+              </td>
+              <td data-label="Next action">
+                <div class="top-action">${esc(recommendedAction(lead))}</div>
+                <div style="margin:6px 0">${deckBadge(lead)}</div>
+                <div class="quick-actions">
+                  <button class="btn" type="button" onclick="quickPipelineAction('${esc(lead.id)}','emailed')">Mark emailed</button>
+                  <button class="btn" type="button" onclick="quickPipelineAction('${esc(lead.id)}','called')">Mark called</button>
+                  <button class="btn" type="button" onclick="quickPipelineAction('${esc(lead.id)}','interested')">Interested</button>
+                  <button class="btn" type="button" onclick="quickPipelineAction('${esc(lead.id)}','follow_up')">Follow up</button>
+                  <button class="btn" type="button" onclick="quickPipelineAction('${esc(lead.id)}','not_interested')">Not interested</button>
+                  <button class="btn danger" type="button" onclick="quickPipelineAction('${esc(lead.id)}','do_not_contact')">Do not contact</button>
+                </div>
+                <button class="btn" type="button" onclick="openDrawer('${esc(lead.id)}')">Open brief</button>
+                <button class="btn" type="button" onclick="openOutreachForLead('${esc(lead.id)}')">Preview email</button>
+              </td>
+            </tr>
+          `).join('')}</tbody>
+        </table>
+      `;
+    }
+
+    function openDrawer(id) {
+      currentId = id || null;
+      const lead = currentId ? leads.find(item => item.id === currentId) : null;
+      $('leadForm').reset();
+      hideNotices();
+      $('drawerTitle').textContent = lead ? lead.company_name : 'Add business';
+      $('drawerMeta').textContent = lead
+        ? `${isNewLead(lead) ? `New from ${lead.newly_added_source || 'latest run'}. ` : ''}${core.generateScoreExplanation(lead).summary} This is a pitch priority signal, not private analytics.`
+        : 'Saved in this browser only.';
+      $('deleteBtn').style.visibility = lead ? 'visible' : 'hidden';
+      setLeadForm(lead || core.normaliseLead({ company_name: '', source: 'manual' }));
+      $('drawerBackdrop').classList.add('open');
+      $('drawer').classList.add('open');
+      $('drawer').setAttribute('aria-hidden', 'false');
+    }
+
+    function closeDrawer() {
+      $('drawerBackdrop').classList.remove('open');
+      $('drawer').classList.remove('open');
+      $('drawer').setAttribute('aria-hidden', 'true');
+      currentId = null;
+    }
+
+    function setLeadForm(lead) {
+      setValue('leadId', lead.id);
+      setValue('companyName', lead.company_name);
+      setValue('website', lead.website);
+      setValue('contactEmail', lead.contact_email);
+      setValue('contactName', lead.contact_name);
+      setValue('contactPhone', lead.contact_phone);
+      setValue('city', lead.city);
+      setValue('region', lead.region || 'New Zealand');
+      setValue('services', lead.services);
+      setValue('status', lead.status || 'research');
+      setValue('pipelineStatus', lead.pipeline_status || 'new_lead');
+      setValue('confidence', lead.confidence || 'unknown');
+      setValue('discoveryConfidence', lead.discovery_confidence || lead.confidence || 'unknown');
+      setValue('fdmStatus', lead.fdm_status || 'unknown');
+      setValue('customFdmStatus', lead.custom_fdm_status || 'review_needed');
+      setValue('serviceModel', lead.service_model || 'unknown');
+      setValue('servicePresenceStatus', lead.service_presence_status || 'unknown');
+      setValue('quoteSystem', lead.quote_system || 'unknown');
+      setValue('pricingSignal', lead.pricing_signal || 'unknown');
+      setValue('pricingMaturity', lead.pricing_maturity || 'unknown');
+      setValue('opportunityType', lead.opportunity_type || 'verify_service');
+      setValue('trafficBand', lead.traffic_band || 'unknown');
+      setValue('conversionLeakScore', lead.conversion_leak_score ?? 50);
+      setValue('businessFitScore', lead.business_fit_score ?? 50);
+      setValue('contactabilityScore', lead.contactability_score ?? 50);
+      setValue('source', lead.source);
+      setValue('googleRating', lead.google_rating || '');
+      setValue('googleReviewCount', lead.google_review_count || '');
+      setValue('googlePlaceId', lead.google_place_id || '');
+      setValue('lastContactedAt', toDateTimeLocal(lead.last_contacted_at));
+      setValue('nextFollowUpAt', lead.next_follow_up_at || '');
+      setValue('contactNotes', lead.contact_notes || '');
+      setValue('targetReason', lead.target_reason || '');
+      setValue('painPoint', lead.pain_point);
+      setValue('salesBoostSummary', lead.sales_boost_summary);
+      setValue('pitchAngle', lead.pitch_angle);
+      setValue('trafficNotes', lead.traffic_notes);
+      setValue('evidence', (lead.evidence || []).join('\n'));
+      setValue('notes', lead.notes);
+      renderBriefPreview(lead);
+      renderPitchDeckPanel(lead);
+    }
+
+    function renderBriefPreview(lead) {
+      const brief = core.generateCompanyBrief(lead);
+      const score = core.generateScoreExplanation(lead);
+      const deck = core.generatePitchDeck(lead);
+      const readiness = core.deckReadiness(lead);
+      const quotePositioning = deck.quote_positioning || core.quoteSystemPositioning(lead);
+      const lastChecked = lead.deck_last_checked_at || lead.deck_generated_at || deck.last_checked_at;
+      const warnings = [...new Set([...(deck.warnings || []), ...(readiness.warnings || [])])];
+      const fitReasons = [
+        lead.target_reason,
+        `Service model: ${label(lead.service_model)}`,
+        brief.demand_proxy,
+      ].filter(Boolean).slice(0, 3);
+      const evidenceItems = brief.evidence.length ? brief.evidence.slice(0, 5) : ['Evidence needs review before outreach.'];
+      const confidenceChipClass = brief.confidence === 'observed' ? 'green' : brief.confidence === 'estimated' ? 'gold' : '';
+      $('briefPreview').innerHTML = `
+        <div>
+          <div class="brief-section-label">Brief Snapshot</div>
+          <div class="brief-snapshot">
+            <div class="brief-snapshot-item"><span>Fit status</span><strong>${esc(label(lead.custom_fdm_status))}</strong></div>
+            <div class="brief-snapshot-item"><span>Quote workflow</span><strong>${esc(brief.quote_workflow)}</strong></div>
+            <div class="brief-snapshot-item"><span>Opportunity score</span><strong><span class="score ${scoreClass(score.score)}">${score.score}</span> ${esc(score.tier.label)}</strong></div>
+            <div class="brief-snapshot-item"><span>Deck readiness</span><strong>${esc(readiness.label)}</strong></div>
+            <div class="brief-snapshot-item"><span>Confidence</span><strong>${esc(label(brief.confidence))}</strong></div>
+          </div>
+        </div>
+        <div class="brief-angle-card">
+          <div class="brief-section-label">Main pitch angle</div>
+          <h3>${esc(brief.headline)}</h3>
+          <p>${esc(brief.pitch_angle)}</p>
+          <div class="brief-chip-row">
+            <span class="brief-chip ${confidenceChipClass}">${esc(label(brief.confidence))} confidence</span>
+            <span class="brief-chip gold">Last checked: ${esc(formatDate(lastChecked))}</span>
+            <span class="brief-chip">${esc(lead.google_review_count || 'No')} Google reviews observed</span>
+          </div>
+          <div class="brief-next-step"><strong>Recommended next step</strong>${esc(brief.recommended_next_step)}</div>
+          ${warnings.slice(0, 2).map(item => `<div class="brief-warning">${esc(item)}</div>`).join('')}
+        </div>
+        <div class="brief-info-grid">
+          <section class="brief-info-card">
+            <h4>Current quote-flow issue</h4>
+            <p><strong>${esc(quotePositioning.current_system)}</strong></p>
+            <p>${esc(quotePositioning.current_read || brief.sales_leak)}</p>
+            <div class="brief-chip-row">
+              <span class="brief-chip gold">${esc(label(lead.pricing_maturity || lead.pricing_signal || 'unknown pricing'))}</span>
+              <span class="brief-chip">${esc(quotePositioning.caution || 'Phrase as public audit evidence.')}</span>
+            </div>
+          </section>
+          <section class="brief-info-card">
+            <h4>Why this company is a fit</h4>
+            <ul class="brief-list">${fitReasons.map(item => `<li>${esc(item)}</li>`).join('')}</ul>
+          </section>
+          <section class="brief-info-card">
+            <h4>How Trennen helps</h4>
+            <ul class="brief-list">${brief.how_trennen_helps.slice(0, 4).map(item => `<li>${esc(item)}</li>`).join('')}</ul>
+            <div class="brief-chip-row"><span class="brief-chip green">${esc(quotePositioning.why_trennen_better)}</span></div>
+          </section>
+          <section class="brief-info-card">
+            <h4>Other services note</h4>
+            <p>${esc(deck.adjacent_services_note || 'Trennen should be pitched as an FDM-first guided quote system, with support to map MJF, resin, CNC, design, or other services into the wider intake and integration process where useful.')}</p>
+            <div class="brief-chip-row">
+              <span class="brief-chip">FDM pricing first</span>
+              <span class="brief-chip">Other services can be guided/intake-supported</span>
+            </div>
+          </section>
+        </div>
+        <section class="brief-info-card">
+          <h4>Evidence</h4>
+          <div class="brief-evidence-list">
+            ${evidenceItems.map(item => `<div class="brief-evidence-item">${esc(item)}</div>`).join('')}
+          </div>
+          <details class="evidence-details">
+            <summary>Show score breakdown, raw notes, and caveats</summary>
+            <p><strong>Snapshot:</strong> ${esc(brief.snapshot || 'Company details need review.')}</p>
+            <p><strong>Demand / opportunity proxy:</strong> ${esc(brief.demand_proxy)}</p>
+            ${score.components.map(component => renderBarRow(`${component.label} (${component.weight}%)`, component.score, 100, scoreClass(component.score))).join('')}
+            <p><strong>Internal notes:</strong> ${esc(lead.notes || 'No internal notes yet.')}</p>
+            ${warnings.slice(2).map(item => `<div class="brief-warning">${esc(item)}</div>`).join('')}
+          </details>
+        </section>
+      `;
+    }
+
+    function renderPitchDeckPanel(lead) {
+      const deck = lead.pitch_deck || core.generatePitchDeck(lead);
+      const warnings = deck.warnings && deck.warnings.length ? deck.warnings : [];
+      const audit = deck.audit_methodology || {};
+      $('pitchDeckPanel').innerHTML = `
+        <div class="deck-summary">
+          <div class="deck-summary-row">
+            <div>
+              <div class="deck-headline">${esc(deck.title)}</div>
+              <div class="meta">Generated ${esc(formatDate(deck.generated_at))} · Last checked ${esc(formatDate(deck.last_checked_at))}</div>
+            </div>
+            <div class="deck-status-block"><span>Readiness</span><strong>${esc(label(deck.status))}</strong></div>
+          </div>
+          <div class="meta">Score ${esc(deck.score)}/100 · ${esc(deck.score_label)} · ${esc(deck.confidence)} confidence</div>
+          <div class="deck-audit-strip"><strong>How data was gathered</strong>${esc(audit.summary || 'External public audit using website/profile evidence and editable assumptions.')}</div>
+          ${warnings.length ? `<ul class="warning-list">${warnings.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : '<div class="meta">No blocking warnings stored for this deck.</div>'}
+        </div>
+        <div class="chart-title">Slides</div>
+        <div class="slide-list">
+          ${deck.slides.map((slide, index) => `
+            <div class="slide-chip">
+              <strong>${index + 1}. ${esc(label(slide.layout))}</strong>
+              <span>${esc(slide.claim || slide.kicker || '')}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="chart-title">Evidence ledger</div>
+        <div class="evidence-ledger">
+          ${deck.evidence.map(item => `
+            <div class="evidence-row">
+              <div class="evidence-source">${esc(label(item.source_type))}</div>
+              <div class="evidence-confidence">${esc(label(item.confidence))}</div>
+              <div class="evidence-claim">
+                <strong>${esc(item.claim)}</strong>
+                <span>${esc(item.snippet)}</span>
+                <div class="meta">Checked ${esc(formatDate(item.last_checked_at))}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function formLead() {
+      const existing = leads.find(item => item.id === $('leadId').value) || {};
+      return core.normaliseLead({
+        id: $('leadId').value,
+        company_name: $('companyName').value,
+        website: $('website').value,
+        contact_email: $('contactEmail').value,
+        contact_name: $('contactName').value,
+        contact_phone: $('contactPhone').value,
+        city: $('city').value,
+        region: $('region').value,
+        services: $('services').value,
+        status: $('status').value,
+        pipeline_status: $('pipelineStatus').value,
+        confidence: $('confidence').value,
+        discovery_confidence: $('discoveryConfidence').value,
+        fdm_status: $('fdmStatus').value,
+        custom_fdm_status: $('customFdmStatus').value,
+        service_model: $('serviceModel').value,
+        service_presence_status: $('servicePresenceStatus').value,
+        quote_system: $('quoteSystem').value,
+        pricing_signal: $('pricingSignal').value,
+        pricing_maturity: $('pricingMaturity').value,
+        opportunity_type: $('opportunityType').value,
+        traffic_band: $('trafficBand').value,
+        conversion_leak_score: $('conversionLeakScore').value,
+        business_fit_score: $('businessFitScore').value,
+        contactability_score: $('contactabilityScore').value,
+        source: $('source').value,
+        google_rating: $('googleRating').value,
+        google_review_count: $('googleReviewCount').value,
+        google_place_id: $('googlePlaceId').value,
+        last_contacted_at: fromDateTimeLocal($('lastContactedAt').value) || '',
+        next_follow_up_at: $('nextFollowUpAt').value,
+        contact_notes: $('contactNotes').value,
+        target_reason: $('targetReason').value,
+        pain_point: $('painPoint').value,
+        sales_boost_summary: $('salesBoostSummary').value,
+        pitch_angle: $('pitchAngle').value,
+        traffic_notes: $('trafficNotes').value,
+        evidence: $('evidence').value,
+        notes: $('notes').value,
+        do_not_contact: existing.do_not_contact,
+        outreach_last_sent_at: existing.outreach_last_sent_at,
+        outreach_last_result: existing.outreach_last_result,
+        newly_added_at: existing.newly_added_at,
+        newly_added_source: existing.newly_added_source,
+        newly_added_batch: existing.newly_added_batch,
+      });
+    }
+
+    function saveLeadRecord(lead) {
+      const existingIndex = leads.findIndex(item => item.id === lead.id);
+      if (existingIndex >= 0) leads[existingIndex] = lead;
+      else {
+        const marked = core.markNewLeads(leads, [lead], {
+          now: new Date().toISOString(),
+          source: 'Manual add',
+          batch: `manual-${Date.now()}`,
+        })[0];
+        leads.unshift(core.normaliseLead(marked));
+      }
+      saveLeads();
+      render();
+    }
+
+    $('leadForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const lead = formLead();
+      if (!lead.company_name) return showNotice('err', 'Business name is required.');
+      saveLeadRecord(lead);
+      openDrawer(lead.id);
+      showNotice('ok', 'Business saved.');
+    });
+
+    $('deleteBtn').addEventListener('click', () => {
+      if (!currentId || !confirm('Delete this business from the local research list?')) return;
+      leads = leads.filter(lead => lead.id !== currentId);
+      saveLeads();
+      render();
+      closeDrawer();
+    });
+
+    $('copySummaryBtn').addEventListener('click', async () => {
+      const lead = formLead();
+      await navigator.clipboard.writeText(core.generateCompanyBrief(lead).copy);
+      showNotice('ok', 'Summary copied.');
+    });
+
+    $('copyBriefBtn').addEventListener('click', async () => {
+      const lead = formLead();
+      await navigator.clipboard.writeText(core.generateCompanyBrief(lead).copy);
+      showNotice('ok', 'Company brief copied.');
+    });
+
+    $('copySlideBtn').addEventListener('click', async () => {
+      const lead = formLead();
+      await navigator.clipboard.writeText(core.generatePitchDeck(lead).copy);
+      showNotice('ok', 'Slide notes copied.');
+    });
+
+    $('previewDeckBtn').addEventListener('click', () => previewMiniDeck(formLead()));
+
+    $('printDeckBtn').addEventListener('click', () => printMiniDeck(formLead()));
+
+    $('refreshDeckBtn').addEventListener('click', refreshCurrentLeadEvidence);
+
+    $('markDeckReadyBtn').addEventListener('click', () => {
+      const lead = core.normaliseLead({ ...formLead(), deck_status: 'ready' });
+      saveLeadRecord(lead);
+      openDrawer(lead.id);
+      showNotice('ok', 'Deck marked ready. Warnings and evidence are still visible below.');
+    });
+
+    $('copyEmailIntroBtn').addEventListener('click', async () => {
+      const deck = core.generateMiniDeck(formLead());
+      await navigator.clipboard.writeText(deck.email_intro);
+      showNotice('ok', 'Email intro copied.');
+    });
+
+    $('deckCopyEmailBtn').addEventListener('click', async () => {
+      const deck = core.generateMiniDeck(formLead());
+      await navigator.clipboard.writeText(deck.email_intro);
+      showNotice('ok', 'Email intro copied.');
+    });
+
+    $('deckPrintBtn').addEventListener('click', () => {
+      document.body.classList.add('printing-deck');
+      window.print();
+      setTimeout(() => document.body.classList.remove('printing-deck'), 250);
+    });
+
+    $('deckCloseBtn').addEventListener('click', closeMiniDeck);
+    $('deckBackdrop').addEventListener('click', () => {
+      closeMiniDeck();
+      closeOutreachModal();
+    });
+    $('outreachCloseBtn').addEventListener('click', closeOutreachModal);
+    $('emailSelectedBtn').addEventListener('click', openOutreachForSelected);
+    $('emailThisBtn').addEventListener('click', () => openOutreachQueueForLeads([formLead()]));
+    $('previewEmailBtn').addEventListener('click', () => openOutreachQueueForLeads([formLead()]));
+    $('doNotContactBtn').addEventListener('click', markCurrentLeadDoNotContact);
+    $('markEmailedBtn').addEventListener('click', () => markCurrentPipelineStatus('emailed'));
+    $('markCalledBtn').addEventListener('click', () => markCurrentPipelineStatus('called'));
+    $('markInterestedBtn').addEventListener('click', () => markCurrentPipelineStatus('interested'));
+    $('markFollowUpBtn').addEventListener('click', () => markCurrentPipelineStatus('follow_up'));
+    $('markNotInterestedBtn').addEventListener('click', () => markCurrentPipelineStatus('not_interested'));
+    $('markDoNotContactBtn').addEventListener('click', markCurrentLeadDoNotContact);
+    $('selectVisibleBtn').addEventListener('click', () => {
+      filteredLeads().forEach(lead => selectedLeadIds.add(lead.id));
+      renderTable();
+      updateSelectionUi();
+    });
+    $('clearSelectionBtn').addEventListener('click', () => {
+      selectedLeadIds = new Set();
+      renderTable();
+      updateSelectionUi();
+    });
+    $('clearNewBtn').addEventListener('click', () => {
+      leads = leads.map(lead => core.normaliseLead({
+        ...lead,
+        newly_added_at: '',
+        newly_added_source: '',
+        newly_added_batch: '',
+      }));
+      saveLeads();
+      render();
+    });
+    $('sendAllOutreachBtn').addEventListener('click', sendAllEligibleOutreach);
+    $('downloadSelectedBtn').addEventListener('click', downloadSelected);
+
+    $('importBtn').addEventListener('click', () => $('csvFile').click());
+    $('csvFile').addEventListener('change', async event => {
+      const file = event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+      const text = await file.text();
+      const imported = file.name.toLowerCase().endsWith('.json')
+        ? core.discoveryJsonToLeads(text)
+        : core.csvToLeads(text);
+      const marked = core.markNewLeads(leads, imported.map(core.normaliseLead), {
+        now: new Date().toISOString(),
+        source: 'File import',
+        batch: `import-${Date.now()}`,
+      });
+      const newCount = marked.filter(isNewLead).length;
+      leads = core.mergeLeadLists(leads, marked.map(core.normaliseLead));
+      saveLeads();
+      render();
+      alert(`Imported ${imported.length} business(es). ${newCount} new addition(s) highlighted.`);
+    });
+
+    ['searchInput', 'customFdmFilter', 'newFilter', 'quoteFilter', 'serviceFilter', 'pricingMaturityFilter', 'opportunityTypeFilter', 'fdmFilter', 'pipelineFilter', 'confidenceFilter', 'deckFilter', 'sortSelect'].forEach(id => {
+      $(id).addEventListener('input', render);
+      $(id).addEventListener('change', render);
+    });
+    $('seedWebsites').addEventListener('input', () => refreshDiscoveryStartState());
+    $('newLeadBtn').addEventListener('click', () => openDrawer());
+    $('startDiscoveryBtn').addEventListener('click', startDiscovery);
+    $('closeDrawer').addEventListener('click', closeDrawer);
+    $('drawerBackdrop').addEventListener('click', closeDrawer);
+
+    function updateSelectionUi() {
+      $('emailSelectedBtn').textContent = selectedLeadIds.size ? `Email selected (${selectedLeadIds.size})` : 'Email selected';
+      $('downloadSelectedBtn').textContent = selectedLeadIds.size ? `Download selected (${selectedLeadIds.size})` : 'Download selected';
+      $('clearNewBtn').disabled = newLeadCount() === 0;
+    }
+
+    function toggleLeadSelection(id, checked) {
+      if (checked) selectedLeadIds.add(id);
+      else selectedLeadIds.delete(id);
+      updateSelectionUi();
+    }
+
+    function selectedLeads() {
+      return leads.filter(lead => selectedLeadIds.has(lead.id));
+    }
+
+    function downloadSelected() {
+      const rows = selectedLeads();
+      if (!rows.length) {
+        alert('Select one or more businesses first.');
+        return;
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      const type = $('downloadType').value;
+      if (type === 'email') {
+        const csv = core.leadsToSelectedEmailCsv(rows);
+        if (!exportRowCount(csv)) {
+          alert('No selected leads are eligible for email export. Do-not-contact, not interested, missing-email, and non-target businesses are excluded.');
+          return;
+        }
+        downloadText(`trennen-selected-email-list-${today}.csv`, csv);
+        return;
+      }
+
+      if (type === 'call') {
+        const csv = core.leadsToCallSheetCsv(rows);
+        if (!exportRowCount(csv)) {
+          alert('No selected leads are eligible for the call sheet. Do-not-contact, not interested, and non-target businesses are excluded.');
+          return;
+        }
+        downloadText(`trennen-selected-call-sheet-${today}.csv`, csv);
+        return;
+      }
+
+      if (type === 'pitch') {
+        const csv = core.leadsToPresentationCsv(rows, { includeReview: $('includeReviewExport').checked });
+        if (!exportRowCount(csv)) {
+          alert('No selected target prospects are available for pitch CSV export.');
+          return;
+        }
+        downloadText(`trennen-selected-pitch-briefs-${today}.csv`, csv);
+        return;
+      }
+
+      const md = core.leadsToDeckMarkdown(rows, { includeReview: $('includeReviewExport').checked });
+      if (!/^## /m.test(md)) {
+        alert('No selected target prospects are available for deck notes export.');
+        return;
+      }
+      downloadText(`trennen-selected-deck-notes-${today}.md`, md, 'text/markdown;charset=utf-8');
+    }
+
+    function exportRowCount(text) {
+      const trimmed = String(text || '').trim();
+      if (!trimmed) return 0;
+      return Math.max(0, trimmed.split('\n').length - 1);
+    }
+
+    async function quickPipelineAction(id, pipelineStatus) {
+      const lead = leads.find(item => item.id === id);
+      if (!lead) return alert('Could not find that business.');
+      if (pipelineStatus === 'do_not_contact' && !confirm(`Mark ${lead.company_name} as do not contact? This will exclude them from outreach exports and sends.`)) return;
+      const updated = core.updateLeadPipelineStatus(lead, pipelineStatus, { now: new Date().toISOString() });
+      if (pipelineStatus === 'do_not_contact') {
+        core.leadIdentityKeys(updated).forEach(key => suppressionKeys.push(key));
+        saveSuppressionKeys();
+      }
+      saveLeadRecord(updated);
+      if (pipelineStatus === 'do_not_contact') {
+        try {
+          await fetch('/api/outreach/suppress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lead: updated }),
+          });
+        } catch {}
+        loadOutreachStatus();
+      }
+    }
+
+    function markCurrentPipelineStatus(pipelineStatus) {
+      const lead = formLead();
+      if (!lead.company_name) return showNotice('err', 'Save or name the business before updating status.');
+      const updated = core.updateLeadPipelineStatus(lead, pipelineStatus, {
+        now: new Date().toISOString(),
+        contact_notes: $('contactNotes').value,
+        next_follow_up_at: $('nextFollowUpAt').value,
+      });
+      if (pipelineStatus === 'do_not_contact') {
+        core.leadIdentityKeys(updated).forEach(key => suppressionKeys.push(key));
+        saveSuppressionKeys();
+      }
+      saveLeadRecord(updated);
+      openDrawer(updated.id);
+      showNotice('ok', `Marked ${core.pipelineStatusLabel(updated.pipeline_status)}.`);
+    }
+
+    function openOutreachForLead(id) {
+      const lead = leads.find(item => item.id === id);
+      if (!lead) return alert('Could not find that business.');
+      openOutreachQueueForLeads([lead]);
+    }
+
+    function openOutreachForSelected() {
+      const selected = leads.filter(lead => selectedLeadIds.has(lead.id));
+      if (!selected.length) {
+        alert('Select one or more businesses first.');
+        return;
+      }
+      openOutreachQueueForLeads(selected);
+    }
+
+    async function loadOutreachStatus() {
+      try {
+        const r = await fetch('/api/outreach/status');
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || 'outreach unavailable');
+        $('outreachStatus').textContent = data.ready
+          ? `Ready to send from ${data.from}. Every email is BCC archived to ${data.archiveEmail}.`
+          : `Outreach setup needs attention: ${data.errors.join(' ')}`;
+      } catch {
+        $('outreachStatus').textContent = 'Open through node research/discovery-server.mjs to preview and send emails.';
+      }
+    }
+
+    async function openOutreachQueueForLeads(rows) {
+      outreachQueue = rows.map(lead => ({ lead: core.normaliseLead(lead), loading: true, preview: null, error: '' }));
+      renderOutreachQueue();
+      $('deckBackdrop').classList.add('open');
+      $('outreachModal').classList.add('open');
+      $('outreachModal').setAttribute('aria-hidden', 'false');
+      $('outreachModalTitle').textContent = `Review ${rows.length} outreach email${rows.length === 1 ? '' : 's'}`;
+
+      await Promise.all(outreachQueue.map(async (item, index) => {
+        try {
+          const r = await fetch('/api/outreach/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lead: item.lead, suppressionKeys }),
+          });
+          const data = await r.json();
+          if (!r.ok || !data.ok) throw new Error(data.error || 'Preview failed.');
+          outreachQueue[index] = { ...item, loading: false, preview: data };
+        } catch (err) {
+          outreachQueue[index] = { ...item, loading: false, error: err.message || 'Preview failed.' };
+        }
+        renderOutreachQueue();
+      }));
+    }
+
+    function closeOutreachModal() {
+      $('outreachModal').classList.remove('open');
+      $('outreachModal').setAttribute('aria-hidden', 'true');
+      if (!$('deckModal').classList.contains('open')) $('deckBackdrop').classList.remove('open');
+    }
+
+    function renderOutreachQueue() {
+      if (!outreachQueue.length) {
+        $('outreachQueue').innerHTML = '<div class="empty">No outreach emails queued.</div>';
+        return;
+      }
+      $('outreachQueue').innerHTML = outreachQueue.map((item, index) => {
+        const lead = item.lead;
+        if (item.loading) {
+          return `<div class="outreach-card"><strong>${esc(lead.company_name)}</strong><div class="meta">Generating email preview...</div></div>`;
+        }
+        if (item.error) {
+          return `<div class="outreach-card"><strong>${esc(lead.company_name)}</strong><div class="notice err show">${esc(item.error)}</div></div>`;
+        }
+        const preview = item.preview;
+        const eligibility = preview.eligibility || { eligible: false, reasons: ['Unknown eligibility.'], warnings: [] };
+        const blockers = [...(preview.configErrors || []), ...(eligibility.reasons || [])];
+        const warnings = eligibility.warnings || [];
+        const canSend = preview.ready && eligibility.eligible && !item.sending && !item.sent;
+        return `
+          <article class="outreach-card">
+            <div class="outreach-card-head">
+              <div>
+                <strong>${esc(lead.company_name)}</strong>
+                <div class="meta">${esc(lead.contact_email || 'No email')} · ${esc(preview.pdfFilename || 'pitch deck PDF')}</div>
+              </div>
+              <span class="tag ${canSend ? 'deck-ready' : 'deck-evidence'}">${esc(item.sent ? 'sent' : canSend ? 'ready to send' : 'needs attention')}</span>
+            </div>
+            <div><strong>Subject:</strong> ${esc(preview.email.subject)}</div>
+            ${blockers.length ? `<ul class="warning-list">${blockers.map(reason => `<li>${esc(reason)}</li>`).join('')}</ul>` : ''}
+            ${warnings.length ? `<ul class="warning-list">${warnings.map(reason => `<li>${esc(reason)}</li>`).join('')}</ul>` : ''}
+            <div class="outreach-email">${esc(preview.email.text)}</div>
+            <div class="outreach-status">${item.result ? esc(item.result) : 'PDF will be generated on send. If PDF generation fails, the email will not be sent.'}</div>
+            <div class="outreach-card-actions">
+              <button class="btn" type="button" onclick="copyOutreachEmail(${index})">Copy email</button>
+              <button class="btn primary" type="button" onclick="sendOutreachItem(${index})" ${canSend ? '' : 'disabled'}>${item.sending ? 'Sending...' : item.sent ? 'Sent' : 'Send email + deck'}</button>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    async function copyOutreachEmail(index) {
+      const item = outreachQueue[index];
+      if (!item?.preview?.email?.text) return;
+      await navigator.clipboard.writeText(item.preview.email.text);
+    }
+
+    async function sendOutreachItem(index) {
+      const item = outreachQueue[index];
+      if (!item || item.sending || item.sent) return;
+      outreachQueue[index] = { ...item, sending: true, result: 'Sending through Resend and generating PDF deck...' };
+      renderOutreachQueue();
+      try {
+        const r = await fetch('/api/outreach/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lead: item.lead, suppressionKeys }),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || 'Send failed.');
+        outreachQueue[index] = {
+          ...item,
+          sending: false,
+          sent: true,
+          result: `Sent to ${data.recipient}. Archived to ${data.archiveEmail}. Attached ${data.pdfFilename}.`,
+        };
+        const sentAt = new Date().toISOString();
+        const updated = core.updateLeadPipelineStatus({
+          ...item.lead,
+          outreach_last_sent_at: sentAt,
+          outreach_last_result: `sent:${data.id || 'resend'}`,
+        }, 'emailed', { now: sentAt });
+        saveLeadRecord(updated);
+        selectedLeadIds.delete(updated.id);
+        render();
+      } catch (err) {
+        outreachQueue[index] = { ...item, sending: false, result: err.message || 'Send failed.' };
+      }
+      renderOutreachQueue();
+    }
+
+    async function sendAllEligibleOutreach() {
+      for (let i = 0; i < outreachQueue.length; i++) {
+        const item = outreachQueue[i];
+        const eligibility = item?.preview?.eligibility;
+        if (item && !item.sent && !item.sending && item.preview?.ready && eligibility?.eligible) {
+          await sendOutreachItem(i);
+        }
+      }
+    }
+
+    async function markCurrentLeadDoNotContact() {
+      const lead = formLead();
+      if (!lead.company_name) return showNotice('err', 'Save or name the business before marking do-not-contact.');
+      if (!confirm(`Mark ${lead.company_name} as do not contact? This will exclude them from outreach sends.`)) return;
+      const updated = core.updateLeadPipelineStatus({ ...lead, do_not_contact: true, outreach_last_result: 'suppressed' }, 'do_not_contact', {
+        now: new Date().toISOString(),
+        contact_notes: lead.contact_notes || 'Marked do not contact.',
+      });
+      core.leadIdentityKeys(updated).forEach(key => suppressionKeys.push(key));
+      saveSuppressionKeys();
+      saveLeadRecord(updated);
+      try {
+        await fetch('/api/outreach/suppress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lead: updated }),
+        });
+      } catch {}
+      openDrawer(updated.id);
+      showNotice('ok', 'Marked do not contact and added to the local suppression list.');
+      loadOutreachStatus();
+    }
+
+    async function refreshCurrentLeadEvidence() {
+      const lead = formLead();
+      if (!lead.website && !lead.company_name) {
+        showNotice('err', 'A website or business name is required before refreshing evidence.');
+        return;
+      }
+      $('refreshDeckBtn').disabled = true;
+      try {
+        const r = await fetch('/api/discovery/refresh-lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lead, maxPages: $('maxPages').value || 5 }),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || 'Evidence refresh failed.');
+        const refreshed = core.normaliseLead(data.lead);
+        leads = core.mergeLeadLists(leads, [refreshed]);
+        saveLeads();
+        render();
+        const next = leads.find(item => core.leadIdentityKeys(item).some(key => core.leadIdentityKeys(refreshed).includes(key))) || refreshed;
+        openDrawer(next.id);
+        showNotice('ok', ['Evidence refreshed and pitch deck regenerated.', ...(data.warnings || [])].join(' '));
+      } catch (err) {
+        showNotice('err', `${err.message || 'Could not refresh evidence.'} Keep the stored deck, but check its last-checked date before sending.`);
+      } finally {
+        $('refreshDeckBtn').disabled = false;
+      }
+    }
+
+    function previewMiniDeck(lead) {
+      const deck = core.generatePitchDeck(lead);
+      $('deckModalTitle').textContent = deck.title;
+      $('deckPreview').innerHTML = deck.slides.map((slide, index) => renderDeckSlide(deck, slide, index)).join('');
+      $('deckBackdrop').classList.add('open');
+      $('deckModal').classList.add('open');
+      $('deckModal').setAttribute('aria-hidden', 'false');
+    }
+
+    function renderDeckSlide(deck, slide, index) {
+      const page = String(index + 1).padStart(2, '0');
+      const body = {
+        cover: () => renderCoverSlide(deck, slide),
+        observed_situation: () => renderObservedSlide(deck, slide),
+        changeable_metrics: () => renderMetricsSlide(deck, slide),
+        proposed_solution: () => renderSolutionSlide(deck, slide),
+        before_after: () => renderBeforeAfterSlide(deck, slide),
+        small_ask: () => renderSmallAskSlide(deck, slide),
+        evidence_appendix: () => renderAppendixSlide(deck, slide),
+      }[slide.layout]?.() || renderGenericSlide(slide);
+      return `
+        <article class="deck-slide deck-slide-${esc(slide.layout || 'generic')}">
+          <div class="deck-slide-top"><span>TRENNEN</span><span class="deck-slide-number">${page}</span></div>
+          ${body}
+          <div class="deck-footer">${esc(slide.footer || deck.footer_note || '')}</div>
+        </article>
+      `;
+    }
+
+    function renderCoverSlide(deck, slide) {
+      const badges = slide.bullets.slice(1, 4);
+      const audit = deck.audit_methodology || {};
+      return `
+        <div class="deck-cover-grid">
+          <div>
+            <div class="deck-slide-kicker">${esc(slide.kicker)}</div>
+            <h2>${esc(slide.title)}</h2>
+            <p>${esc(slide.claim)}</p>
+            <div class="deck-audit-strip"><strong>How this was gathered</strong>${esc(audit.summary || 'External public audit using website/profile evidence and editable assumptions.')}</div>
+            <div class="deck-company">${esc(deck.company_name)}</div>
+            <div class="deck-badges">${badges.map(item => `<div class="deck-badge">${esc(item)}</div>`).join('')}</div>
+            <div class="deck-metrics">${(deck.metric_cards || []).map(card => renderDeckMetric(card)).join('')}</div>
+          </div>
+          <div class="guided-panel">
+            <div class="guided-card">
+              <h3>Guided quote path</h3>
+              ${(deck.guided_quote_path || []).map(step => `<div class="guided-step">${esc(step)}</div>`).join('')}
+              <div class="guided-cta">10 min audit</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderObservedSlide(deck, slide) {
+      const audit = deck.audit_methodology || {};
+      const positioning = deck.quote_positioning || slide.quote_positioning || {};
+      const bullets = slide.bullets
+        .filter(item => !/^How we gathered this:|^Current pricing system:/i.test(item))
+        .slice(0, 4);
+      return `
+        <div class="deck-slide-kicker">${esc(slide.kicker)}</div>
+        <h2>What the buyer likely sees before asking for a price</h2>
+        <p>${esc(slide.claim)}</p>
+        <div class="deck-audit-strip"><strong>External audit disclosure</strong>${esc(audit.disclaimer || 'Outside-in audit only; update with client data before making performance claims.')}</div>
+        <div class="deck-two-col">
+          <div class="deck-card compact">
+            <div class="deck-card-title">Current pricing system</div>
+            <p><strong>${esc(positioning.current_system || 'Quote workflow needs verification')}</strong></p>
+            <p>${esc(positioning.current_read || '')}</p>
+            <ul>${bullets.map(item => `<li>${esc(item)}</li>`).join('')}</ul>
+          </div>
+          <div class="deck-card green">
+            <div class="deck-card-title">Sales friction hypothesis</div>
+            <p>${esc(slide.claim)}</p>
+            <p class="gold">Make this a question, not a claim: “Are incomplete quote requests or manual follow-ups slowing your team down?”</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMetricsSlide(deck, slide) {
+      const calculator = deck.calculator || slide.calculator || { cards: [], best_stack: [] };
+      return `
+        <div class="deck-slide-kicker">${esc(slide.kicker)}</div>
+        <h2>${esc(slide.title)}</h2>
+        <p>${esc(slide.claim)}</p>
+        <div class="calculator-grid">${calculator.cards.map(card => renderDeckMetric(card)).join('')}</div>
+        <div class="formula-line">${esc(calculator.formula || '')}</div>
+        <div class="impact-grid">
+          <div class="deck-card">
+            <div class="deck-card-title">Calculation guardrail</div>
+            <p>${esc(calculator.impact_line || '')}</p>
+            <p>Keep as a calculator, not a promise.</p>
+          </div>
+          <div class="deck-card" style="background:#EEE7D8">
+            <div class="deck-card-title">Best metric stack for cold outreach</div>
+            <ol>${(calculator.best_stack || []).map(item => `<li>${esc(item)}</li>`).join('')}</ol>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSolutionSlide(deck, slide) {
+      const positioning = deck.quote_positioning || slide.quote_positioning || {};
+      return `
+        <div class="deck-slide-kicker">${esc(slide.kicker)}</div>
+        <h2>${esc(slide.title)}</h2>
+        <p>${esc(slide.claim)}</p>
+        <div class="path-row">${(deck.guided_quote_path || []).map((step, i) => `<div class="path-step"><span style="color:var(--deck-gold);display:block;margin-bottom:10px">${String(i + 1).padStart(2, '0')}</span>${esc(step)}</div>`).join('')}</div>
+        <div class="benefit-grid">
+          <div class="deck-card"><div class="deck-card-title">Current pricing system</div><p>${esc(positioning.current_read || slide.proof[0] || '')}</p></div>
+          <div class="deck-card green"><div class="deck-card-title">Why Trennen is better</div><p>${esc(positioning.why_trennen_better || slide.proof[1] || '')}</p></div>
+        </div>
+      `;
+    }
+
+    function renderBeforeAfterSlide(deck, slide) {
+      const model = deck.before_after || slide.before_after || { before: [], after: [], before_title: 'Before', after_title: 'After' };
+      return `
+        <div class="deck-slide-kicker">${esc(slide.kicker)}</div>
+        <h2>${esc(slide.title)}</h2>
+        <p>${esc(slide.claim)}</p>
+        <div class="deck-two-col">
+          <div class="deck-card"><div class="deck-card-title">${esc(model.before_title)}</div><ul>${model.before.map(item => `<li>${esc(item)}</li>`).join('')}</ul></div>
+          <div class="deck-card green"><div class="deck-card-title">${esc(model.after_title)}</div><ul>${model.after.map(item => `<li>${esc(item)}</li>`).join('')}</ul></div>
+        </div>
+      `;
+    }
+
+    function renderSmallAskSlide(deck, slide) {
+      return `
+        <div class="deck-slide-kicker">${esc(slide.kicker)}</div>
+        <h2>${esc(slide.title)}</h2>
+        <p>${esc(slide.claim)}</p>
+        <div class="ask-grid">${slide.bullets.slice(0, 3).map((item, i) => `
+          <div class="deck-card ask-card">
+            <div class="ask-number">${i + 1}</div>
+            <div class="deck-card-title">${esc(item.split(':')[0])}</div>
+            <p>${esc(item.split(':').slice(1).join(':').trim())}</p>
+          </div>
+        `).join('')}</div>
+        <p style="text-align:center;color:var(--deck-green);font-weight:850;margin-top:20px">${esc(slide.proof[0] || '')}</p>
+      `;
+    }
+
+    function renderAppendixSlide(deck, slide) {
+      const rows = deck.appendix_rows || slide.appendix_rows || [];
+      return `
+        <div class="deck-slide-kicker">${esc(slide.kicker)}</div>
+        <h2>${esc(slide.title)}</h2>
+        <p>${esc(slide.claim)}</p>
+        <div class="appendix-table">
+          <div class="appendix-row header"><div>Field</div><div>Value</div><div>Confidence</div></div>
+          ${rows.slice(0, 10).map(row => `<div class="appendix-row"><div>${esc(row.field)}</div><div>${esc(row.value)}</div><div>${esc(row.confidence)}</div></div>`).join('')}
+        </div>
+        <div class="deck-disclaimer">${esc(slide.footer)}</div>
+      `;
+    }
+
+    function renderGenericSlide(slide) {
+      return `
+        <div class="deck-slide-kicker">${esc(slide.kicker)}</div>
+        <h2>${esc(slide.title)}</h2>
+        <p><strong>${esc(slide.claim || '')}</strong></p>
+        <ul>${slide.bullets.map(item => `<li>${esc(item)}</li>`).join('')}</ul>
+      `;
+    }
+
+    function renderDeckMetric(card) {
+      return `
+        <div class="deck-metric">
+          <div class="deck-metric-label">${esc(card.label)}</div>
+          <div class="deck-metric-value">${esc(card.value)}</div>
+          <div class="deck-metric-detail">${esc(card.detail || card.note || '')}</div>
+        </div>
+      `;
+    }
+
+    function closeMiniDeck() {
+      $('deckBackdrop').classList.remove('open');
+      $('deckModal').classList.remove('open');
+      $('deckModal').setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('printing-deck');
+    }
+
+    function printMiniDeck(lead) {
+      previewMiniDeck(lead);
+      document.body.classList.add('printing-deck');
+      window.print();
+      setTimeout(() => document.body.classList.remove('printing-deck'), 250);
+    }
+
+    function downloadText(filename, text, type = 'text/csv;charset=utf-8') {
+      const blob = new Blob([text], { type });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function setValue(id, value) { $(id).value = value == null ? '' : value; }
+    function label(value) { return String(value || 'unknown').replace(/_/g, ' '); }
+    function toDateTimeLocal(value) {
+      if (!value) return '';
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) return value.slice(0, 16);
+      const date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return '';
+      return date.toISOString().slice(0, 16);
+    }
+    function fromDateTimeLocal(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return value;
+      return date.toISOString();
+    }
+    function primaryPainPoint(lead) {
+      return lead.pain_point || core.generateCompanyBrief(lead).sales_leak || 'Quote-flow opportunity needs review.';
+    }
+    function recommendedAction(lead) {
+      if (lead.do_not_contact) return 'Do not contact';
+      if (lead.pipeline_status === 'do_not_contact') return 'Do not contact';
+      if (lead.pipeline_status === 'not_interested') return 'Leave out of outreach';
+      if (lead.pipeline_status === 'won') return 'Onboard as customer';
+      if (lead.pipeline_status === 'interested') return 'Book demo or send next step';
+      if (lead.pipeline_status === 'follow_up') return lead.next_follow_up_at ? `Follow up ${formatDate(lead.next_follow_up_at)}` : 'Set follow-up date';
+      if (lead.pipeline_status === 'called') return 'Log call outcome or send follow-up';
+      if (lead.pipeline_status === 'emailed') return 'Call or follow up';
+      if (lead.custom_fdm_status === 'review_needed') return 'Verify custom FDM fit';
+      if (lead.opportunity_type === 'benchmark_auto_pricing') return 'Benchmark existing quote flow';
+      if (lead.opportunity_type === 'fix_bad_calculator') return 'Pitch clearer calculator flow';
+      if (lead.opportunity_type === 'improve_upload_flow') return 'Pitch clearer upload pricing';
+      if (lead.opportunity_type === 'exclude_supplier' || lead.opportunity_type === 'exclude_non_service') return 'Keep out of outreach';
+      if (lead.quote_system === 'automated_quote') return 'Benchmark existing quote flow';
+      if (lead.status === 'ready' && lead.contact_email) return 'Send outreach with pitch deck';
+      if (!lead.contact_email && !lead.contact_phone) return 'Find decision-maker contact';
+      return 'Open brief and preview pitch deck';
+    }
+    function pipelineBadge(lead) {
+      const value = lead.pipeline_status || 'new_lead';
+      const className = ['do_not_contact', 'not_interested'].includes(value)
+        ? 'stop'
+        : ['follow_up', 'called'].includes(value)
+          ? 'warn'
+          : ['new_lead', 'researched'].includes(value)
+            ? 'cold'
+            : '';
+      return `<span class="pipeline-tag ${className}">${esc(core.pipelineStatusLabel(value))}</span>`;
+    }
+    function deckBadge(lead) {
+      const status = lead.deck_status || core.deckReadiness(lead).status;
+      const className = {
+        ready: 'deck-ready',
+        needs_evidence: 'deck-evidence',
+        needs_refresh: 'deck-refresh',
+        not_suitable: 'deck-unsuitable',
+      }[status] || 'deck-evidence';
+      return `<span class="tag ${className}">${esc(label(status))}</span>`;
+    }
+    function newBadge(lead) {
+      if (!isNewLead(lead)) return '';
+      const source = lead.newly_added_source ? ` from ${lead.newly_added_source}` : '';
+      return `<span class="tag new" title="Added ${esc(formatDate(lead.newly_added_at))}${esc(source)}">New</span>`;
+    }
+    function formatDate(value) {
+      if (!value) return 'not checked';
+      const date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return value;
+      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    function chartClass(key) {
+      if (['target', 'strong', 'automated', 'service'].includes(key)) return 'green';
+      if (['review', 'upload', 'manual', 'bad'].includes(key)) return 'amber';
+      return 'red';
+    }
+    function chartColor(key) {
+      return {
+        target: '#16A34A',
+        strong: '#16A34A',
+        automated: '#16A34A',
+        service: '#16A34A',
+        review: '#D97706',
+        upload: '#D97706',
+        manual: '#D97706',
+        bad: '#D97706',
+        lower: '#DC2626',
+        not_target: '#DC2626',
+        supplier: '#DC2626',
+        premade: '#DC2626',
+        resin: '#DC2626',
+        directory: '#DC2626',
+        unknown: '#94A3B8',
+      }[key] || '#315C49';
+    }
+    function targetBadge(lead) {
+      const value = lead.custom_fdm_status || 'review_needed';
+      const className = value === 'target_confirmed'
+        ? 'target'
+        : value === 'target_likely'
+          ? 'likely'
+          : value === 'not_target'
+            ? 'skip'
+            : 'review';
+      const text = value === 'target_confirmed'
+        ? 'Custom FDM target'
+        : value === 'target_likely'
+          ? 'Likely custom FDM'
+          : value === 'not_target'
+            ? 'Skipped non-target'
+            : 'Needs review';
+      return `<span class="tag ${className}">${esc(text)}</span>`;
+    }
+    function scoreClass(score) {
+      if (Number(score) >= 75) return 'high';
+      if (Number(score) >= 50) return 'mid';
+      return 'low';
+    }
+    function showNotice(type, message) {
+      hideNotices();
+      const el = type === 'ok' ? $('okNotice') : $('errNotice');
+      el.textContent = message;
+      el.classList.add('show');
+    }
+    function hideNotices() {
+      $('okNotice').classList.remove('show');
+      $('errNotice').classList.remove('show');
+    }
+
+    render();
+    loadDiscoveryStatus();
+    loadOutreachStatus();
+  </script>
+</body>
+</html>

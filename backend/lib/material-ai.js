@@ -2,8 +2,9 @@
  * AI material lookup — fallback for materials NOT in the curated library.
  *
  * Calls Anthropic's Claude API with a strict JSON-only prompt asking for
- * strength / flexibility / heat ratings + ideal-for / not-for bullets +
- * production-day suggestion. Uses claude-haiku for speed and cost.
+ * strength / flexibility / heat/detail/outdoor ratings + customer-facing
+ * material specs, tags, ideal-for / not-for bullets, and production-day
+ * suggestions. Uses claude-haiku for speed and cost.
  *
  * Requires: ANTHROPIC_API_KEY env var. Falls back to a 503-style response
  * with a clear message if the key isn't configured.
@@ -15,7 +16,7 @@ const API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL   = 'claude-haiku-4-5';
 
 const SYSTEM_PROMPT =
-  'You are a 3D-printing materials expert. When given a material name, you answer ONLY ' +
+  'You are an additive manufacturing and 3D-printing materials expert. When given a material name, you answer ONLY ' +
   'with a single JSON object — no prose, no markdown, no code fences. The JSON must match ' +
   'the schema exactly. Base your answers on widely-known material datasheet properties.';
 
@@ -28,6 +29,14 @@ Return a JSON object with exactly these keys:
   "strength":    integer 0-100,     // tensile + impact, perceptual
   "flexibility": integer 0-100,     // ability to bend without breaking
   "heat":        integer 0-100,     // continuous-use temperature resistance
+  "detail":      integer 1-5,       // surface/detail suitability
+  "outdoorUse":  integer 1-5,       // UV/weather/outdoor suitability
+  "tags":        string[] (2-6 short filter labels),
+  "best_for":    string[] (2-4 short labels),
+  "specs":       [{"label": string, "value": string}] (4-8 rows),
+  "shortDescription": string,        // one short customer card sentence
+  "longDescription": string,         // 1-2 customer-safe technical sentences
+  "learn_more":  string,             // 1-2 practical guidance sentences
   "production_days_min": integer 1-14,
   "production_days_max": integer 1-14,
   "ideal_for":   string[] (3-5 short bullet phrases),
@@ -37,9 +46,16 @@ Return a JSON object with exactly these keys:
 }
 
 Rules:
+- Treat "additive manufacturing", "AM", "3D printing", "rapid prototyping", "FFF/FDM", "SLA/DLP/MSLA",
+  "SLS", "MJF", "powder bed fusion", "material extrusion", and "vat photopolymerization" as process/search
+  context. Identify the underlying material family first.
+- Interpret common AM naming variants and regional spellings, such as carbon fibre/fiber, glass fibre/fiber,
+  PA/polyamide/nylon, PA12/nylon 12, TPU shore names, photopolymer/resin, and filament/powder/resin feedstock.
 - For obscure or brand-specific names, infer from the base resin family.
 - If a material truly doesn't exist or you can't confidently rate it, set "confidence":"low" but still answer.
 - Bullets must be short user-facing phrases — no full sentences.
+- Tags should use generic labels such as Strong, Flexible, Outdoor, Smooth finish, Engineering, Low cost when appropriate.
+- Specs must describe material properties only. Do not include shipping, delivery, packaging, location, service area, or production promises.
 - Numbers MUST be integers, no quotes, no units.
 - Output ONLY the JSON. No leading text. No trailing text. No \`\`\` fences.
 `;
@@ -65,7 +81,7 @@ export async function aiLookupMaterial(name) {
 
   const body = {
     model: MODEL,
-    max_tokens: 600,
+    max_tokens: 1000,
     system: SYSTEM_PROMPT,
     messages: [
       {
@@ -121,13 +137,41 @@ export async function aiLookupMaterial(name) {
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, parseInt(v, 10) || 0));
   const cleanArr = (a, maxLen = 5) =>
     Array.isArray(a) ? a.map(s => String(s).trim()).filter(Boolean).slice(0, maxLen) : [];
+  const cleanSpecs = a =>
+    Array.isArray(a)
+      ? a.map(row => ({
+          label: String(row?.label || '').trim().slice(0, 48),
+          value: String(row?.value || '').trim().slice(0, 96),
+        })).filter(row => row.label && row.value).slice(0, 8)
+      : [];
+  const rating = v => Math.max(1, Math.min(5, parseInt(v, 10) || 3));
+  const strength = clamp(parsed.strength, 0, 100);
+  const flexibility = clamp(parsed.flexibility, 0, 100);
+  const heat = clamp(parsed.heat, 0, 100);
+  const detail = rating(parsed.detail);
+  const outdoorUse = rating(parsed.outdoorUse);
 
   const out = {
     displayName: String(parsed.displayName || name).trim().slice(0, 80),
     category:    ['FDM','Resin','SLS','Specialty'].includes(parsed.category) ? parsed.category : 'FDM',
-    strength:    clamp(parsed.strength,    0, 100),
-    flexibility: clamp(parsed.flexibility, 0, 100),
-    heat:        clamp(parsed.heat,        0, 100),
+    strength,
+    flexibility,
+    heat,
+    ratings: {
+      strength: Math.max(1, Math.min(5, Math.round(strength / 20))),
+      flexibility: Math.max(1, Math.min(5, Math.round(flexibility / 20))),
+      heatResistance: Math.max(1, Math.min(5, Math.round(heat / 20))),
+      detail,
+      outdoorUse,
+    },
+    detail,
+    outdoorUse,
+    tags:        cleanArr(parsed.tags, 6),
+    best_for:    cleanArr(parsed.best_for, 4),
+    specs:       cleanSpecs(parsed.specs),
+    shortDescription: String(parsed.shortDescription || '').trim().slice(0, 180),
+    longDescription: String(parsed.longDescription || '').trim().slice(0, 500),
+    learn_more:  String(parsed.learn_more || '').trim().slice(0, 500),
     production_days_min: clamp(parsed.production_days_min, 1, 30),
     production_days_max: clamp(parsed.production_days_max, 1, 30),
     ideal_for:   cleanArr(parsed.ideal_for, 5),

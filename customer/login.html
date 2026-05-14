@@ -78,7 +78,9 @@
 
   <script>
     // Get shop slug from URL: /customer/login.html?shop=my-shop
-    let shopSlug = new URLSearchParams(window.location.search).get('shop') || '';
+    const loginParams = new URLSearchParams(window.location.search);
+    let shopSlug = loginParams.get('shop') || '';
+    const nextPath = loginParams.get('next') || '';
 
     // If no slug in URL, show the shop ID input
     if (!shopSlug) {
@@ -87,6 +89,11 @@
 
     function getSlug() {
       return shopSlug || document.getElementById('shopSlugInput').value.trim().toLowerCase();
+    }
+
+    function dashboardTarget(slug) {
+      if (nextPath && /^dashboard\.html(?:\?|#|$)/.test(nextPath)) return nextPath;
+      return `dashboard.html?shop=${encodeURIComponent(slug)}#overview`;
     }
 
     // Populate wordmark with shop name if slug known
@@ -103,7 +110,7 @@
     (async () => {
       try {
         const r = await fetch('/api/customer/me');
-        if (r.ok) window.location.href = `dashboard.html?shop=${shopSlug}`;
+        if (r.ok) window.location.href = dashboardTarget(getSlug());
       } catch {}
     })();
 
@@ -139,7 +146,7 @@
         });
         const d = await r.json();
         if (r.ok) {
-          window.location.href = `dashboard.html?shop=${slug}`;
+          window.location.href = dashboardTarget(slug);
         } else {
           showError(d.error || 'Incorrect email or password');
         }
@@ -166,7 +173,7 @@
         });
         const d = await r.json();
         if (r.ok) {
-          window.location.href = `dashboard.html?shop=${slug}`;
+          window.location.href = dashboardTarget(slug);
         } else {
           showError(d.error || 'Could not create account');
         }

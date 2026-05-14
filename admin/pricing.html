@@ -257,6 +257,12 @@
             <span class="section-card-title">Calculation method</span>
           </div>
           <div class="section-card-body">
+            <div style="background:rgba(122,158,126,0.08);border:1px solid var(--sage-light);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--muted);line-height:1.55">
+              <strong style="color:var(--sage-dark)">Live checkout uses Pricing V1:</strong>
+              per-cm³ material pricing, volume tiers, minimums, finish/infill multipliers,
+              shipping, tax, and rounding. Other pricing modes are saved here but are not
+              used for live customer payments yet.
+            </div>
 
             <!-- Mode selector -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px">
@@ -276,7 +282,7 @@
                 <span>
                   <div style="font-weight:500;font-size:13px">Print time + material</div>
                   <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
-                    Hourly machine rate plus a per-gram material cost. Best for large prints where machine time dominates.
+                    Saved for future pricing-model expansion. Not used by live checkout in Pricing V1.
                   </div>
                 </span>
               </label>

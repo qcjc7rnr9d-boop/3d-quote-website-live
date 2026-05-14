@@ -5,9 +5,28 @@ import { renderTemplate, DEFAULTS as EMAIL_TEMPLATE_DEFAULTS } from '../lib/emai
 
 const router = Router();
 
+function ensureSupportEmailColumns() {
+  const cols = db.prepare('PRAGMA table_info(store_settings)').all().map(c => c.name);
+  if (!cols.includes('support_email_mode')) {
+    db.exec("ALTER TABLE store_settings ADD COLUMN support_email_mode TEXT NOT NULL DEFAULT 'signup'");
+  }
+  if (!cols.includes('support_email')) {
+    db.exec('ALTER TABLE store_settings ADD COLUMN support_email TEXT');
+  }
+}
+
 function ensureSettings(shopId) {
+  ensureSupportEmailColumns();
   db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shopId);
   return db.prepare('SELECT * FROM store_settings WHERE shop_id = ?').get(shopId);
+}
+
+function normaliseEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 }
 
 function parseSettings(row) {
@@ -47,9 +66,14 @@ router.put('/', requireShopAuth, (req, res) => {
     ensureSettings(req.shop.id);
     const {
       name,
-      tagline, about, phone, address, logo_url, gst_number,
+      tagline, about, phone, address, support_email_mode, support_email, logo_url, gst_number,
       invoice_footer, invoice_logo, notifications, email_templates, shipping_zones
     } = req.body;
+    const supportMode = support_email_mode === 'custom' ? 'custom' : 'signup';
+    const supportEmail = normaliseEmail(support_email);
+    if (supportMode === 'custom' && !isValidEmail(supportEmail)) {
+      return res.status(400).json({ error: 'Enter a valid support email, or use the signup email option.' });
+    }
 
     // Update shop display name if supplied — slug stays stable for URLs
     if (typeof name === 'string' && name.trim()) {
@@ -63,6 +87,8 @@ router.put('/', requireShopAuth, (req, res) => {
         about = ?,
         phone = ?,
         address = ?,
+        support_email_mode = ?,
+        support_email = ?,
         logo_url = ?,
         gst_number = ?,
         invoice_footer = ?,
@@ -77,6 +103,8 @@ router.put('/', requireShopAuth, (req, res) => {
       about ?? null,
       phone ?? null,
       address ?? null,
+      supportMode,
+      supportMode === 'custom' ? supportEmail : null,
       logo_url ?? null,
       gst_number ?? null,
       invoice_footer ?? null,

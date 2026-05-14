@@ -84,7 +84,7 @@ setInterval(() => {
 const privatePrefixes = [
   '/backend', '/.git', '/node_modules', '/package.json', '/package-lock.json',
   '/trennen-site.zip', '/.env', '/.DS_Store', '/security.md', '/payments_setup.md',
-  '/milestone_stability_security.md'
+  '/milestone_stability_security.md', '/security_review_post_milestone.md', '/research'
 ];
 app.use((req, res, next) => {
   const path = req.path.toLowerCase();

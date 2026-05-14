@@ -1,0 +1,11 @@
+{
+  "name": "trennen-prospect-research",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "playwright": "^1.56.1"
+  },
+  "scripts": {
+    "install-browsers": "playwright install chromium"
+  }
+}

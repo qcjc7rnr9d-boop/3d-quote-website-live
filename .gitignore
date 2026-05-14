@@ -22,3 +22,9 @@ backend/data/
 # Logs and temporary artifacts
 *.log
 *.zip
+
+# Local prospect research outputs
+research/.env
+research/.env.*
+research/node_modules/
+research/data/discovered-prospects.*
