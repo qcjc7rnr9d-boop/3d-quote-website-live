@@ -120,6 +120,23 @@
     .action-row strong { display: block; font-size: 13px; margin-bottom: 3px; }
     .action-row span { font-size: 12px; color: var(--muted); line-height: 1.45; }
 
+    .quotes-grid { display: grid; gap: 14px; }
+    .quote-card {
+      border-bottom: 1px solid var(--border); padding: 18px 20px;
+      display: grid; gap: 14px;
+    }
+    .quote-card:last-child { border-bottom: 0; }
+    .quote-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .quote-title { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+    .quote-date { font-size: 12px; color: var(--muted); }
+    .quote-total { font-family: var(--font-brand); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .quote-meta {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+      padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--off-white);
+    }
+    .quote-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .quote-card.expired { opacity: 0.78; }
+
     .form-grid { display: grid; gap: 14px; max-width: 560px; }
     .form-field { display: grid; gap: 6px; }
     .form-label { font-size: 12px; font-weight: 700; color: var(--ink); }
@@ -181,6 +198,7 @@
       .section-grid { grid-template-columns: 1fr; }
       .help-grid { grid-template-columns: 1fr; }
       .order-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .quote-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .status-label { white-space: normal; }
     }
     @media (max-width: 520px) {
@@ -190,6 +208,8 @@
       .order-top { flex-direction: column; }
       .order-summary { justify-items: start; min-width: 0; }
       .order-meta { grid-template-columns: 1fr; }
+      .quote-top { flex-direction: column; }
+      .quote-meta { grid-template-columns: 1fr; }
     }
   </style>
   <script src="../assets/brand.js" defer></script>
@@ -216,6 +236,7 @@
     <nav class="tabs" aria-label="Customer portal sections">
       <button class="tab-btn active" type="button" data-tab="overview">Overview</button>
       <button class="tab-btn" type="button" data-tab="orders">Orders</button>
+      <button class="tab-btn" type="button" data-tab="quotes">Quotes</button>
       <button class="tab-btn" type="button" data-tab="account">Account</button>
       <button class="tab-btn" type="button" data-tab="help">Help</button>
     </nav>
@@ -265,6 +286,7 @@
           <div class="card-body action-list">
             <a class="action-row" href="#account" data-tab-link="account"><div><strong>Profile & Settings</strong><span>Update your name or password.</span></div><span>→</span></a>
             <a class="action-row" href="#orders" data-tab-link="orders"><div><strong>My Orders</strong><span>See full order history and tracking.</span></div><span>→</span></a>
+            <a class="action-row" href="#quotes" data-tab-link="quotes"><div><strong>Saved Quotes</strong><span>Pick up estimates you saved earlier.</span></div><span>→</span></a>
             <a class="action-row" href="#help" data-tab-link="help"><div><strong>Help</strong><span>Find contact details for this store.</span></div><span>→</span></a>
           </div>
         </div>
@@ -280,6 +302,20 @@
           </div>
         </div>
         <div id="ordersList"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="panel-quotes">
+      <div class="portal-card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Saved quotes</div>
+            <div class="card-sub">Saved quotes are estimates. Expired quotes can be recalculated before ordering.</div>
+          </div>
+          <a class="btn btn-dark" id="quotesStartBtn" href="../quote.html">Start a Quote</a>
+        </div>
+        <div class="card-body" id="quotesMsg" style="display:none"></div>
+        <div id="quotesList"></div>
       </div>
     </section>
 
@@ -353,10 +389,12 @@
   <script>
     const params = new URLSearchParams(window.location.search);
     const shopSlug = params.get('shop') || '';
-    const validTabs = new Set(['overview', 'orders', 'account', 'help']);
+    const PENDING_SAVED_QUOTE_KEY = 'pending_saved_quote';
+    const validTabs = new Set(['overview', 'orders', 'quotes', 'account', 'help']);
     let me = null;
     let shopInfo = null;
     let orders = [];
+    let quotes = [];
 
     const STEPS = [
       { key: 'pending', label: 'Received' },
@@ -390,6 +428,10 @@
       return `dashboard.html?shop=${encodeURIComponent(shopSlug)}#${tab}`;
     }
 
+    function activeShopSlug() {
+      return shopSlug || me?.shop?.slug || '';
+    }
+
     function loginUrl() {
       const slug = shopSlug || me?.shop?.slug || '';
       const next = `dashboard.html?shop=${encodeURIComponent(slug)}${location.hash || '#overview'}`;
@@ -403,6 +445,15 @@
     function fmtDate(d) {
       if (!d) return '—';
       return new Date(d).toLocaleDateString('en-NZ', { day:'numeric', month:'short', year:'numeric' });
+    }
+
+    function fmtDimensions(dimensions) {
+      if (!dimensions) return '—';
+      const x = Number(dimensions.xMm ?? dimensions.x_mm ?? dimensions.x);
+      const y = Number(dimensions.yMm ?? dimensions.y_mm ?? dimensions.y);
+      const z = Number(dimensions.zMm ?? dimensions.z_mm ?? dimensions.z ?? dimensions.heightMm ?? dimensions.height);
+      if (![x, y, z].every(Number.isFinite)) return '—';
+      return `${x.toFixed(1)} × ${y.toFixed(1)} × ${z.toFixed(1)} mm`;
     }
 
     function statusIndex(status) {
@@ -465,6 +516,17 @@
         target.innerHTML = `<div class="empty-state"><h2>No orders yet</h2><p>Once you place an order, it will appear here.</p></div>`;
         return;
       }
+      const orderGroups = o => {
+        if (Array.isArray(o.items) && o.items.length) {
+          return `<div class="meta-value wrap" style="margin-bottom:14px">${o.items.map((item, index) => {
+            const files = Array.isArray(item.files) ? item.files.map(f => `${f.name || 'Model'} x${Math.max(1, Math.floor(Number(f.quantity) || 1))}`).join(', ') : '';
+            return `${index + 1}. ${item.materialName || item.material || 'Material'}${item.colour ? ` · ${item.colour}` : ''}${item.finish ? ` · ${item.finish}` : ''}${files ? ` — ${files}` : ''}`;
+          }).map(esc).join('<br>')}</div>`;
+        }
+        const files = Array.isArray(o.files) && o.files.length ? o.files : (o.file_name ? [{ name: o.file_name }] : []);
+        if (!files.length) return '';
+        return `<div class="meta-value wrap" style="margin-bottom:14px">Files: ${files.map(f => `${esc(f.name || 'Model')} x${Math.max(1, Math.floor(Number(f.quantity) || 1))}`).join(', ')}</div>`;
+      };
       target.innerHTML = list.map(o => `
         <article class="order-card">
           <div class="order-top">
@@ -483,11 +545,110 @@
             <div><div class="meta-label">Finish</div><div class="meta-value wrap">${esc(o.finish || '—')}</div></div>
             <div><div class="meta-label">Qty</div><div class="meta-value">${esc(o.quantity || 1)}</div></div>
           </div>
-          ${o.file_name ? `<div class="meta-value wrap" style="margin-bottom:14px">File: ${esc(o.file_name)}</div>` : ''}
+          ${orderGroups(o)}
           ${o.fulfilment_status !== 'cancelled' ? renderStatusTrack(o.fulfilment_status) : ''}
           ${renderTracking(o)}
         </article>
       `).join('');
+    }
+
+    function quoteBadgeClass(status) {
+      return status === 'expired' ? 'badge-warm' : 'badge-sage';
+    }
+
+    function quoteFilesMarkup(quote) {
+      const file = quote.file || {};
+      const files = Array.isArray(file.models) && file.models.length
+        ? file.models
+        : (file.name ? [file] : []);
+      if (!files.length) return '';
+      if (files.length === 1) return `<div class="quote-date">${esc(files[0].name || 'Uploaded file')}${(Number(files[0].quantity) || 1) > 1 ? ` · Qty ${Math.max(1, Math.floor(Number(files[0].quantity) || 1))}` : ''}</div>`;
+      return `<div class="quote-date">${files.length} files · ${files.map(f => `${esc(f.name || 'Model')} x${Math.max(1, Math.floor(Number(f.quantity) || 1))}`).join(', ')}</div>`;
+    }
+
+    function renderQuotes() {
+      const target = document.getElementById('quotesList');
+      if (!quotes.length) {
+        target.innerHTML = `<div class="empty-state"><h2>No saved quotes yet</h2><p>Save a quote and it will appear here.</p></div>`;
+        return;
+      }
+
+      target.innerHTML = quotes.map(q => {
+        const expired = q.status === 'expired';
+        const file = q.file || {};
+        const selection = q.selection || {};
+        const finishParts = [q.finish_name || selection.finishName || '—', q.finish_layer_height || selection.finishLayerHeight]
+          .filter(Boolean).join(' · ');
+        return `<article class="quote-card ${expired ? 'expired' : ''}" data-quote-id="${esc(q.id)}">
+          <div class="quote-top">
+            <div>
+              <div class="quote-title">${esc(file.name || 'Saved quote')}</div>
+              <div class="quote-date">Saved ${esc(fmtDate(q.created_at))} · Valid until ${esc(fmtDate(q.expires_at))}</div>
+              ${quoteFilesMarkup(q)}
+            </div>
+            <div class="order-summary">
+              <div class="quote-total">${esc(fmtMoney(q.total))}</div>
+              <span class="badge ${quoteBadgeClass(q.status)}">${expired ? 'Expired' : 'Valid quote'}</span>
+            </div>
+          </div>
+          <div class="quote-meta">
+            <div><div class="meta-label">Material</div><div class="meta-value">${esc(q.material_name || selection.materialName || '—')}</div></div>
+            <div><div class="meta-label">Colour</div><div class="meta-value">${esc(q.colour_name || selection.colourName || selection.colorName || '—')}</div></div>
+            <div><div class="meta-label">Finish</div><div class="meta-value wrap">${esc(finishParts)}</div></div>
+            <div><div class="meta-label">Dimensions</div><div class="meta-value wrap">${esc(fmtDimensions(q.dimensions))}</div></div>
+          </div>
+          <div class="quote-actions">
+            <button class="btn ${expired ? 'btn-light' : 'btn-dark'}" type="button" data-quote-action="continue" data-quote-id="${esc(q.id)}">${expired ? 'Requote' : 'Continue'}</button>
+            <button class="btn btn-light" type="button" data-quote-action="remove" data-quote-id="${esc(q.id)}">Remove</button>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    function restoreQuoteToFlow(quote) {
+      const selected = quote.quoteSnapshot?.selected || {};
+      const selection = quote.selection || {};
+      const request = quote.quoteRequest || {};
+      const file = {
+        ...(quote.file || {}),
+        volumeCm3: quote.file?.volumeCm3 ?? request.volumeCm3 ?? selected.volumeCm3 ?? null,
+        dimensions: quote.dimensions || quote.file?.dimensions || request.dimensions || selected.dimensions || null,
+        models: quote.file?.models || selected.models || request.models || [],
+      };
+      const material = selected.material || {};
+      const colour = selected.colour || {};
+      const finish = selected.finish || {};
+      const shipping = selected.shipping || {};
+      const restoredSelection = {
+        ...selection,
+        shopSlug: activeShopSlug(),
+        materialId: material.id || selection.materialId || request.materialId,
+        materialName: material.name || selection.materialName || quote.material_name || '',
+        colorId: colour.id || selection.colourId || selection.colorId || request.colourId || null,
+        colourId: colour.id || selection.colourId || selection.colorId || request.colourId || null,
+        colorName: colour.name || selection.colourName || selection.colorName || quote.colour_name || '',
+        colourName: colour.name || selection.colourName || selection.colorName || quote.colour_name || '',
+        colorHex: colour.hex || selection.colourHex || selection.colorHex || quote.colour_hex || null,
+        colourHex: colour.hex || selection.colourHex || selection.colorHex || quote.colour_hex || null,
+        finishId: finish.id || selection.finishId || request.finishId || null,
+        finish: finish.id || selection.finishId || request.finishId || selection.finish || null,
+        finishLabel: finish.name || selection.finishName || selection.finishLabel || quote.finish_name || '',
+        finishName: finish.name || selection.finishName || selection.finishLabel || quote.finish_name || '',
+        finishLayerHeight: finish.layerHeight || selection.finishLayerHeight || quote.finish_layer_height || '',
+        finishDescription: finish.description || selection.finishDescription || '',
+        finishPriceMultiplier: finish.priceMultiplier || selection.finishPriceMultiplier || 1,
+        infillTierId: selected.infill?.id || selection.infillTierId || request.infillTierId || null,
+        qty: file.models?.length > 1 ? 1 : (selected.quantity || selection.quantity || selection.qty || request.quantity || 1),
+        quantity: file.models?.length > 1 ? 1 : (selected.quantity || selection.quantity || selection.qty || request.quantity || 1),
+        shippingOptionId: shipping.id || selection.shippingId || selection.shippingOptionId || request.shippingId || null,
+        shippingOptionLabel: shipping.label || selection.shippingLabel || selection.shippingOptionLabel || '',
+        shippingOptionPrice: shipping.finalPrice ?? shipping.price ?? selection.shippingPrice ?? selection.shippingOptionPrice ?? null,
+      };
+      try {
+        localStorage.setItem('form_file', JSON.stringify(file));
+        localStorage.setItem('form_selection', JSON.stringify(restoredSelection));
+      } catch {}
+      window.location.href = `../quote.html?shop=${encodeURIComponent(activeShopSlug())}`;
     }
 
     function setTab(tab, updateHash = true) {
@@ -565,9 +726,11 @@
       document.getElementById('profileEmail').value = me.email || '';
       document.title = `Customer Portal · ${shopName}`;
       document.getElementById('quickQuoteBtn').href = `../quote.html?shop=${encodeURIComponent(shopSlug || me.shop?.slug || '')}`;
+      document.getElementById('quotesStartBtn').href = `../quote.html?shop=${encodeURIComponent(shopSlug || me.shop?.slug || '')}`;
       renderStats();
       renderOrders('ordersList', orders);
       renderOrders('recentOrders', orders.slice(0, 3));
+      renderQuotes();
       renderHelp();
       setTab((location.hash || '#overview').slice(1), false);
     }
@@ -583,6 +746,38 @@
       el.className = `inline-message ${type}`;
     }
 
+    function setQuotesMessage(msg, type = '') {
+      const el = document.getElementById('quotesMsg');
+      el.style.display = msg ? '' : 'none';
+      el.className = `card-body inline-message ${type}`;
+      el.textContent = msg;
+    }
+
+    async function savePendingQuoteIfPresent() {
+      let pending = null;
+      try { pending = JSON.parse(sessionStorage.getItem(PENDING_SAVED_QUOTE_KEY) || 'null'); } catch {}
+      if (!pending) return;
+      if (pending.shopSlug && pending.shopSlug !== activeShopSlug()) return;
+
+      setTab('quotes');
+      setQuotesMessage('Saving your quote...');
+      try {
+        const res = await fetch('/api/customer/quotes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pending),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || 'Could not save quote.');
+        sessionStorage.removeItem(PENDING_SAVED_QUOTE_KEY);
+        quotes = [data.quote, ...quotes.filter(q => String(q.id) !== String(data.quote.id))];
+        renderQuotes();
+        setQuotesMessage('Quote saved. You can continue it whenever you are ready.', 'success');
+      } catch (err) {
+        setQuotesMessage(err.message || 'Could not save the pending quote.', 'error');
+      }
+    }
+
     document.querySelectorAll('[data-tab]').forEach(btn => {
       btn.addEventListener('click', () => setTab(btn.dataset.tab));
     });
@@ -591,6 +786,38 @@
         e.preventDefault();
         setTab(link.dataset.tabLink);
       });
+    });
+    document.addEventListener('click', async e => {
+      const tabLink = e.target.closest('[data-tab-link]');
+      if (tabLink) {
+        e.preventDefault();
+        setTab(tabLink.dataset.tabLink);
+        return;
+      }
+      const actionBtn = e.target.closest('[data-quote-action]');
+      if (!actionBtn) return;
+      const quote = quotes.find(q => String(q.id) === String(actionBtn.dataset.quoteId));
+      if (!quote) return;
+      if (actionBtn.dataset.quoteAction === 'continue') {
+        restoreQuoteToFlow(quote);
+        return;
+      }
+      if (actionBtn.dataset.quoteAction === 'remove') {
+        actionBtn.disabled = true;
+        try {
+          const res = await fetch(`/api/customer/quotes/${encodeURIComponent(quote.id)}?shop=${encodeURIComponent(activeShopSlug())}`, {
+            method: 'DELETE',
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Could not remove quote.');
+          quotes = quotes.filter(q => String(q.id) !== String(quote.id));
+          renderQuotes();
+          setQuotesMessage('Saved quote removed.', 'success');
+        } catch (err) {
+          setQuotesMessage(err.message || 'Could not remove quote.', 'error');
+          actionBtn.disabled = false;
+        }
+      }
     });
     window.addEventListener('hashchange', () => setTab((location.hash || '#overview').slice(1), false));
     document.getElementById('signoutBtn').addEventListener('click', doSignout);
@@ -656,13 +883,16 @@
         }
         me = await meRes.json();
         const resolvedSlug = shopSlug || me.shop?.slug || '';
-        const [shopRes, ordersRes] = await Promise.all([
+        const [shopRes, ordersRes, quotesRes] = await Promise.all([
           fetch(`/api/customer/shop-info?slug=${encodeURIComponent(resolvedSlug)}`).catch(() => null),
           fetch(`/api/customer/orders?shop=${encodeURIComponent(resolvedSlug)}`),
+          fetch(`/api/customer/quotes?shop=${encodeURIComponent(resolvedSlug)}`),
         ]);
         shopInfo = shopRes && shopRes.ok ? await shopRes.json() : null;
         orders = ordersRes.ok ? await ordersRes.json() : [];
+        quotes = quotesRes.ok ? await quotesRes.json() : [];
         renderPage();
+        await savePendingQuoteIfPresent();
       } catch {
         window.location.href = loginUrl();
       }

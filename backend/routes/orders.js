@@ -1,7 +1,9 @@
 import { Router } from 'express';
+import { randomBytes } from 'crypto';
 import { db, requireShopAuth } from '../middleware/auth.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate } from '../lib/email-templates/index.js';
+import { attachOrderFiles, attachOrderFilesList, saveOrderFiles, saveOrderItems } from '../lib/order-files.js';
 
 const STATUS_LABELS = {
   pending:       'Order Received',
@@ -13,6 +15,22 @@ const STATUS_LABELS = {
 };
 
 const router = Router();
+
+function ensureOrderPublicTokenColumn() {
+  const cols = db.prepare('PRAGMA table_info(orders)').all().map(c => c.name);
+  if (!cols.includes('public_token')) {
+    db.exec('ALTER TABLE orders ADD COLUMN public_token TEXT');
+  }
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_public_token
+      ON orders(public_token)
+      WHERE public_token IS NOT NULL
+  `);
+}
+
+function newPublicOrderToken() {
+  return randomBytes(24).toString('base64url');
+}
 
 // Export createOrder for use by the stripe webhook handler
 export function createOrder({
@@ -29,14 +47,18 @@ export function createOrder({
   shipping = 0,
   total = 0,
   stripePaymentId = null,
-  notes = null
+  notes = null,
+  files = [],
+  items = []
 }) {
+  ensureOrderPublicTokenColumn();
+  const publicToken = newPublicOrderToken();
   const result = db.prepare(`
     INSERT INTO orders
       (shop_id, customer_email, customer_name, file_name, material_id,
        colour, finish, quantity, subtotal, tax, shipping, total,
-       stripe_payment_id, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       stripe_payment_id, notes, public_token)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     shopId,
     customerEmail,
@@ -51,9 +73,12 @@ export function createOrder({
     shipping,
     total,
     stripePaymentId,
-    notes
+    notes,
+    publicToken
   );
-  return result;
+  if (items?.length) saveOrderItems(db, result.lastInsertRowid, items);
+  else if (files?.length) saveOrderFiles(db, result.lastInsertRowid, files);
+  return { ...result, publicToken };
 }
 
 // GET /api/orders/public/:id  (public — used by the customer confirmation page)
@@ -61,18 +86,22 @@ export function createOrder({
 // without exposing other shops' details. Confirmation page fetches this
 // immediately after Stripe redirects the customer back.
 router.get('/public/:id', (req, res) => {
+  ensureOrderPublicTokenColumn();
+  const token = String(req.query.token || '').trim();
+  if (!token) return res.status(400).json({ error: 'Confirmation token required' });
   const row = db.prepare(`
-    SELECT o.id, o.customer_email, o.customer_name, o.file_name,
+    SELECT o.id, o.file_name,
            o.colour, o.finish, o.quantity, o.subtotal, o.shipping, o.tax, o.total,
            o.payment_status, o.fulfilment_status, o.created_at,
-           m.name AS material_name, s.name AS shop_name, s.slug AS shop_slug
+           m.name AS material_name, m.name AS material,
+           s.name AS shop_name, s.slug AS shop_slug
     FROM orders o
     LEFT JOIN materials m ON m.id = o.material_id
     LEFT JOIN shops s     ON s.id = o.shop_id
-    WHERE o.id = ?
-  `).get(req.params.id);
+    WHERE o.id = ? AND o.public_token = ?
+  `).get(req.params.id, token);
   if (!row) return res.status(404).json({ error: 'Order not found' });
-  res.json(row);
+  res.json(attachOrderFiles(db, row));
 });
 
 // GET /api/orders/
@@ -112,7 +141,7 @@ router.get('/', requireShopAuth, (req, res) => {
   const total = totalRow.c;
 
   const orders = db.prepare(
-    `SELECT o.*, m.name as material_name
+    `SELECT o.*, m.name as material_name, m.name as material
      FROM orders o
      LEFT JOIN materials m ON m.id = o.material_id
      ${where}
@@ -121,7 +150,7 @@ router.get('/', requireShopAuth, (req, res) => {
   ).all(...params, limit, offset);
 
   res.json({
-    orders,
+    orders: attachOrderFilesList(db, orders),
     total,
     page,
     pages: Math.ceil(total / limit)
@@ -131,7 +160,7 @@ router.get('/', requireShopAuth, (req, res) => {
 // GET /api/orders/:id
 router.get('/:id', requireShopAuth, (req, res) => {
   const order = db.prepare(
-    `SELECT o.*, m.name as material_name
+    `SELECT o.*, m.name as material_name, m.name as material
      FROM orders o
      LEFT JOIN materials m ON m.id = o.material_id
      WHERE o.id = ? AND o.shop_id = ?`
@@ -141,7 +170,7 @@ router.get('/:id', requireShopAuth, (req, res) => {
     return res.status(404).json({ error: 'Order not found' });
   }
 
-  res.json(order);
+  res.json(attachOrderFiles(db, order));
 });
 
 // PATCH /api/orders/:id

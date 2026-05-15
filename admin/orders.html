@@ -454,7 +454,7 @@
               <div class="customer-email">${escHtml(o.customer_email || '')}</div>
             </div>
           </td>
-          <td>${escHtml(o.material || '—')}</td>
+          <td>${escHtml(o.material_name || o.material || '—')}</td>
           <td>${o.quantity ?? '—'}</td>
           <td>${fmtCurrency(o.total)}</td>
           <td>${fulfilmentBadge(o.fulfilment_status)}</td>
@@ -528,8 +528,16 @@
       document.getElementById('detCustomerName').textContent = o.customer_name || '—';
       document.getElementById('detEmail').textContent        = o.customer_email || '—';
       document.getElementById('detDate').textContent         = fmtDate(o.created_at);
-      document.getElementById('detFile').textContent         = o.file_name || '—';
-      document.getElementById('detMaterial').textContent     = o.material || '—';
+      const itemLines = Array.isArray(o.items) && o.items.length
+        ? o.items.map((item, index) => {
+          const files = Array.isArray(item.files) ? item.files.map(f => `${f.name || 'Model'} x${Math.max(1, Math.floor(Number(f.quantity) || 1))}`).join(', ') : '';
+          return `${index + 1}. ${item.materialName || item.material || 'Material'}${item.colour ? ` / ${item.colour}` : ''}${item.finish ? ` / ${item.finish}` : ''}${files ? ` — ${files}` : ''}`;
+        }).join('\n')
+        : '';
+      document.getElementById('detFile').textContent         = itemLines || (Array.isArray(o.files) && o.files.length
+        ? o.files.map(f => `${f.name || 'Model'} x${Math.max(1, Math.floor(Number(f.quantity) || 1))}`).join(', ')
+        : (o.file_name || '—'));
+      document.getElementById('detMaterial').textContent     = o.material_name || o.material || '—';
       document.getElementById('detColour').textContent       = o.colour || '—';
       document.getElementById('detFinish').textContent       = o.finish || '—';
       document.getElementById('detQty').textContent          = o.quantity ?? '—';

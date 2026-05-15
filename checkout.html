@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Checkout — mahi3d</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://js.stripe.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -29,6 +29,25 @@
       font-size: 28px;
       font-weight: 400;
       margin-bottom: 24px;
+    }
+
+    .review-validation-error {
+      display: none;
+      margin: -6px 0 18px;
+      padding: 13px 14px;
+      border: 1px solid #F1B7B0;
+      border-radius: 14px;
+      background: #FFF3F1;
+      color: #8A241A;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .review-validation-error.show { display: block; }
+    .review-validation-error a {
+      color: #6F1D15;
+      font-weight: 800;
+      text-decoration: underline;
+      text-underline-offset: 3px;
     }
 
     .file-row {
@@ -77,6 +96,183 @@
       color: var(--ink-soft);
       font-variant-numeric: tabular-nums;
     }
+    .model-list {
+      display: grid;
+      gap: 8px;
+      margin: -2px 0 18px;
+    }
+    .model-item {
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.64);
+    }
+    .model-item strong {
+      display: block;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .model-item span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .cart-items-review { display: grid; gap: 14px; margin-bottom: 22px; }
+    .cart-item-review {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fffdf8;
+      padding: 16px;
+      box-shadow: 0 10px 26px rgba(32, 28, 20, 0.05);
+    }
+    .cart-item-head { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+    .cart-item-kicker {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .cart-item-head strong { display: block; font-family: var(--font-brand); font-size: 18px; line-height: 1.12; }
+    .cart-item-head span { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .cart-item-total { color: var(--green); font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .cart-item-section { margin-top: 13px; }
+    .cart-item-section-title {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .cart-item-files { display: grid; gap: 7px; margin: 10px 0; }
+    .cart-item-file {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(90,138,94,0.06);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .cart-item-file strong {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--ink);
+    }
+    .cart-item-file span {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .cart-item-pricing {
+      display: grid;
+      gap: 7px;
+      margin-top: 8px;
+      padding: 10px;
+      border: 1px solid rgba(90,138,94,0.16);
+      border-radius: 14px;
+      background: rgba(90,138,94,0.045);
+    }
+    .cart-item-price-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .cart-item-price-row + .cart-item-price-row {
+      padding-top: 7px;
+      border-top: 1px solid rgba(41, 36, 27, 0.08);
+    }
+    .cart-item-price-row strong {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--ink);
+      font-size: 13px;
+    }
+    .cart-item-price-row .price-each {
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .cart-item-price-row .price-total {
+      color: var(--ink);
+      font-weight: 850;
+      white-space: nowrap;
+    }
+    .cart-item-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .cart-option {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      border: 1px solid var(--stone);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.68);
+      font-size: 12px;
+    }
+    .cart-option .label {
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .cart-option .value {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-align: right;
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .cart-option-wide { grid-column: 1 / -1; }
+    .cart-item-money {
+      display: grid;
+      gap: 7px;
+      padding-top: 12px;
+      border-top: 1px solid var(--stone);
+    }
+    .cart-item-money-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .cart-item-money-row strong {
+      color: var(--ink);
+      font-size: 13px;
+    }
+    .cart-item-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+    .remove-cart-item {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .remove-cart-item:hover { color: #9f2d2d; border-color: rgba(159,45,45,0.35); }
 
     /* ── Detail rows ─────────────────────────────────────── */
     .detail-rows {
@@ -187,36 +383,6 @@
 
     .edit-link:hover { color: var(--ink); }
 
-    /* ── Payment toggle ──────────────────────────────────── */
-    .payment-toggle {
-      display: flex;
-      border: 1.5px solid var(--border);
-      border-radius: 20px;
-      padding: 3px;
-      gap: 2px;
-      margin-bottom: 24px;
-      background: var(--white);
-    }
-
-    .toggle-btn {
-      flex: 1;
-      height: 36px;
-      border: none;
-      border-radius: 18px;
-      font-family: var(--font-ui);
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 200ms ease-out, color 200ms ease-out;
-      background: transparent;
-      color: var(--muted);
-    }
-
-    .toggle-btn.active {
-      background: var(--sage);
-      color: var(--white);
-    }
-
     /* ── Card panel ──────────────────────────────────────── */
     .card-panel-inner {
       display: flex;
@@ -232,42 +398,24 @@
       transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
     }
 
-    /* ── Shop Pay panel ──────────────────────────────────── */
-    .shop-pay-inner {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      padding: 8px 0;
+    .payment-setup-error {
+      display: none;
+      margin-bottom: 18px;
+      padding: 16px 18px;
+      border: 1px solid #F1B7B0;
+      border-radius: 16px;
+      background: #FFF3F1;
+      color: #8A241A;
+      font-size: 13px;
+      line-height: 1.55;
     }
 
-    .shop-pay-logo {
-      display: inline-block;
-      background: #1A1A1A;
-      color: #FFFFFF;
-      font-family: var(--font-ui);
+    .payment-setup-error.show { display: block; }
+    .payment-setup-error strong {
+      display: block;
       font-size: 14px;
-      font-weight: 500;
-      line-height: 28px;
-      padding: 6px 20px;
-      border-radius: 4px;
-      letter-spacing: 0.02em;
-    }
-
-    .shop-pay-caption {
-      font-size: 12px;
-      color: var(--muted);
-      text-align: center;
-      line-height: 1.5;
-    }
-
-    .btn-shoppay {
-      background: #1A1A1A !important;
-      width: 100%;
-    }
-
-    .btn-shoppay:hover {
-      background: #333 !important;
+      color: #6F1D15;
+      margin-bottom: 4px;
     }
 
     /* ── Security caption ────────────────────────────────── */
@@ -317,6 +465,13 @@
       .page-wrap {
         padding: 80px 16px 40px;
       }
+      .cart-item-head { flex-direction: column; }
+      .cart-item-total { align-self: flex-start; }
+      .cart-item-options { grid-template-columns: 1fr; }
+      .cart-item-file { flex-direction: column; gap: 4px; }
+      .cart-item-file span { text-align: left; }
+      .cart-item-price-row { grid-template-columns: minmax(0, 1fr) auto; }
+      .cart-item-price-row .price-each { grid-column: 1 / -1; }
     }
   </style>
   <script src="assets/brand.js" defer></script>
@@ -326,9 +481,10 @@
   <nav class="nav" role="navigation">
     <a href="index.html" class="nav-wordmark">mahi3d</a>
     <ul class="nav-links" id="navLinks">
-      <li><a href="materials.html">Materials</a></li>
-      <li><a href="quote.html">Quote</a></li>
-      <li><a href="#">Contact</a></li>
+      <li><a href="catalog.html" data-checkout-link="materials">Materials</a></li>
+      <li><a href="quote.html" data-checkout-link="quote">Quote</a></li>
+      <li><a href="customer/dashboard.html?shop=mahi3d#overview" data-checkout-link="portal">Customer Portal</a></li>
+      <li><a href="customer/dashboard.html#help" data-checkout-link="help">Contact</a></li>
     </ul>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -362,50 +518,10 @@
       <!-- LEFT COLUMN: Order Review -->
       <div class="card" id="orderReviewCard">
         <h2 class="review-heading">Order Review</h2>
-
-        <!-- File row -->
-        <div class="file-row">
-          <div class="file-icon-box">
-            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="5" y="3" width="12" height="20" rx="1.5" stroke="#D4D0C8" stroke-width="1.5" fill="none"/>
-              <path d="M13 3v6h4" stroke="#D4D0C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M8 13h10M8 17h6" stroke="#B5CEB8" stroke-width="1.5" stroke-linecap="round"/>
-              <path d="M17 16l3 3M20 16l-3 3" stroke="#7A9E7E" stroke-width="1.2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div class="file-meta">
-            <div class="file-name" id="reviewFileName">model.stl</div>
-            <div class="file-size" id="reviewFileSize">—</div>
-            <div class="file-dimensions" id="reviewFileDimensions">—</div>
-          </div>
-        </div>
-
-        <!-- Part details -->
-        <p class="overline" style="margin-bottom:14px;">Part details</p>
-        <div class="detail-rows">
-          <div class="detail-row">
-            <span class="detail-label">Material</span>
-            <span class="detail-value" id="reviewMaterial">—</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Colour</span>
-            <span class="detail-value">
-              <span class="color-swatch" id="reviewColorSwatch"></span>
-              <span id="reviewColorName">—</span>
-            </span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Finish</span>
-            <span class="detail-value" id="reviewFinish">—</span>
-          </div>
-          <div class="detail-row" id="reviewInfillRow" style="display:none;">
-            <span class="detail-label">Infill</span>
-            <span class="detail-value" id="reviewInfill">—</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Quantity</span>
-            <span class="detail-value" id="reviewQty">—</span>
-          </div>
+        <div class="cart-items-review" id="cartItemsReview"></div>
+        <div class="review-validation-error" id="reviewValidationError" role="alert" aria-live="polite">
+          <span id="reviewValidationErrorText">This order needs to be reviewed before payment.</span>
+          <a href="quote.html" id="reviewValidationEditLink">Edit group</a>
         </div>
 
         <!-- Price breakdown -->
@@ -437,15 +553,15 @@
 
       <!-- RIGHT COLUMN: Payment -->
       <div class="card">
-        <p class="overline" style="margin-bottom:20px;">Payment</p>
+        <p class="overline" style="margin-bottom:8px;">Payment</p>
+        <h2 style="font-family:var(--font-brand);font-size:24px;letter-spacing:-0.03em;margin-bottom:8px;">Secure card payment</h2>
+        <p class="security-caption" style="text-align:left;margin:0 0 18px;">Card payment is processed by Stripe. We never see or store your card number.</p>
 
-        <!-- Payment method toggle -->
-        <div class="payment-toggle" role="group" aria-label="Payment method">
-          <button class="toggle-btn active" id="toggleCard" aria-pressed="true">Stripe card</button>
-          <button class="toggle-btn" id="toggleShopPay" aria-pressed="false">Shop Pay</button>
+        <div class="payment-setup-error" id="paymentSetupError" role="alert" aria-live="polite">
+          <strong>Stripe payment is not ready</strong>
+          <span id="paymentSetupErrorText">This store cannot accept card payments yet.</span>
         </div>
 
-        <!-- Card panel -->
         <div id="cardPanel">
           <div class="card-panel-inner">
             <div class="form-group">
@@ -483,15 +599,6 @@
           <p class="security-caption">Your card details are processed securely by Stripe. We never see or store your card number.</p>
         </div>
 
-        <!-- Shop Pay panel -->
-        <div id="shopPayPanel" style="display:none;">
-          <div class="shop-pay-inner">
-            <span class="shop-pay-logo">Shop Pay</span>
-            <button class="btn btn-primary lg full btn-shoppay" id="shopPayBtn">Continue with Shop Pay →</button>
-            <p class="shop-pay-caption">You'll be redirected to Shopify Checkout to complete your payment securely.</p>
-          </div>
-        </div>
-
         <!-- Trust badges -->
         <div class="trust-strip">
           <span class="chip">🔒 Stripe Verified</span>
@@ -504,7 +611,6 @@
   </div><!-- /page-wrap -->
 
   <script src="https://js.stripe.com/v3/"></script>
-  <script async src="https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js"></script>
   <script src="assets/checkout.js" defer></script>
 
 </body>

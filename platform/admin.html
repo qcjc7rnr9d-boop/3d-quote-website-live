@@ -738,11 +738,17 @@
   }
   async function viewOrder(id) {
     const o = await api(`/api/platform/orders/${id}`);
+    const groups = Array.isArray(o.items) && o.items.length
+      ? o.items.map((item, index) => {
+        const files = Array.isArray(item.files) ? item.files.map(f => `${esc(f.name || 'Model')} x${Math.max(1, Math.floor(Number(f.quantity) || 1))}`).join(', ') : '';
+        return `${index + 1}. ${esc(item.materialName || item.material || 'Material')}${item.colour ? ` / ${esc(item.colour)}` : ''}${item.finish ? ` / ${esc(item.finish)}` : ''}${files ? ` — ${files}` : ''}`;
+      }).join('<br>')
+      : '';
     openDetail(`Order #${o.id}`, `${o.shop.name} - ${o.customer.email}`, `
       <div class="detail-grid">
         ${detailItem('Store', `${o.shop.name} (${o.shop.slug})`)}
         ${detailItem('Customer', `${esc(o.customer.name || '-')}<br>${esc(o.customer.email)}`, true)}
-        ${detailItem('File', o.file_name || '-')}
+        ${detailItem('Groups', groups || (Array.isArray(o.files) && o.files.length ? o.files.map(f => `${esc(f.name || 'Model')} x${Math.max(1, Math.floor(Number(f.quantity) || 1))}`).join('<br>') : (o.file_name || '-')), true)}
         ${detailItem('Material', o.material ? `${o.material.name || '-'} (${o.material.category || '-'})` : '-')}
         ${detailItem('Colour', o.colour || '-')}
         ${detailItem('Finish', o.finish || '-')}

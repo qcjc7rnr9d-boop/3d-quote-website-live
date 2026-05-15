@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { db } from '../middleware/auth.js';
-import { BCRYPT_ROUNDS, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES } from '../config.js';
+import { sendMail } from '../lib/mailer.js';
+import { renderTemplate } from '../lib/email-templates/index.js';
+import { BCRYPT_ROUNDS, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES, MIN_PASSWORD_LENGTH } from '../config.js';
 import { parseInfillTiers } from '../lib/infill-tiers.js';
 import { parseMaterialRow, safeJson } from '../lib/material-config.js';
 import { calculateQuoteForShopSlug, PricingError } from '../lib/pricing-engine.js';
+import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
 
 const router = Router();
 const customerLoginLimiter = rateLimit({
@@ -29,6 +33,20 @@ const customerPasswordLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+const customerResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { ok: true, message: "If that email is registered, you'll receive a reset link shortly." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const customerQuoteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { error: 'Too many quote requests, please try again shortly.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 function ensureSupportEmailColumns() {
   const cols = db.prepare('PRAGMA table_info(store_settings)').all().map(c => c.name);
@@ -38,6 +56,26 @@ function ensureSupportEmailColumns() {
   if (!cols.includes('support_email')) {
     db.exec('ALTER TABLE store_settings ADD COLUMN support_email TEXT');
   }
+}
+
+function ensureCustomerResetTokensTable() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS customer_reset_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      shop_id INTEGER NOT NULL,
+      customer_account_id INTEGER NOT NULL,
+      token TEXT UNIQUE NOT NULL,
+      used INTEGER NOT NULL DEFAULT 0,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+      FOREIGN KEY (customer_account_id) REFERENCES customer_accounts(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_customer_reset_token
+      ON customer_reset_tokens(token);
+    CREATE INDEX IF NOT EXISTS idx_customer_reset_account
+      ON customer_reset_tokens(customer_account_id, used, expires_at);
+  `);
 }
 
 class CustomerPortalError extends Error {
@@ -76,13 +114,13 @@ function paymentLabel(status) {
   }[status] || status || 'Pending';
 }
 
-function getCustomerShop(req) {
+function getCustomerShop(req, requestedSlugOverride = null) {
   const shop = db.prepare(
     "SELECT id, name, slug FROM shops WHERE id = ? AND plan != 'suspended'"
   ).get(req.customerAccount.shop_id);
   if (!shop) throw new CustomerPortalError('Not authenticated', 401);
 
-  const requestedSlug = String(req.query.shop || req.query.slug || '').trim();
+  const requestedSlug = String(requestedSlugOverride || req.query.shop || req.query.slug || '').trim();
   if (requestedSlug && requestedSlug !== shop.slug) {
     throw new CustomerPortalError('This customer session belongs to another shop.', 403);
   }
@@ -146,6 +184,125 @@ function normaliseCustomerOrder(row) {
     customer_message: revealTracking ? (row.customer_message || null) : null,
     material_name: row.material_name || null,
     material_category: row.material_category || null,
+    files: Array.isArray(row.files) ? row.files : [],
+    items: Array.isArray(row.items) ? row.items : [],
+  };
+}
+
+function sqlDatetime(date = new Date()) {
+  return date.toISOString().replace('T', ' ').slice(0, 19);
+}
+
+function parseSqlDatetime(value) {
+  if (!value) return null;
+  const date = new Date(String(value).replace(' ', 'T') + 'Z');
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function quoteValidityHours(shopId) {
+  const row = db.prepare('SELECT quote_valid_hours FROM pricing_config WHERE shop_id = ?').get(shopId) || {};
+  const hours = parseInt(row.quote_valid_hours, 10);
+  if (!Number.isFinite(hours) || hours <= 0) return 24;
+  return Math.min(hours, 24 * 30);
+}
+
+function safeObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function normaliseSavedQuoteRequest(input = {}, slug) {
+  const source = safeObject(input);
+  const file = safeObject(source.file);
+  const shipping = safeObject(source.shipping);
+  return {
+    shopSlug: slug,
+    materialId: source.materialId ?? safeObject(source.material).id ?? null,
+    models: Array.isArray(source.models) ? source.models : (Array.isArray(file.models) ? file.models : null),
+    volumeCm3: source.volumeCm3 ?? file.volumeCm3 ?? null,
+    colourId: source.colourId ?? source.colorId ?? safeObject(source.colour).id ?? safeObject(source.color).id ?? null,
+    colour: source.colour ?? source.colorName ?? source.colourName ?? safeObject(source.colour).name ?? safeObject(source.color).name ?? null,
+    finishId: source.finishId ?? safeObject(source.finish).id ?? null,
+    finish: source.finishName ?? source.finishLabel ?? (typeof source.finish === 'string' ? source.finish : safeObject(source.finish).name) ?? null,
+    infillTierId: source.infillTierId ?? safeObject(source.infill).id ?? null,
+    quantity: source.quantity,
+    shippingId: source.shippingId ?? shipping.id ?? null,
+    dimensions: source.dimensions ?? file.dimensions ?? null,
+  };
+}
+
+function normaliseFileMeta(input = {}, quote = {}) {
+  const file = safeObject(input.fileMeta || input.file);
+  const selected = safeObject(quote.selected);
+  const models = Array.isArray(file.models) && file.models.length
+    ? file.models
+    : (Array.isArray(selected.models) ? selected.models : []);
+  return {
+    name: String(file.name || file.fileName || 'Uploaded file').slice(0, 240),
+    size: file.size ?? file.fileSize ?? null,
+    sizeLabel: file.sizeLabel || file.file_size || null,
+    type: file.type || file.fileType || null,
+    volumeCm3: file.volumeCm3 ?? selected.volumeCm3 ?? null,
+    dimensions: file.dimensions || selected.dimensions || null,
+    models,
+  };
+}
+
+function buildSavedQuoteSelection(quote = {}) {
+  const selected = safeObject(quote.selected);
+  return {
+    materialId: selected.material?.id ?? null,
+    materialName: selected.material?.name || null,
+    colourId: selected.colour?.id ?? null,
+    colourName: selected.colour?.name || null,
+    colourHex: selected.colour?.hex || null,
+    finishId: selected.finish?.id ?? null,
+    finishName: selected.finish?.name || null,
+    finishLayerHeight: selected.finish?.layerHeight || '',
+    finishDescription: selected.finish?.description || '',
+    finishPriceMultiplier: selected.finish?.priceMultiplier ?? 1,
+    infillTierId: selected.infill?.id ?? null,
+    infillLabel: selected.infill?.label || null,
+    quantity: selected.quantity || 1,
+    shippingId: selected.shipping?.id ?? null,
+    shippingLabel: selected.shipping?.label || null,
+    shippingPrice: selected.shipping?.finalPrice ?? selected.shipping?.price ?? null,
+  };
+}
+
+function normaliseSavedQuote(row) {
+  if (!row) return null;
+  const quoteSnapshot = safeJson(row.quote_snapshot, {}) || {};
+  const file = safeJson(row.file_meta, {}) || {};
+  const selection = safeJson(row.selection, {}) || {};
+  const quoteRequest = safeJson(row.quote_request, {}) || {};
+  const selected = safeObject(quoteSnapshot.selected);
+  const material = safeObject(selected.material);
+  const colour = safeObject(selected.colour);
+  const finish = safeObject(selected.finish);
+  const expiresAt = parseSqlDatetime(row.expires_at);
+  const expired = row.status === 'active' && expiresAt && expiresAt.getTime() <= Date.now();
+  const status = expired ? 'expired' : (row.status || 'active');
+  const dimensions = file.dimensions || selected.dimensions || quoteRequest.dimensions || null;
+  return {
+    id: row.id,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    expires_at: row.expires_at,
+    status,
+    currency: String(row.currency || quoteSnapshot.currency || 'NZD').toUpperCase(),
+    totalCents: parseInt(row.total_cents, 10) || 0,
+    total: money((parseInt(row.total_cents, 10) || 0) / 100),
+    file,
+    file_name: file.name || null,
+    selection,
+    quoteRequest,
+    quoteSnapshot,
+    material_name: material.name || selection.materialName || null,
+    colour_name: colour.name || selection.colourName || null,
+    colour_hex: colour.hex || selection.colourHex || null,
+    finish_name: finish.name || selection.finishName || null,
+    finish_layer_height: finish.layerHeight || selection.finishLayerHeight || '',
+    dimensions,
   };
 }
 
@@ -155,6 +312,17 @@ function sendCustomerPortalError(res, err) {
   }
   console.error('Customer portal error:', err);
   return res.status(500).json({ error: 'Internal server error' });
+}
+
+function customerResetMessage() {
+  return "If that email is registered, you'll receive a reset link shortly.";
+}
+
+function validateCustomerPassword(password) {
+  if (!password || String(password).length < MIN_PASSWORD_LENGTH) {
+    return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
+  }
+  return null;
 }
 
 // ── Auth middleware for customer portal ───────────────────────
@@ -233,6 +401,7 @@ router.get('/pricing', (req, res) => {
     min_order_value:     cfg.min_order_value      ?? 0,
     free_shipping_above: cfg.free_shipping_above  ?? 50,
     quote_rounding:      parseFloat(cfg.quote_rounding) || 0,
+    max_model_quantity:  cfg.max_model_quantity ?? null,
     show_breakdown:      cfg.show_breakdown        ? true : false,
     pricing_mode:        cfg.pricing_mode          || 'material',
     time_rate_per_hour:  cfg.time_rate_per_hour    ?? 0,
@@ -284,7 +453,7 @@ router.get('/catalog', (req, res) => {
 });
 
 // ── POST /api/customer/quote-preview  (public pricing source) ──
-router.post('/quote-preview', (req, res) => {
+router.post('/quote-preview', customerQuoteLimiter, (req, res) => {
   try {
     const { shopSlug, shop, ...input } = req.body || {};
     const slug = shopSlug || shop;
@@ -370,6 +539,150 @@ router.post('/login', customerLoginLimiter, async (req, res) => {
   }
 });
 
+// ── POST /api/customer/forgot-password ───────────────────────
+router.post('/forgot-password', customerResetLimiter, async (req, res) => {
+  const message = customerResetMessage();
+  try {
+    ensureCustomerResetTokensTable();
+    const shopSlug = String(req.body?.shopSlug || req.body?.shop || '').trim();
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!shopSlug || !email) {
+      return res.json({ ok: true, message });
+    }
+
+    const shop = db.prepare(
+      "SELECT id, name, slug, email FROM shops WHERE slug = ? AND plan != 'suspended'"
+    ).get(shopSlug);
+    if (!shop) return res.json({ ok: true, message });
+
+    const account = db.prepare(
+      'SELECT id, shop_id, email, name FROM customer_accounts WHERE shop_id = ? AND email = ?'
+    ).get(shop.id, email);
+    if (!account) return res.json({ ok: true, message });
+
+    const token = jwt.sign(
+      { customerAccountId: account.id, shopId: shop.id },
+      process.env.JWT_SECRET || 'dev-jwt-secret',
+      { expiresIn: '1h' }
+    );
+    db.prepare(`
+      INSERT INTO customer_reset_tokens (shop_id, customer_account_id, token, expires_at)
+      VALUES (?, ?, ?, datetime('now', '+1 hour'))
+    `).run(shop.id, account.id, token);
+
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const resetLink = `${baseUrl}/customer/reset-password.html?shop=${encodeURIComponent(shop.slug)}&token=${encodeURIComponent(token)}`;
+    const tpl = renderTemplate('customer_password_reset', {
+      shop,
+      customerName: account.name,
+      resetLink,
+    });
+    await sendMail({
+      to: account.email,
+      from: tpl.from,
+      replyTo: tpl.replyTo,
+      subject: tpl.subject,
+      text: tpl.text,
+      html: tpl.html,
+    });
+
+    res.json({ ok: true, message });
+  } catch (err) {
+    console.error('Customer forgot password error:', err);
+    res.json({ ok: true, message });
+  }
+});
+
+// ── GET /api/customer/reset-password/verify ──────────────────
+router.get('/reset-password/verify', (req, res) => {
+  try {
+    ensureCustomerResetTokensTable();
+    const token = String(req.query?.token || '');
+    if (!token) {
+      return res.status(400).json({ valid: false, error: 'Token expired or invalid' });
+    }
+
+    const row = db.prepare(`
+      SELECT crt.*, ca.email, ca.name, s.slug, s.name AS shop_name
+      FROM customer_reset_tokens crt
+      JOIN customer_accounts ca ON ca.id = crt.customer_account_id AND ca.shop_id = crt.shop_id
+      JOIN shops s ON s.id = crt.shop_id
+      WHERE crt.token = ? AND crt.used = 0 AND crt.expires_at > datetime('now')
+    `).get(token);
+    if (!row) {
+      return res.status(400).json({ valid: false, error: 'Token expired or invalid' });
+    }
+
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-jwt-secret');
+    if (Number(payload.customerAccountId) !== Number(row.customer_account_id) || Number(payload.shopId) !== Number(row.shop_id)) {
+      return res.status(400).json({ valid: false, error: 'Token expired or invalid' });
+    }
+
+    res.json({
+      valid: true,
+      shop: { slug: row.slug, name: row.shop_name },
+      email: row.email,
+      name: row.name,
+    });
+  } catch (err) {
+    res.status(400).json({ valid: false, error: 'Token expired or invalid' });
+  }
+});
+
+// ── POST /api/customer/reset-password ────────────────────────
+router.post('/reset-password', customerPasswordLimiter, async (req, res) => {
+  try {
+    ensureCustomerResetTokensTable();
+    const token = String(req.body?.token || '');
+    const newPassword = String(req.body?.newPassword || req.body?.password || '');
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Token and new password are required.' });
+    }
+
+    const strengthError = validateCustomerPassword(newPassword);
+    if (strengthError) {
+      return res.status(400).json({ error: strengthError });
+    }
+
+    const row = db.prepare(`
+      SELECT *
+      FROM customer_reset_tokens
+      WHERE token = ? AND used = 0 AND expires_at > datetime('now')
+    `).get(token);
+    if (!row) {
+      return res.status(400).json({ error: 'Token expired or invalid' });
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-jwt-secret');
+    } catch {
+      return res.status(400).json({ error: 'Token expired or invalid' });
+    }
+    if (Number(payload.customerAccountId) !== Number(row.customer_account_id) || Number(payload.shopId) !== Number(row.shop_id)) {
+      return res.status(400).json({ error: 'Token expired or invalid' });
+    }
+
+    const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    db.prepare(`
+      UPDATE customer_accounts
+      SET password_hash = ?
+      WHERE id = ? AND shop_id = ?
+    `).run(hash, row.customer_account_id, row.shop_id);
+    db.prepare('UPDATE customer_reset_tokens SET used = 1 WHERE token = ?').run(token);
+
+    if (req.session && Number(req.session.customerId) === Number(row.customer_account_id)) {
+      req.session.customerId = null;
+      req.session.customerShopId = null;
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Customer reset password error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ── POST /api/customer/logout ─────────────────────────────────
 router.post('/logout', (req, res) => {
   req.session.customerId = null;
@@ -430,8 +743,9 @@ router.post('/change-password', customerPasswordLimiter, requireCustomerAuth, as
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Current and new password are required.' });
     }
-    if (newPassword.length < 8) {
-      return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+    const strengthError = validateCustomerPassword(newPassword);
+    if (strengthError) {
+      return res.status(400).json({ error: strengthError });
     }
 
     const valid = await bcrypt.compare(currentPassword, req.customerAccount.password_hash);
@@ -453,13 +767,105 @@ router.post('/change-password', customerPasswordLimiter, requireCustomerAuth, as
   }
 });
 
+// ── GET /api/customer/quotes ────────────────────────────────
+router.get('/quotes', requireCustomerAuth, (req, res) => {
+  try {
+    const shop = getCustomerShop(req);
+    const rows = db.prepare(`
+      SELECT *
+      FROM customer_saved_quotes
+      WHERE shop_id = ?
+        AND customer_account_id = ?
+        AND status != 'deleted'
+      ORDER BY created_at DESC, id DESC
+    `).all(shop.id, req.customerAccount.id);
+
+    res.json(rows.map(normaliseSavedQuote));
+  } catch (err) {
+    sendCustomerPortalError(res, err);
+  }
+});
+
+// ── POST /api/customer/quotes ───────────────────────────────
+router.post('/quotes', customerQuoteLimiter, requireCustomerAuth, (req, res) => {
+  try {
+    const body = safeObject(req.body);
+    const rawQuoteRequest = safeObject(body.quoteRequest || body.request || body);
+    const requestedSlug = body.shopSlug || body.shop || rawQuoteRequest.shopSlug || rawQuoteRequest.shop;
+    const shop = getCustomerShop(req, requestedSlug);
+    const quoteRequest = normaliseSavedQuoteRequest(rawQuoteRequest, shop.slug);
+    const quote = calculateQuoteForShopSlug(db, shop.slug, quoteRequest);
+    const fileMeta = normaliseFileMeta(body, quote);
+    const selection = buildSavedQuoteSelection(quote);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + quoteValidityHours(shop.id) * 60 * 60 * 1000);
+
+    const result = db.prepare(`
+      INSERT INTO customer_saved_quotes (
+        shop_id, customer_account_id, quote_request, quote_snapshot, file_meta,
+        selection, total_cents, currency, status, expires_at, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
+    `).run(
+      shop.id,
+      req.customerAccount.id,
+      JSON.stringify(quoteRequest),
+      JSON.stringify(quote),
+      JSON.stringify(fileMeta),
+      JSON.stringify(selection),
+      quote.totalCents,
+      quote.currency,
+      sqlDatetime(expiresAt),
+      sqlDatetime(now),
+      sqlDatetime(now)
+    );
+
+    const row = db.prepare('SELECT * FROM customer_saved_quotes WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json({ ok: true, quote: normaliseSavedQuote(row) });
+  } catch (err) {
+    if (err instanceof PricingError) {
+      return res.status(err.status).json({
+        ok: false,
+        code: err.code,
+        error: err.message,
+        quote: err.quote || null,
+      });
+    }
+    sendCustomerPortalError(res, err);
+  }
+});
+
+// ── DELETE /api/customer/quotes/:id ─────────────────────────
+router.delete('/quotes/:id', requireCustomerAuth, (req, res) => {
+  try {
+    const row = db.prepare(`
+      SELECT q.*, s.slug AS shop_slug
+      FROM customer_saved_quotes q
+      JOIN shops s ON s.id = q.shop_id
+      WHERE q.id = ? AND q.customer_account_id = ? AND q.status != 'deleted'
+    `).get(req.params.id, req.customerAccount.id);
+    if (!row) return res.status(404).json({ error: 'Saved quote not found' });
+
+    getCustomerShop(req, row.shop_slug);
+    db.prepare(`
+      UPDATE customer_saved_quotes
+      SET status = 'deleted', updated_at = ?
+      WHERE id = ? AND customer_account_id = ?
+    `).run(sqlDatetime(), row.id, req.customerAccount.id);
+
+    res.json({ ok: true });
+  } catch (err) {
+    sendCustomerPortalError(res, err);
+  }
+});
+
 // ── GET /api/customer/orders ──────────────────────────────────
 router.get('/orders', requireCustomerAuth, (req, res) => {
   try {
     const { email, shop_id } = req.customerAccount;
     getCustomerShop(req);
 
-    const orders = db.prepare(`
+    const orders = attachOrderFilesList(db, db.prepare(`
       SELECT
         o.id, o.created_at, o.fulfilment_status, o.payment_status,
         o.subtotal, o.shipping, o.tax, o.total,
@@ -470,7 +876,7 @@ router.get('/orders', requireCustomerAuth, (req, res) => {
       LEFT JOIN materials m ON m.id = o.material_id
       WHERE o.shop_id = ? AND LOWER(o.customer_email) = LOWER(?)
       ORDER BY o.created_at DESC
-    `).all(shop_id, email).map(normaliseCustomerOrder);
+    `).all(shop_id, email)).map(normaliseCustomerOrder);
 
     res.json(orders);
   } catch (err) {
@@ -484,7 +890,7 @@ router.get('/orders/:id', requireCustomerAuth, (req, res) => {
     const { email, shop_id } = req.customerAccount;
     getCustomerShop(req);
 
-    const order = normaliseCustomerOrder(db.prepare(`
+    const rawOrder = db.prepare(`
       SELECT
         o.id, o.created_at, o.fulfilment_status, o.payment_status,
         o.subtotal, o.shipping, o.tax, o.total,
@@ -494,7 +900,8 @@ router.get('/orders/:id', requireCustomerAuth, (req, res) => {
       FROM orders o
       LEFT JOIN materials m ON m.id = o.material_id
       WHERE o.id = ? AND o.shop_id = ? AND LOWER(o.customer_email) = LOWER(?)
-    `).get(req.params.id, shop_id, email));
+    `).get(req.params.id, shop_id, email);
+    const order = normaliseCustomerOrder(attachOrderFiles(db, rawOrder));
 
     if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);

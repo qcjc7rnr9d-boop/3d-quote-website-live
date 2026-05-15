@@ -13,14 +13,13 @@
   // Load cart (snapshotted from quote.html)
   let cart;
   try { cart = JSON.parse(localStorage.getItem('cart') || 'null'); } catch { cart = null; }
-
-  // Only hide the grid when there's literally nothing to show.
-  const hasData = !!(cart && (cart.materialId || cart.file || cart.itemsNzd != null));
   const SIZE_WARNING_KEY = 'material_size_warning';
   let savedSelection = null;
   try { savedSelection = JSON.parse(localStorage.getItem('form_selection') || 'null'); } catch {}
   const urlShop = new URLSearchParams(window.location.search).get('shop');
   const shopSlug = cart?.shopSlug || urlShop || savedSelection?.shopSlug || 'mahi3d';
+  cart = normaliseCart(cart, shopSlug);
+  const hasData = cart.items.length > 0;
 
   function shopHref(path) {
     return `${path}?shop=${encodeURIComponent(shopSlug)}`;
@@ -30,7 +29,7 @@
     try {
       localStorage.setItem(SIZE_WARNING_KEY, JSON.stringify({
         shopSlug,
-        materialId: cart?.materialId || savedSelection?.materialId || null,
+        materialId: cart?.items?.[0]?.materialId || cart?.materialId || savedSelection?.materialId || null,
         message: message || 'This model is too large for the selected material.',
       }));
     } catch {}
@@ -41,6 +40,13 @@
 
   document.querySelectorAll('a[href="quote.html"]').forEach(link => { link.href = shopHref('quote.html'); });
   document.querySelectorAll('a[href="materials.html"]').forEach(link => { link.href = shopHref('materials.html'); });
+  document.querySelectorAll('[data-checkout-link]').forEach(link => {
+    const target = link.dataset.checkoutLink;
+    if (target === 'materials') link.href = shopHref('catalog.html');
+    if (target === 'quote') link.href = shopHref('quote.html');
+    if (target === 'portal') link.href = `customer/dashboard.html?shop=${encodeURIComponent(shopSlug)}#overview`;
+    if (target === 'help') link.href = `customer/dashboard.html?shop=${encodeURIComponent(shopSlug)}#help`;
+  });
 
   if (!hasData) {
     console.warn('[checkout] no cart data found - showing empty state. localStorage.cart =', cart);
@@ -68,6 +74,16 @@
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[ch]));
+  }
+
   function normaliseDimensions(source) {
     const d = source || {};
     const xMm = Number(d.xMm ?? d.x_mm ?? d.x);
@@ -77,13 +93,28 @@
     return { xMm, yMm, zMm };
   }
 
-  function cartDimensions() {
+  function cartDimensions(item = cart.items[0] || {}) {
     return normaliseDimensions(
-      cart?.file?.dimensions
-      || cart?.dimensions
-      || cart?.quoteSnapshot?.selected?.dimensions
+      item?.file?.dimensions
+      || item?.dimensions
+      || item?.quoteSnapshot?.selected?.dimensions
       || null
     );
+  }
+
+  function cartModels(item = cart.items[0] || {}) {
+    const raw = item?.file?.models || item?.models || item?.quoteSnapshot?.selected?.models || [];
+    const models = Array.isArray(raw) && raw.length ? raw : (item?.file?.name ? [{
+      name: item.file.name,
+      size: item.file.size,
+      dimensions: item.file.dimensions || item.dimensions || item.quoteSnapshot?.selected?.dimensions,
+      volumeCm3: item.file.volumeCm3 || item.volumeCm3,
+    }] : []);
+    return models.map((model, index) => ({
+      ...model,
+      id: model?.id || `model-${index + 1}`,
+      quantity: Math.max(1, Math.floor(Number(model?.quantity) || 1)),
+    }));
   }
 
   function formatDimensionValue(value) {
@@ -104,20 +135,153 @@
     return /layer/i.test(text) ? text : `${text} layer height`;
   }
 
+  function modelVolumeText(model) {
+    const volume = Number(model?.volumeCm3);
+    if (!Number.isFinite(volume) || volume <= 0) return '';
+    return `${Math.round(volume * 100) / 100} cm³`;
+  }
+
+  function swatchMarkup(hex) {
+    const safeHex = String(hex || '').trim();
+    if (!safeHex || safeHex === '-') return '';
+    return `<span class="color-swatch" style="background:${escapeHtml(safeHex)}"></span>`;
+  }
+
+  function modelPriceLines(item, models) {
+    const explicit = item?.quoteSnapshot?.lineItems?.models;
+    if (Array.isArray(explicit) && explicit.length) return explicit;
+
+    const itemSubtotal = Number(item?.itemsNzd) || 0;
+    if (!models.length || itemSubtotal <= 0) return [];
+    const weightedVolumes = models.map(model => {
+      const volume = Number(model?.volumeCm3) || 0;
+      const quantity = Math.max(1, Math.floor(Number(model?.quantity) || 1));
+      return volume * quantity;
+    });
+    const totalWeight = weightedVolumes.reduce((total, value) => total + value, 0);
+    if (totalWeight <= 0) {
+      const unit = itemSubtotal / models.length;
+      return models.map((model, index) => ({
+        id: model.id || null,
+        name: model.name || `Model ${index + 1}`,
+        quantity: Math.max(1, Math.floor(Number(model?.quantity) || 1)),
+        unit,
+        subtotal: unit,
+      }));
+    }
+    return models.map((model, index) => {
+      const quantity = Math.max(1, Math.floor(Number(model?.quantity) || 1));
+      const subtotal = itemSubtotal * (weightedVolumes[index] / totalWeight);
+      return {
+        id: model.id || null,
+        name: model.name || `Model ${index + 1}`,
+        quantity,
+        unit: quantity > 0 ? subtotal / quantity : subtotal,
+        subtotal,
+      };
+    });
+  }
+
+  function priceLineForModel(lines, model, index) {
+    return lines.find(line => line?.id && model?.id && String(line.id) === String(model.id))
+      || lines[index]
+      || null;
+  }
+
   // All payments charge in NZD (the platform's home currency).
   // The currency picker on the quote page is for display only.
   const fmtNzd = n => '$' + (Number(n) || 0).toFixed(2);
 
+  function sum(items, key) {
+    return items.reduce((total, item) => total + (Number(item[key]) || 0), 0);
+  }
+
+  function normaliseCartItem(input = {}, index = 0) {
+    const quote = input.quoteSnapshot || {};
+    const selected = quote.selected || {};
+    const file = input.file || {};
+    const rawModels = Array.isArray(input.models) && input.models.length
+      ? input.models
+      : (Array.isArray(file.models) && file.models.length ? file.models : (Array.isArray(selected.models) ? selected.models : []));
+    const models = rawModels.map((model, modelIndex) => ({
+      ...model,
+      id: model?.id || `model-${modelIndex + 1}`,
+      quantity: Math.max(1, Math.floor(Number(model?.quantity) || 1)),
+    }));
+    return {
+      id: input.id || `cart-item-${index + 1}`,
+      shopSlug: input.shopSlug || shopSlug,
+      file: {
+        ...file,
+        name: file.name || input.fileName || (models.length > 1 ? `${models.length} models` : models[0]?.name) || 'Uploaded model',
+        size: file.size ?? input.fileSize ?? models.reduce((total, model) => total + (Number(model.size) || 0), 0),
+        volumeCm3: file.volumeCm3 ?? input.volumeCm3 ?? selected.volumeCm3,
+        dimensions: file.dimensions ?? input.dimensions ?? selected.dimensions ?? null,
+        models,
+      },
+      models,
+      materialId: input.materialId ?? selected.material?.id ?? null,
+      materialName: input.materialName ?? (typeof input.material === 'string' ? input.material : input.material?.name) ?? selected.material?.name ?? '',
+      colorId: input.colorId ?? input.colourId ?? selected.colour?.id ?? null,
+      colorName: input.colorName ?? input.colourName ?? selected.colour?.name ?? '',
+      colorHex: input.colorHex ?? input.colourHex ?? selected.colour?.hex ?? null,
+      finish: input.finish ?? input.finishId ?? selected.finish?.id ?? null,
+      finishId: input.finishId ?? input.finish ?? selected.finish?.id ?? null,
+      finishLabel: input.finishLabel ?? selected.finish?.name ?? input.finish ?? '',
+      finishLayerHeight: input.finishLayerHeight ?? selected.finish?.layerHeight ?? '',
+      finishDescription: input.finishDescription ?? selected.finish?.description ?? '',
+      infillTierId: input.infillTierId ?? selected.infill?.id ?? null,
+      infillLabel: input.infillLabel ?? selected.infill?.label ?? null,
+      quantity: Number(input.quantity ?? selected.quantity) || 1,
+      shipping: input.shipping ?? (selected.shipping ? {
+        id: selected.shipping.id,
+        label: selected.shipping.label || 'Shipping',
+        price: Number(selected.shipping.finalPrice ?? selected.shipping.price) || 0,
+      } : null),
+      unitNzd: Number(input.unitNzd ?? quote.lineItems?.unit) || 0,
+      itemsNzd: Number(input.itemsNzd ?? quote.lineItems?.itemSubtotal) || 0,
+      shippingNzd: Number(input.shippingNzd ?? quote.lineItems?.shipping) || 0,
+      taxNzd: Number(input.taxNzd ?? quote.lineItems?.tax) || 0,
+      totalNzd: Number(input.totalNzd ?? quote.lineItems?.total) || 0,
+      totalCents: Number(input.totalCents ?? quote.totalCents) || 0,
+      quoteSnapshot: quote,
+      createdAt: input.createdAt || input.savedAt || new Date().toISOString(),
+    };
+  }
+
+  function normaliseCart(input, fallbackShopSlug) {
+    if (!input) return { shopSlug: fallbackShopSlug, items: [], totalNzd: 0, totalCents: 0, currency: 'NZD' };
+    const rawItems = Array.isArray(input.items) && input.items.length
+      ? input.items
+      : ((input.materialId || input.file || input.quoteSnapshot) ? [input] : []);
+    const items = rawItems.map((item, index) => normaliseCartItem({ ...item, shopSlug: item.shopSlug || input.shopSlug || fallbackShopSlug }, index));
+    return {
+      shopSlug: input.shopSlug || fallbackShopSlug,
+      items,
+      currency: input.currency || items[0]?.currency || 'NZD',
+      totalNzd: Number(input.totalNzd) || sum(items, 'totalNzd'),
+      totalCents: Number(input.totalCents) || items.reduce((total, item) => total + (Number(item.totalCents) || Math.round((Number(item.totalNzd) || 0) * 100)), 0),
+      savedAt: input.savedAt || new Date().toISOString(),
+    };
+  }
+
+  function persistCart() {
+    cart.totalNzd = sum(cart.items, 'totalNzd');
+    cart.totalCents = cart.items.reduce((total, item) => total + (Number(item.totalCents) || Math.round((Number(item.totalNzd) || 0) * 100)), 0);
+    try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
+  }
+
   let totalNzd = 0;
   let quoteValidated = false;
   let stripeReady = false;
+  let paymentUnavailable = false;
 
   function updatePayButton(message) {
     const payBtn = document.getElementById('payBtn');
     if (!payBtn) return;
     if (totalNzd > 0) {
-      payBtn.textContent = message || 'Pay ' + fmtNzd(totalNzd);
-      payBtn.disabled = !(quoteValidated && stripeReady);
+      payBtn.textContent = paymentUnavailable ? 'Payment unavailable' : (message || 'Pay ' + fmtNzd(totalNzd));
+      payBtn.disabled = !(quoteValidated && stripeReady) || paymentUnavailable;
       payBtn.style.opacity = payBtn.disabled ? '0.7' : '';
       payBtn.style.cursor = payBtn.disabled ? 'not-allowed' : '';
     } else {
@@ -128,152 +292,223 @@
     }
   }
 
-  function applyQuoteSnapshot(quote) {
+  function setPaymentFieldsDisabled(disabled) {
+    ['customerEmail', 'cardName'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = disabled;
+    });
+  }
+
+  function showPaymentSetupError(message) {
+    paymentUnavailable = true;
+    stripeReady = false;
+    setPaymentFieldsDisabled(true);
+    const box = document.getElementById('paymentSetupError');
+    const text = document.getElementById('paymentSetupErrorText');
+    if (text) text.textContent = message || 'This store cannot accept card payments yet.';
+    if (box) box.classList.add('show');
+    updatePayButton('Payment unavailable');
+  }
+
+  function clearPaymentSetupError() {
+    paymentUnavailable = false;
+    setPaymentFieldsDisabled(false);
+    const box = document.getElementById('paymentSetupError');
+    if (box) box.classList.remove('show');
+  }
+
+  function showReviewValidationError(message) {
+    const box = document.getElementById('reviewValidationError');
+    const text = document.getElementById('reviewValidationErrorText');
+    const link = document.getElementById('reviewValidationEditLink');
+    if (text) text.textContent = message || 'This order needs to be reviewed before payment.';
+    if (link) link.href = shopHref('quote.html');
+    if (box) box.classList.add('show');
+  }
+
+  function clearReviewValidationError() {
+    const box = document.getElementById('reviewValidationError');
+    if (box) box.classList.remove('show');
+  }
+
+  function applyQuoteSnapshotToItem(item, quote) {
     if (!quote?.lineItems || !quote?.selected) return;
     const selected = quote.selected;
     const lines = quote.lineItems;
-    cart.shopSlug = shopSlug;
-    cart.materialId = selected.material?.id || cart.materialId;
-    cart.materialName = selected.material?.name || cart.materialName;
-    cart.colorId = selected.colour?.id || cart.colorId || null;
-    cart.colorName = selected.colour?.name || cart.colorName || '—';
-    cart.colorHex = selected.colour?.hex || cart.colorHex || null;
-    cart.finish = selected.finish?.id || cart.finish || null;
-    cart.finishId = selected.finish?.id || cart.finishId || cart.finish || null;
-    cart.finishLabel = selected.finish?.name || cart.finishLabel || '—';
-    cart.finishLayerHeight = selected.finish?.layerHeight || cart.finishLayerHeight || '';
-    cart.finishDescription = selected.finish?.description || cart.finishDescription || '';
-    cart.dimensions = selected.dimensions || cart.dimensions || cart.file?.dimensions || null;
-    if (cart.file && selected.dimensions && !cart.file.dimensions) cart.file.dimensions = selected.dimensions;
-    cart.infillTierId = selected.infill?.id || cart.infillTierId || null;
-    cart.infillLabel = selected.infill?.label || cart.infillLabel || null;
-    cart.quantity = selected.quantity || cart.quantity || 1;
-    cart.unitNzd = Number(lines.unit) || 0;
-    cart.itemsNzd = Number(lines.itemSubtotal) || 0;
-    cart.shippingNzd = Number(lines.shipping) || 0;
-    cart.taxNzd = Number(lines.tax) || 0;
-    cart.totalNzd = Number(lines.total) || 0;
-    cart.totalCents = quote.totalCents;
-    cart.quoteSnapshot = quote;
+    item.shopSlug = shopSlug;
+    item.materialId = selected.material?.id || item.materialId;
+    item.materialName = selected.material?.name || item.materialName;
+    item.colorId = selected.colour?.id || item.colorId || null;
+    item.colorName = selected.colour?.name || item.colorName || '—';
+    item.colorHex = selected.colour?.hex || item.colorHex || null;
+    item.finish = selected.finish?.id || item.finish || null;
+    item.finishId = selected.finish?.id || item.finishId || item.finish || null;
+    item.finishLabel = selected.finish?.name || item.finishLabel || '—';
+    item.finishLayerHeight = selected.finish?.layerHeight || item.finishLayerHeight || '';
+    item.finishDescription = selected.finish?.description || item.finishDescription || '';
+    item.infillTierId = selected.infill?.id || item.infillTierId || null;
+    item.infillLabel = selected.infill?.label || item.infillLabel || null;
+    item.quantity = selected.quantity || item.quantity || 1;
+    item.unitNzd = Number(lines.unit) || 0;
+    item.itemsNzd = Number(lines.itemSubtotal) || 0;
+    item.shippingNzd = Number(lines.shipping) || 0;
+    item.taxNzd = Number(lines.tax) || 0;
+    item.totalNzd = Number(lines.total) || 0;
+    item.totalCents = quote.totalCents;
+    item.quoteSnapshot = quote;
+    item.models = selected.models || item.models || [];
+    item.file = {
+      ...(item.file || {}),
+      name: selected.models?.length > 1 ? `${selected.models.length} models` : selected.models?.[0]?.name || item.file?.name,
+      size: selected.models?.reduce((total, model) => total + (Number(model.size) || 0), 0) || item.file?.size || 0,
+      volumeCm3: selected.volumeCm3,
+      dimensions: selected.dimensions || item.file?.dimensions || null,
+      models: selected.models || item.file?.models || [],
+    };
     if (selected.shipping) {
-      cart.shipping = {
+      item.shipping = {
         id: selected.shipping.id,
         label: selected.shipping.label || 'Shipping',
         price: Number(selected.shipping.finalPrice ?? selected.shipping.price) || 0,
       };
     }
-    try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
   }
 
-  function quotePayload() {
-    const file = cart.file || {};
+  function quotePayload(item) {
+    const file = item.file || {};
     return {
       shopSlug,
-      materialId: cart.materialId,
-      volumeCm3: file.volumeCm3 ?? cart.volumeCm3 ?? cart.quoteSnapshot?.selected?.volumeCm3,
-      dimensions: file.dimensions ?? cart.dimensions ?? cart.quoteSnapshot?.selected?.dimensions ?? null,
-      colourId: cart.colorId || null,
-      colour: cart.colorName || null,
-      finishId: cart.finishId || null,
-      finish: cart.finishLabel || cart.finish || null,
-      infillTierId: cart.infillTierId || null,
-      quantity: cart.quantity,
-      shippingId: cart.shipping?.id || null,
+      materialId: item.materialId,
+      materialName: item.materialName || (typeof item.material === 'string' ? item.material : item.material?.name) || item.quoteSnapshot?.selected?.material?.name || null,
+      models: item.models?.length ? item.models : file.models,
+      volumeCm3: file.volumeCm3 ?? item.volumeCm3 ?? item.quoteSnapshot?.selected?.volumeCm3,
+      dimensions: file.dimensions ?? item.dimensions ?? item.quoteSnapshot?.selected?.dimensions ?? null,
+      colourId: item.colorId || null,
+      colour: item.colorName || null,
+      finishId: item.finishId || null,
+      finish: item.finishLabel || item.finish || null,
+      infillTierId: item.infillTierId || null,
+      quantity: item.quantity,
+      shippingId: item.shipping?.id || null,
     };
   }
 
   async function refreshCheckoutQuote() {
     quoteValidated = false;
+    clearReviewValidationError();
     updatePayButton('Validating price...');
-    const res = await fetch('/api/customer/quote-preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(quotePayload()),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.ok === false) {
-      if (data.code === 'MODEL_TOO_LARGE' || data.code === 'MODEL_DIMENSIONS_REQUIRED') {
-        redirectToMaterialSelection(data.error || 'This model is too large for the selected material.');
-        const err = new Error(data.error || 'This model is too large for the selected material.');
-        err.redirected = true;
+    for (const item of cart.items) {
+      const res = await fetch('/api/customer/quote-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quotePayload(item)),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        if (data.code === 'MODEL_TOO_LARGE' || data.code === 'MODEL_DIMENSIONS_REQUIRED') {
+          redirectToMaterialSelection(data.error || 'This model is too large for the selected material.');
+          const err = new Error(data.error || 'This model is too large for the selected material.');
+          err.redirected = true;
+          throw err;
+        }
+        const err = new Error(data.error || 'Could not refresh checkout total.');
+        err.checkoutValidation = true;
         throw err;
       }
-      throw new Error(data.error || 'Could not refresh checkout total.');
+      applyQuoteSnapshotToItem(item, data);
     }
-    applyQuoteSnapshot(data);
+    persistCart();
     quoteValidated = true;
     renderCart();
-    return data;
+    return cart;
   }
 
   function renderCart() {
-    document.getElementById('reviewFileName').textContent = cart.file?.name || 'model.stl';
-    document.getElementById('reviewFileSize').textContent = formatBytes(cart.file?.size);
-    const dims = cartDimensions();
-    const dimsEl = document.getElementById('reviewFileDimensions');
-    if (dimsEl) {
-      dimsEl.textContent = formatDimensions(dims);
-      dimsEl.style.display = dims ? '' : 'none';
+    const cartItemsReview = document.getElementById('cartItemsReview');
+    if (cartItemsReview) {
+      cartItemsReview.innerHTML = cart.items.map((item, index) => {
+        const models = cartModels(item);
+        const priceLines = modelPriceLines(item, models);
+        const finishDetails = [finishLayerText(item.finishLayerHeight), item.finishDescription || ''].filter(Boolean).join(' · ');
+        const colourText = item.colorName || 'No colour selected';
+        const finishText = [item.finishLabel || item.finish || 'Standard', finishDetails].filter(Boolean).join(' · ');
+        const infillText = item.infillLabel || 'Standard';
+        const quantityText = models.length > 1 ? 'Per model' : `x ${Math.max(1, parseInt(item.quantity, 10) || 1)}`;
+        const shippingLabel = item.shipping?.label || (Number(item.shippingNzd) > 0 ? 'Shipping' : 'No shipping selected');
+        return `<section class="cart-item-review" data-cart-item-id="${escapeHtml(item.id)}">
+          <div class="cart-item-head">
+            <div>
+              <span class="cart-item-kicker">Material group ${index + 1}</span>
+              <strong>${escapeHtml(item.materialName || `Material group ${index + 1}`)}</strong>
+              <span>${escapeHtml([colourText, finishText].filter(Boolean).join(' · '))}</span>
+            </div>
+            <div class="cart-item-total">${fmtNzd(item.totalNzd)}</div>
+          </div>
+          <div class="cart-item-section">
+            <span class="cart-item-section-title">Files</span>
+            <div class="cart-item-files">
+            ${models.map((model, modelIndex) => {
+              const dimsText = formatDimensions(normaliseDimensions(model.dimensions));
+              const quantity = Math.max(1, Math.floor(Number(model.quantity) || 1));
+              const qtyText = ` · Qty ${quantity}`;
+              const volumeText = modelVolumeText(model);
+              return `<div class="cart-item-file"><strong>${escapeHtml(model.name || 'Model')}</strong><span>${[formatBytes(model.size), dimsText, volumeText].filter(Boolean).join(' · ')}${qtyText}</span></div>`;
+            }).join('')}
+            </div>
+          </div>
+          <div class="cart-item-section">
+            <span class="cart-item-section-title">Per-item pricing</span>
+            <div class="cart-item-pricing">
+              ${models.map((model, modelIndex) => {
+                const priceLine = priceLineForModel(priceLines, model, modelIndex);
+                const quantity = Math.max(1, Math.floor(Number(priceLine?.quantity ?? model.quantity) || 1));
+                const unit = Number(priceLine?.unit) || 0;
+                const subtotal = Number(priceLine?.subtotal) || 0;
+                return `<div class="cart-item-price-row">
+                  <strong>${escapeHtml(model.name || priceLine?.name || `Model ${modelIndex + 1}`)}</strong>
+                  <span class="price-each">${fmtNzd(unit)} each × ${quantity}</span>
+                  <span class="price-total">${fmtNzd(subtotal)}</span>
+                </div>`;
+              }).join('')}
+              ${Number(item.quoteSnapshot?.lineItems?.minOrderAdjustment) > 0 ? `<div class="cart-item-price-row">
+                <strong>Minimum order adjustment</strong>
+                <span class="price-each">Store minimum</span>
+                <span class="price-total">${fmtNzd(item.quoteSnapshot.lineItems.minOrderAdjustment)}</span>
+              </div>` : ''}
+            </div>
+          </div>
+          <div class="cart-item-section">
+            <span class="cart-item-section-title">Options</span>
+            <div class="cart-item-options">
+              <div class="cart-option"><span class="label">Material</span><span class="value">${escapeHtml(item.materialName || '—')}</span></div>
+              <div class="cart-option"><span class="label">Colour</span><span class="value">${swatchMarkup(item.colorHex)}${escapeHtml(colourText)}</span></div>
+              <div class="cart-option cart-option-wide"><span class="label">Finish</span><span class="value">${escapeHtml(finishText)}</span></div>
+              <div class="cart-option"><span class="label">Infill</span><span class="value">${escapeHtml(infillText)}</span></div>
+              <div class="cart-option"><span class="label">Quantity</span><span class="value">${escapeHtml(quantityText)}</span></div>
+            </div>
+          </div>
+          <div class="cart-item-section cart-item-money">
+            <div class="cart-item-money-row"><span>Subtotal</span><strong>${fmtNzd(item.itemsNzd)}</strong></div>
+            <div class="cart-item-money-row"><span>${escapeHtml(shippingLabel)}</span><strong>${Number(item.shippingNzd) > 0 ? fmtNzd(item.shippingNzd) : 'Free'}</strong></div>
+            ${Number(item.taxNzd) > 0 ? `<div class="cart-item-money-row"><span>Tax</span><strong>${fmtNzd(item.taxNzd)}</strong></div>` : ''}
+            <div class="cart-item-money-row"><span>Group total</span><strong>${fmtNzd(item.totalNzd)}</strong></div>
+          </div>
+          <div class="cart-item-actions"><button class="remove-cart-item" type="button" data-remove-cart-item="${escapeHtml(item.id)}">Remove group</button></div>
+        </section>`;
+      }).join('');
     }
-    document.getElementById('reviewMaterial').textContent = cart.materialName || '-';
 
-    const swatch = document.getElementById('reviewColorSwatch');
-    if (cart.colorHex && cart.colorHex !== '-') {
-      swatch.style.background = cart.colorHex;
-      swatch.style.display = '';
-    } else {
-      swatch.style.display = 'none';
-    }
-    document.getElementById('reviewColorName').textContent =
-      (cart.colorName && cart.colorName !== '') ? cart.colorName : 'No colour selected';
-
-    const finishLabel = cart.finishLabel || cart.finish || 'Standard';
-    const finishDetails = [
-      finishLayerText(cart.finishLayerHeight),
-      cart.finishDescription || '',
-    ].filter(Boolean).join(' · ');
-    const finishEl = document.getElementById('reviewFinish');
-    finishEl.classList.add('stack');
-    finishEl.textContent = '';
-    const finishPrimary = document.createElement('span');
-    finishPrimary.className = 'finish-primary';
-    finishPrimary.textContent = finishLabel;
-    finishEl.appendChild(finishPrimary);
-    if (finishDetails) {
-      const finishSecondary = document.createElement('span');
-      finishSecondary.className = 'finish-secondary';
-      finishSecondary.textContent = finishDetails;
-      finishEl.appendChild(finishSecondary);
-    }
-
-    if (cart.infillLabel) {
-      document.getElementById('reviewInfill').textContent = cart.infillLabel;
-      document.getElementById('reviewInfillRow').style.display = '';
-    }
-
-    const qty = Math.max(1, parseInt(cart.quantity, 10) || 1);
-    document.getElementById('reviewQty').textContent = 'x ' + qty;
-
-    const unitPriceNzd = Number(cart.unitNzd) || 0;
-    const subtotalNzd  = Number(cart.itemsNzd) || (unitPriceNzd * qty);
-    const shippingNzd  = Number(cart.shippingNzd) || 0;
-    const taxNzd       = Number(cart.taxNzd) || 0;
-    totalNzd           = Number(cart.totalNzd) || (subtotalNzd + shippingNzd + taxNzd);
+    const subtotalNzd  = sum(cart.items, 'itemsNzd');
+    const shippingNzd  = sum(cart.items, 'shippingNzd');
+    const taxNzd       = sum(cart.items, 'taxNzd');
+    totalNzd           = sum(cart.items, 'totalNzd') || (subtotalNzd + shippingNzd + taxNzd);
 
     const unitRow = document.getElementById('priceUnitRow');
-    if (qty > 1 && unitPriceNzd > 0) {
-      document.getElementById('priceUnitLabel').textContent = `Unit price - x ${qty}`;
-      document.getElementById('priceUnit').textContent      = fmtNzd(unitPriceNzd);
-      unitRow.style.display = '';
-    } else {
-      unitRow.style.display = 'none';
-    }
+    if (unitRow) unitRow.style.display = 'none';
 
     document.getElementById('priceSubtotal').textContent = fmtNzd(subtotalNzd);
 
-    const shipLbl = cart.shipping?.label;
-    document.getElementById('priceShippingLabel').textContent =
-      (shippingNzd > 0 && shipLbl) ? `Shipping - ${shipLbl}` : 'Shipping';
+    document.getElementById('priceShippingLabel').textContent = 'Shipping';
     document.getElementById('priceShipping').textContent = shippingNzd > 0 ? fmtNzd(shippingNzd) : 'Free';
 
     const taxRow = document.getElementById('priceTaxRow');
@@ -288,10 +523,29 @@
 
     updatePayButton();
   }
+
+  document.getElementById('cartItemsReview')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-remove-cart-item]');
+    if (!btn) return;
+    cart.items = cart.items.filter(item => String(item.id) !== String(btn.dataset.removeCartItem));
+    persistCart();
+    if (!cart.items.length) {
+      try { localStorage.removeItem('cart'); } catch {}
+      window.location.href = shopHref('quote.html');
+      return;
+    }
+    renderCart();
+    refreshCheckoutQuote().catch(err => {
+      if (err.redirected) return;
+      if (err.checkoutValidation) showReviewValidationError(err.message);
+      document.getElementById('card-errors').textContent = err.message || 'Could not refresh checkout total.';
+    });
+  });
   if (hasData) {
     renderCart();
     refreshCheckoutQuote().catch(err => {
       if (err.redirected) return;
+      if (err.checkoutValidation) showReviewValidationError(err.message);
       document.getElementById('card-errors').textContent = err.message || 'Could not refresh checkout total.';
       quoteValidated = false;
       updatePayButton('Review total unavailable');
@@ -306,9 +560,7 @@
       const r = await fetch('/api/stripe/public-key?shop=' + encodeURIComponent(shopSlug));
       const data = await r.json();
       if (!r.ok || !data.publishable_key) {
-        document.getElementById('card-errors').textContent =
-          data.error || 'Card payments are not configured on this server yet.';
-        document.getElementById('payBtn').disabled = true;
+        showPaymentSetupError(data.error || 'Stripe card payments are not configured for this store yet.');
         return;
       }
       stripe = Stripe(data.publishable_key);
@@ -322,6 +574,7 @@
       });
       cardEl.mount('#card-element');
       stripeReady = true;
+      clearPaymentSetupError();
       updatePayButton();
 
       const wrapper = document.getElementById('card-element-wrapper');
@@ -331,9 +584,7 @@
         document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
       });
     } catch (e) {
-      stripeReady = false;
-      document.getElementById('card-errors').textContent = 'Could not initialise card form: ' + e.message;
-      document.getElementById('payBtn').disabled = true;
+      showPaymentSetupError('Could not initialise Stripe card payment: ' + e.message);
     }
   })();
 
@@ -385,27 +636,14 @@
           currency:        'nzd',
           customerEmail:   email,
           customerName:    name,
-          orderData: {
-            fileName:   cart.file?.name,
-            volumeCm3:  cart.file?.volumeCm3 ?? cart.volumeCm3 ?? cart.quoteSnapshot?.selected?.volumeCm3,
-            dimensions: cart.file?.dimensions ?? cart.dimensions ?? cart.quoteSnapshot?.selected?.dimensions ?? null,
-            materialId: cart.materialId,
-            colour:     cart.colorName,
-            colourId:   cart.colorId,
-            finish:     cart.finishLabel || cart.finish,
-            finishId:   cart.finishId || null,
-            infillTierId: cart.infillTierId,
-            quantity:   cart.quantity,
-            subtotal:   cart.itemsNzd,
-            shipping:   cart.shippingNzd,
-            shippingId: cart.shipping?.id || null,
-            tax:        0,
-          },
+          orderData: cart,
         }),
       });
       const data = await res.json();
       if (res.status === 409 && data.code === 'PRICE_CHANGED' && data.quote) {
-        applyQuoteSnapshot(data.quote);
+        if (data.quote.cart) cart = normaliseCart(data.quote.cart, shopSlug);
+        else if (data.quote.selected && cart.items[0]) applyQuoteSnapshotToItem(cart.items[0], data.quote);
+        persistCart();
         renderCart();
         throw new Error('The price changed. Please review the updated total, then click Pay again.');
       }
@@ -417,7 +655,11 @@
       }
 
       try { localStorage.removeItem('cart'); } catch {}
-      window.location.href = 'confirmation.html?order=' + encodeURIComponent(data.orderId);
+      const confirmation = new URL('confirmation.html', window.location.href);
+      confirmation.searchParams.set('order', data.orderId);
+      if (data.orderToken) confirmation.searchParams.set('token', data.orderToken);
+      confirmation.searchParams.set('shop', shopSlug);
+      window.location.href = confirmation.pathname + confirmation.search;
     } catch (err) {
       errEl.textContent = err.message || 'Payment failed. Please try again.';
       btn.disabled = false;
@@ -425,48 +667,4 @@
     }
   });
 
-  // Shop Pay
-  document.getElementById('shopPayBtn').addEventListener('click', async () => {
-    if (typeof ShopifyBuy === 'undefined') {
-      alert('Shop Pay is loading, please try again.');
-      return;
-    }
-    try {
-      const client = ShopifyBuy.buildClient({
-        domain: 'REPLACE.myshopify.com',
-        storefrontAccessToken: 'REPLACE_TOKEN'
-      });
-      const checkout = await client.checkout.create();
-      window.location.href = checkout.webUrl;
-    } catch (e) {
-      alert('Shop Pay is not configured yet. Please use card payment.');
-    }
-  });
-
-  // Payment method toggle
-  const toggleCard    = document.getElementById('toggleCard');
-  const toggleShopPay = document.getElementById('toggleShopPay');
-  const cardPanel     = document.getElementById('cardPanel');
-  const shopPayPanel  = document.getElementById('shopPayPanel');
-
-  function showPanel(which) {
-    if (which === 'card') {
-      cardPanel.style.display    = '';
-      shopPayPanel.style.display = 'none';
-      toggleCard.classList.add('active');
-      toggleCard.setAttribute('aria-pressed', 'true');
-      toggleShopPay.classList.remove('active');
-      toggleShopPay.setAttribute('aria-pressed', 'false');
-    } else {
-      cardPanel.style.display    = 'none';
-      shopPayPanel.style.display = '';
-      toggleShopPay.classList.add('active');
-      toggleShopPay.setAttribute('aria-pressed', 'true');
-      toggleCard.classList.remove('active');
-      toggleCard.setAttribute('aria-pressed', 'false');
-    }
-  }
-
-  toggleCard.addEventListener('click',    () => showPanel('card'));
-  toggleShopPay.addEventListener('click', () => showPanel('shoppay'));
 })();

@@ -57,33 +57,58 @@
     /* ── Top nav ───────────────────────────────────────────────── */
     .nav {
       position: sticky; top: 0; z-index: 30;
-      background: rgba(247,244,238,0.92);
-      backdrop-filter: saturate(140%) blur(8px);
-      -webkit-backdrop-filter: saturate(140%) blur(8px);
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
       border-bottom: 1px solid var(--border);
     }
     .nav-inner {
-      max-width: 1220px; margin: 0 auto;
-      padding: 14px 28px;
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 24px;
+      width: 100%;
+      min-height: 76px;
+      padding: 0 36px;
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 22px;
     }
     .logo {
       font-family: var(--font-heading);
       font-weight: 700;
-      font-size: 18px;
-      letter-spacing: -0.01em;
+      font-size: 23px;
+      letter-spacing: 0.02em;
+      color: var(--ink);
+      text-transform: uppercase;
+    }
+    .logo-dot { color: inherit; }
+    .nav-links {
+      display: flex; align-items: center; justify-content: flex-end; gap: 22px;
+      font-weight: 700;
+    }
+    .quote-progress {
+      display: flex; align-items: center; justify-content: center; gap: 14px;
+      min-width: 0;
+      font-size: 15px; font-weight: 700;
+    }
+    .quote-progress-step { display: flex; align-items: center; gap: 10px; color: var(--ink); white-space: nowrap; }
+    .quote-progress-step span:first-child {
+      width: 34px; height: 34px; border-radius: 999px;
+      border: 1px solid var(--border);
+      display: grid; place-items: center;
+      background: var(--white);
       color: var(--ink);
     }
-    .logo-dot { color: var(--sage); }
-    .nav-links {
-      display: flex; align-items: center; gap: 28px;
+    .quote-progress-step.active { color: var(--sage-dark); }
+    .quote-progress-step.active span:first-child {
+      background: var(--sage);
+      border-color: var(--sage);
+      color: var(--white);
     }
+    .quote-progress-line { height: 1px; min-width: 78px; background: var(--border); }
     .nav-link {
-      font-size: 13px; font-weight: 500;
-      color: var(--muted);
-      padding: 4px 0;
-      border-bottom: 1.5px solid transparent;
+      font-size: 15px; font-weight: 700;
+      color: var(--ink);
+      padding: 6px 0;
+      border-bottom: 2px solid transparent;
       transition: color 140ms;
     }
     .nav-link:hover { color: var(--ink); }
@@ -98,14 +123,14 @@
       appearance: none; -webkit-appearance: none;
       background: transparent;
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 6px 26px 6px 10px;
-      font-size: 12px; font-weight: 500;
+      border-radius: 12px;
+      padding: 9px 32px 9px 12px;
+      font-size: 14px; font-weight: 700;
       color: var(--ink);
       cursor: pointer;
       background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a7972' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 10px center;
+      background-position: right 12px center;
       transition: border-color 140ms;
     }
     .currency-select:hover { border-color: var(--muted-2); }
@@ -192,12 +217,38 @@
       color: var(--muted);
       font-size: 13px;
       text-align: center;
-      pointer-events: none;
+      pointer-events: auto;
     }
     .viewer-empty .ve-icon {
       width: 36px; height: 36px;
       opacity: 0.5;
     }
+    .viewer-empty-title {
+      margin: 0;
+      font-family: var(--font-heading);
+      color: var(--ink);
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+    .viewer-empty-copy {
+      margin: 0;
+      max-width: 360px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .viewer-empty-btn {
+      margin-top: 6px;
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      background: var(--sage);
+      color: #fff;
+      font: 700 13px var(--font-ui);
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(90,138,94,0.2);
+    }
+    .viewer-empty-btn:hover { background: var(--sage-dark); }
 
     /* Floating viewer controls */
     .viewer-ctrls {
@@ -275,6 +326,124 @@
       color: var(--muted);
       margin-top: 2px;
       font-variant-numeric: tabular-nums;
+    }
+    .model-list {
+      display: grid;
+      gap: 8px;
+      margin: 10px 28px 0;
+    }
+    .model-chip {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 11px;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.62);
+      cursor: pointer;
+      text-align: left;
+    }
+    .model-chip:hover,
+    .model-chip.selected {
+      border-color: var(--sage-light);
+      background: rgba(90,138,94,0.08);
+    }
+    .model-chip.selected {
+      box-shadow: inset 0 0 0 1px rgba(90,138,94,0.22);
+    }
+    .model-chip strong {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+    .model-chip span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .model-qty {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      padding: 3px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.78);
+    }
+    .model-chip.show-qty .model-qty { display: flex; }
+    .model-qty button {
+      width: 24px;
+      height: 24px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--ink-soft);
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+    }
+    .model-qty button:hover { background: var(--stone); }
+    .model-qty input {
+      width: 48px;
+      border: 0;
+      background: transparent;
+      text-align: center;
+      font: 600 12px/1 Inter, sans-serif;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      outline: none;
+    }
+    .model-qty input::-webkit-outer-spin-button,
+    .model-qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .model-remove {
+      border: 1px solid var(--border);
+      background: var(--white);
+      color: var(--muted);
+      border-radius: 999px;
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+    }
+    .model-remove:hover { color: var(--ink); border-color: var(--sage-light); }
+    .new-upload-banner {
+      display: none;
+      align-items: flex-start;
+      gap: 12px;
+      margin: 0 28px 14px;
+      padding: 13px 14px;
+      border: 1px solid rgba(90,138,94,0.25);
+      border-radius: var(--radius-sm);
+      background: rgba(90,138,94,0.08);
+      box-shadow: 0 10px 24px rgba(31,35,33,0.06);
+    }
+    .new-upload-banner.show { display: flex; }
+    .new-upload-icon {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 999px;
+      color: var(--sage-dark);
+      background: rgba(90,138,94,0.12);
+    }
+    .new-upload-banner strong {
+      display: block;
+      font-size: 13px;
+      color: var(--ink);
+      margin-bottom: 2px;
+    }
+    .new-upload-banner span {
+      display: block;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--muted);
     }
     .size-warning {
       display: none;
@@ -595,6 +764,22 @@
       font-weight: 500;
     }
     .btn-secondary:hover { border-color: var(--ink); }
+    .cart-actions {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      gap: 10px;
+    }
+    .cart-actions.hidden { display: none; }
+    .cart-actions p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: center;
+    }
+    .cart-actions .btn { text-decoration: none; }
 
     /* ── Trust strip ───────────────────────────────────────────── */
     .trust {
@@ -636,6 +821,64 @@
       opacity: 1; transform: translateX(-50%) translateY(0);
     }
 
+    /* ── Themed auth modal ────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      background: rgba(28,28,26,0.34);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .modal-overlay.hidden { display: none; }
+    .auth-modal {
+      width: min(430px, 100%);
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: 0 24px 80px rgba(28,28,26,0.18);
+      padding: 24px;
+    }
+    .auth-modal-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--sage-soft);
+      color: var(--sage-dark);
+      margin-bottom: 16px;
+    }
+    .auth-modal-title {
+      margin: 0 0 8px;
+      font-family: var(--font-heading);
+      font-size: 24px;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+    }
+    .auth-modal-body {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .auth-modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 22px;
+    }
+    .auth-modal-actions .btn {
+      width: 100%;
+      margin-top: 0;
+    }
+    .auth-modal-actions .btn-secondary { background: var(--white); }
+
     /* Hidden file input */
     .hidden-input { display: none; }
 
@@ -649,12 +892,30 @@
 
     /* ── Responsive ────────────────────────────────────────────── */
     @media (max-width: 980px) {
+      .nav-inner {
+        grid-template-columns: 1fr auto;
+        padding: 14px 18px;
+        gap: 12px 18px;
+      }
+      .quote-progress {
+        grid-column: 1 / -1;
+        order: 3;
+      }
+      .nav-links {
+        gap: 18px;
+      }
+      .nav-right {
+        justify-self: end;
+      }
       .main-grid { grid-template-columns: 1fr; }
       .summary { position: static; }
+      .quote-progress { order: 3; width: 100%; overflow-x: auto; justify-content: flex-start; }
+      .quote-progress-line { width: 28px; flex-shrink: 0; }
     }
     @media (max-width: 640px) {
-      .nav-inner { padding: 12px 18px; gap: 12px; }
-      .nav-links { gap: 18px; }
+      .nav-links { display: none; }
+      .logo { font-size: 22px; }
+      .currency-select { padding: 8px 30px 8px 11px; }
       .page-head, .main-grid, .trust { padding-left: 18px; padding-right: 18px; }
       .viewer-wrap { padding: 18px 18px 0; }
       .file-row { margin: 14px 18px 0; }
@@ -662,6 +923,7 @@
       .card-pad { padding: 22px 18px; }
       .summary-head, .summary-body { padding-left: 20px; padding-right: 20px; }
       .price-display { font-size: 36px; }
+      .auth-modal-actions { grid-template-columns: 1fr; }
     }
   </style>
   <script src="assets/brand.js" defer></script>
@@ -672,9 +934,19 @@
 <nav class="nav">
   <div class="nav-inner">
     <a class="logo" href="index.html">mahi<span class="logo-dot">3d</span></a>
+    <div class="quote-progress" aria-label="Quote progress">
+      <div class="quote-progress-step"><span>1</span>Upload</div>
+      <div class="quote-progress-line" aria-hidden="true"></div>
+      <div class="quote-progress-step"><span>2</span>Material</div>
+      <div class="quote-progress-line" aria-hidden="true"></div>
+      <div class="quote-progress-step"><span>3</span>Options</div>
+      <div class="quote-progress-line" aria-hidden="true"></div>
+      <div class="quote-progress-step active"><span>4</span>Quote</div>
+    </div>
     <div class="nav-links">
-      <a href="materials.html" class="nav-link">Materials</a>
-      <a href="quote.html"     class="nav-link active">Quote</a>
+      <a href="materials.html?shop=mahi3d" class="nav-link" data-quote-nav="materials">Materials</a>
+      <a href="quote.html?shop=mahi3d" class="nav-link active" data-quote-nav="quote">Quote</a>
+      <a href="customer/dashboard.html?shop=mahi3d#overview" class="nav-link" data-quote-nav="portal">Portal</a>
     </div>
     <div class="nav-right">
       <select class="currency-select" id="navCurrency" aria-label="Currency">
@@ -704,6 +976,16 @@
       <h2 class="card-title">Your Order</h2>
     </div>
 
+    <div class="new-upload-banner" id="newUploadBanner" role="status" aria-live="polite">
+      <div class="new-upload-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+      </div>
+      <div>
+        <strong>New uploads</strong>
+        <span>Upload the next parts for a new material group. Your existing cart is saved.</span>
+      </div>
+    </div>
+
     <!-- 3D Viewer -->
     <div class="viewer-wrap">
       <div class="viewer" id="viewer">
@@ -714,7 +996,9 @@
             <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
             <line x1="12" y1="22.08" x2="12" y2="12"/>
           </svg>
-          <span>Upload an STL or OBJ file to preview</span>
+          <h2 class="viewer-empty-title" id="viewerEmptyTitle">Upload the next model group</h2>
+          <p class="viewer-empty-copy" id="viewerEmptyCopy">You can upload the same model again to choose different material, colour or finish.</p>
+          <button class="viewer-empty-btn" id="viewerEmptyChoose" type="button">Choose files</button>
         </div>
 
         <!-- Floating controls -->
@@ -770,45 +1054,28 @@
         <div class="file-dimensions" id="fileDimensions">—</div>
         <div class="size-warning" id="sizeWarning" role="alert"></div>
       </div>
-      <button class="btn-link" id="replaceBtn" type="button">Replace file</button>
-      <input type="file" id="fileInput" class="hidden-input" accept=".stl,.obj">
+      <button class="btn-link" id="replaceBtn" type="button">Add files</button>
+      <input type="file" id="fileInput" class="hidden-input" accept=".stl,.obj" multiple>
     </div>
+    <div class="model-list" id="modelList" aria-label="Uploaded models"></div>
 
     <!-- Editable settings -->
     <div class="settings" style="margin-bottom:6px;">
       <div class="settings-row">
-        <label class="settings-label" for="materialSelect">Material</label>
-        <div class="settings-value">
-          <select class="select-clean" id="materialSelect" aria-label="Select material">
-            <option value="">Loading…</option>
-          </select>
-        </div>
+        <span class="settings-label">Material</span>
+        <div class="settings-value"><strong id="reviewMaterial">—</strong> <a class="btn-link" id="editMaterialLink" href="materials.html">Edit</a></div>
       </div>
       <div class="settings-row">
-        <label class="settings-label" for="colourSelect">Colour</label>
-        <div class="settings-value">
-          <span class="swatch-dot" id="colourSwatch"></span>
-          <select class="select-clean" id="colourSelect" aria-label="Select colour" style="min-width:140px;">
-            <option value="">—</option>
-          </select>
-        </div>
+        <span class="settings-label">Colour</span>
+        <div class="settings-value"><span class="swatch-dot" id="colourSwatch"></span><strong id="reviewColour">—</strong></div>
       </div>
       <div class="settings-row">
         <span class="settings-label">Finish</span>
-        <div class="settings-value">
-          <div class="seg" role="group" aria-label="Finish">
-            <button type="button" class="seg-btn active" data-finish="standard">Standard</button>
-            <button type="button" class="seg-btn" data-finish="fine">Fine</button>
-          </div>
-        </div>
+        <div class="settings-value"><strong id="reviewFinish">—</strong></div>
       </div>
       <div class="settings-row" id="infillRow">
-        <label class="settings-label" for="infillSelect">Infill</label>
-        <div class="settings-value">
-          <select class="select-clean" id="infillSelect" aria-label="Select infill density">
-            <option value="">Loading…</option>
-          </select>
-        </div>
+        <span class="settings-label">Infill</span>
+        <div class="settings-value"><strong id="reviewInfill">—</strong> <a class="btn-link" id="editOptionsLink" href="options.html">Edit options</a></div>
       </div>
       <div class="settings-row">
         <span class="settings-label">Quantity</span>
@@ -887,8 +1154,12 @@
 
       <hr class="sum-divider">
 
-      <button class="btn btn-primary" id="addToCartBtn" type="button">Add to Cart</button>
       <button class="btn btn-secondary" id="saveQuoteBtn" type="button">Save Quote</button>
+      <div class="cart-actions hidden" id="cartActions" aria-live="polite">
+        <p id="cartActionsText">This group is in your cart.</p>
+        <button class="btn btn-secondary" id="addAnotherBtn" type="button">Add another material/group</button>
+        <a class="btn btn-primary" id="checkoutCartBtn" href="checkout.html">Checkout</a>
+      </div>
     </div>
   </aside>
 </main>
@@ -911,6 +1182,23 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<div class="modal-overlay hidden" id="saveQuoteAuthModal" role="dialog" aria-modal="true" aria-labelledby="saveQuoteAuthTitle">
+  <div class="auth-modal">
+    <div class="auth-modal-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </div>
+    <h2 class="auth-modal-title" id="saveQuoteAuthTitle">Save this quote to your account</h2>
+    <p class="auth-modal-body">Create an account or sign in to save this quote, then you can find it later in your customer portal.</p>
+    <div class="auth-modal-actions">
+      <button class="btn btn-secondary" id="saveQuoteAuthCancel" type="button">Not now</button>
+      <button class="btn btn-primary" id="saveQuoteAuthContinue" type="button">Sign in or create account</button>
+    </div>
+  </div>
+</div>
+
 <!-- Import map so Three.js example modules can resolve their bare 'three' import. -->
 <script type="importmap">
 {
@@ -931,7 +1219,17 @@
 
   // ── Config ──────────────────────────────────────────────────
   const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'mahi3d';
+  document.querySelectorAll('[data-quote-nav]').forEach(link => {
+    if (link.dataset.quoteNav === 'materials') link.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    if (link.dataset.quoteNav === 'quote') link.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    if (link.dataset.quoteNav === 'portal') link.href = `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#overview`;
+  });
+  const URL_PARAMS = new URLSearchParams(location.search);
+  const SHOULD_PROMPT_UPLOAD = URL_PARAMS.get('promptUpload') === '1' || URL_PARAMS.get('newGroup') === '1';
+  const IS_NEW_GROUP_FLOW = URL_PARAMS.get('newGroup') === '1';
+  const MAX_MODELS_PER_GROUP = 20;
   const SIZE_WARNING_KEY = 'material_size_warning';
+  const PENDING_SAVED_QUOTE_KEY = 'pending_saved_quote';
 
   // Static currency conversion table (vs NZD = 1.000)
   const RATES = {
@@ -944,7 +1242,8 @@
   };
 
   // ── State ───────────────────────────────────────────────────
-  let fileData         = null;   // { name, size, volumeCm3 }
+  let fileData         = null;   // { name, size, volumeCm3, models? }
+  let modelFiles       = [];      // normalized uploaded model metadata
   let selectionData    = null;   // { materialId, materialName, ratePerCm3, minCharge, colorIndex, colorName, colorHex, finish, qty, currency }
   let catalog          = [];     // material objects from API
   let qty              = 1;
@@ -955,10 +1254,14 @@
   let quoteTimer       = null;
   let quoteRequestSeq  = 0;
   let sizeValidation   = { ok: true, message: '' };
+  let previewModelId   = null;
+  let maxModelQuantity = 9999;
 
   try { fileData      = JSON.parse(localStorage.getItem('form_file')      || 'null'); } catch {}
   try { selectionData = JSON.parse(localStorage.getItem('form_selection') || 'null'); } catch {}
   if (!selectionData) selectionData = {};
+  modelFiles = normaliseModelFiles(fileData);
+  previewModelId = fileData?.previewModelId || modelFiles[0]?.id || null;
   qty      = Math.max(1, parseInt(selectionData.qty)      || 1);
   currency = RATES[selectionData.currency] ? selectionData.currency : 'NZD';
 
@@ -973,6 +1276,10 @@
   }
 
   function saveSelection() {
+    if (!fileData && SHOULD_PROMPT_UPLOAD) {
+      try { localStorage.removeItem('form_selection'); } catch {}
+      return;
+    }
     selectionData.qty      = qty;
     selectionData.currency = currency;
     try { localStorage.setItem('form_selection', JSON.stringify(selectionData)); } catch {}
@@ -980,6 +1287,11 @@
 
   function saveFileMeta() {
     try { localStorage.setItem('form_file', JSON.stringify(fileData)); } catch {}
+  }
+
+  function modelQuantity(value) {
+    const n = Math.floor(Number(value) || 1);
+    return Math.max(1, Math.min(maxModelQuantity, n));
   }
 
   function showToast(msg) {
@@ -999,6 +1311,108 @@
     } catch {}
     window.location.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
   }
+
+  function savedQuoteLoginUrl() {
+    const next = `dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#quotes`;
+    return `customer/login.html?shop=${encodeURIComponent(SHOP_SLUG)}&next=${encodeURIComponent(next)}`;
+  }
+
+  async function currentCustomerSession() {
+    try {
+      const res = await fetch(`/api/customer/me?shop=${encodeURIComponent(SHOP_SLUG)}`, { cache: 'no-store' });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  function buildSavedQuotePayload(quote) {
+    const selected = quote?.selected || {};
+    const finish = selected.finish || {};
+    const colour = selected.colour || {};
+    const material = selected.material || {};
+    return {
+      shopSlug: SHOP_SLUG,
+      quoteRequest: quotePayload(),
+      file: fileData ? { ...fileData } : null,
+      selection: {
+        ...selectionData,
+        materialId: material.id || selectionData.materialId,
+        materialName: material.name || selectionData.materialName || '',
+        colorId: colour.id || selectionData.colorId || null,
+        colourId: colour.id || selectionData.colorId || null,
+        colorName: colour.name || selectionData.colorName || '',
+        colourName: colour.name || selectionData.colorName || '',
+        colorHex: colour.hex || selectionData.colorHex || null,
+        colourHex: colour.hex || selectionData.colorHex || null,
+        finishId: finish.id || selectionData.finishId || selectionData.finish || null,
+        finishName: finish.name || selectionData.finishLabel || selectionData.finish || '',
+        finishLabel: finish.name || selectionData.finishLabel || selectionData.finish || '',
+        finishLayerHeight: finish.layerHeight || selectionData.finishLayerHeight || '',
+        finishDescription: finish.description || selectionData.finishDescription || '',
+        finishPriceMultiplier: finish.priceMultiplier || selectionData.finishPriceMultiplier || 1,
+        quantity: selected.quantity || qty,
+        qty: selected.quantity || qty,
+        infillTierId: selected.infill?.id || selectionData.infillTierId || null,
+        infillLabel: selected.infill?.label || selectionData.infillLabel || '',
+        shippingOptionId: selected.shipping?.id || selectedShipping?.id || selectionData.shippingOptionId || null,
+        shippingOptionLabel: selected.shipping?.label || selectedShipping?.label || selectionData.shippingOptionLabel || '',
+        shippingOptionPrice: selected.shipping?.finalPrice ?? selected.shipping?.price ?? selectedShipping?.price ?? selectionData.shippingOptionPrice ?? null,
+        shopSlug: SHOP_SLUG,
+      },
+      totalCents: quote?.totalCents || 0,
+      currency: quote?.currency || currency,
+    };
+  }
+
+  async function postSavedQuote(payload) {
+    const res = await fetch('/api/customer/quotes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      const err = new Error(data.error || 'Could not save quote');
+      err.code = data.code;
+      throw err;
+    }
+    return data.quote;
+  }
+
+  let pendingAuthPayload = null;
+
+  function closeSaveQuoteAuthModal() {
+    pendingAuthPayload = null;
+    $('saveQuoteAuthModal')?.classList.add('hidden');
+  }
+
+  function openSaveQuoteAuthModal(payload) {
+    pendingAuthPayload = payload;
+    $('saveQuoteAuthModal')?.classList.remove('hidden');
+    $('saveQuoteAuthContinue')?.focus();
+  }
+
+  function promptForSavedQuoteAccount(payload) {
+    openSaveQuoteAuthModal(payload);
+  }
+
+  $('saveQuoteAuthCancel').addEventListener('click', closeSaveQuoteAuthModal);
+  $('saveQuoteAuthModal').addEventListener('click', e => {
+    if (e.target === $('saveQuoteAuthModal')) closeSaveQuoteAuthModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !$('saveQuoteAuthModal').classList.contains('hidden')) {
+      closeSaveQuoteAuthModal();
+    }
+  });
+  $('saveQuoteAuthContinue').addEventListener('click', () => {
+    const payload = pendingAuthPayload;
+    if (payload) {
+      try { sessionStorage.setItem(PENDING_SAVED_QUOTE_KEY, JSON.stringify(payload)); } catch {}
+      window.location.href = savedQuoteLoginUrl();
+    }
+  });
 
   // ── Pricing ─────────────────────────────────────────────────
   // Infill tiers are configured by the shop owner (admin → Pricing).
@@ -1026,12 +1440,26 @@
     return `${(Math.round(n * 10) / 10).toLocaleString('en-NZ')} mm`;
   }
 
-  function currentMaterial() {
-    return catalog.find(m => String(m.id) === String(selectionData.materialId)) || null;
+  function modelId() {
+    return `model-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   }
 
-  function modelDimensions() {
-    const d = fileData?.dimensions || {};
+  function normaliseModelFiles(source) {
+    const raw = Array.isArray(source?.models) && source.models.length
+      ? source.models
+      : (source?.name ? [source] : []);
+    return raw.map((model, index) => ({
+      id: model.id || `model-${index + 1}`,
+      name: String(model.name || `Model ${index + 1}`).slice(0, 240),
+      size: Number(model.size) || 0,
+      ext: String(model.ext || model.name?.split('.').pop() || '').toLowerCase(),
+      volumeCm3: Number(model.volumeCm3) || 0,
+      quantity: modelQuantity(model.quantity),
+      dimensions: normaliseDimensions(model.dimensions),
+    })).filter(model => model.name);
+  }
+
+  function normaliseDimensions(d = {}) {
     const xMm = Number(d.xMm ?? d.x_mm ?? d.x);
     const yMm = Number(d.yMm ?? d.y_mm ?? d.y);
     const zMm = Number(d.zMm ?? d.z_mm ?? d.z ?? d.heightMm ?? d.height);
@@ -1039,14 +1467,86 @@
     return { xMm, yMm, zMm };
   }
 
-  function updateAddToCartState() {
-    const btn = $('addToCartBtn');
-    if (!btn) return;
-    btn.disabled = !sizeValidation.ok;
-    if (sizeValidation.ok && btn.textContent === 'Model too large') {
-      btn.textContent = 'Add to Cart';
+  function aggregateDimensions(models = modelFiles) {
+    const dims = models.map(model => model.dimensions).filter(Boolean);
+    if (!dims.length) return null;
+    return {
+      xMm: Math.max(...dims.map(d => d.xMm)),
+      yMm: Math.max(...dims.map(d => d.yMm)),
+      zMm: Math.max(...dims.map(d => d.zMm)),
+    };
+  }
+
+  function syncFileDataFromModels() {
+    if (!modelFiles.length) {
+      fileData = null;
+      previewModelId = null;
+      saveFileMeta();
+      return;
     }
-    if (!sizeValidation.ok) btn.textContent = 'Model too large';
+    if (!previewModelId || !modelFiles.some(model => String(model.id) === String(previewModelId))) {
+      previewModelId = modelFiles[0].id;
+    }
+    const totalSize = modelFiles.reduce((sum, model) => sum + (Number(model.size) || 0), 0);
+    modelFiles = modelFiles.map(model => ({ ...model, quantity: modelQuantity(model.quantity) }));
+    const totalVolume = modelFiles.reduce((sum, model) => sum + ((Number(model.volumeCm3) || 0) * (Number(model.quantity) || 1)), 0);
+    fileData = {
+      id: modelFiles[0].id,
+      name: modelFiles.length > 1 ? `${modelFiles.length} models` : modelFiles[0].name,
+      size: totalSize,
+      volumeCm3: Math.round(totalVolume * 1000) / 1000,
+      dimensions: aggregateDimensions(modelFiles),
+      models: modelFiles,
+      previewModelId,
+    };
+    saveFileMeta();
+  }
+
+  function effectiveQty() {
+    return modelFiles.length > 1 ? 1 : qty;
+  }
+
+  function renderModelList() {
+    const list = $('modelList');
+    if (!list) return;
+    const showQty = modelFiles.length > 1;
+    list.innerHTML = modelFiles.map(model => `
+      <div class="model-chip ${showQty ? 'show-qty' : ''} ${String(model.id) === String(previewModelId) ? 'selected' : ''}" data-model-id="${escapeHtml(model.id)}" role="button" tabindex="0" aria-current="${String(model.id) === String(previewModelId) ? 'true' : 'false'}">
+        <div>
+          <strong>${escapeHtml(model.name)}</strong>
+          <span>${fmtBytes(model.size)} · ${model.dimensions ? `${fmtMm(model.dimensions.xMm)} × ${fmtMm(model.dimensions.yMm)} × ${fmtMm(model.dimensions.zMm)}` : 'Dimensions unavailable'}${showQty ? ` · Qty ${modelQuantity(model.quantity)}` : ''}</span>
+        </div>
+        <div class="model-qty" aria-label="Quantity for ${escapeHtml(model.name)}">
+          <button type="button" data-model-qty-minus="${escapeHtml(model.id)}" aria-label="Decrease quantity for ${escapeHtml(model.name)}">−</button>
+          <input type="number" min="1" max="${maxModelQuantity}" value="${modelQuantity(model.quantity)}" inputmode="numeric" data-model-qty="${escapeHtml(model.id)}" aria-label="Quantity for ${escapeHtml(model.name)}">
+          <button type="button" data-model-qty-plus="${escapeHtml(model.id)}" aria-label="Increase quantity for ${escapeHtml(model.name)}">+</button>
+        </div>
+        <button class="model-remove" type="button" aria-label="Remove ${escapeHtml(model.name)}" data-remove-model="${escapeHtml(model.id)}">×</button>
+      </div>
+    `).join('');
+  }
+
+  function updateQuantityMode() {
+    const multi = modelFiles.length > 1;
+    $('qtyVal').disabled = multi;
+    $('qtyMinus').disabled = multi || qty <= 1;
+    $('qtyPlus').disabled = multi;
+    $('sumQty').textContent = multi ? 'Per model' : '× ' + qty;
+  }
+
+  function currentMaterial() {
+    return catalog.find(m => String(m.id) === String(selectionData.materialId)) || null;
+  }
+
+  function modelDimensions() {
+    return aggregateDimensions(modelFiles.length ? modelFiles : normaliseModelFiles(fileData));
+  }
+
+  function updateAddToCartState() {
+    const checkout = $('checkoutCartBtn');
+    if (!checkout) return;
+    checkout.classList.toggle('disabled', !sizeValidation.ok);
+    checkout.setAttribute('aria-disabled', sizeValidation.ok ? 'false' : 'true');
   }
 
   function validateModelSize() {
@@ -1055,18 +1555,22 @@
     const mat = currentMaterial();
     sizeValidation = { ok: true, message: '' };
 
-    if (dims && mat) {
+    if (mat && modelFiles.length) {
       const checks = [
         { key: 'xMm', label: 'width/X', limit: Number(mat.max_x_mm) },
         { key: 'yMm', label: 'depth/Y', limit: Number(mat.max_y_mm) },
         { key: 'zMm', label: 'height/Z', limit: Number(mat.max_z_mm) },
       ];
-      const failed = checks.find(c => Number.isFinite(c.limit) && c.limit > 0 && dims[c.key] > c.limit);
-      if (failed) {
-        sizeValidation = {
-          ok: false,
-          message: `Model ${failed.label} is ${fmtMm(dims[failed.key])}, but ${mat.name} allows up to ${fmtMm(failed.limit)}.`,
-        };
+      for (const model of modelFiles) {
+        if (!model.dimensions) continue;
+        const failed = checks.find(c => Number.isFinite(c.limit) && c.limit > 0 && model.dimensions[c.key] > c.limit);
+        if (failed) {
+          sizeValidation = {
+            ok: false,
+            message: `${model.name} ${failed.label} is ${fmtMm(model.dimensions[failed.key])}, but ${mat.name} allows up to ${fmtMm(failed.limit)}.`,
+          };
+          break;
+        }
       }
     }
 
@@ -1082,24 +1586,240 @@
     return {
       shopSlug: SHOP_SLUG,
       materialId: selectionData.materialId,
+      materialName: selectionData.materialName || null,
+      models: modelFiles.length ? modelFiles : null,
       volumeCm3: fileData?.volumeCm3,
       dimensions: modelDimensions(),
       colourId: selectionData.colorId || null,
       finishId: selectionData.finishId || selectionData.finish || null,
       infillTierId: selectionData.infillTierId || null,
-      quantity: qty,
+      quantity: effectiveQty(),
       shippingId: selectedShipping?.id || null,
     };
+  }
+
+  function normaliseCartItem(input = {}, index = 0) {
+    const quote = input.quoteSnapshot || {};
+    const selected = quote.selected || {};
+    const file = input.file || {};
+    const rawModels = Array.isArray(input.models) && input.models.length
+      ? input.models
+      : (Array.isArray(file.models) && file.models.length ? file.models : (Array.isArray(selected.models) ? selected.models : []));
+    const models = rawModels.map((model, modelIndex) => ({
+      ...model,
+      id: model?.id || `model-${modelIndex + 1}`,
+      quantity: modelQuantity(model?.quantity),
+    }));
+    return {
+      id: input.id || `cart-item-${Date.now().toString(36)}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+      shopSlug: input.shopSlug || SHOP_SLUG,
+      file: {
+        ...file,
+        name: file.name || input.fileName || (models.length > 1 ? `${models.length} models` : models[0]?.name) || 'Uploaded model',
+        size: file.size ?? models.reduce((sum, model) => sum + (Number(model.size) || 0), 0),
+        volumeCm3: file.volumeCm3 ?? selected.volumeCm3,
+        dimensions: file.dimensions ?? selected.dimensions ?? null,
+        models,
+      },
+      models,
+      materialId: input.materialId ?? selected.material?.id ?? null,
+      materialName: input.materialName ?? (typeof input.material === 'string' ? input.material : input.material?.name) ?? selected.material?.name ?? '',
+      colorId: input.colorId ?? selected.colour?.id ?? null,
+      colorName: input.colorName ?? selected.colour?.name ?? '',
+      colorHex: input.colorHex ?? selected.colour?.hex ?? null,
+      finish: input.finish ?? input.finishId ?? selected.finish?.id ?? null,
+      finishId: input.finishId ?? input.finish ?? selected.finish?.id ?? null,
+      finishLabel: input.finishLabel ?? selected.finish?.name ?? input.finish ?? '',
+      finishLayerHeight: input.finishLayerHeight ?? selected.finish?.layerHeight ?? '',
+      finishDescription: input.finishDescription ?? selected.finish?.description ?? '',
+      infillTierId: input.infillTierId ?? selected.infill?.id ?? null,
+      infillLabel: input.infillLabel ?? selected.infill?.label ?? null,
+      quantity: Number(input.quantity ?? selected.quantity) || 1,
+      shipping: input.shipping ?? (selected.shipping ? {
+        id: selected.shipping.id,
+        label: selected.shipping.label || 'Shipping',
+        price: Number(selected.shipping.finalPrice ?? selected.shipping.price) || 0,
+      } : null),
+      currency: input.currency || quote.currency || currency,
+      unitNzd: Number(input.unitNzd ?? quote.lineItems?.unit) || 0,
+      itemsNzd: Number(input.itemsNzd ?? quote.lineItems?.itemSubtotal) || 0,
+      shippingNzd: Number(input.shippingNzd ?? quote.lineItems?.shipping) || 0,
+      taxNzd: Number(input.taxNzd ?? quote.lineItems?.tax) || 0,
+      totalNzd: Number(input.totalNzd ?? quote.lineItems?.total) || 0,
+      totalCents: Number(input.totalCents ?? quote.totalCents) || 0,
+      quoteSnapshot: quote,
+      createdAt: input.createdAt || input.savedAt || new Date().toISOString(),
+    };
+  }
+
+  function normaliseCart(input = {}) {
+    const rawItems = Array.isArray(input.items) && input.items.length
+      ? input.items
+      : ((input.materialId || input.file || input.quoteSnapshot) ? [input] : []);
+    const items = rawItems.map((item, index) => normaliseCartItem({ ...item, shopSlug: item.shopSlug || input.shopSlug || SHOP_SLUG }, index));
+    return {
+      shopSlug: input.shopSlug || SHOP_SLUG,
+      items,
+      currency: input.currency || currency,
+      totalNzd: items.reduce((sum, item) => sum + (Number(item.totalNzd) || 0), 0),
+      totalCents: items.reduce((sum, item) => sum + (Number(item.totalCents) || Math.round((Number(item.totalNzd) || 0) * 100)), 0),
+      savedAt: new Date().toISOString(),
+    };
+  }
+
+  function readCart() {
+    try { return normaliseCart(JSON.parse(localStorage.getItem('cart') || '{}')); }
+    catch { return normaliseCart({}); }
+  }
+
+  function writeCart(cart) {
+    try { localStorage.setItem('cart', JSON.stringify(normaliseCart(cart))); } catch {}
+  }
+
+  function updateCartActions(cart) {
+    const actions = $('cartActions');
+    if (!actions) return;
+    const count = cart?.items?.length || 0;
+    $('cartActionsText').textContent = count === 1
+      ? 'This material group is ready. Add another group for a different material, or checkout now.'
+      : `${count} material groups are ready. Add another group or checkout when ready.`;
+    $('checkoutCartBtn').href = `checkout.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    actions.classList.toggle('hidden', count === 0);
+  }
+
+  function removeCurrentQuoteFromCart() {
+    if (!selectionData?.cartItemId) return;
+    const cart = readCart();
+    const nextItems = cart.items.filter(item => String(item.id) !== String(selectionData.cartItemId));
+    if (nextItems.length === cart.items.length) return;
+    cart.items = nextItems;
+    writeCart(cart);
+    updateCartActions(cart);
+  }
+
+  function buildCartItemFromQuote(quote) {
+    const infillLabel = quote.selected?.infill?.label || currentInfill()?.label || null;
+    const selected = quote.selected || {};
+    const lines = quote.lineItems || {};
+    return normaliseCartItem({
+      id:              selectionData.cartItemId || undefined,
+      shopSlug:        SHOP_SLUG,
+      file:            { ...fileData },
+      materialId:      selected.material?.id || selectionData.materialId,
+      materialName:    selected.material?.name || selectionData.materialName,
+      colorId:         selected.colour?.id || selectionData.colorId || null,
+      colorName:       selected.colour?.name || selectionData.colorName || '—',
+      colorHex:        selected.colour?.hex || selectionData.colorHex || null,
+      finish:          selected.finish?.id || selectionData.finishId || selectionData.finish || null,
+      finishId:        selected.finish?.id || selectionData.finishId || selectionData.finish || null,
+      finishLabel:     selected.finish?.name || selectionData.finishLabel || selectionData.finish || '—',
+      finishLayerHeight: selected.finish?.layerHeight || selectionData.finishLayerHeight || '',
+      finishDescription: selected.finish?.description || selectionData.finishDescription || '',
+      infillTierId:    selected.infill?.id || selectionData.infillTierId || null,
+      infillLabel,
+      quantity:        selected.quantity || qty,
+      currency,
+      unitNzd:         Number(lines.unit) || 0,
+      itemsNzd:        Number(lines.itemSubtotal) || 0,
+      shippingNzd:     Number(lines.shipping) || 0,
+      taxNzd:          Number(lines.tax) || 0,
+      totalNzd:        Number(lines.total) || 0,
+      totalCents:      quote.totalCents,
+      quoteSnapshot:   quote,
+      shipping:        selected.shipping ? {
+        id:     selected.shipping.id,
+        label:  selected.shipping.label || 'Shipping',
+        price:  Number(selected.shipping.finalPrice ?? selected.shipping.price) || 0,
+      } : null,
+      savedAt:         new Date().toISOString(),
+    });
+  }
+
+  function syncCurrentQuoteToCart(quote) {
+    if (!quote?.ok || !fileData || !selectionData?.materialId) return null;
+    const cart = readCart();
+    const cartItem = buildCartItemFromQuote(quote);
+    selectionData.cartItemId = cartItem.id;
+    saveSelection();
+    const index = cart.items.findIndex(item => String(item.id) === String(cartItem.id));
+    if (index >= 0) cart.items[index] = cartItem;
+    else cart.items.push(cartItem);
+    writeCart(cart);
+    updateCartActions(readCart());
+    return cartItem;
+  }
+
+  function clearCurrentQuoteGroup() {
+    fileData = null;
+    modelFiles = [];
+    previewModelId = null;
+    selectionData = { shopSlug: SHOP_SLUG };
+    const input = $('fileInput');
+    if (input) input.value = '';
+    try {
+      const req = indexedDB.open('mahi3d-quote', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('files');
+      req.onsuccess = () => {
+        try {
+          const db = req.result;
+          const tx = db.transaction('files', 'readwrite');
+          tx.objectStore('files').clear();
+        } catch {}
+      };
+    } catch {}
+    try {
+      localStorage.removeItem('form_file');
+      localStorage.removeItem('form_selection');
+    } catch {}
+  }
+
+  function scrubPromptParams() {
+    if (!SHOULD_PROMPT_UPLOAD) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('promptUpload');
+    url.searchParams.delete('newGroup');
+    window.history.replaceState({}, '', url);
+  }
+
+  function showNewUploadBanner() {
+    const banner = $('newUploadBanner');
+    if (!banner || !SHOULD_PROMPT_UPLOAD) return;
+    banner.classList.add('show');
+    setTimeout(() => banner.classList.remove('show'), 8000);
+  }
+
+  function openFilePicker() {
+    const input = $('fileInput');
+    if (!input) return;
+    input.value = '';
+    input.click();
+  }
+
+  function showUploadPrompt({ autoOpen = false } = {}) {
+    const empty = $('viewerEmpty');
+    if (!empty) return;
+    showNewUploadBanner();
+    empty.style.display = 'flex';
+    empty.setAttribute('tabindex', '-1');
+    $('viewerEmptyTitle').textContent = 'Upload the next model group';
+    $('viewerEmptyCopy').textContent = 'You can upload the same model again to choose different material, colour or finish.';
+    requestAnimationFrame(() => empty.focus({ preventScroll: true }));
+    if (autoOpen) {
+      setTimeout(() => openFilePicker(), 80);
+      scrubPromptParams();
+    }
   }
 
   async function refreshQuotePreview({ silent = false } = {}) {
     if (!validateModelSize()) {
       serverQuote = null;
+      removeCurrentQuoteFromCart();
       renderPrice();
       return null;
     }
     if (!fileData?.volumeCm3 || !selectionData?.materialId) {
       serverQuote = null;
+      removeCurrentQuoteFromCart();
       renderPrice();
       return null;
     }
@@ -1119,6 +1839,7 @@
       if (seq !== quoteRequestSeq) return serverQuote;
       if (!res.ok || data.ok === false) {
         serverQuote = null;
+        removeCurrentQuoteFromCart();
         if (data.code === 'MODEL_TOO_LARGE' || data.code === 'MODEL_DIMENSIONS_REQUIRED') {
           sizeValidation = { ok: false, message: data.error || 'This model is too large for the selected material.' };
           const warning = $('sizeWarning');
@@ -1133,11 +1854,13 @@
         return null;
       }
       serverQuote = data;
+      syncCurrentQuoteToCart(data);
       renderPrice();
       return data;
     } catch (err) {
       if (seq !== quoteRequestSeq) return serverQuote;
       serverQuote = null;
+      removeCurrentQuoteFromCart();
       if (!silent) showToast('Could not calculate this quote');
       renderPrice();
       return null;
@@ -1174,14 +1897,16 @@
       $('sumUnit').textContent     = sym + fmtMoney(unitDisp);
       $('sumSubtotal').textContent = sym + fmtMoney(itemsDisp); // pre-shipping items subtotal
     }
-    $('sumQty').textContent = '× ' + qty;
+    $('sumQty').textContent = modelFiles.length > 1 ? 'Per model' : '× ' + qty;
 
     // Helper line under the big price tracks shipping inclusion + qty:
     //   no shipping options yet → "excluding shipping"
     //   shipping included       → "incl. shipping" (and qty hint)
     const helper = $('priceHelper');
     if (helper) {
-      const qtyHint = qty > 1 ? `total for ${qty} units` : 'total';
+      const qtyHint = modelFiles.length > 1
+        ? `total for ${modelFiles.length} models with selected quantities`
+        : (qty > 1 ? `total for ${qty} units` : 'total');
       helper.textContent = serverQuote && selectedShipping
         ? `${qtyHint} · incl. shipping`
         : (serverQuote ? `${qtyHint} · excluding shipping` : 'Waiting for quote details');
@@ -1197,6 +1922,12 @@
       ]);
       const pricing = pRes.ok ? await pRes.json() : { materials: [] };
       const catPayload = cRes.ok ? await cRes.json() : [];
+      maxModelQuantity = Number(pricing.max_model_quantity) > 0 ? Math.min(9999, Math.floor(Number(pricing.max_model_quantity))) : 9999;
+      if (modelFiles.length) {
+        modelFiles = modelFiles.map(model => ({ ...model, quantity: modelQuantity(model.quantity) }));
+        syncFileDataFromModels();
+        applyFileMeta();
+      }
       const cat     = Array.isArray(catPayload) ? catPayload : (catPayload.materials || []);
       const pMap    = Object.fromEntries((pricing.materials || []).map(m => [m.id, m]));
       catalog = cat.map(m => {
@@ -1210,28 +1941,10 @@
         };
       });
       infillTiers = Array.isArray(pricing.infill_tiers) ? pricing.infill_tiers : [];
-      populateInfillSelect();
-      populateMaterialSelect();
+      normaliseReviewSelection();
     } catch (e) {
       console.warn('Catalog load failed', e);
     }
-  }
-
-  function populateMaterialSelect() {
-    const sel = $('materialSelect');
-    if (!catalog.length) {
-      sel.innerHTML = '<option value="">No materials</option>';
-      return;
-    }
-    // Dropdown shows clean names only — production time is rendered in
-    // the dedicated row below the picker (driven by onMaterialChange).
-    sel.innerHTML = catalog.map(m =>
-      `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`
-    ).join('');
-
-    const saved = catalog.find(m => m.id == selectionData.materialId || m.name === selectionData.materialName);
-    sel.value = String(saved ? saved.id : catalog[0].id);
-    onMaterialChange(false);
   }
 
   // Friendly production-time label for the detail row + summary
@@ -1259,180 +1972,91 @@
     }
   }
 
-  function onMaterialChange(save = true) {
-    const id  = $('materialSelect').value;
-    const mat = catalog.find(m => String(m.id) === id);
-    if (!mat) { updateProdTimeUI(null); return; }
-    selectionData.materialId   = mat.id;
-    selectionData.materialName = mat.name;
-    selectionData.ratePerCm3   = mat.base_price;
-    selectionData.minCharge    = mat.min_charge;
+  function currentInfill() {
+    const active = infillTiers.filter(t => t.active !== false);
+    return active.find(t => String(t.id) === String(selectionData.infillTierId))
+      || active.find(t => t.is_default)
+      || active[0]
+      || null;
+  }
 
-    // Update the production-time line on left + summary cards
-    updateProdTimeUI(mat);
-
-    // Repopulate colours
-    const cols  = Array.isArray(mat.colours) ? mat.colours : [];
-    const colSel = $('colourSelect');
-    colSel.innerHTML = cols.length
-      ? cols.map((c, i) => `<option value="${i}" data-id="${escapeHtml(c.id || '')}" data-hex="${escapeHtml(c.hex)}">${escapeHtml(c.name)}</option>`).join('')
-      : '<option value="">—</option>';
-
-    // Restore prior colour selection if valid
-    if (selectionData.colorName) {
-      const idx = cols.findIndex(c => c.name === selectionData.colorName);
-      if (idx >= 0) colSel.value = String(idx);
+  function normaliseReviewSelection() {
+    const mat = currentMaterial();
+    if (!mat) {
+      updateProdTimeUI(null);
+      return;
     }
-    onColourChange(false);
+    selectionData.materialId = mat.id;
+    selectionData.materialName = mat.name;
+    selectionData.ratePerCm3 = mat.base_price;
+    selectionData.minCharge = mat.min_charge;
+
+    const colours = Array.isArray(mat.colours) ? mat.colours : [];
+    let colour = colours.find(c => String(c.id) === String(selectionData.colorId || selectionData.colourId))
+      || colours.find(c => c.name === selectionData.colorName || c.name === selectionData.colourName)
+      || colours[0]
+      || null;
+    selectionData.colorId = colour?.id || null;
+    selectionData.colourId = colour?.id || null;
+    selectionData.colorName = colour?.name || '';
+    selectionData.colourName = colour?.name || '';
+    selectionData.colorHex = colour?.hex || null;
+    selectionData.colourHex = colour?.hex || null;
 
     const finishes = Array.isArray(mat.finishes) ? mat.finishes : [];
-    const savedFinish = finishes.find(f => String(f.id || f.name || f) === String(selectionData.finishId || selectionData.finish))
-      || finishes.find(f => String(f.name || f) === String(selectionData.finishLabel))
+    let finish = finishes.find(f => String(f.id || f.name) === String(selectionData.finishId || selectionData.finish))
+      || finishes.find(f => f.name === selectionData.finishLabel)
       || finishes.find(f => f.default)
       || finishes[0]
       || null;
-    if (savedFinish) {
-      selectionData.finish = savedFinish.id || savedFinish.name || 'finish';
-      selectionData.finishId = savedFinish.id || selectionData.finish;
-      selectionData.finishLabel = savedFinish.name || String(savedFinish);
-      selectionData.finishLayerHeight = savedFinish.layerHeight || savedFinish.layer_height || '';
-      selectionData.finishDescription = savedFinish.description || '';
-      selectionData.finishMultiplier = Number(savedFinish.priceMultiplier ?? savedFinish.price_multiplier) || 1;
-    } else {
-      selectionData.finish = null;
-      selectionData.finishId = null;
-      selectionData.finishLabel = '';
-      selectionData.finishLayerHeight = '';
-      selectionData.finishDescription = '';
-      selectionData.finishMultiplier = 1;
-    }
-    renderFinishOptions(mat);
-    updateFinishUI(selectionData.finishId || selectionData.finish);
+    selectionData.finish = finish?.id || null;
+    selectionData.finishId = finish?.id || null;
+    selectionData.finishLabel = finish?.name || '';
+    selectionData.finishLayerHeight = finish?.layerHeight || finish?.layer_height || '';
+    selectionData.finishDescription = finish?.description || '';
+    selectionData.finishMultiplier = Number(finish?.priceMultiplier ?? finish?.price_multiplier) || 1;
 
-    if (save) saveSelection();
-    validateModelSize();
-    scheduleQuotePreview();
-  }
+    const infill = currentInfill();
+    selectionData.infillTierId = infill?.id || null;
+    selectionData.infillLabel = infill?.label || '';
 
-  function onColourChange(save = true) {
-    const colSel = $('colourSelect');
-    const opt    = colSel.options[colSel.selectedIndex];
-    const hex    = opt?.dataset.hex || '#cccccc';
-    const name   = opt?.text || '';
-    $('colourSwatch').style.background = hex;
-    selectionData.colorHex   = hex;
-    selectionData.colorName  = name;
-    selectionData.colorId    = opt?.dataset.id || null;
-    selectionData.colorIndex = colSel.selectedIndex;
-    if (save) saveSelection();
-    if (typeof setViewerColor === 'function') setViewerColor(hex);
-  }
-
-  function finishMetaText(finish) {
-    const layerHeight = finish?.layerHeight || finish?.layer_height || '';
-    const layerText = /layer/i.test(layerHeight) ? layerHeight : (layerHeight ? `${layerHeight} layer height` : '');
-    return [layerText, finish?.description || '']
-      .filter(Boolean)
-      .join(' · ');
-  }
-
-  function renderFinishOptions(mat) {
-    const seg = document.querySelector('.seg[role="group"][aria-label="Finish"]');
-    if (!seg) return;
-    const finishes = Array.isArray(mat?.finishes) ? mat.finishes : [];
-    if (!finishes.length) {
-      seg.innerHTML = '<span style="color:var(--muted);font-size:13px;">No finish presets</span>';
-      return;
-    }
-    seg.innerHTML = finishes.map(f => `
-      <button type="button" class="seg-btn" data-finish="${escapeHtml(f.id || f.name || 'finish')}"
-              data-label="${escapeHtml(f.name || f)}"
-              data-layer="${escapeHtml(f.layerHeight || f.layer_height || '')}"
-              data-description="${escapeHtml(f.description || '')}"
-              data-multiplier="${Number(f.priceMultiplier ?? f.price_multiplier) || 1}">
-        <span class="finish-option-name">${escapeHtml(f.name || f)}</span>
-        ${finishMetaText(f) ? `<span class="finish-option-meta">${escapeHtml(finishMetaText(f))}</span>` : ''}
-      </button>
-    `).join('');
-    seg.querySelectorAll('.seg-btn').forEach(b => {
-      b.addEventListener('click', () => {
-        selectionData.finish = b.dataset.finish;
-        selectionData.finishId = b.dataset.finish;
-        selectionData.finishLabel = b.dataset.label || b.textContent.trim();
-        selectionData.finishLayerHeight = b.dataset.layer || '';
-        selectionData.finishDescription = b.dataset.description || '';
-        selectionData.finishMultiplier = Number(b.dataset.multiplier) || 1;
-        updateFinishUI(b.dataset.finish);
-        saveSelection();
-        scheduleQuotePreview();
-      });
-    });
-  }
-
-  function updateFinishUI(value) {
-    document.querySelectorAll('.seg-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.finish === value)
-    );
-  }
-
-  // ── Events: material / colour / finish / qty ───────────────
-  $('materialSelect').addEventListener('change', () => onMaterialChange(true));
-  $('colourSelect').addEventListener('change',   () => onColourChange(true));
-  document.querySelectorAll('.seg-btn').forEach(b => {
-    b.addEventListener('click', () => {
-      selectionData.finish = b.dataset.finish;
-      selectionData.finishId = b.dataset.finish;
-      selectionData.finishLabel = b.dataset.label || b.textContent.trim();
-      selectionData.finishLayerHeight = b.dataset.layer || '';
-      selectionData.finishDescription = b.dataset.description || '';
-      selectionData.finishMultiplier = b.dataset.finish === 'fine' ? 1.50 : 1.0;
-      updateFinishUI(b.dataset.finish);
-      saveSelection();
-      scheduleQuotePreview();
-    });
-  });
-
-  // Infill — populated from /api/customer/pricing once the catalog loads
-  const infillSelect = $('infillSelect');
-
-  function populateInfillSelect() {
-    const row = $('infillRow');
-    const active = infillTiers.filter(t => t.active !== false);
-
-    // If the shop has no infill tiers configured, hide the row entirely
-    // and apply a 1.0× multiplier (so pricing is unaffected).
-    if (!active.length) {
-      if (row) row.style.display = 'none';
-      selectionData.infillTierId = null;
-      return;
-    }
-    if (row) row.style.display = '';
-
-    infillSelect.innerHTML = active.map(t => {
-      const pct = (typeof t.percent === 'number') ? ` · ${t.percent}%` : '';
-      return `<option value="${t.id}">${t.label}${pct}</option>`;
-    }).join('');
-
-    // Restore prior choice if still valid, otherwise use the tier marked default
-    const savedId = selectionData.infillTierId;
-    const choose  = active.find(t => t.id === savedId)
-                 || active.find(t => t.is_default)
-                 || active[0];
-    infillSelect.value = choose.id;
-    selectionData.infillTierId = choose.id;
-  }
-
-  infillSelect.addEventListener('change', () => {
-    selectionData.infillTierId = infillSelect.value;
     saveSelection();
-    scheduleQuotePreview();
-  });
+    updateReviewOptions();
+    updateProdTimeUI(mat);
+    validateModelSize();
+  }
+
+  function updateReviewOptions() {
+    const mat = currentMaterial();
+    const colourHex = selectionData.colorHex || '#cccccc';
+    $('reviewMaterial').textContent = mat?.name || selectionData.materialName || '—';
+    $('reviewColour').textContent = selectionData.colorName || '—';
+    $('colourSwatch').style.background = colourHex;
+    $('reviewFinish').textContent = [selectionData.finishLabel, selectionData.finishLayerHeight].filter(Boolean).join(' — ') || '—';
+    $('reviewInfill').textContent = selectionData.infillLabel || currentInfill()?.label || 'Default';
+    $('editMaterialLink').href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    $('editOptionsLink').href = `options.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+  }
 
   function setQty(n) {
     qty = Math.max(1, Math.min(999, n | 0));
     $('qtyVal').value = qty;
-    $('qtyMinus').disabled = qty <= 1;
+    updateQuantityMode();
     saveSelection();
+    scheduleQuotePreview();
+  }
+  function setModelQty(modelId, n) {
+    const next = modelQuantity(n);
+    let changed = false;
+    modelFiles = modelFiles.map(model => {
+      if (String(model.id) !== String(modelId)) return model;
+      changed = true;
+      return { ...model, quantity: next };
+    });
+    if (!changed) return;
+    syncFileDataFromModels();
+    applyFileMeta();
+    $('priceHelper').textContent = 'Updating price...';
     scheduleQuotePreview();
   }
   $('qtyMinus').addEventListener('click', () => setQty(qty - 1));
@@ -1462,6 +2086,8 @@
     $('fileDimensions').textContent = dims
       ? `Dimensions: ${fmtMm(dims.xMm)} × ${fmtMm(dims.yMm)} × ${fmtMm(dims.zMm)}`
       : 'Dimensions: —';
+    renderModelList();
+    updateQuantityMode();
     validateModelSize();
   }
   applyFileMeta();
@@ -1496,6 +2122,8 @@
   const renderer   = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.18;
 
   const scene  = new THREE.Scene();
   scene.background = null;
@@ -1504,12 +2132,13 @@
   camera.position.set(60, 50, 90);
 
   // Soft lighting — emulates a daylight softbox
-  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-  const key = new THREE.DirectionalLight(0xffffff, 0.7);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d1c4, 1.15));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.42));
+  const key = new THREE.DirectionalLight(0xffffff, 0.92);
   key.position.set(60, 80, 50); scene.add(key);
-  const fill = new THREE.DirectionalLight(0xffffff, 0.30);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.46);
   fill.position.set(-70, 40, -50); scene.add(fill);
-  const rim = new THREE.DirectionalLight(0xffffff, 0.18);
+  const rim = new THREE.DirectionalLight(0xffffff, 0.32);
   rim.position.set(0, -40, -60); scene.add(rim);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -1522,9 +2151,10 @@
 
   // Soft neutral material — colour can be tinted by selected colour
   const modelMaterial = new THREE.MeshStandardMaterial({
-    color:     new THREE.Color(0xd9d4ca),
-    roughness: 0.78,
-    metalness: 0.06,
+    color:     new THREE.Color(0xe4ded2),
+    roughness: 0.66,
+    metalness: 0.02,
+    side:      THREE.DoubleSide,
     flatShading: false,
   });
 
@@ -1587,6 +2217,7 @@
     scene.add(currentMesh);
     fitTo(currentMesh);
   }
+  window.showModelPlaceholder = placePlaceholder;
 
   function placeGeometry(geom) {
     disposeMesh();
@@ -1633,6 +2264,21 @@
     }
   }
 
+  function dimensionsFromBuffer(buffer, ext) {
+    try {
+      if (ext === 'obj') {
+        const loader = new OBJLoader();
+        const text = new TextDecoder().decode(new Uint8Array(buffer));
+        return dimensionsFromObject(loader.parse(text));
+      }
+      const loader = new STLLoader();
+      return dimensionsFromObject(new THREE.Mesh(loader.parse(buffer), modelMaterial));
+    } catch (err) {
+      console.warn('Model dimension parse failed', err);
+      return null;
+    }
+  }
+
   // ── IndexedDB for the uploaded file blob ───────────────────
   function openIDB() {
     return new Promise((resolve, reject) => {
@@ -1650,6 +2296,15 @@
       tx.oncomplete = () => res();
     });
   }
+  async function idbDelete(key) {
+    const db = await openIDB();
+    return new Promise(res => {
+      const tx = db.transaction('files', 'readwrite');
+      tx.objectStore('files').delete(key);
+      tx.oncomplete = () => res();
+      tx.onerror = () => res();
+    });
+  }
   async function idbGet(key) {
     const db = await openIDB();
     return new Promise(res => {
@@ -1660,22 +2315,52 @@
     });
   }
 
-  async function tryLoadStoredModel() {
+  async function loadPreviewModel(modelId, { persist = true } = {}) {
+    if (!fileData) return false;
+    const model = modelFiles.find(m => String(m.id) === String(modelId)) || modelFiles[0] || null;
+    const keys = [
+      model?.id ? `model:${model.id}` : null,
+    ].filter(Boolean);
+    if (!modelId || !model?.id || String(model.id) === String(modelFiles[0]?.id)) {
+      keys.push('current_model');
+    }
     try {
-      const entry = await idbGet('current_model');
-      if (entry && entry.buffer && entry.ext) {
-        const dimensions = loadFromBuffer(entry.buffer, entry.ext);
-        if (dimensions && fileData && !modelDimensions()) {
-          fileData.dimensions = dimensions;
-          saveFileMeta();
-          applyFileMeta();
+      for (const key of keys) {
+        const entry = await idbGet(key);
+        if (entry && entry.buffer && entry.ext) {
+          previewModelId = model?.id || previewModelId;
+          const dimensions = loadFromBuffer(entry.buffer, entry.ext);
+          if (persist) {
+            await idbPut('current_model', entry);
+            syncFileDataFromModels();
+            renderModelList();
+          }
+          if (dimensions && model && !model.dimensions) {
+            model.dimensions = dimensions;
+            syncFileDataFromModels();
+            applyFileMeta();
+          }
+          emptyEl.style.display = 'none';
+          return true;
         }
-        emptyEl.style.display = 'none';
-        return true;
       }
     } catch {}
     return false;
   }
+
+  async function tryLoadStoredModel() {
+    return loadPreviewModel(previewModelId, { persist: false });
+  }
+
+  window.previewModelById = async function (modelId) {
+    const ok = await loadPreviewModel(modelId, { persist: true });
+    if (!ok) showToast('Preview for that model is not available. Re-upload to view it.');
+  };
+
+  window.deleteModelPreviewById = async function (modelId) {
+    if (!modelId) return;
+    try { await idbDelete(`model:${modelId}`); } catch {}
+  };
 
   // ── STL volume estimate (cm³, assumes mm units) ────────────
   function stlVolumeCm3(buffer) {
@@ -1695,6 +2380,12 @@
       off += 36 + 2; // 3 verts + uint16 attribute
     }
     return Math.abs(vol6) / 6 / 1000; // mm³ → cm³
+  }
+
+  function estimatedObjVolumeCm3(dimensions) {
+    if (!dimensions) return 0;
+    const boxMm3 = Math.max(0, dimensions.xMm) * Math.max(0, dimensions.yMm) * Math.max(0, dimensions.zMm);
+    return Math.round((boxMm3 * 0.12 / 1000) * 1000) / 1000;
   }
 
   // ── Resize handling ────────────────────────────────────────
@@ -1755,25 +2446,50 @@
 
   // ── File replace flow ──────────────────────────────────────
   $('replaceBtn').addEventListener('click', () => $('fileInput').click());
+  $('viewerEmptyChoose')?.addEventListener('click', () => openFilePicker());
   $('fileInput').addEventListener('change', async e => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const ext = f.name.split('.').pop().toLowerCase();
-    if (!['stl', 'obj'].includes(ext)) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    if (files.length > MAX_MODELS_PER_GROUP) {
+      showToast(`Please upload up to ${MAX_MODELS_PER_GROUP} models at one time`);
+      e.target.value = '';
+      return;
+    }
+    const invalid = files.find(f => !['stl', 'obj'].includes(f.name.split('.').pop().toLowerCase()));
+    if (invalid) {
       showToast('Only STL or OBJ files supported');
       return;
     }
-    const buf = await f.arrayBuffer();
-    const dimensions = loadFromBuffer(buf, ext);
-    // Persist
-    await idbPut('current_model', { buffer: buf, ext });
-    fileData = {
-      name:      f.name,
-      size:      f.size,
-      volumeCm3: ext === 'stl' ? stlVolumeCm3(buf) : (fileData?.volumeCm3 || 0),
-      dimensions,
-    };
-    saveFileMeta();
+    const nextModels = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const ext = f.name.split('.').pop().toLowerCase();
+      const buf = await f.arrayBuffer();
+      const id = modelId();
+      const entry = { buffer: buf, ext };
+      const dimensions = i === 0 ? loadFromBuffer(buf, ext) : dimensionsFromBuffer(buf, ext);
+      if (!dimensions) {
+        showToast(`Could not read ${f.name}. Please try another STL or OBJ.`);
+        e.target.value = '';
+        return;
+      }
+      await idbPut(`model:${id}`, entry);
+      if (i === 0) {
+        previewModelId = id;
+        await idbPut('current_model', entry);
+      }
+      nextModels.push({
+        id,
+        name: f.name,
+        size: f.size,
+        ext,
+        volumeCm3: ext === 'stl' ? stlVolumeCm3(buf) : estimatedObjVolumeCm3(dimensions),
+        quantity: 1,
+        dimensions,
+      });
+    }
+    modelFiles = nextModels;
+    syncFileDataFromModels();
     applyFileMeta();
     refreshQuotePreview({ silent: true });
   });
@@ -1782,19 +2498,89 @@
   const loaded = await tryLoadStoredModel();
   if (!loaded) {
     placePlaceholder();
-    // Show the "upload" empty hint only if there is genuinely no file metadata either
-    if (!fileData) emptyEl.style.display = 'flex';
+    if (!fileData) showUploadPrompt({ autoOpen: SHOULD_PROMPT_UPLOAD });
   }
+  if (fileData && SHOULD_PROMPT_UPLOAD) scrubPromptParams();
   // After viewer is ready, also reflect the saved colour onto the material
   if (selectionData?.colorHex) setViewerColor(selectionData.colorHex);
 
   })();   // ← close outer async viewer IIFE
 
-  // ── Add to Cart / Save Quote ───────────────────────────────
-  // "Add to Cart" → snapshot the full order into localStorage, then
-  // navigate to checkout.html which reads it and shows a Stripe form.
-  $('addToCartBtn').addEventListener('click', async () => {
-    const btn = $('addToCartBtn');
+  $('modelList').addEventListener('click', e => {
+    const minus = e.target.closest('[data-model-qty-minus]');
+    if (minus) {
+      e.stopPropagation();
+      const model = modelFiles.find(m => String(m.id) === String(minus.dataset.modelQtyMinus));
+      setModelQty(minus.dataset.modelQtyMinus, (Number(model?.quantity) || 1) - 1);
+      return;
+    }
+    const plus = e.target.closest('[data-model-qty-plus]');
+    if (plus) {
+      e.stopPropagation();
+      const model = modelFiles.find(m => String(m.id) === String(plus.dataset.modelQtyPlus));
+      setModelQty(plus.dataset.modelQtyPlus, (Number(model?.quantity) || 1) + 1);
+      return;
+    }
+    const qtyInput = e.target.closest('[data-model-qty]');
+    if (qtyInput) {
+      e.stopPropagation();
+      return;
+    }
+    const btn = e.target.closest('[data-remove-model]');
+    if (btn) {
+      const removedId = btn.dataset.removeModel;
+      modelFiles = modelFiles.filter(model => String(model.id) !== String(removedId));
+      window.deleteModelPreviewById?.(removedId);
+      if (String(previewModelId) === String(removedId)) {
+        previewModelId = modelFiles[0]?.id || null;
+        if (previewModelId) window.previewModelById?.(previewModelId);
+        else window.showModelPlaceholder?.();
+      }
+      syncFileDataFromModels();
+      applyFileMeta();
+      refreshQuotePreview({ silent: true });
+      showToast(modelFiles.length ? 'Model removed' : 'All models removed');
+      return;
+    }
+    const row = e.target.closest('[data-model-id]');
+    if (!row) return;
+    window.previewModelById?.(row.dataset.modelId);
+  });
+
+  $('modelList').addEventListener('keydown', e => {
+    if (e.target.closest('[data-model-qty]')) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const row = e.target.closest('[data-model-id]');
+    if (!row || e.target.closest('[data-remove-model]')) return;
+    e.preventDefault();
+    window.previewModelById?.(row.dataset.modelId);
+  });
+
+  $('modelList').addEventListener('change', e => {
+    const input = e.target.closest('[data-model-qty]');
+    if (!input) return;
+    setModelQty(input.dataset.modelQty, input.value);
+  });
+
+  $('modelList').addEventListener('input', e => {
+    const input = e.target.closest('[data-model-qty]');
+    if (!input) return;
+    setModelQty(input.dataset.modelQty, input.value);
+  });
+
+  // ── Cart Actions / Save Quote ──────────────────────────────
+  // A valid server quote now auto-syncs this material group into the
+  // cart, so checkout can proceed without a separate manual cart step.
+  $('addAnotherBtn')?.addEventListener('click', () => {
+    clearCurrentQuoteGroup();
+    window.location.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`;
+  });
+
+  updateCartActions(readCart());
+
+  $('saveQuoteBtn').addEventListener('click', async () => {
+    const btn = $('saveQuoteBtn');
+    const original = btn.textContent;
     if (!fileData) { showToast('Please upload a file first'); return; }
     if (!selectionData?.materialId) { showToast('Please pick a material'); return; }
     if (!validateModelSize()) {
@@ -1803,78 +2589,30 @@
     }
 
     btn.disabled = true;
-    btn.textContent = 'Checking price...';
-    const quote = await refreshQuotePreview({ silent: true });
-    if (!quote) {
-      if (!sizeValidation.ok) {
-        redirectToMaterialSelection(sizeValidation.message || 'This model is too large for the selected material.');
+    btn.textContent = 'Saving...';
+    try {
+      const quote = serverQuote || await refreshQuotePreview({ silent: true });
+      if (!quote) throw new Error('Could not calculate this quote');
+      const payload = buildSavedQuotePayload(quote);
+      const isLoggedIn = await currentCustomerSession();
+      if (!isLoggedIn) {
+        btn.disabled = false;
+        btn.textContent = original;
+        promptForSavedQuoteAccount(payload);
         return;
       }
-      btn.textContent = sizeValidation.ok ? 'Add to Cart' : 'Model too large';
-      btn.disabled = !sizeValidation.ok;
-      showToast('Could not calculate this quote');
-      return;
-    }
 
-    // Resolve a human label for the chosen infill tier so checkout doesn't
-    // need to re-fetch the pricing API.
-    const infillOpt = infillSelect.options[infillSelect.selectedIndex];
-    const infillLabel = quote.selected?.infill?.label || (infillOpt ? infillOpt.text : null);
-    const selected = quote.selected || {};
-    const lines = quote.lineItems || {};
-
-    // Material's pricing model (per_cm3 etc.) for the order record
-    const cart = {
-      shopSlug:        SHOP_SLUG,
-      file:            { ...fileData },
-      materialId:      selected.material?.id || selectionData.materialId,
-      materialName:    selected.material?.name || selectionData.materialName,
-      colorId:         selected.colour?.id || selectionData.colorId || null,
-      colorName:       selected.colour?.name || selectionData.colorName || '—',
-      colorHex:        selected.colour?.hex || selectionData.colorHex || null,
-      finish:          selected.finish?.id || selectionData.finishId || selectionData.finish || null,
-      finishId:        selected.finish?.id || selectionData.finishId || selectionData.finish || null,
-      finishLabel:     selected.finish?.name || selectionData.finishLabel || selectionData.finish || '—',
-      finishLayerHeight: selected.finish?.layerHeight || selectionData.finishLayerHeight || '',
-      finishDescription: selected.finish?.description || selectionData.finishDescription || '',
-      infillTierId:    selected.infill?.id || selectionData.infillTierId || null,
-      infillLabel:     infillLabel,
-      quantity:        selected.quantity || qty,
-      currency,
-      unitNzd:         Number(lines.unit) || 0,
-      itemsNzd:        Number(lines.itemSubtotal) || 0,
-      shippingNzd:     Number(lines.shipping) || 0,
-      taxNzd:          Number(lines.tax) || 0,
-      totalNzd:        Number(lines.total) || 0,
-      totalCents:      quote.totalCents,
-      quoteSnapshot:   quote,
-      shipping:        selected.shipping ? {
-        id:     selected.shipping.id,
-        label:  selected.shipping.label || 'Shipping',
-        price:  Number(selected.shipping.finalPrice ?? selected.shipping.price) || 0,
-      } : null,
-      savedAt:         new Date().toISOString(),
-    };
-    try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
-
-    btn.textContent = 'Going to checkout…';
-    // tiny delay so the click feedback registers
-    setTimeout(() => { location.href = `checkout.html?shop=${encodeURIComponent(SHOP_SLUG)}`; }, 150);
-  });
-
-  $('saveQuoteBtn').addEventListener('click', () => {
-    try {
-      const list = JSON.parse(localStorage.getItem('saved_quotes') || '[]');
-      list.unshift({
-        savedAt:    new Date().toISOString(),
-        file:       fileData ? { ...fileData } : null,
-        selection:  { ...selectionData },
-        priceNzd:   serverQuote?.lineItems?.total || 0,
-      });
-      localStorage.setItem('saved_quotes', JSON.stringify(list.slice(0, 50)));
-      showToast('Quote saved');
-    } catch {
-      showToast('Could not save quote');
+      await postSavedQuote(payload);
+      showToast('Quote saved to your portal');
+    } catch (err) {
+      if (err?.code === 'MODEL_TOO_LARGE' || err?.code === 'MODEL_DIMENSIONS_REQUIRED') {
+        redirectToMaterialSelection(err.message || 'This model is too large for the selected material.');
+        return;
+      }
+      showToast(err?.message || 'Could not save quote');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
     }
   });
 

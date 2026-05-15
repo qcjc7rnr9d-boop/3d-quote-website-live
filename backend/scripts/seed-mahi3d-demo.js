@@ -1,9 +1,11 @@
 import { mkdirSync, writeFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { randomBytes } from 'crypto';
 import { DatabaseSync } from 'node:sqlite';
 import bcrypt from 'bcryptjs';
 import { BCRYPT_ROUNDS } from '../config.js';
+import { MATERIAL_LIBRARY, enrichMaterialSuggestion } from '../lib/material-library.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,6 +44,261 @@ function materialId(materials, key) {
 
 function orderTotal(subtotal, tax, shipping) {
   return roundMoney(subtotal + tax + shipping);
+}
+
+function parseJson(value, fallback = {}) {
+  try {
+    return JSON.parse(value || '');
+  } catch {
+    return fallback;
+  }
+}
+
+function json(value) {
+  return JSON.stringify(value);
+}
+
+function stableId(prefix, value, index = 0) {
+  const slug = String(value || `${prefix}-${index + 1}`)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 48);
+  return `${prefix}_${slug || index + 1}`;
+}
+
+function hasAny(text, patterns) {
+  return patterns.some(pattern => pattern.test(text));
+}
+
+function buildDemoColours(material) {
+  const text = `${material.key} ${material.displayName} ${material.category} ${(material.tags || []).join(' ')}`.toLowerCase();
+  let colours;
+
+  if (material.category === 'Resin') {
+    colours = [
+      ['Grey', '#9ca3af'],
+      ['White', '#f8fafc'],
+      ['Clear / Translucent', '#dbeafe'],
+      ['Black', '#111827'],
+    ];
+  } else if (material.category === 'SLS') {
+    colours = [
+      ['White / Natural', '#f5f1e8'],
+      ['Black', '#111827'],
+      ['Grey', '#9ca3af'],
+    ];
+  } else if (hasAny(text, [/support/, /pva/, /bvoh/, /hips/])) {
+    colours = [
+      ['Natural', '#f3ead7'],
+      ['White', '#f8fafc'],
+      ['Black', '#111827'],
+    ];
+  } else if (hasAny(text, [/wood/])) {
+    colours = [
+      ['Natural Wood', '#b98b58'],
+      ['Dark Wood', '#6f4e37'],
+    ];
+  } else if (hasAny(text, [/marble|stone/])) {
+    colours = [
+      ['Marble White', '#f3f4f6'],
+      ['Stone Grey', '#9ca3af'],
+      ['Black', '#111827'],
+    ];
+  } else if (hasAny(text, [/metal|tungsten|magnetite|conductive/])) {
+    colours = [
+      ['Graphite', '#374151'],
+      ['Black', '#111827'],
+      ['Bronze', '#8a5a2b'],
+    ];
+  } else if (hasAny(text, [/nylon|pa6|pa11|pa12|paht|ppa/])) {
+    colours = [
+      ['White / Natural', '#f5f1e8'],
+      ['Black', '#111827'],
+      ['Grey', '#9ca3af'],
+    ];
+  } else if (hasAny(text, [/tpu|tpe|tpc|peba|flexible/])) {
+    colours = [
+      ['Black', '#111827'],
+      ['White', '#f8fafc'],
+      ['Grey', '#9ca3af'],
+      ['Blue', '#2563eb'],
+      ['Red', '#dc2626'],
+    ];
+  } else {
+    colours = [
+      ['Black', '#111827'],
+      ['White', '#f8fafc'],
+      ['Grey', '#9ca3af'],
+      ['Blue', '#2563eb'],
+      ['Red', '#dc2626'],
+      ['Green', '#15803d'],
+    ];
+  }
+
+  return colours.map(([name, hex], index) => ({
+    id: stableId('colour', name, index),
+    name,
+    hex,
+    textureUrl: null,
+    enabled: true,
+    sortOrder: index,
+  }));
+}
+
+function buildDemoFinishes(material) {
+  const text = `${material.key} ${material.displayName} ${material.category} ${(material.tags || []).join(' ')}`.toLowerCase();
+  const isResin = material.category === 'Resin';
+  const isSls = material.category === 'SLS';
+  const isFlexible = hasAny(text, [/tpu|tpe|tpc|peba|flexible/]);
+  const isSupport = hasAny(text, [/support|pva|bvoh|hips/]);
+
+  const presets = isResin
+    ? [
+      ['Draft', '0.10 mm', 'Fast resin quote preview with visible layer stepping', 0.92, 'standard'],
+      ['Standard', '0.05 mm', 'Balanced detail for resin quote previews', 1, 'fine'],
+      ['Balanced', '0.04 mm', 'Cleaner detail for general resin parts', 1.08, 'fine'],
+      ['Fine', '0.03 mm', 'Finer layers for small visual features', 1.18, 'fine'],
+      ['Extra fine', '0.025 mm', 'Higher-detail resin showcase preset', 1.28, 'fine'],
+      ['Smooth', '0.02 mm', 'Smoother visible layer finish for display parts', 1.4, 'fine'],
+      ['High detail', '0.015 mm', 'Detailed demo preset for intricate features', 1.58, 'fine'],
+      ['Presentation', '0.01 mm', 'Highest-detail demo preset for presentation models', 1.8, 'fine'],
+    ]
+    : isSls
+      ? [
+        ['Draft', '0.15 mm', 'Coarser powder-process demo setting', 0.95, 'standard'],
+        ['Standard', '0.10 mm', 'Balanced powder-process surface setting', 1, 'standard'],
+        ['Balanced', '0.10 mm', 'General-use powder-process quote preset', 1.06, 'standard'],
+        ['Fine', '0.08 mm', 'Finer powder-process quote preset where supported', 1.15, 'fine'],
+        ['Smoothed', '0.10 mm', 'Optional smoother post-process style', 1.2, 'fine'],
+        ['Dyed finish', '0.10 mm', 'Demo dyed-finish quote preset', 1.28, 'fine'],
+        ['Sealed finish', '0.10 mm', 'Demo sealed-surface quote preset', 1.36, 'fine'],
+        ['Presentation', '0.08 mm', 'Higher-effort demo finish for presentation parts', 1.5, 'fine'],
+      ]
+      : isSupport
+        ? [
+          ['Draft', '0.28 mm', 'Quick support-material quote preview', 0.95, 'standard'],
+          ['Standard', '0.20 mm', 'Support-material setup for quote previews', 1, 'standard'],
+          ['Balanced', '0.18 mm', 'Balanced support-material demo preset', 1.06, 'standard'],
+          ['Fine', '0.16 mm', 'Cleaner support interfaces where useful', 1.12, 'fine'],
+          ['Interface fine', '0.14 mm', 'Finer support-contact quote preset', 1.18, 'fine'],
+          ['Dense interface', '0.12 mm', 'Denser support-contact demo preset', 1.26, 'fine'],
+          ['High support', '0.10 mm', 'Higher-detail support-material quote preset', 1.38, 'fine'],
+          ['Presentation', '0.08 mm', 'Demo stress-test preset for support workflows', 1.5, 'fine'],
+        ]
+        : isFlexible
+          ? [
+            ['Draft', '0.28 mm', 'Faster flexible-part setup with more visible layers', 0.95, 'standard'],
+            ['Standard', '0.20 mm', 'Balanced flexible-part setup', 1, 'standard'],
+            ['Balanced', '0.18 mm', 'Cleaner flexible-part quote preset', 1.08, 'standard'],
+            ['Fine', '0.16 mm', 'Smaller layers for cleaner flexible surfaces', 1.16, 'fine'],
+            ['Extra fine', '0.14 mm', 'Higher-detail flexible-part demo preset', 1.26, 'fine'],
+            ['Smooth', '0.12 mm', 'Smoother flexible surface where supported', 1.38, 'fine'],
+            ['High detail', '0.10 mm', 'Fine flexible-part detail preset', 1.5, 'fine'],
+            ['Presentation', '0.08 mm', 'Highest-detail flexible demo preset', 1.68, 'fine'],
+          ]
+          : [
+            ['Draft', '0.28 mm', 'Faster, lower-cost quote preview', 0.9, 'standard'],
+            ['Standard', '0.20 mm', 'Balanced speed and surface finish', 1, 'standard'],
+            ['Balanced', '0.16 mm', 'Cleaner surface with moderate cost', 1.1, 'standard'],
+            ['Fine', '0.12 mm', 'Better detail with a smoother surface', 1.18, 'fine'],
+            ['Extra fine', '0.10 mm', 'Sharper details for smaller features', 1.28, 'fine'],
+            ['Smooth', '0.08 mm', 'Smoother visible layer finish', 1.42, 'fine'],
+            ['High detail', '0.06 mm', 'Detailed demo preset for intricate parts', 1.6, 'fine'],
+            ['Presentation', '0.04 mm', 'Highest-detail demo preset for display models', 1.85, 'fine'],
+          ];
+
+  return presets.map(([name, layerHeight, description, priceMultiplier, previewType], index) => ({
+    id: stableId('finish', name, index),
+    name,
+    layerHeight,
+    description,
+    priceMultiplier,
+    previewType,
+    previewImageUrl: null,
+    enabled: true,
+    default: index === 0,
+    sortOrder: index,
+  }));
+}
+
+function buildDemoPricing(material) {
+  const text = `${material.key} ${material.displayName} ${material.category} ${(material.tags || []).join(' ')}`.toLowerCase();
+  if (material.category === 'SLS') return { base_price: 0.65, min_charge: 20 };
+  if (material.category === 'Resin') return { base_price: 0.42, min_charge: 10 };
+  if (hasAny(text, [/peek|pekk|pei|ultem|pps|ppsu|psu|pvdf/])) return { base_price: 1.35, min_charge: 25 };
+  if (hasAny(text, [/tungsten|magnetite/])) return { base_price: 0.85, min_charge: 18 };
+  if (hasAny(text, [/ppa|paht|pa6_cf|pa6_gf|pa11_cf|pa12_cf|pc_cf|pps_cf/])) return { base_price: 0.68, min_charge: 14 };
+  if (hasAny(text, [/carbon|glass|cf|gf/])) return { base_price: 0.48, min_charge: 10 };
+  if (hasAny(text, [/tpu|tpe|tpc|peba|flexible/])) return { base_price: 0.36, min_charge: 8 };
+  if (hasAny(text, [/nylon|pa6|pa11|pa12|copa|pc|abs|asa|pp|pom|pmma|pctg|cpe|pet/])) return { base_price: 0.28, min_charge: 6 };
+  if (hasAny(text, [/support|pva|bvoh|hips/])) return { base_price: 0.24, min_charge: 6 };
+  if (hasAny(text, [/silk|wood|metal|marble|stone|glow|conductive|pvb/])) return { base_price: 0.26, min_charge: 6 };
+  return { base_price: 0.2, min_charge: 4.5 };
+}
+
+function buildDemoMaterialRecord(material, index, existing = null) {
+  const enriched = enrichMaterialSuggestion(material);
+  const pricing = buildDemoPricing(enriched);
+  const ratingsPercent = {
+    strength: Number(material.strength ?? enriched.strength ?? 60),
+    flexibility: Number(material.flexibility ?? enriched.flexibility ?? 60),
+    heatResistance: Number(material.heat ?? enriched.heat ?? 60),
+    detail: Number(enriched.detail ?? 3) * 20,
+    outdoorUse: Number(enriched.outdoorUse ?? 3) * 20,
+  };
+  const specs = [
+    ...(Array.isArray(enriched.specs) ? enriched.specs : []),
+    {
+      label: 'Demo data note',
+      value: 'Practical quoting defaults. Review against the exact material brand before publishing.',
+    },
+  ];
+
+  return {
+    name: enriched.displayName,
+    description_short: enriched.shortDescription,
+    description_long: enriched.longDescription,
+    category: enriched.category || 'FDM',
+    colours: json(buildDemoColours(enriched)),
+    finishes: json(buildDemoFinishes(enriched)),
+    image_url: existing?.image_url || null,
+    image_alt: existing?.image_alt || `Example ${enriched.displayName} printed part`,
+    price_unit: 'per cm³',
+    recommended: ['pla', 'petg', 'asa', 'tpu', 'tpu_95a', 'tpu_ams', 'pa12', 'nylon'].includes(enriched.key) ? 1 : 0,
+    tags: json([...new Set([enriched.category, ...(enriched.tags || [])].filter(Boolean))]),
+    best_for: json(enriched.best_for || enriched.ideal_for || []),
+    specs: json(specs),
+    pricing_model: 'per_cm3',
+    base_price: pricing.base_price,
+    min_charge: pricing.min_charge,
+    volume_tiers: json([]),
+    properties: json({
+      libraryKey: enriched.key,
+      librarySource: 'curated-material-library',
+      ratings: ratingsPercent,
+      strength: ratingsPercent.strength,
+      flexibility: ratingsPercent.flexibility,
+      heat: ratingsPercent.heatResistance,
+      detail: ratingsPercent.detail,
+      outdoorUse: ratingsPercent.outdoorUse,
+      idealFor: enriched.ideal_for || enriched.best_for || [],
+      notFor: enriched.not_for || [],
+      learnMore: enriched.learn_more,
+      dataNote: 'Practical demo defaults, not certified datasheet values.',
+    }),
+    active: 1,
+    stock_status: 'in_stock',
+    sort_order: index * 10,
+    production_days_min: enriched.production_days_min || null,
+    production_days_max: enriched.production_days_max || null,
+    min_x_mm: null,
+    min_y_mm: null,
+    min_z_mm: null,
+    max_x_mm: null,
+    max_y_mm: null,
+    max_z_mm: null,
+  };
 }
 
 export function assertDemoSeedAllowed({ env = process.env, argv = process.argv.slice(2) } = {}) {
@@ -206,6 +463,7 @@ function backupExistingDemoData(db, shop) {
     created_at: new Date().toISOString(),
     shop: db.prepare('SELECT * FROM shops WHERE id = ?').get(shop.id),
     store_settings: db.prepare('SELECT * FROM store_settings WHERE shop_id = ?').get(shop.id) || null,
+    materials: getRows(db, 'SELECT * FROM materials WHERE shop_id = ? ORDER BY sort_order, id', shop.id),
     customer_accounts: getRows(db, 'SELECT * FROM customer_accounts WHERE shop_id = ? ORDER BY id', shop.id),
     customers: getRows(db, 'SELECT * FROM customers WHERE shop_id = ? ORDER BY id', shop.id),
     orders: getRows(db, 'SELECT * FROM orders WHERE shop_id = ? ORDER BY id', shop.id),
@@ -214,23 +472,102 @@ function backupExistingDemoData(db, shop) {
   return backupPath;
 }
 
+function materialTableColumns(db) {
+  return new Set(db.prepare('PRAGMA table_info(materials)').all().map(col => col.name));
+}
+
+function insertMaterialRecord(db, shopId, record, columns) {
+  const values = { shop_id: shopId, ...record };
+  const entries = Object.entries(values).filter(([key]) => columns.has(key));
+  const names = entries.map(([key]) => key);
+  const placeholders = names.map(() => '?').join(', ');
+  db.prepare(`
+    INSERT INTO materials (${names.join(', ')})
+    VALUES (${placeholders})
+  `).run(...entries.map(([, value]) => value));
+}
+
+function updateMaterialRecord(db, existingId, record, columns) {
+  const entries = Object.entries(record)
+    .filter(([key]) => columns.has(key))
+    .filter(([key]) => key !== 'shop_id' && key !== 'created_at');
+  if (!entries.length) return;
+  const assignments = entries.map(([key]) => `${key} = ?`).join(', ');
+  db.prepare(`
+    UPDATE materials
+    SET ${assignments}
+    WHERE id = ?
+  `).run(...entries.map(([, value]) => value), existingId);
+}
+
+function materialLibraryKeyFromRow(row) {
+  const properties = parseJson(row.properties, {});
+  return properties?.libraryKey || properties?.library_key || null;
+}
+
+export function syncDemoMaterials(db, shopId) {
+  const columns = materialTableColumns(db);
+  const existingRows = db.prepare(`
+    SELECT *
+    FROM materials
+    WHERE shop_id = ?
+    ORDER BY sort_order, id
+  `).all(shopId);
+
+  const byKey = new Map();
+  const byName = new Map();
+  for (const row of existingRows) {
+    const key = materialLibraryKeyFromRow(row);
+    if (key && !byKey.has(key)) byKey.set(key, row);
+    byName.set(String(row.name || '').trim().toLowerCase(), row);
+  }
+
+  const touched = new Set();
+  MATERIAL_LIBRARY.forEach((material, index) => {
+    const nameKey = String(material.displayName || '').trim().toLowerCase();
+    const existing = byKey.get(material.key) || byName.get(nameKey) || null;
+    const record = buildDemoMaterialRecord(material, index, existing);
+    if (existing) {
+      updateMaterialRecord(db, existing.id, record, columns);
+      touched.add(existing.id);
+    } else {
+      insertMaterialRecord(db, shopId, record, columns);
+    }
+  });
+
+  for (const row of existingRows) {
+    if (touched.has(row.id)) continue;
+    db.prepare('UPDATE materials SET active = 0, sort_order = ? WHERE id = ?')
+      .run(100000 + Number(row.id), row.id);
+  }
+
+  return MATERIAL_LIBRARY.length;
+}
+
 function loadRequiredMaterials(db, shopId) {
   const rows = db.prepare(`
-    SELECT id, name
+    SELECT id, name, properties
     FROM materials
     WHERE shop_id = ? AND active = 1
     ORDER BY sort_order, id
   `).all(shopId);
 
+  const byKey = new Map();
+  for (const row of rows) {
+    const key = materialLibraryKeyFromRow(row);
+    if (key && !byKey.has(key)) byKey.set(key, row);
+  }
+
   const find = (label) => rows.find(row => row.name.toLowerCase() === label.toLowerCase())
     || rows.find(row => row.name.toLowerCase().includes(label.toLowerCase()));
+  const findKey = (...keys) => keys.map(key => byKey.get(key)).find(Boolean);
 
   const materials = {
-    PLA: find('PLA'),
-    PETG: find('PETG'),
-    ASA: find('ASA'),
-    TPU: find('TPU'),
-    Nylon: find('Nylon'),
+    PLA: findKey('pla') || find('PLA'),
+    PETG: findKey('petg') || find('PETG'),
+    ASA: findKey('asa') || find('ASA'),
+    TPU: findKey('tpu') || find('TPU'),
+    Nylon: findKey('nylon') || find('Nylon'),
   };
 
   for (const key of Object.keys(materials)) materialId(materials, key);
@@ -289,14 +626,23 @@ function insertDemoCustomer(db, shopId, passwordHash) {
 }
 
 function insertDemoOrders(db, shopId, materials) {
+  const cols = db.prepare('PRAGMA table_info(orders)').all().map(c => c.name);
+  if (!cols.includes('public_token')) {
+    db.exec('ALTER TABLE orders ADD COLUMN public_token TEXT');
+  }
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_public_token
+      ON orders(public_token)
+      WHERE public_token IS NOT NULL
+  `);
   const insert = db.prepare(`
     INSERT INTO orders (
       shop_id, customer_email, customer_name, file_name, material_id,
       colour, finish, quantity, subtotal, tax, shipping, total,
       stripe_payment_id, fulfilment_status, payment_status, notes,
-      created_at, tracking_number, tracking_url, customer_message
+      created_at, tracking_number, tracking_url, customer_message, public_token
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const orders = buildDemoOrders(materials);
@@ -321,7 +667,8 @@ function insertDemoOrders(db, shopId, materials) {
       order.created_at,
       order.tracking_number,
       order.tracking_url,
-      order.customer_message
+      order.customer_message,
+      randomBytes(24).toString('base64url')
     );
   }
 }
@@ -334,10 +681,10 @@ export async function seedMahi3dDemo({ dbPath = defaultDbPath } = {}) {
     const shop = db.prepare('SELECT * FROM shops WHERE slug = ?').get(DEMO_SHOP_SLUG);
     if (!shop) throw new Error(`Shop "${DEMO_SHOP_SLUG}" was not found.`);
 
-    const materials = loadRequiredMaterials(db, shop.id);
     const ownerHash = await bcrypt.hash(DEMO_OWNER_PASSWORD, BCRYPT_ROUNDS);
     const customerHash = await bcrypt.hash(DEMO_CUSTOMER_PASSWORD, BCRYPT_ROUNDS);
     const backupPath = backupExistingDemoData(db, shop);
+    let materialCount = 0;
 
     db.exec('BEGIN IMMEDIATE');
     try {
@@ -359,6 +706,8 @@ export async function seedMahi3dDemo({ dbPath = defaultDbPath } = {}) {
         WHERE id = ?
       `).run('Mahi3D', DEMO_OWNER_EMAIL, ownerHash, shop.id);
 
+      materialCount = syncDemoMaterials(db, shop.id);
+      const materials = loadRequiredMaterials(db, shop.id);
       resetShopDemoData(db, shop.id);
       upsertStoreSettings(db, shop.id);
       insertDemoCustomer(db, shop.id, customerHash);
@@ -388,6 +737,7 @@ export async function seedMahi3dDemo({ dbPath = defaultDbPath } = {}) {
       ownerPassword: DEMO_OWNER_PASSWORD,
       customerEmail: DEMO_CUSTOMER_EMAIL,
       customerPassword: DEMO_CUSTOMER_PASSWORD,
+      materialCount,
       orderCount: metrics.order_count || 0,
       deliveredCount: metrics.delivered_count || 0,
       activeCount: metrics.active_count || 0,
@@ -405,6 +755,7 @@ async function main() {
   console.log(`Backup: ${result.backupPath}`);
   console.log(`Shop admin: ${result.ownerEmail} / ${result.ownerPassword}`);
   console.log(`Customer: ${result.customerEmail} / ${result.customerPassword}`);
+  console.log(`Materials: ${result.materialCount}`);
   console.log(`Orders: ${result.orderCount} (${result.deliveredCount} delivered, ${result.activeCount} active)`);
   console.log(`Paid total: $${result.paidTotal.toFixed(2)} NZD`);
 }

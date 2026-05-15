@@ -44,6 +44,25 @@
       margin-bottom: 8px;
     }
     .logo-preview.hidden { display: none; }
+    .logo-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .logo-remove-btn {
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      color: var(--muted);
+      font: 600 12px var(--font-ui);
+      cursor: pointer;
+    }
+    .logo-remove-btn:hover { color: var(--ink); border-color: var(--border-2); }
+    .logo-remove-btn.hidden { display: none; }
 
     /* Toggle row */
     .toggle-row {
@@ -302,8 +321,11 @@
             <div class="form-group">
               <label class="form-label" for="shopLogo">Logo</label>
               <img class="logo-preview hidden" id="logoPreview" src="" alt="Current logo">
-              <input type="file" class="form-input" id="shopLogo" accept="image/*" style="padding:7px 14px;">
-              <span class="form-hint">PNG or SVG recommended. Max 2 MB.</span>
+              <input type="file" class="form-input" id="shopLogo" accept="image/png,image/jpeg,image/webp,image/gif" style="padding:7px 14px;">
+              <div class="logo-actions">
+                <span class="form-hint">PNG, JPG, WebP, or GIF. Max 2 MB.</span>
+                <button class="logo-remove-btn hidden" id="removeLogoBtn" type="button">Remove logo</button>
+              </div>
             </div>
 
             <div class="form-group col-span-2">
@@ -495,6 +517,9 @@
   document.getElementById('supportEmail').addEventListener('input', syncSupportEmailInput);
   syncSupportEmailInput();
 
+  let currentLogoUrl = '';
+  let removeLogoRequested = false;
+
   // ── Load settings ──────────────────────────────────────────
   (async () => {
     try {
@@ -517,9 +542,12 @@
       if (s.invoice_prefix)  document.getElementById('invoicePrefix').value = s.invoice_prefix;
       if (s.invoice_logo != null) document.getElementById('invoiceLogo').checked = !!s.invoice_logo;
       if (s.logo_url) {
+        currentLogoUrl = s.logo_url;
+        removeLogoRequested = false;
         const img = document.getElementById('logoPreview');
         img.src = s.logo_url;
         img.classList.remove('hidden');
+        document.getElementById('removeLogoBtn').classList.remove('hidden');
       }
     } catch { /* ignore */ }
   })();
@@ -533,16 +561,43 @@
   });
 
   // ── Logo file preview ──────────────────────────────────────
+  function validateLogoFile(file) {
+    if (!file) return '';
+    const allowed = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+    if (!allowed.has(file.type)) return 'Logo must be PNG, JPG, WebP, or GIF.';
+    if (file.size > 2 * 1024 * 1024) return 'Logo must be under 2 MB.';
+    return '';
+  }
+
   document.getElementById('shopLogo').addEventListener('change', function() {
     const file = this.files[0];
     if (!file) return;
+    const error = validateLogoFile(file);
+    if (error) {
+      this.value = '';
+      saveError.textContent = error;
+      saveError.style.display = 'block';
+      return;
+    }
+    saveError.style.display = 'none';
+    removeLogoRequested = false;
     const reader = new FileReader();
     reader.onload = e => {
       const img = document.getElementById('logoPreview');
       img.src = e.target.result;
       img.classList.remove('hidden');
+      document.getElementById('removeLogoBtn').classList.remove('hidden');
     };
     reader.readAsDataURL(file);
+  });
+
+  document.getElementById('removeLogoBtn').addEventListener('click', () => {
+    currentLogoUrl = '';
+    removeLogoRequested = true;
+    document.getElementById('shopLogo').value = '';
+    document.getElementById('logoPreview').src = '';
+    document.getElementById('logoPreview').classList.add('hidden');
+    document.getElementById('removeLogoBtn').classList.add('hidden');
   });
 
   // ── Save settings ──────────────────────────────────────────
@@ -560,6 +615,8 @@
     try {
       const invoiceFooterVal = document.getElementById('invoiceFooter').value;
       const logoFile = document.getElementById('shopLogo').files[0];
+      const logoValidationError = validateLogoFile(logoFile);
+      if (logoValidationError) throw new Error(logoValidationError);
 
       // If logo selected, upload first
       let logoUrl;
@@ -570,6 +627,8 @@
         if (!lr.ok) throw new Error((await lr.json().catch(() => ({}))).error || 'Logo upload failed.');
         const lj = await lr.json();
         logoUrl = lj.url;
+        currentLogoUrl = logoUrl;
+        removeLogoRequested = false;
       }
 
       const payload = {
@@ -585,6 +644,8 @@
         invoice_logo:   document.getElementById('invoiceLogo').checked,
       };
       if (logoUrl) payload.logo_url = logoUrl;
+      else if (removeLogoRequested) payload.logo_url = null;
+      else if (currentLogoUrl) payload.logo_url = currentLogoUrl;
 
       const r = await fetch('/api/settings', {
         method: 'PUT',
@@ -601,6 +662,7 @@
       }
 
       saveSuccess.style.display = 'block';
+      if (currentLogoUrl) document.getElementById('removeLogoBtn').classList.remove('hidden');
       setTimeout(() => { saveSuccess.style.display = 'none'; }, 4000);
     } catch (err) {
       saveError.textContent = err.message;

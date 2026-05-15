@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS orders (
   shipping            REAL    NOT NULL DEFAULT 0,
   total               REAL    NOT NULL DEFAULT 0,
   stripe_payment_id   TEXT,
+  public_token        TEXT UNIQUE,
   fulfilment_status   TEXT    NOT NULL DEFAULT 'pending',
   payment_status      TEXT    NOT NULL DEFAULT 'pending',
   notes               TEXT,
@@ -119,6 +120,42 @@ CREATE TABLE IF NOT EXISTS orders (
   customer_message    TEXT,
   created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (shop_id)    REFERENCES shops(id) ON DELETE CASCADE,
+  FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS order_files (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id      INTEGER NOT NULL,
+  order_item_id INTEGER,
+  file_name     TEXT    NOT NULL,
+  file_size     INTEGER,
+  file_ext      TEXT,
+  volume_cm3    REAL,
+  quantity      INTEGER NOT NULL DEFAULT 1,
+  dimensions    TEXT    NOT NULL DEFAULT '{}',
+  sort_order    INTEGER NOT NULL DEFAULT 0,
+  created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id        INTEGER NOT NULL,
+  material_id     INTEGER,
+  material_name   TEXT,
+  colour          TEXT,
+  finish          TEXT,
+  finish_detail   TEXT,
+  infill          TEXT,
+  quantity        INTEGER NOT NULL DEFAULT 1,
+  subtotal        REAL    NOT NULL DEFAULT 0,
+  tax             REAL    NOT NULL DEFAULT 0,
+  shipping        REAL    NOT NULL DEFAULT 0,
+  total           REAL    NOT NULL DEFAULT 0,
+  quote_snapshot  TEXT    NOT NULL DEFAULT '{}',
+  sort_order      INTEGER NOT NULL DEFAULT 0,
+  created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
   FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE SET NULL
 );
 
@@ -143,6 +180,36 @@ CREATE TABLE IF NOT EXISTS customer_accounts (
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
   UNIQUE (shop_id, email),
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS customer_reset_tokens (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id             INTEGER NOT NULL,
+  customer_account_id INTEGER NOT NULL,
+  token               TEXT    UNIQUE NOT NULL,
+  used                INTEGER NOT NULL DEFAULT 0,
+  expires_at          TEXT    NOT NULL,
+  created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+  FOREIGN KEY (customer_account_id) REFERENCES customer_accounts(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS customer_saved_quotes (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id             INTEGER NOT NULL,
+  customer_account_id INTEGER NOT NULL,
+  quote_request       TEXT    NOT NULL DEFAULT '{}',
+  quote_snapshot      TEXT    NOT NULL DEFAULT '{}',
+  file_meta           TEXT    NOT NULL DEFAULT '{}',
+  selection           TEXT    NOT NULL DEFAULT '{}',
+  total_cents         INTEGER NOT NULL DEFAULT 0,
+  currency            TEXT    NOT NULL DEFAULT 'NZD',
+  status              TEXT    NOT NULL DEFAULT 'active',
+  expires_at          TEXT    NOT NULL,
+  created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+  FOREIGN KEY (customer_account_id) REFERENCES customer_accounts(id) ON DELETE CASCADE
 );
 
 -- ── Discount codes ─────────────────────────────────────────
@@ -172,6 +239,7 @@ CREATE TABLE IF NOT EXISTS pricing_config (
   free_shipping_above  REAL    NOT NULL DEFAULT 50,
   quote_rounding       REAL    NOT NULL DEFAULT 0.10,
   quote_valid_hours    INTEGER NOT NULL DEFAULT 24,
+  max_model_quantity   INTEGER,
   show_breakdown       INTEGER NOT NULL DEFAULT 1,
   surcharges           TEXT    NOT NULL DEFAULT '[]',
   updated_at           TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -224,9 +292,16 @@ CREATE TABLE IF NOT EXISTS reset_tokens (
 -- ── Indexes ────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_orders_shop     ON orders(shop_id);
 CREATE INDEX IF NOT EXISTS idx_orders_email    ON orders(customer_email);
+CREATE INDEX IF NOT EXISTS idx_order_files_order ON order_files(order_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_order_files_item ON order_files(order_item_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id, sort_order);
 CREATE INDEX IF NOT EXISTS idx_materials_shop  ON materials(shop_id);
 CREATE INDEX IF NOT EXISTS idx_customers_shop  ON customers(shop_id);
 CREATE INDEX IF NOT EXISTS idx_customer_accounts_email ON customer_accounts(shop_id, email);
+CREATE INDEX IF NOT EXISTS idx_customer_reset_token ON customer_reset_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_customer_reset_account ON customer_reset_tokens(customer_account_id, used, expires_at);
+CREATE INDEX IF NOT EXISTS idx_customer_saved_quotes_account ON customer_saved_quotes(customer_account_id, shop_id, status, created_at);
+CREATE INDEX IF NOT EXISTS idx_customer_saved_quotes_shop ON customer_saved_quotes(shop_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token  ON sessions(token);
 CREATE INDEX IF NOT EXISTS idx_reset_token     ON reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_platform_reset_token ON platform_reset_tokens(token);

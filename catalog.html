@@ -605,6 +605,7 @@
     }
   </style>
   <script src="assets/brand.js" defer></script>
+  <script src="assets/material-filtering.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -615,7 +616,7 @@
     </nav>
     <div class="nav-actions">
       <a class="btn-dark" data-link="quote" href="quote.html?shop=mahi3d">Start a Quote</a>
-      <button class="menu-btn" type="button" aria-label="Menu">
+      <button class="menu-btn" type="button" aria-label="Open customer portal" data-portal-button>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
     </div>
@@ -659,8 +660,8 @@
       <li><a data-link="quote" href="quote.html?shop=mahi3d">Quote</a></li>
       <li><a data-link="orders" href="customer/dashboard.html?shop=mahi3d#orders">My Orders</a></li>
       <li><a data-link="help" href="customer/dashboard.html?shop=mahi3d#help">Contact</a></li>
-      <li><a data-link="help" href="customer/dashboard.html?shop=mahi3d#help">Terms</a></li>
-      <li><a data-link="help" href="customer/dashboard.html?shop=mahi3d#help">Privacy</a></li>
+      <li><a data-link="terms" href="terms.html?shop=mahi3d">Terms</a></li>
+      <li><a data-link="privacy" href="privacy.html?shop=mahi3d">Privacy</a></li>
     </ul>
     <p class="footer-copy">&copy; 2026 mahi3d. All rights reserved.</p>
   </footer>
@@ -773,10 +774,17 @@
         quote: quoteHref(),
         orders: `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#orders`,
         help: `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#help`,
+        terms: `terms.html?shop=${encodeURIComponent(SHOP_SLUG)}`,
+        privacy: `privacy.html?shop=${encodeURIComponent(SHOP_SLUG)}`,
       };
       document.querySelectorAll('[data-link]').forEach(link => {
         const next = links[link.dataset.link];
         if (next) link.href = next;
+      });
+      document.querySelectorAll('[data-portal-button]').forEach(button => {
+        button.onclick = () => {
+          window.location.href = `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#overview`;
+        };
       });
     }
 
@@ -860,26 +868,24 @@
     }
 
     function filteredMaterials() {
-      if (activeFilter === 'recommended') return materials.filter(material => material.recommended);
-      if (activeFilter.startsWith('tag:')) {
-        const target = activeFilter.slice(4);
-        return materials.filter(material => {
-          const values = [material.category, ...(material.tags || [])].map(keyFor);
-          return values.includes(target);
-        });
-      }
-      return materials;
+      const filterTools = window.TrennenMaterialFilters;
+      if (!filterTools) return materials;
+      return filterTools.sortMaterialsForFilter(
+        materials.filter(material => filterTools.materialMatchesFilter(material, activeFilter)),
+        activeFilter
+      );
     }
 
     function priceMarkup(material) {
-      const start = material.minCharge > 0 ? material.minCharge : material.basePrice;
-      const unitText = material.basePrice > 0
-        ? `Rate $${money(material.basePrice)} ${material.priceUnit}`
-        : material.priceUnit;
-      if (!start) {
+      const rate = Number(material.basePrice) || 0;
+      const minimum = Number(material.minCharge) || 0;
+      if (!rate && !minimum) {
         return `<div class="price-card"><span>Starting price</span><strong>Configured by quote</strong></div>`;
       }
-      return `<div class="price-card"><span>Starting price</span><strong>From $${money(start)}</strong><span>${esc(unitText)}</span></div>`;
+      if (!rate) {
+        return `<div class="price-card"><span>Minimum charge</span><strong>From $${money(minimum)}</strong></div>`;
+      }
+      return `<div class="price-card"><span>Material rate</span><strong>From $${money(rate)}</strong><span>${esc(material.priceUnit)}${minimum ? ` · min $${money(minimum)}` : ''}</span></div>`;
     }
 
     function materialCard(material) {

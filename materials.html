@@ -41,19 +41,19 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      height: 68px;
+      height: 76px;
       display: grid;
-      grid-template-columns: 180px 1fr 180px;
+      grid-template-columns: 190px 1fr 250px;
       align-items: center;
-      gap: 24px;
+      gap: 22px;
       padding: 0 36px;
-      background: rgba(255,255,255,0.82);
+      background: rgba(255,255,255,0.9);
       border-bottom: 1px solid var(--line);
       backdrop-filter: blur(18px);
     }
     .brand {
       font-family: var(--font-brand);
-      font-size: 22px;
+      font-size: 23px;
       font-weight: 700;
       letter-spacing: 0.02em;
       text-decoration: none;
@@ -63,21 +63,23 @@
       justify-self: center;
       display: flex;
       align-items: center;
-      gap: 18px;
-      min-width: min(520px, 100%);
+      gap: 14px;
+      min-width: 0;
+      font-size: 15px;
+      font-weight: 700;
     }
     .progress-step {
       display: inline-flex;
       align-items: center;
       gap: 10px;
       white-space: nowrap;
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 700;
       color: var(--ink);
     }
     .progress-step span:first-child {
-      width: 30px;
-      height: 30px;
+      width: 34px;
+      height: 34px;
       display: grid;
       place-items: center;
       border: 1px solid var(--border);
@@ -94,23 +96,23 @@
     .progress-line {
       height: 1px;
       flex: 1;
-      min-width: 42px;
+      min-width: 78px;
       background: var(--border);
     }
     .nav-actions {
       justify-self: end;
       display: flex;
       align-items: center;
-      gap: 22px;
+      gap: 20px;
     }
     .nav-actions a {
       text-decoration: none;
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 700;
     }
     .menu-btn {
-      width: 42px;
-      height: 42px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
       border: 1px solid var(--border);
       background: var(--white);
@@ -172,15 +174,142 @@
       font-size: 13px;
       line-height: 1.5;
     }
+    .model-group-panel {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: start;
+      margin: 0 0 22px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(255,255,255,0.78);
+      box-shadow: var(--shadow);
+    }
+    .model-group-panel h2 {
+      margin: 3px 0 6px;
+      font-family: var(--font-brand);
+      font-size: clamp(22px, 3vw, 28px);
+      letter-spacing: 0;
+      line-height: 1.05;
+    }
+    .model-group-panel p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .model-group-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0;
+      color: var(--sage-dark);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .model-group-kicker::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--sage);
+      box-shadow: 0 0 0 5px rgba(83, 132, 82, 0.12);
+    }
+    .model-group-note {
+      margin-top: 6px !important;
+      color: var(--muted-2) !important;
+    }
+    .model-group-arrival {
+      grid-column: 1 / -1;
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      gap: 8px;
+      padding: 9px 12px;
+      border: 1px solid var(--sage-line);
+      border-radius: 999px;
+      background: var(--sage-soft);
+      color: var(--sage-dark);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .model-group-arrival::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--sage);
+    }
+    .model-group-list {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .model-group-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--white);
+      min-width: 0;
+    }
+    .model-group-item strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+    .model-group-item span {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .model-group-link {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 9px 13px;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--sage-dark);
+      background: var(--white);
+    }
 
     .filters {
       display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
+      flex-wrap: nowrap;
+      gap: 10px;
       margin: 20px 0 18px;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0 2px 10px;
+      scroll-padding-inline: 2px;
+      scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(47,125,67,0.42) transparent;
+    }
+    .filters::-webkit-scrollbar {
+      height: 7px;
+    }
+    .filters::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .filters::-webkit-scrollbar-thumb {
+      background: rgba(47,125,67,0.28);
+      border-radius: 999px;
     }
     .chip {
       height: 38px;
+      flex: 0 0 auto;
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -192,6 +321,8 @@
       cursor: pointer;
       font-size: 13px;
       font-weight: 700;
+      white-space: nowrap;
+      scroll-snap-align: start;
       transition: border-color 160ms, background 160ms, color 160ms;
     }
     .chip.active {
@@ -373,6 +504,65 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(118px, 1fr));
       gap: 10px;
+    }
+    .quality-scroll {
+      position: relative;
+      max-height: 304px;
+      overflow: auto;
+      padding-right: 5px;
+      scrollbar-gutter: stable;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(47,125,67,0.38) transparent;
+    }
+    .quality-scroll::-webkit-scrollbar {
+      width: 7px;
+    }
+    .quality-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .quality-scroll::-webkit-scrollbar-thumb {
+      background: rgba(47,125,67,0.28);
+      border-radius: 999px;
+    }
+    .quality-scroll.has-more {
+      padding-bottom: 42px;
+    }
+    .quality-scroll.has-more::after {
+      content: "";
+      position: sticky;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      display: block;
+      height: 44px;
+      margin: -30px -5px 0 0;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.96) 66%);
+      pointer-events: none;
+    }
+    .quality-scroll.at-bottom {
+      padding-bottom: 0;
+    }
+    .quality-scroll.at-bottom::after {
+      display: none;
+    }
+    .quality-scroll-hint {
+      position: sticky;
+      bottom: 8px;
+      z-index: 2;
+      width: max-content;
+      margin: 10px auto -32px;
+      padding: 6px 10px;
+      border: 1px solid var(--sage-line);
+      border-radius: 999px;
+      background: rgba(236,245,237,0.96);
+      color: var(--sage-dark);
+      font-size: 12px;
+      font-weight: 850;
+      box-shadow: 0 8px 18px rgba(31,37,31,0.08);
+      pointer-events: none;
+    }
+    .quality-scroll.at-bottom .quality-scroll-hint {
+      display: none;
     }
     .quality-card {
       min-height: 126px;
@@ -658,9 +848,16 @@
       .progress-line { min-width: 20px; }
       .page { width: min(100% - 32px, 560px); padding-bottom: 190px; }
       .hero-row { grid-template-columns: 1fr; gap: 18px; }
+      .model-group-panel { grid-template-columns: 1fr; padding: 16px; }
+      .model-group-link { justify-self: start; }
+      .model-group-item { align-items: flex-start; flex-direction: column; gap: 5px; }
+      .model-group-item span { white-space: normal; }
       .material-card { grid-template-columns: 1fr; gap: 16px; padding: 16px; }
       .material-image { min-height: 210px; }
       .quality-grid, .specs-list { grid-template-columns: 1fr; }
+      .quality-scroll { max-height: none; overflow: visible; padding-right: 0; }
+      .quality-scroll.has-more { padding-bottom: 0; }
+      .quality-scroll.has-more::after, .quality-scroll-hint { display: none; }
       .card-actions { flex-direction: column; align-items: stretch; }
       .specs-btn, .select-btn { min-width: 0; }
       .selected-badge { align-self: flex-start; }
@@ -678,6 +875,7 @@
     }
   </style>
   <script src="assets/brand.js" defer></script>
+  <script src="assets/material-filtering.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -687,12 +885,14 @@
       <div class="progress-line" aria-hidden="true"></div>
       <div class="progress-step active"><span>2</span>Material</div>
       <div class="progress-line" aria-hidden="true"></div>
-      <div class="progress-step"><span>3</span>Quote</div>
+      <div class="progress-step"><span>3</span>Options</div>
+      <div class="progress-line" aria-hidden="true"></div>
+      <div class="progress-step"><span>4</span>Quote</div>
     </div>
     <nav class="nav-actions" aria-label="Main navigation">
       <a href="catalog.html?shop=mahi3d" data-catalog-link>Materials</a>
       <a href="quote.html?shop=mahi3d" data-quote-link>Quote</a>
-      <button class="menu-btn" type="button" aria-label="Menu">
+      <button class="menu-btn" type="button" aria-label="Open customer portal" data-portal-button>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
     </nav>
@@ -714,6 +914,7 @@
     </section>
 
     <div class="filters" id="filters" role="tablist" aria-label="Material filters"></div>
+    <section class="model-group-panel" id="modelGroupPanel" aria-label="Uploaded model group" style="display:none;"></section>
     <section class="materials-list" id="materialsList" aria-label="Available materials">
       <div class="empty">Loading materials...</div>
     </section>
@@ -725,33 +926,40 @@
       <span class="summary-value" id="summaryMaterial">Select a material</span>
     </div>
     <div class="summary-item">
-      <span class="summary-label">Colour</span>
-      <span class="summary-value"><span class="summary-swatch" id="summarySwatch"></span><span id="summaryColour">-</span></span>
+      <span class="summary-label">Next step</span>
+      <span class="summary-value"><span class="summary-swatch" id="summarySwatch"></span><span id="summaryColour">Options</span></span>
     </div>
     <div class="summary-item">
-      <span class="summary-label">Finish</span>
-      <span class="summary-value" id="summaryFinish">-</span>
+      <span class="summary-label">Shared options</span>
+      <span class="summary-value" id="summaryFinish">Colour, finish, infill</span>
     </div>
-    <a class="continue-btn" id="continueBtn" href="quote.html" aria-disabled="true">Continue to Quote <span aria-hidden="true">→</span></a>
+    <a class="continue-btn" id="continueBtn" href="options.html" aria-disabled="true">Continue to Options <span aria-hidden="true">→</span></a>
     <div class="summary-size-warning" id="summarySizeWarning" role="alert"></div>
   </aside>
 
   <script>
     const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'mahi3d';
+    const IS_NEW_GROUP_FLOW = new URLSearchParams(location.search).get('newGroup') === '1';
     const SIZE_WARNING_KEY = 'material_size_warning';
     const listEl = document.getElementById('materialsList');
     const filtersEl = document.getElementById('filters');
     const continueBtn = document.getElementById('continueBtn');
+    const modelGroupPanel = document.getElementById('modelGroupPanel');
     document.querySelectorAll('[data-catalog-link]').forEach(link => {
       link.href = `catalog.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
     });
     document.querySelectorAll('[data-quote-link]').forEach(link => {
       link.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
     });
+    document.querySelectorAll('[data-portal-button]').forEach(button => {
+      button.onclick = () => {
+        window.location.href = `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#overview`;
+      };
+    });
     let materials = [];
     let settings = {};
     let activeFilter = 'all';
-    let selection = { materialId: null, colourId: null, finishId: null };
+    let selection = { materialId: null };
     let savedSizeWarning = consumeSavedSizeWarning();
     const openSpecs = new Set();
 
@@ -773,10 +981,60 @@
       return { xMm, yMm, zMm };
     }
 
-    function readSavedModelDimensions() {
+    function readSavedModelGroup() {
       let saved = null;
       try { saved = JSON.parse(localStorage.getItem('form_file') || 'null'); } catch {}
-      return normaliseDimensions(saved?.dimensions || saved?.file?.dimensions || saved || null);
+      const rawModels = Array.isArray(saved?.models) && saved.models.length
+        ? saved.models
+        : (saved?.name ? [saved] : []);
+      return rawModels.map((model, index) => ({
+        id: model.id || `model-${index + 1}`,
+        name: model.name || `Model ${index + 1}`,
+        size: Number(model.size) || 0,
+        volumeCm3: Number(model.volumeCm3) || 0,
+        quantity: Math.max(1, Math.floor(Number(model.quantity) || 1)),
+        dimensions: normaliseDimensions(model.dimensions || model),
+      }));
+    }
+
+    function hasActiveModelGroup() {
+      return readSavedModelGroup().length > 0;
+    }
+
+    function formatBytes(bytes) {
+      const n = Number(bytes) || 0;
+      if (!n) return '—';
+      if (n < 1024) return `${n} B`;
+      if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+      return `${(n / 1024 / 1024).toFixed(2)} MB`;
+    }
+
+    function dimensionsText(dimensions) {
+      if (!dimensions) return 'Dimensions unavailable';
+      return `${formatMm(dimensions.xMm)} × ${formatMm(dimensions.yMm)} × ${formatMm(dimensions.zMm)}`;
+    }
+
+    function renderModelGroupPanel() {
+      const models = readSavedModelGroup();
+      if (!models.length) {
+        modelGroupPanel.style.display = 'none';
+        return;
+      }
+      modelGroupPanel.style.display = '';
+      const modelCount = models.length === 1 ? '1 model uploaded' : `${models.length} models uploaded`;
+      modelGroupPanel.innerHTML = `
+        ${IS_NEW_GROUP_FLOW ? '<div class="model-group-arrival">New material group · select specs for these uploads</div>' : ''}
+        <div>
+          <p class="model-group-kicker">Ready for material selection</p>
+          <h2>${modelCount}</h2>
+          <p>Choose one shared material for this group.</p>
+          <p class="model-group-note">Need different materials? Add this group to cart, then start another quote.</p>
+        </div>
+        <a class="model-group-link" href="quote.html?shop=${encodeURIComponent(SHOP_SLUG)}">Edit models</a>
+        <div class="model-group-list">
+          ${models.map(model => `<div class="model-group-item"><strong>${esc(model.name)}</strong><span>${esc(formatBytes(model.size))} · ${esc(dimensionsText(model.dimensions))} · Qty ${Math.max(1, Math.floor(Number(model.quantity) || 1))}</span></div>`).join('')}
+        </div>
+      `;
     }
 
     function consumeSavedSizeWarning() {
@@ -795,18 +1053,25 @@
     }
 
     function validateMaterialSize(mat) {
-      const dims = readSavedModelDimensions();
-      if (!dims || !mat) return { ok: true, message: '' };
+      const models = readSavedModelGroup();
+      if (!models.length || !mat) return { ok: true, message: '' };
       const checks = [
         { key: 'xMm', label: 'width/X', limit: Number(mat.max_x_mm) },
         { key: 'yMm', label: 'depth/Y', limit: Number(mat.max_y_mm) },
         { key: 'zMm', label: 'height/Z', limit: Number(mat.max_z_mm) },
       ];
-      const failed = checks.find(c => Number.isFinite(c.limit) && c.limit > 0 && dims[c.key] > c.limit);
-      if (!failed) return { ok: true, message: '' };
+      for (const model of models) {
+        if (!model.dimensions) continue;
+        const failed = checks.find(c => Number.isFinite(c.limit) && c.limit > 0 && model.dimensions[c.key] > c.limit);
+        if (!failed) continue;
+        return {
+          ok: false,
+          message: `${model.name} ${failed.label} is ${formatMm(model.dimensions[failed.key])}, but ${mat.name} allows up to ${formatMm(failed.limit)}.`,
+        };
+      }
       return {
-        ok: false,
-        message: `Model ${failed.label} is ${formatMm(dims[failed.key])}, but ${mat.name} allows up to ${formatMm(failed.limit)}.`,
+        ok: true,
+        message: '',
       };
     }
 
@@ -922,7 +1187,7 @@
       document.getElementById('pageSubtitle').textContent = settings.subtitle || 'Pick based on how your part will be used. You can view detailed specs if needed.';
       document.getElementById('helperTitle').textContent = settings.helperTitle || 'Not sure what to choose?';
       document.getElementById('helperText').textContent = settings.helperText || 'Start with the recommended material, or filter by what matters most.';
-      continueBtn.firstChild.textContent = `${settings.continueLabel || 'Continue to Quote'} `;
+      continueBtn.firstChild.textContent = 'Continue to Options ';
     }
 
     function renderFilters() {
@@ -953,20 +1218,22 @@
           activeFilter = btn.dataset.filter;
           renderFilters();
           renderMaterials();
+          filtersEl.querySelector('.chip.active')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'center',
+          });
         });
       });
     }
 
     function filteredMaterials() {
-      if (activeFilter === 'recommended') return materials.filter(m => m.recommended);
-      if (activeFilter.startsWith('tag:')) {
-        const tag = activeFilter.slice(4);
-        return materials.filter(m => {
-          const values = [m.category, ...(m.tags || [])].map(v => String(v || '').trim().toLowerCase());
-          return values.includes(tag);
-        });
-      }
-      return materials;
+      const filterTools = window.TrennenMaterialFilters;
+      if (!filterTools) return materials;
+      return filterTools.sortMaterialsForFilter(
+        materials.filter(material => filterTools.materialMatchesFilter(material, activeFilter)),
+        activeFilter
+      );
     }
 
     function renderMaterials() {
@@ -978,13 +1245,25 @@
       }
       listEl.innerHTML = rows.map(materialCard).join('');
       bindCardEvents();
+      bindQualityScrollHints();
       updateSummary();
+    }
+
+    function updateQualityScrollHint(scroller) {
+      if (!scroller) return;
+      const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 3;
+      scroller.classList.toggle('at-bottom', atBottom);
+    }
+
+    function bindQualityScrollHints() {
+      listEl.querySelectorAll('.quality-scroll.has-more').forEach(scroller => {
+        scroller.addEventListener('scroll', () => updateQualityScrollHint(scroller), { passive: true });
+        requestAnimationFrame(() => updateQualityScrollHint(scroller));
+      });
     }
 
     function materialCard(mat) {
       const selected = String(selection.materialId) === String(mat.id);
-      const colour = selected ? currentColour(mat) : null;
-      const finish = selected ? currentFinish(mat) : null;
       const sizeStatus = selected ? materialSizeStatus(mat) : { ok: true, message: '' };
       const specsOpen = openSpecs.has(String(mat.id));
       const specs = mat.specs.length
@@ -1004,7 +1283,7 @@
             <h2 class="material-name">${esc(mat.name)}</h2>
             <p class="material-desc">${esc(mat.description_short || '')}</p>
             ${mat.bestFor.length ? `<div class="best-row"><span class="mini-label">Best for:</span>${mat.bestFor.slice(0, 4).map(t => `<span class="pill">${esc(t)}</span>`).join('')}</div>` : ''}
-            <div class="price">From $${money(mat.minCharge)} ${esc(mat.priceUnit)}</div>
+            <div class="price">From $${money(mat.ratePerCm3)} ${esc(mat.priceUnit)}</div>
           </div>
           <div class="column">
             <p class="column-title">Performance</p>
@@ -1019,20 +1298,23 @@
           <div class="column">
             <p class="column-title">Available colours</p>
             <div class="swatches">
-              ${mat.colours.map((c, i) => `<button class="swatch-btn ${colour && String(colour.id) === String(c.id) ? 'selected' : ''}" type="button" style="--c:${esc(c.hex || '#cccccc')}" data-colour-id="${esc(c.id)}" title="${esc(c.name)}" aria-label="${esc(c.name)}"></button>`).join('') || '<span class="material-desc muted">No colours configured</span>'}
+              ${mat.colours.slice(0, 8).map(c => `<span class="swatch-btn" style="--c:${esc(c.hex || '#cccccc')}" title="${esc(c.name)}" aria-label="${esc(c.name)}"></span>`).join('') || '<span class="material-desc muted">No colours configured</span>'}
             </div>
           </div>
           <div class="column">
             <p class="column-title">Print quality</p>
-            <div class="quality-grid">
-              ${mat.finishes.map(f => `
-                <button class="quality-card ${finish && String(finish.id) === String(f.id) ? 'selected' : ''}" type="button" data-finish-id="${esc(f.id)}">
-                  <strong>${esc(f.name)}</strong>
-                  ${f.layerHeight ? `<span class="layer">${esc(f.layerHeight)}</span>` : ''}
-                  ${f.description ? `<p>${esc(f.description)}</p>` : '<p>Configured print quality option.</p>'}
-                  ${finishPreview(f)}
-                </button>
-              `).join('') || '<span class="material-desc muted">Add finish presets in the admin portal.</span>'}
+            <div class="quality-scroll ${mat.finishes.length > 2 ? 'has-more' : ''}">
+              <div class="quality-grid">
+                ${mat.finishes.map(f => `
+                  <div class="quality-card">
+                    <strong>${esc(f.name)}</strong>
+                    ${f.layerHeight ? `<span class="layer">${esc(f.layerHeight)}</span>` : ''}
+                    ${f.description ? `<p>${esc(f.description)}</p>` : '<p>Configured print quality option.</p>'}
+                    ${finishPreview(f)}
+                  </div>
+                `).join('') || '<span class="material-desc muted">Add finish presets in the admin portal.</span>'}
+              </div>
+              ${mat.finishes.length > 2 ? '<div class="quality-scroll-hint">Scroll for more ↓</div>' : ''}
             </div>
           </div>
           <div class="card-actions">
@@ -1053,49 +1335,10 @@
       return materials.find(m => String(m.id) === String(selection.materialId)) || null;
     }
 
-    function currentColour(mat = currentMaterial()) {
-      if (!mat) return null;
-      return mat.colours.find(c => String(c.id) === String(selection.colourId)) || mat.colours[0] || null;
-    }
-
-    function currentFinish(mat = currentMaterial()) {
-      if (!mat) return null;
-      return mat.finishes.find(f => String(f.id) === String(selection.finishId))
-        || mat.finishes.find(f => f.default)
-        || mat.finishes[0]
-        || null;
-    }
-
     function selectMaterial(id) {
       const mat = materials.find(m => String(m.id) === String(id));
       if (!mat) return;
       selection.materialId = mat.id;
-      selection.colourId = currentColour(mat)?.id || null;
-      selection.finishId = currentFinish(mat)?.id || null;
-      saveSelection();
-      renderMaterials();
-    }
-
-    function setColour(materialId, colourId) {
-      if (String(selection.materialId) !== String(materialId)) {
-        const mat = materials.find(m => String(m.id) === String(materialId));
-        if (!mat) return;
-        selection.materialId = mat.id;
-        selection.finishId = currentFinish(mat)?.id || null;
-      }
-      selection.colourId = colourId;
-      saveSelection();
-      renderMaterials();
-    }
-
-    function setFinish(materialId, finishId) {
-      if (String(selection.materialId) !== String(materialId)) {
-        const mat = materials.find(m => String(m.id) === String(materialId));
-        if (!mat) return;
-        selection.materialId = mat.id;
-        selection.colourId = currentColour(mat)?.id || null;
-      }
-      selection.finishId = finishId;
       saveSelection();
       renderMaterials();
     }
@@ -1111,14 +1354,6 @@
           e.stopPropagation();
           selectMaterial(materialId);
         });
-        card.querySelectorAll('[data-colour-id]').forEach(btn => btn.addEventListener('click', e => {
-          e.stopPropagation();
-          setColour(materialId, btn.dataset.colourId);
-        }));
-        card.querySelectorAll('[data-finish-id]').forEach(btn => btn.addEventListener('click', e => {
-          e.stopPropagation();
-          setFinish(materialId, btn.dataset.finishId);
-        }));
         card.querySelector('.specs-btn')?.addEventListener('click', e => {
           e.stopPropagation();
           if (openSpecs.has(String(materialId))) openSpecs.delete(String(materialId));
@@ -1131,26 +1366,16 @@
     function saveSelection() {
       const mat = currentMaterial();
       if (!mat) return;
-      const colour = currentColour(mat);
-      const finish = currentFinish(mat);
+      let existing = {};
+      try { existing = JSON.parse(localStorage.getItem('form_selection') || '{}') || {}; } catch {}
+      const sameMaterial = String(existing.materialId || '') === String(mat.id);
       const payload = {
+        ...(sameMaterial ? existing : {}),
         materialId: mat.id,
         materialName: mat.name,
         material: mat.name,
         ratePerCm3: mat.ratePerCm3,
         minCharge: mat.minCharge,
-        colorId: colour?.id || null,
-        colorIndex: Math.max(0, mat.colours.findIndex(c => String(c.id) === String(colour?.id))),
-        colorHex: colour?.hex || null,
-        colorName: colour?.name || '',
-        colourId: colour?.id || null,
-        colourHex: colour?.hex || null,
-        colourName: colour?.name || '',
-        finish: finish?.id || null,
-        finishId: finish?.id || null,
-        finishLabel: finish?.name || '',
-        finishLayerHeight: finish?.layerHeight || '',
-        finishMultiplier: Number(finish?.priceMultiplier) || 1,
         shopSlug: SHOP_SLUG,
       };
       localStorage.setItem('form_selection', JSON.stringify(payload));
@@ -1163,34 +1388,22 @@
       const selected = mat || materials.find(m => m.recommended) || materials[0];
       if (!selected) return;
       selection.materialId = selected.id;
-      selection.colourId = selected.colours.find(c => String(c.id) === String(saved?.colorId))?.id
-        || selected.colours.find(c => c.name === saved?.colorName)?.id
-        || selected.colours[0]?.id
-        || null;
-      selection.finishId = selected.finishes.find(f => String(f.id) === String(saved?.finishId || saved?.finish))?.id
-        || selected.finishes.find(f => f.name === saved?.finishLabel)?.id
-        || selected.finishes.find(f => f.default)?.id
-        || selected.finishes[0]?.id
-        || null;
       saveSelection();
     }
 
     function updateSummary() {
       const mat = currentMaterial();
-      const colour = currentColour(mat);
-      const finish = currentFinish(mat);
       const sizeStatus = materialSizeStatus(mat);
       document.getElementById('summaryMaterial').textContent = mat ? mat.name : 'Select a material';
-      document.getElementById('summaryColour').textContent = colour ? colour.name : '-';
-      document.getElementById('summarySwatch').style.setProperty('--c', colour?.hex || '#cccccc');
-      const finishParts = [finish?.name, finish?.layerHeight].filter(Boolean);
-      document.getElementById('summaryFinish').textContent = finishParts.length ? finishParts.join(' — ') : '-';
+      document.getElementById('summaryColour').textContent = mat ? 'Choose options next' : '-';
+      document.getElementById('summarySwatch').style.setProperty('--c', mat?.colours?.[0]?.hex || '#cccccc');
+      document.getElementById('summaryFinish').textContent = mat ? 'Colour, finish, infill' : '-';
       const summaryWarning = document.getElementById('summarySizeWarning');
       if (summaryWarning) {
         summaryWarning.textContent = sizeStatus.message;
         summaryWarning.classList.toggle('show', !sizeStatus.ok);
       }
-      continueBtn.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+      continueBtn.href = `options.html?shop=${encodeURIComponent(SHOP_SLUG)}${IS_NEW_GROUP_FLOW ? '&newGroup=1' : ''}`;
       continueBtn.setAttribute('aria-disabled', mat && sizeStatus.ok ? 'false' : 'true');
       continueBtn.title = !sizeStatus.ok ? sizeStatus.message : '';
     }
@@ -1209,6 +1422,10 @@
     });
 
     async function init() {
+      if (!hasActiveModelGroup()) {
+        window.location.replace(`index.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`);
+        return;
+      }
       try {
         const [pricingRes, catalogRes] = await Promise.all([
           fetch(`/api/customer/pricing?shop=${encodeURIComponent(SHOP_SLUG)}`),
@@ -1219,6 +1436,7 @@
         const catalog = await catalogRes.json();
         materials = normaliseCatalogPayload(catalog, pricing);
         applyCopy();
+        renderModelGroupPanel();
         restoreSelection();
         renderFilters();
         renderMaterials();

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
+import { randomBytes } from 'crypto';
 import rateLimit from 'express-rate-limit';
 import { db, requireShopAuth } from '../middleware/auth.js';
 import {
@@ -8,11 +9,10 @@ import {
   updateShopStripeReadiness,
 } from '../lib/platform-payments.js';
 import {
-  assertClaimedTotalMatches,
-  buildQuoteRequestFromCart,
-  calculateQuoteForShop,
   PricingError,
 } from '../lib/pricing-engine.js';
+import { normaliseCart, validateCartForShop } from '../lib/cart.js';
+import { saveOrderItems } from '../lib/order-files.js';
 
 const router = Router();
 const paymentIntentLimiter = rateLimit({
@@ -67,6 +67,22 @@ function shopReadinessPayload(shop, account = null) {
 
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+}
+
+function ensureOrderPublicTokenColumn() {
+  const cols = db.prepare('PRAGMA table_info(orders)').all().map(c => c.name);
+  if (!cols.includes('public_token')) {
+    db.exec('ALTER TABLE orders ADD COLUMN public_token TEXT');
+  }
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_public_token
+      ON orders(public_token)
+      WHERE public_token IS NOT NULL
+  `);
+}
+
+function newPublicOrderToken() {
+  return randomBytes(24).toString('base64url');
 }
 
 export function stripeWebhookHandler(req, res) {
@@ -187,13 +203,23 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
 
     const stripe = ensurePlatformStripe();
     const { feePercent } = getEffectivePlatformStripeConfig();
-    const quote = calculateQuoteForShop(db, shop, {
-      ...buildQuoteRequestFromCart(orderData),
-      ...orderData,
+    const cart = validateCartForShop(db, shop, normaliseCart({
+      ...(orderData || {}),
       shopSlug,
-    });
-    assertClaimedTotalMatches(quote, amount);
-    const amountCents = quote.totalCents;
+      items: Array.isArray(orderData?.items) && orderData.items.length ? orderData.items : null,
+    }, shopSlug));
+    const claimedCents = Math.round(Number(amount) * 100);
+    if (!Number.isFinite(claimedCents) || claimedCents !== cart.totalCents) {
+      const err = new PricingError(
+        'Checkout total changed. Please review the updated price and try again.',
+        409,
+        'PRICE_CHANGED',
+        { ok: true, cart }
+      );
+      throw err;
+    }
+    const firstItem = cart.items[0];
+    const amountCents = cart.totalCents;
     const feeCents = Math.round(amountCents * feePercent / 100);
 
     const intent = await stripe.paymentIntents.create({
@@ -210,8 +236,9 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
         shopSlug: shop.slug,
         customerEmail: customerEmail || '',
         customerName: customerName || '',
-        materialId: String(quote.selected.material.id),
-        pricingVersion: quote.pricingVersion,
+        materialId: String(firstItem?.materialId || ''),
+        pricingVersion: 'pricing-v1-per-volume-cart',
+        cartItems: String(cart.items.length),
       },
     });
 
@@ -220,21 +247,33 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       ON CONFLICT(shop_id, email) DO UPDATE SET name = excluded.name
     `).run(shop.id, (customerEmail || '').toLowerCase(), customerName || null);
 
+    ensureOrderPublicTokenColumn();
+    const publicToken = newPublicOrderToken();
     const order = db.prepare(`
       INSERT INTO orders
         (shop_id, customer_email, customer_name, file_name, material_id,
-         colour, finish, quantity, subtotal, tax, shipping, total, stripe_payment_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         colour, finish, quantity, subtotal, tax, shipping, total, stripe_payment_id, public_token)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       shop.id, (customerEmail || '').toLowerCase(), customerName || '',
-      orderData?.fileName || null, quote.selected.material.id,
-      quote.selected.colour?.name || null, quote.selected.finish?.name || null,
-      quote.selected.quantity,
-      quote.lineItems.itemSubtotal, quote.lineItems.tax, quote.lineItems.shipping,
-      quote.lineItems.total, intent.id,
+      cart.items.length > 1 ? `${cart.items.length} material groups` : firstItem?.file?.name || null,
+      firstItem?.materialId || null,
+      cart.items.length > 1 ? 'Multiple' : firstItem?.colorName || null,
+      cart.items.length > 1 ? 'Multiple' : firstItem?.finishLabel || null,
+      cart.items.length > 1 ? 1 : firstItem?.quantity || 1,
+      cart.items.reduce((sum, item) => sum + Number(item.itemsNzd || 0), 0),
+      cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
+      cart.items.reduce((sum, item) => sum + Number(item.shippingNzd || 0), 0),
+      cart.totalNzd, intent.id, publicToken,
     );
+    saveOrderItems(db, order.lastInsertRowid, cart.items);
 
-    res.json({ clientSecret: intent.client_secret, orderId: order.lastInsertRowid, status: intent.status });
+    res.json({
+      clientSecret: intent.client_secret,
+      orderId: order.lastInsertRowid,
+      orderToken: publicToken,
+      status: intent.status,
+    });
   } catch (err) {
     console.error('Create payment intent error:', err);
     if (err instanceof PricingError) {

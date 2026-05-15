@@ -1,9 +1,26 @@
 import { Router } from 'express';
+import multer from 'multer';
+import { mkdirSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { db, requireShopAuth } from '../middleware/auth.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate, DEFAULTS as EMAIL_TEMPLATE_DEFAULTS } from '../lib/email-templates/index.js';
 
 const router = Router();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedMime = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+    if (!allowedMime.has(file.mimetype || '')) {
+      return cb(new Error('Only PNG, JPEG, WebP, or GIF logo uploads are supported.'));
+    }
+    cb(null, true);
+  },
+});
 
 function ensureSupportEmailColumns() {
   const cols = db.prepare('PRAGMA table_info(store_settings)').all().map(c => c.name);
@@ -29,6 +46,27 @@ function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 }
 
+function verifiedImageExtension(file) {
+  const buf = file?.buffer;
+  const mime = file?.mimetype;
+  if (!buf || buf.length < 12) return null;
+  if (mime === 'image/png' && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return '.png';
+  if (mime === 'image/jpeg' && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return '.jpg';
+  if (mime === 'image/gif' && (buf.subarray(0, 6).toString('ascii') === 'GIF87a' || buf.subarray(0, 6).toString('ascii') === 'GIF89a')) return '.gif';
+  if (mime === 'image/webp' && buf.subarray(0, 4).toString('ascii') === 'RIFF' && buf.subarray(8, 12).toString('ascii') === 'WEBP') return '.webp';
+  return null;
+}
+
+function handleLogoUpload(req, res, next) {
+  logoUpload.single('logo')(req, res, err => {
+    if (!err) return next();
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Logo file is too large. Upload an image under 2 MB.' });
+    }
+    return res.status(400).json({ error: err.message || 'Logo upload failed.' });
+  });
+}
+
 function parseSettings(row) {
   const templates = JSON.parse(row.email_templates || '{}');
   // Surface the optional "thank-you" sentence as a top-level field so the
@@ -42,6 +80,10 @@ function parseSettings(row) {
     email_thank_you: thankYou,
     shipping_zones:  JSON.parse(row.shipping_zones || '[]'),
   };
+}
+
+function parseJsonSetting(value, fallback) {
+  try { return JSON.parse(value || ''); } catch { return fallback; }
 }
 
 // GET /api/settings/
@@ -58,19 +100,44 @@ router.get('/', requireShopAuth, (req, res) => {
   }
 });
 
+// POST /api/settings/logo
+// Uploads a shop logo into the public uploads folder. The returned URL is
+// persisted by the normal PUT /api/settings save flow.
+router.post('/logo', requireShopAuth, handleLogoUpload, (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Logo file is required.' });
+    const ext = verifiedImageExtension(req.file);
+    if (!ext) {
+      return res.status(400).json({ error: 'Uploaded logo content did not match an allowed image type.' });
+    }
+    const dir = join(__dirname, '../../uploads/logos', String(req.shop.id));
+    mkdirSync(dir, { recursive: true });
+    const name = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+    writeFileSync(join(dir, name), req.file.buffer);
+    res.status(201).json({ url: `/uploads/logos/${req.shop.id}/${name}` });
+  } catch (err) {
+    console.error('Logo upload error:', err);
+    res.status(500).json({ error: 'Logo upload failed.' });
+  }
+});
+
 // PUT /api/settings/
 // Updates BOTH the shop-level fields on the shops table (name) AND the
 // per-shop branding in store_settings. Single endpoint, single Save click.
 router.put('/', requireShopAuth, (req, res) => {
   try {
-    ensureSettings(req.shop.id);
+    const existing = ensureSettings(req.shop.id);
     const {
       name,
       tagline, about, phone, address, support_email_mode, support_email, logo_url, gst_number,
       invoice_footer, invoice_logo, notifications, email_templates, shipping_zones
     } = req.body;
-    const supportMode = support_email_mode === 'custom' ? 'custom' : 'signup';
-    const supportEmail = normaliseEmail(support_email);
+    const supportMode = support_email_mode !== undefined
+      ? (support_email_mode === 'custom' ? 'custom' : 'signup')
+      : (existing.support_email_mode === 'custom' ? 'custom' : 'signup');
+    const supportEmail = support_email !== undefined
+      ? normaliseEmail(support_email)
+      : normaliseEmail(existing.support_email);
     if (supportMode === 'custom' && !isValidEmail(supportEmail)) {
       return res.status(400).json({ error: 'Enter a valid support email, or use the signup email option.' });
     }
@@ -99,19 +166,19 @@ router.put('/', requireShopAuth, (req, res) => {
         updated_at = datetime('now')
       WHERE shop_id = ?
     `).run(
-      tagline ?? null,
-      about ?? null,
-      phone ?? null,
-      address ?? null,
+      tagline !== undefined ? tagline : existing.tagline,
+      about !== undefined ? about : existing.about,
+      phone !== undefined ? phone : existing.phone,
+      address !== undefined ? address : existing.address,
       supportMode,
       supportMode === 'custom' ? supportEmail : null,
-      logo_url ?? null,
-      gst_number ?? null,
-      invoice_footer ?? null,
-      invoice_logo !== undefined ? (invoice_logo ? 1 : 0) : 1,
-      JSON.stringify(notifications || {}),
-      JSON.stringify(email_templates || {}),
-      JSON.stringify(Array.isArray(shipping_zones) ? shipping_zones : []),
+      logo_url !== undefined ? logo_url : existing.logo_url,
+      gst_number !== undefined ? gst_number : existing.gst_number,
+      invoice_footer !== undefined ? invoice_footer : existing.invoice_footer,
+      invoice_logo !== undefined ? (invoice_logo ? 1 : 0) : (existing.invoice_logo ?? 1),
+      JSON.stringify(notifications !== undefined ? (notifications || {}) : parseJsonSetting(existing.notifications, {})),
+      JSON.stringify(email_templates !== undefined ? (email_templates || {}) : parseJsonSetting(existing.email_templates, {})),
+      JSON.stringify(shipping_zones !== undefined ? (Array.isArray(shipping_zones) ? shipping_zones : []) : parseJsonSetting(existing.shipping_zones, [])),
       req.shop.id
     );
 

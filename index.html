@@ -297,6 +297,41 @@
       position: relative; z-index: 0;
     }
     .upload-zone:hover .btn-browse { background: #4A7A4E; }
+    .new-upload-banner {
+      display: none;
+      align-items: flex-start;
+      gap: 12px;
+      margin: 0 28px 16px;
+      padding: 13px 14px;
+      border: 1px solid rgba(90,138,94,0.25);
+      border-radius: var(--radius);
+      background: rgba(90,138,94,0.08);
+      box-shadow: 0 10px 24px rgba(31,35,33,0.06);
+      text-align: left;
+    }
+    .new-upload-banner.show { display: flex; }
+    .new-upload-icon {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 999px;
+      color: var(--sage);
+      background: rgba(90,138,94,0.12);
+    }
+    .new-upload-banner strong {
+      display: block;
+      font-size: 13px;
+      color: var(--ink);
+      margin-bottom: 2px;
+    }
+    .new-upload-banner span {
+      display: block;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
 
     /* Features strip */
     .features-strip {
@@ -357,6 +392,37 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .file-size { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .uploaded-model-list {
+      display: grid;
+      gap: 8px;
+      margin: -8px 0 18px;
+    }
+    .uploaded-model-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.72);
+      min-width: 0;
+    }
+    .uploaded-model-row strong {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      color: var(--ink);
+    }
+    .uploaded-model-row span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
     .btn-continue {
       display: flex; align-items: center; justify-content: center; gap: 8px;
       width: 100%; height: 44px;
@@ -1180,12 +1246,21 @@
 
   <!-- Upload card -->
   <div class="upload-card fade-in fade-in-4" role="region" aria-label="File upload">
+    <div class="new-upload-banner" id="newUploadBanner" role="status" aria-live="polite">
+      <div class="new-upload-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+      </div>
+      <div>
+        <strong>New uploads</strong>
+        <span>Choose the next parts for a new material group. Your existing cart is saved.</span>
+      </div>
+    </div>
 
     <!-- Upload zone — visible before file chosen -->
     <div class="upload-zone" id="uploadZone" tabindex="0" role="button"
          aria-label="Drop your STL or OBJ file here, or press Enter to browse">
-      <input type="file" id="fileInput" accept=".stl,.obj"
-             aria-label="Select a 3D model file" tabindex="-1">
+      <input type="file" id="fileInput" accept=".stl,.obj" multiple
+             aria-label="Select one or more 3D model files" tabindex="-1">
 
       <div class="upload-icon-wrap" aria-hidden="true">
         <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -1195,8 +1270,8 @@
         </svg>
       </div>
 
-      <p class="upload-title">Drop your STL or OBJ file here</p>
-      <p class="upload-hint">or click to browse &nbsp;·&nbsp; up to 250 MB</p>
+      <p class="upload-title">Drop your STL or OBJ files here</p>
+      <p class="upload-hint">or click to browse &nbsp;·&nbsp; up to 20 models / 250 MB</p>
 
       <div class="btn-browse" aria-hidden="true">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -1224,6 +1299,7 @@
         <button class="table-action" onclick="resetUpload()" aria-label="Remove file"
           style="color:var(--muted);font-size:18px;padding:4px 8px;background:none;border:none;cursor:pointer;line-height:1">×</button>
       </div>
+      <div class="uploaded-model-list" id="uploadedModelList" aria-label="Uploaded models"></div>
       <a href="materials.html" class="btn-continue" id="continueBtn">Choose Material</a>
     </div>
 
@@ -1350,14 +1426,14 @@
 
 <!-- ── Footer ── -->
 <footer class="footer">
-  <a href="index.html" class="footer-wordmark">mahi3d</a>
+  <a href="index.html?shop=mahi3d" class="footer-wordmark">mahi3d</a>
   <ul class="footer-links">
     <li><a href="catalog.html?shop=mahi3d" data-pv-catalog>Materials</a></li>
-    <li><a href="quote.html">Quote</a></li>
+    <li><a href="quote.html?shop=mahi3d" data-pv-quote>Quote</a></li>
     <li><a href="customer/dashboard.html?shop=mahi3d#orders" data-pv-tab="orders">My Orders</a></li>
     <li><a href="customer/dashboard.html?shop=mahi3d#help" data-pv-tab="help">Contact</a></li>
-    <li><a href="customer/dashboard.html?shop=mahi3d#help" data-pv-tab="help">Terms</a></li>
-    <li><a href="customer/dashboard.html?shop=mahi3d#help" data-pv-tab="help">Privacy</a></li>
+    <li><a href="terms.html?shop=mahi3d" data-pv-terms>Terms</a></li>
+    <li><a href="privacy.html?shop=mahi3d" data-pv-privacy>Privacy</a></li>
   </ul>
   <p class="footer-copy">&copy; 2026 mahi3d. All rights reserved.</p>
 </footer>
@@ -1556,11 +1632,26 @@
   });
 
   // ── Keyboard support for upload zone ─────────────────────────
+  const MAX_MODELS_PER_GROUP = 20;
+  const HOME_URL_PARAMS = new URLSearchParams(location.search);
+  const HOME_SHOP_SLUG = (() => {
+    try {
+      const fromUrl = HOME_URL_PARAMS.get('shop');
+      if (fromUrl) return fromUrl;
+    } catch {}
+    try { return JSON.parse(localStorage.getItem('form_selection') || '{}').shopSlug || 'mahi3d'; }
+    catch { return 'mahi3d'; }
+  })();
+  const SHOULD_PROMPT_UPLOAD = HOME_URL_PARAMS.get('promptUpload') === '1' || HOME_URL_PARAMS.get('newGroup') === '1';
+  const IS_NEW_GROUP_FLOW = HOME_URL_PARAMS.get('newGroup') === '1';
   const uploadZone = document.getElementById('uploadZone');
+  const uploadInput = document.getElementById('fileInput');
+  const newUploadBanner = document.getElementById('newUploadBanner');
+  const continueBtn = document.getElementById('continueBtn');
   uploadZone.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      document.getElementById('fileInput').click();
+      uploadInput.click();
     }
   });
 
@@ -1569,6 +1660,26 @@
     uploadZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => uploadZone.focus({ preventScroll: true }), 420);
   });
+
+  function scrubUploadPromptParams() {
+    if (!SHOULD_PROMPT_UPLOAD) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('promptUpload');
+    url.searchParams.delete('newGroup');
+    window.history.replaceState({}, '', url);
+  }
+
+  function showNewUploadPrompt() {
+    if (!SHOULD_PROMPT_UPLOAD) return;
+    newUploadBanner?.classList.add('show');
+    uploadZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => {
+      uploadZone.focus({ preventScroll: true });
+      uploadInput.value = '';
+      uploadInput.click();
+      scrubUploadPromptParams();
+    }, 450);
+  }
 
   // ── STL volume parser (binary STL) ───────────────────────────
   function parseBinaryVolumeCm3(buffer) {
@@ -1589,10 +1700,56 @@
     return cm3 > 0.001 ? cm3 : null;
   }
 
+  function parseBinaryDimensionsMm(buffer) {
+    const view = new DataView(buffer);
+    if (buffer.byteLength < 84) return null;
+    const triCount = view.getUint32(80, true);
+    const expected = 84 + triCount * 50;
+    if (Math.abs(buffer.byteLength - expected) > 200 || triCount === 0 || triCount > 5_000_000) return null;
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+    for (let i = 0; i < triCount; i++) {
+      const o = 84 + i * 50;
+      for (const p of [12, 24, 36]) {
+        const x = view.getFloat32(o + p, true);
+        const y = view.getFloat32(o + p + 4, true);
+        const z = view.getFloat32(o + p + 8, true);
+        if (![x, y, z].every(Number.isFinite)) return null;
+        minX = Math.min(minX, x); minY = Math.min(minY, y); minZ = Math.min(minZ, z);
+        maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); maxZ = Math.max(maxZ, z);
+      }
+    }
+    return { xMm: maxX - minX, yMm: maxY - minY, zMm: maxZ - minZ };
+  }
+
   function formatBytes(bytes) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  function formatMm(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return `${(Math.round(n * 10) / 10).toLocaleString('en-NZ')} mm`;
+  }
+
+  function formatDimensions(dimensions) {
+    if (!dimensions) return 'Dimensions unavailable';
+    return `${formatMm(dimensions.xMm)} × ${formatMm(dimensions.yMm)} × ${formatMm(dimensions.zMm)}`;
+  }
+
+  function renderUploadedModelList(models = []) {
+    const list = document.getElementById('uploadedModelList');
+    if (!list) return;
+    list.innerHTML = models.map(model => `
+      <div class="uploaded-model-row">
+        <div>
+          <strong>${String(model.name || 'Model').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}</strong>
+          <span>${formatBytes(model.size)} · ${formatDimensions(model.dimensions)}</span>
+        </div>
+      </div>
+    `).join('');
   }
 
   // ── IndexedDB helpers (share the uploaded model with quote.html) ──
@@ -1606,12 +1763,12 @@
       req.onerror         = () => reject(req.error);
     });
   }
-  async function persistModelBuffer(buffer, ext) {
+  async function persistModelBuffer(buffer, ext, key = 'current_model') {
     try {
       const db = await _idbOpen();
       await new Promise((res) => {
         const tx = db.transaction('files', 'readwrite');
-        tx.objectStore('files').put({ buffer, ext }, 'current_model');
+        tx.objectStore('files').put({ buffer, ext }, key);
         tx.oncomplete = res; tx.onerror = res;
       });
     } catch { /* IDB unavailable — viewer just falls back to placeholder */ }
@@ -1621,54 +1778,89 @@
       const db = await _idbOpen();
       await new Promise((res) => {
         const tx = db.transaction('files', 'readwrite');
-        tx.objectStore('files').delete('current_model');
+        const store = tx.objectStore('files');
+        store.delete('current_model');
+        try { store.clear(); } catch {}
         tx.oncomplete = res; tx.onerror = res;
       });
     } catch {}
   }
 
   // ── Handle file selection ─────────────────────────────────────
-  function handleFile(file) {
-    if (!file) return;
-    const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
-    if (!['.stl', '.obj'].includes(ext)) {
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    if (files.length > MAX_MODELS_PER_GROUP) {
+      alert(`Please upload up to ${MAX_MODELS_PER_GROUP} models at one time.`);
+      return;
+    }
+    const invalid = files.find(file => !['.stl', '.obj'].includes(file.name.slice(file.name.lastIndexOf('.')).toLowerCase()));
+    if (invalid) {
       alert('Please upload a .STL or .OBJ file.');
       return;
     }
 
-    document.getElementById('cardFileName').textContent = file.name;
-    document.getElementById('cardFileSize').textContent = formatBytes(file.size);
+    document.getElementById('cardFileName').textContent = files.length > 1 ? `${files.length} models ready` : files[0].name;
+    document.getElementById('cardFileSize').textContent = formatBytes(files.reduce((sum, file) => sum + file.size, 0));
 
-    const reader = new FileReader();
-    reader.onload = e => {
-      const buf       = e.target.result; // ArrayBuffer of the uploaded file
+    const models = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+      const buf = await file.arrayBuffer();
       const parsedVol = parseBinaryVolumeCm3(buf);
+      const dimensions = ext === '.stl' ? parseBinaryDimensionsMm(buf) : null;
+      if (ext === '.stl' && (!parsedVol || !dimensions)) {
+        alert(`Could not read ${file.name}. Please try another STL or OBJ file.`);
+        return;
+      }
       const volumeCm3 = parsedVol ?? Math.max(2, file.size / 50 * 0.0022);
-      localStorage.setItem('form_file', JSON.stringify({
+      const id = `model-${Date.now().toString(36)}-${i}`;
+      models.push({
+        id,
         name: file.name,
         size: file.size,
+        ext: ext.replace('.', ''),
         volumeCm3: parseFloat(volumeCm3.toFixed(4)),
-      }));
-      // Persist the raw buffer so the quote-page 3D viewer can render
-      // the exact model the customer uploaded.
-      persistModelBuffer(buf, ext.replace('.', ''));
-    };
-    reader.readAsArrayBuffer(file);
+        dimensions,
+      });
+      persistModelBuffer(buf, ext.replace('.', ''), `model:${id}`);
+      if (i === 0) {
+        // Persist the first raw buffer so the quote-page 3D viewer can render a preview.
+        persistModelBuffer(buf, ext.replace('.', ''));
+      }
+    }
+    renderUploadedModelList(models);
+    const totalVolume = models.reduce((sum, model) => sum + model.volumeCm3, 0);
+    const dims = models.map(model => model.dimensions).filter(Boolean);
+    localStorage.setItem('form_file', JSON.stringify({
+      name: models.length > 1 ? `${models.length} models` : models[0].name,
+      size: models.reduce((sum, model) => sum + model.size, 0),
+      volumeCm3: parseFloat(totalVolume.toFixed(4)),
+      dimensions: dims.length ? {
+        xMm: Math.max(...dims.map(d => d.xMm)),
+        yMm: Math.max(...dims.map(d => d.yMm)),
+        zMm: Math.max(...dims.map(d => d.zMm)),
+      } : null,
+      models,
+      previewModelId: models[0]?.id || null,
+    }));
 
     uploadZone.style.display = 'none';
     document.getElementById('fileCard').classList.add('visible');
     document.getElementById('featuresStrip').style.borderTop = '1px solid var(--border)';
+    continueBtn.href = `materials.html?shop=${encodeURIComponent(HOME_SHOP_SLUG)}${IS_NEW_GROUP_FLOW ? '&newGroup=1' : ''}`;
   }
 
   function resetUpload() {
     uploadZone.style.display = '';
     document.getElementById('fileCard').classList.remove('visible');
-    document.getElementById('fileInput').value = '';
+    uploadInput.value = '';
     localStorage.removeItem('form_file');
     clearModelBuffer();
   }
 
-  document.getElementById('fileInput').addEventListener('change', e => handleFile(e.target.files[0]));
+  uploadInput.addEventListener('change', e => handleFiles(e.target.files));
 
   // ── Drag and drop ─────────────────────────────────────────────
   uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
@@ -1678,8 +1870,11 @@
   uploadZone.addEventListener('drop', e => {
     e.preventDefault();
     uploadZone.classList.remove('drag-over');
-    handleFile(e.dataTransfer.files[0]);
+    handleFiles(e.dataTransfer.files);
   });
+
+  continueBtn.href = `materials.html?shop=${encodeURIComponent(HOME_SHOP_SLUG)}${IS_NEW_GROUP_FLOW ? '&newGroup=1' : ''}`;
+  window.addEventListener('load', showNewUploadPrompt);
 
   // ── Scroll-triggered animation for How it works ───────────────
   const hiw = document.querySelector('.hiw-section');
@@ -1709,14 +1904,7 @@
   const portalSignout = document.getElementById('portalSignout');
 
   // Resolve shop slug from stored selection or fall back to page default
-  const PORTAL_SHOP_SLUG = (() => {
-    try {
-      const fromUrl = new URLSearchParams(location.search).get('shop');
-      if (fromUrl) return fromUrl;
-    } catch {}
-    try { return JSON.parse(localStorage.getItem('form_selection') || '{}').shopSlug || 'mahi3d'; }
-    catch { return 'mahi3d'; }
-  })();
+  const PORTAL_SHOP_SLUG = HOME_SHOP_SLUG;
 
   function pvPortalHref(tab = 'overview') {
     return `customer/dashboard.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}#${tab}`;
@@ -1739,6 +1927,12 @@
     });
     document.querySelectorAll('[data-pv-catalog]').forEach(a => {
       a.href = `catalog.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`;
+    });
+    document.querySelectorAll('[data-pv-terms]').forEach(a => {
+      a.href = `terms.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`;
+    });
+    document.querySelectorAll('[data-pv-privacy]').forEach(a => {
+      a.href = `privacy.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`;
     });
   }
   pvApplyPortalLinks();

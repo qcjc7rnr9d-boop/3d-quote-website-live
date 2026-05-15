@@ -105,6 +105,7 @@ try {
   assert(Array.isArray(orders), '/orders did not return an array');
   assert(orders.length === 5, `Expected 5 demo orders, got ${orders.length}`);
   assert(orders.every(o => typeof o.total === 'number'), 'Order totals must be numeric');
+  assert(orders.every(o => o.material_name), 'Every demo customer order must include material_name');
 
   const paid = orders.filter(o => o.payment_status === 'paid');
   const expectedTotal = roundMoney(paid.reduce((sum, order) => sum + order.total, 0));

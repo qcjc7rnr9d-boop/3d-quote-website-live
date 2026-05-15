@@ -22,6 +22,7 @@ import {
   verifyPlatformPassword,
   verifyPlatformResetToken,
 } from '../lib/platform-auth.js';
+import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
 
 const router = Router();
 
@@ -397,7 +398,7 @@ router.get('/orders', requirePlatformAuth, (req, res) => {
       LEFT JOIN materials m ON m.id = o.material_id
       ${where}
     `).get(...params).c;
-    const orders = db.prepare(`
+    const orders = attachOrderFilesList(db, db.prepare(`
       SELECT o.id, o.shop_id, s.name as shop_name, s.slug as shop_slug,
              o.created_at, o.customer_email, o.customer_name, o.file_name,
              o.material_id, m.name as material_name, o.colour, o.finish, o.quantity,
@@ -409,7 +410,7 @@ router.get('/orders', requirePlatformAuth, (req, res) => {
       ${where}
       ORDER BY o.created_at DESC, o.id DESC
       LIMIT ? OFFSET ?
-    `).all(...params, limit, offset);
+    `).all(...params, limit, offset));
 
     res.json({ orders, total, page, pages: Math.ceil(total / limit), limit });
   } catch (err) {
@@ -444,10 +445,13 @@ router.get('/orders/:id', requirePlatformAuth, (req, res) => {
       shopId: order.shop_id,
     });
 
+    const withFiles = attachOrderFiles(db, order);
     res.json({
       id: order.id,
       created_at: order.created_at,
       file_name: order.file_name,
+      files: withFiles.files,
+      items: withFiles.items,
       material: order.material_id ? {
         id: order.material_id,
         name: order.material_name,

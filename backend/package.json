@@ -11,9 +11,20 @@
     "security:smoke": "node scripts/security-smoke.js",
     "platform:smoke": "node scripts/platform-reporting-smoke.js",
     "materials:smoke": "node scripts/material-library-smoke.js",
+    "materials:filter-smoke": "node scripts/material-filter-ranking-smoke.js",
     "demo:seed:mahi3d": "ALLOW_MAHI3D_DEMO_SEED=1 node scripts/seed-mahi3d-demo.js",
     "demo:seed:smoke": "node scripts/mahi3d-demo-seed-smoke.js",
-    "customer:smoke": "node scripts/customer-portal-smoke.js"
+    "demo:materials:smoke": "node scripts/mahi3d-demo-materials-smoke.js",
+    "customer:smoke": "node scripts/customer-portal-smoke.js",
+    "customer:quotes-smoke": "node scripts/customer-saved-quotes-smoke.js",
+    "customer:password-reset-smoke": "node scripts/customer-password-reset-smoke.js",
+    "multi-model:smoke": "node scripts/multi-model-smoke.js",
+    "multi-line-cart:smoke": "node scripts/multi-line-cart-smoke.js",
+    "checkout:smoke": "node scripts/checkout-stripe-only-smoke.js",
+    "legal:smoke": "node scripts/legal-pages-smoke.js",
+    "settings:logo-smoke": "node scripts/settings-logo-smoke.js",
+    "quote:ui-smoke": "node scripts/quote-ui-smoke.js",
+    "admin-orders:smoke": "node scripts/admin-orders-smoke.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

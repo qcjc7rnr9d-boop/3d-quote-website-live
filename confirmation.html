@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Order Confirmed — mahi3d</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -163,7 +163,7 @@
     <ul class="nav-links" id="navLinks">
       <li><a href="materials.html">Materials</a></li>
       <li><a href="quote.html">Quote</a></li>
-      <li><a href="#">Contact</a></li>
+      <li><a href="customer/dashboard.html#help">Contact</a></li>
     </ul>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -221,8 +221,8 @@
       <hr class="divider">
 
       <div class="dispatch-row">
-        <span class="dispatch-label">Estimated dispatch</span>
-        <span class="badge badge-stone">2–5 business days</span>
+        <span class="dispatch-label">Order status</span>
+        <span class="badge badge-stone" id="sumStatus">Received</span>
       </div>
     </div>
 
@@ -234,9 +234,9 @@
 
     <!-- 8. Trust strip -->
     <div class="trust-strip">
-      <span class="chip">🔒 Secure checkout</span>
-      <span class="chip">♻ Eco packaging</span>
-      <span class="chip">✦ Quality guaranteed</span>
+      <span class="chip">Secure checkout</span>
+      <span class="chip">Order saved</span>
+      <span class="chip">Portal tracking</span>
     </div>
 
   </main>
@@ -253,14 +253,20 @@
     // ── Fetch the real order from the backend ──────────────
     // The checkout flow redirects here with ?order=<id> after a successful
     // Stripe charge. We pull the public order details and render them.
-    const orderId = new URLSearchParams(location.search).get('order');
+    const params = new URLSearchParams(location.search);
+    const orderId = params.get('order');
+    const orderToken = params.get('token');
+    const shopSlug = params.get('shop') || 'mahi3d';
     const orderRefEl = document.getElementById('orderRef');
+    document.querySelectorAll('a[href="materials.html"]').forEach(a => { a.href = `catalog.html?shop=${encodeURIComponent(shopSlug)}`; });
+    document.querySelectorAll('a[href="quote.html"]').forEach(a => { a.href = `quote.html?shop=${encodeURIComponent(shopSlug)}`; });
+    document.querySelectorAll('a[href="customer/dashboard.html#help"]').forEach(a => { a.href = `customer/dashboard.html?shop=${encodeURIComponent(shopSlug)}#help`; });
 
-    if (!orderId) {
+    if (!orderId || !orderToken) {
       orderRefEl.textContent = 'No order found';
     } else {
       orderRefEl.textContent = 'Loading…';
-      fetch('/api/orders/public/' + encodeURIComponent(orderId))
+      fetch('/api/orders/public/' + encodeURIComponent(orderId) + '?token=' + encodeURIComponent(orderToken))
         .then(r => r.ok ? r.json() : Promise.reject(r))
         .then(o => {
           // Big "ORD-XXXX" badge
@@ -269,11 +275,9 @@
           // Summary
           document.getElementById('sumMaterial').textContent = o.material_name || '—';
           document.getElementById('sumColorName').textContent = o.colour || '—';
-          const finishBadge = o.finish === 'fine'
-            ? '<span class="badge badge-sage">Fine</span>'
-            : '<span class="badge badge-stone">Standard</span>';
-          document.getElementById('sumFinish').innerHTML = finishBadge;
+          document.getElementById('sumFinish').textContent = o.finish || '—';
           document.getElementById('sumQty').textContent = String(o.quantity || 1);
+          document.getElementById('sumStatus').textContent = o.fulfilment_status || 'Received';
         })
         .catch(() => {
           orderRefEl.textContent = 'Order not found';

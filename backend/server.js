@@ -107,7 +107,8 @@ app.use('/uploads', express.static(join(ROOT_DIR, 'uploads'), {
 }));
 const publicRootPages = new Set([
   '/', '/index.html', '/catalog.html', '/checkout.html', '/confirmation.html',
-  '/materials.html', '/onboarding.html', '/quote.html', '/stripe-callback.html'
+  '/materials.html', '/onboarding.html', '/options.html', '/privacy.html', '/quote.html',
+  '/stripe-callback.html', '/terms.html'
 ]);
 app.get([...publicRootPages], (req, res) => {
   const page = req.path === '/' ? 'index.html' : req.path.slice(1);

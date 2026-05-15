@@ -5,7 +5,15 @@ import { parseInfillTiers, sanitiseTierList } from '../lib/infill-tiers.js';
 
 const router = Router();
 
+function ensurePricingColumns() {
+  const cols = db.prepare('PRAGMA table_info(pricing_config)').all().map(c => c.name);
+  if (!cols.includes('max_model_quantity')) {
+    db.exec('ALTER TABLE pricing_config ADD COLUMN max_model_quantity INTEGER;');
+  }
+}
+
 function ensurePricingConfig(shopId) {
+  ensurePricingColumns();
   const existing = db.prepare('SELECT * FROM pricing_config WHERE shop_id = ?').get(shopId);
   if (!existing) {
     db.prepare(`
@@ -36,7 +44,7 @@ router.put('/', requireShopAuth, (req, res) => {
   try {
     const {
       currency, tax_rate, tax_inclusive, min_order_value,
-      free_shipping_above, quote_rounding, quote_valid_hours,
+      free_shipping_above, quote_rounding, quote_valid_hours, max_model_quantity,
       show_breakdown, surcharges,
       // Pricing scheme
       pricing_mode,
@@ -59,13 +67,13 @@ router.put('/', requireShopAuth, (req, res) => {
     db.prepare(`
       INSERT OR REPLACE INTO pricing_config
         (shop_id, currency, tax_rate, tax_inclusive, min_order_value,
-         free_shipping_above, quote_rounding, quote_valid_hours,
+         free_shipping_above, quote_rounding, quote_valid_hours, max_model_quantity,
          show_breakdown, surcharges,
          pricing_mode, mat_include_support,
          time_rate_per_hour, time_rate_per_gram, time_include_support,
          infill_tiers,
          updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `).run(
       req.shop.id,
       currency || 'NZD',
@@ -75,6 +83,7 @@ router.put('/', requireShopAuth, (req, res) => {
       free_shipping_above ?? 50,
       quote_rounding ?? 0.10,
       quote_valid_hours ?? 24,
+      Number.isFinite(Number(max_model_quantity)) && Number(max_model_quantity) > 0 ? Math.floor(Number(max_model_quantity)) : null,
       show_breakdown ? 1 : 0,
       JSON.stringify(Array.isArray(surcharges) ? surcharges : []),
       mode,

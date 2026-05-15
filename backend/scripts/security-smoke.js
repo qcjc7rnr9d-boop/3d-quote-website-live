@@ -1,4 +1,38 @@
 const base = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
+let existingOrderId = null;
+let db = null;
+let tempOrderId = null;
+let tempOrderToken = null;
+try {
+  const { DatabaseSync } = await import('node:sqlite');
+  const { randomUUID } = await import('node:crypto');
+  db = new DatabaseSync('data/rfdewi.db');
+  existingOrderId = db.prepare('SELECT id FROM orders ORDER BY id LIMIT 1').get()?.id || null;
+  const shop = db.prepare("SELECT id FROM shops WHERE slug = 'mahi3d'").get();
+  if (shop) {
+    const cols = db.prepare('PRAGMA table_info(orders)').all().map(c => c.name);
+    if (!cols.includes('public_token')) {
+      db.exec('ALTER TABLE orders ADD COLUMN public_token TEXT');
+    }
+    tempOrderToken = `smoke-${randomUUID()}`;
+    const result = db.prepare(`
+      INSERT INTO orders (
+        shop_id, customer_email, customer_name, file_name, quantity,
+        subtotal, tax, shipping, total, payment_status, fulfilment_status, public_token
+      )
+      VALUES (?, 'private@example.test', 'Private Customer', 'Private Part.stl', 1, 1, 0, 0, 1, 'paid', 'pending', ?)
+    `).run(shop.id, tempOrderToken);
+    tempOrderId = result.lastInsertRowid;
+  }
+} catch {}
+
+function cleanup() {
+  try {
+    if (tempOrderId && db) db.prepare('DELETE FROM orders WHERE id = ?').run(tempOrderId);
+    if (db) db.close();
+  } catch {}
+}
+process.on('exit', cleanup);
 
 async function expectStatus(path, expected) {
   const res = await fetch(`${base}${path}`, { method: 'HEAD', redirect: 'manual' });
@@ -28,6 +62,22 @@ async function expectPostJson(path, body, expectedStatus) {
     throw new Error(`${path} returned ${res.status}, expected ${expectedStatus.join('/')}`);
   }
   console.log(`✓ ${path} -> ${res.status}`);
+}
+
+async function expectPublicOrderTokenBoundary() {
+  if (!tempOrderId || !tempOrderToken) {
+    console.log('↷ public order token boundary skipped (no demo shop available)');
+    return;
+  }
+  await expectStatus(`/api/orders/public/${tempOrderId}`, [400]);
+  await expectStatus(`/api/orders/public/${tempOrderId}?token=wrong`, [404]);
+  const res = await fetch(`${base}/api/orders/public/${tempOrderId}?token=${encodeURIComponent(tempOrderToken)}`);
+  if (res.status !== 200) throw new Error(`/api/orders/public/${tempOrderId}?token=<valid> returned ${res.status}`);
+  const data = await res.json();
+  if ('customer_email' in data || 'customer_name' in data) {
+    throw new Error('/api/orders/public returned customer PII');
+  }
+  console.log('✓ /api/orders/public/:id requires token and omits customer PII');
 }
 
 async function expectOversizeRejectedIfConfigured() {
@@ -93,7 +143,14 @@ await expectStatus('/api/platform/orders', [401]);
 await expectStatus('/api/platform/orders/1', [401]);
 await expectStatus('/api/platform/customers', [401]);
 await expectStatus('/api/platform/audit-events', [401]);
+if (existingOrderId) {
+  await expectStatus(`/api/orders/public/${existingOrderId}`, [400]);
+} else {
+  await expectStatus('/api/orders/public/1', [400, 404]);
+}
+await expectPublicOrderTokenBoundary();
 await expectStatus('/api/settings', [401]);
+await expectPostJson('/api/settings/logo', {}, [401]);
 await expectStatus('/api/pricing', [401]);
 await expectStatus('/api/materials', [401]);
 await expectStatus('/api/customer/me', [401]);
@@ -105,4 +162,6 @@ await expectPostJson('/api/stripe/create-payment-intent', {}, [400, 429]);
 await expectPostJson('/api/customer/change-password', {}, [401, 429]);
 await expectOversizeRejectedIfConfigured();
 
+if (tempOrderId && db) db.prepare('DELETE FROM orders WHERE id = ?').run(tempOrderId);
+if (db) db.close();
 console.log('Security smoke checks passed.');

@@ -12,6 +12,8 @@ export class PricingError extends Error {
 }
 
 const DEFAULT_CURRENCY = 'NZD';
+export const MAX_MODELS_PER_QUOTE = 20;
+export const MAX_MODEL_QUANTITY_SAFETY = 9999;
 
 function toNumber(value, fallback = 0) {
   const n = Number(value);
@@ -103,6 +105,24 @@ function publicShipping(shipping) {
   };
 }
 
+function roundOne(value) {
+  const n = toNumber(value, NaN);
+  return Number.isFinite(n) ? Math.round(n * 10) / 10 : null;
+}
+
+function publicModel(model) {
+  if (!model) return null;
+  return {
+    id: model.id || null,
+    name: model.name,
+    size: model.size ?? null,
+    ext: model.ext || '',
+    volumeCm3: money(model.volumeCm3),
+    quantity: clampInt(model.quantity, 1, MAX_MODEL_QUANTITY_SAFETY, 1),
+    dimensions: model.dimensions || null,
+  };
+}
+
 export function normaliseShippingZones(rawZones = []) {
   return (Array.isArray(rawZones) ? rawZones : [])
     .filter(o => o && o.active !== false)
@@ -158,15 +178,45 @@ function getShopBySlug(db, slug) {
   return shop;
 }
 
-function loadPricingInputs(db, shop, input = {}) {
-  if (input.materialId == null || input.materialId === '') {
-    throw new PricingError('Selected material is required.', 400, 'MATERIAL_REQUIRED');
+function normaliseLookupText(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function resolveMaterial(db, shop, input = {}) {
+  if (input.materialId != null && input.materialId !== '') {
+    const byId = parseMaterialRow(db.prepare(`
+      SELECT *
+      FROM materials
+      WHERE id = ? AND shop_id = ? AND active = 1
+    `).get(input.materialId, shop.id), { stableIds: true, publicOnly: true });
+    if (byId) return byId;
   }
-  const material = parseMaterialRow(db.prepare(`
+
+  const materialName = normaliseLookupText(
+    input.materialName
+    ?? input.material_name
+    ?? (typeof input.material === 'string' ? input.material : input.material?.name)
+    ?? input.quoteSnapshot?.selected?.material?.name
+  );
+  if (!materialName) return null;
+
+  const rows = db.prepare(`
     SELECT *
     FROM materials
-    WHERE id = ? AND shop_id = ? AND active = 1
-  `).get(input.materialId, shop.id), { stableIds: true, publicOnly: true });
+    WHERE shop_id = ? AND active = 1
+  `).all(shop.id);
+  const matches = rows.filter(row => normaliseLookupText(row.name) === materialName);
+  if (matches.length !== 1) return null;
+  return parseMaterialRow(matches[0], { stableIds: true, publicOnly: true });
+}
+
+function loadPricingInputs(db, shop, input = {}) {
+  const hasMaterialRef = (input.materialId != null && input.materialId !== '')
+    || normaliseLookupText(input.materialName ?? input.material_name ?? (typeof input.material === 'string' ? input.material : input.material?.name));
+  if (!hasMaterialRef) {
+    throw new PricingError('Selected material is required.', 400, 'MATERIAL_REQUIRED');
+  }
+  const material = resolveMaterial(db, shop, input);
   if (!material) {
     throw new PricingError('Selected material is not available.', 400, 'MATERIAL_UNAVAILABLE');
   }
@@ -180,6 +230,8 @@ export function buildQuoteRequestFromCart(cart = {}) {
   return {
     shopSlug: cart.shopSlug,
     materialId: cart.materialId,
+    materialName: cart.materialName ?? cart.material_name ?? (typeof cart.material === 'string' ? cart.material : cart.material?.name) ?? cart.quoteSnapshot?.selected?.material?.name,
+    models: cart.file?.models ?? cart.models ?? cart.quoteSnapshot?.selected?.models ?? null,
     volumeCm3: cart.file?.volumeCm3 ?? cart.volumeCm3 ?? cart.quoteSnapshot?.selected?.volumeCm3,
     colourId: cart.colorId ?? cart.colourId,
     colour: cart.colorName ?? cart.colour,
@@ -201,14 +253,80 @@ function normaliseDimensions(input = {}) {
   return { xMm, yMm, zMm };
 }
 
-function checkMaterialSize(material, input = {}) {
+function modelQuantity(model = {}, index = 0, maxQuantity = MAX_MODEL_QUANTITY_SAFETY) {
+  const raw = model.quantity ?? 1;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1) {
+    throw new PricingError(`Quantity must be a whole number of 1 or more for ${model?.name || `model ${index + 1}`}.`, 400, 'INVALID_MODEL_QUANTITY');
+  }
+  const limit = Math.max(1, Math.min(MAX_MODEL_QUANTITY_SAFETY, clampInt(maxQuantity, 1, MAX_MODEL_QUANTITY_SAFETY, MAX_MODEL_QUANTITY_SAFETY)));
+  if (n > limit) {
+    throw new PricingError(`Quantity for ${model?.name || `model ${index + 1}`} cannot be more than ${limit}.`, 400, 'MODEL_QUANTITY_TOO_HIGH');
+  }
+  return n;
+}
+
+function normaliseModels(input = {}, options = {}) {
+  const rawModels = Array.isArray(input.models) && input.models.length
+    ? input.models
+    : null;
+  const sourceModels = rawModels || [{
+    id: input.file?.id || null,
+    name: input.file?.name || input.fileName || 'Uploaded model',
+    size: input.file?.size ?? input.fileSize ?? null,
+    ext: input.file?.ext || input.file?.type || '',
+    volumeCm3: input.volumeCm3 ?? input.file?.volumeCm3,
+    dimensions: input.dimensions || input.file?.dimensions || null,
+  }];
+
+  if (sourceModels.length > MAX_MODELS_PER_QUOTE) {
+    throw new PricingError(
+      `Upload up to ${MAX_MODELS_PER_QUOTE} models at one time.`,
+      400,
+      'TOO_MANY_MODELS'
+    );
+  }
+
+  return sourceModels.map((model, index) => {
+    const volumeCm3 = toNumber(model?.volumeCm3, NaN);
+    if (!Number.isFinite(volumeCm3) || volumeCm3 <= 0) {
+      throw new PricingError(`Model volume is missing or invalid for ${model?.name || `model ${index + 1}`}.`, 400, 'INVALID_VOLUME');
+    }
+    const dimensions = normaliseDimensions({ dimensions: model?.dimensions });
+    const name = String(model?.name || `Model ${index + 1}`).slice(0, 240);
+    const ext = String(model?.ext || name.split('.').pop() || '').toLowerCase().slice(0, 12);
+    return {
+      id: model?.id || `model-${index + 1}`,
+      name,
+      size: Number.isFinite(Number(model?.size)) ? Number(model.size) : null,
+      ext,
+      volumeCm3,
+      quantity: rawModels ? modelQuantity(model, index, options.maxModelQuantity) : 1,
+      dimensions,
+    };
+  });
+}
+
+function aggregateDimensions(models = []) {
+  const dims = models.map(m => m.dimensions).filter(Boolean);
+  if (!dims.length) return null;
+  return {
+    xMm: Math.max(...dims.map(d => toNumber(d.xMm, 0))),
+    yMm: Math.max(...dims.map(d => toNumber(d.yMm, 0))),
+    zMm: Math.max(...dims.map(d => toNumber(d.zMm, 0))),
+  };
+}
+
+function checkMaterialSize(material, input = {}, models = null) {
   const checks = [
     { key: 'xMm', label: 'width/X', limit: toNumber(material.max_x_mm, 0) },
     { key: 'yMm', label: 'depth/Y', limit: toNumber(material.max_y_mm, 0) },
     { key: 'zMm', label: 'height/Z', limit: toNumber(material.max_z_mm, 0) },
   ];
   const hasConfiguredLimit = checks.some(c => c.limit > 0);
-  const dimensions = normaliseDimensions(input);
+  const bundle = models || normaliseModels(input);
+  const missingModel = bundle.find(model => !model.dimensions);
+  const dimensions = aggregateDimensions(bundle);
   if (!dimensions) {
     if (hasConfiguredLimit) {
       throw new PricingError(
@@ -219,15 +337,26 @@ function checkMaterialSize(material, input = {}) {
     }
     return null;
   }
-  const failed = checks.find(c => c.limit > 0 && dimensions[c.key] > c.limit);
-  if (!failed) return dimensions;
-  const actual = Math.round(dimensions[failed.key] * 10) / 10;
-  const limit = Math.round(failed.limit * 10) / 10;
-  throw new PricingError(
-    `Model ${failed.label} is ${actual} mm, but this material allows up to ${limit} mm.`,
-    400,
-    'MODEL_TOO_LARGE'
-  );
+  if (missingModel && hasConfiguredLimit) {
+    throw new PricingError(
+      `Model dimensions are required before ${missingModel.name} can be quoted with this material.`,
+      400,
+      'MODEL_DIMENSIONS_REQUIRED'
+    );
+  }
+  for (const model of bundle) {
+    if (!model.dimensions) continue;
+    const failed = checks.find(c => c.limit > 0 && model.dimensions[c.key] > c.limit);
+    if (!failed) continue;
+    const actual = Math.round(model.dimensions[failed.key] * 10) / 10;
+    const limit = Math.round(failed.limit * 10) / 10;
+    throw new PricingError(
+      `${model.name} ${failed.label} is ${actual} mm, but this material allows up to ${limit} mm.`,
+      400,
+      'MODEL_TOO_LARGE'
+    );
+  }
+  return dimensions;
 }
 
 export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], input = {} }) {
@@ -237,13 +366,15 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
     warnings.push('Live checkout currently charges in NZD; other currencies are display-only.');
   }
 
-  const volumeCm3 = toNumber(input.volumeCm3, NaN);
-  if (!Number.isFinite(volumeCm3) || volumeCm3 <= 0) {
-    throw new PricingError('Model volume is missing or invalid.', 400, 'INVALID_VOLUME');
-  }
-  const dimensions = checkMaterialSize(material, input);
-
-  const quantity = clampInt(input.quantity, 1, 999, 1);
+  const maxModelQuantity = toNumber(cfg.max_model_quantity, 0) > 0
+    ? toNumber(cfg.max_model_quantity, MAX_MODEL_QUANTITY_SAFETY)
+    : MAX_MODEL_QUANTITY_SAFETY;
+  const models = normaliseModels(input, { maxModelQuantity });
+  const bundleMode = models.length > 1;
+  const quantity = bundleMode ? 1 : clampInt(input.quantity, 1, 999, 1);
+  if (!bundleMode && models[0]) models[0].quantity = quantity;
+  const volumeCm3 = money(models.reduce((sum, model) => sum + (model.volumeCm3 * (bundleMode ? model.quantity : 1)), 0));
+  const dimensions = checkMaterialSize(material, input, models);
 
   const colours = Array.isArray(material.colours) ? material.colours : [];
   let colour = null;
@@ -294,7 +425,24 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
   const minCharge = Math.max(0, toNumber(material.min_charge, 0));
   const rawUnit = volumeCm3 * ratePerCm3 * finishMultiplier * infillMultiplier;
   const unit = money(Math.max(rawUnit, minCharge));
-  const itemSubtotalBeforeMinimum = money(unit * quantity);
+  const modelLineItems = models.map((model, index) => {
+    const modelRate = selectVolumeRate(material, model.volumeCm3);
+    const modelUnit = bundleMode
+      ? money(Math.max(model.volumeCm3 * modelRate * finishMultiplier * infillMultiplier, minCharge))
+      : unit;
+    const modelQuantity = bundleMode ? model.quantity : quantity;
+    return {
+      id: model.id || null,
+      name: model.name || `Model ${index + 1}`,
+      quantity: modelQuantity,
+      volumeCm3: money(model.volumeCm3),
+      ratePerCm3: money(modelRate),
+      unit: fromCents(toCents(modelUnit)),
+      subtotal: money(modelUnit * modelQuantity),
+    };
+  });
+  const bundleSubtotal = modelLineItems.reduce((sum, item) => sum + item.subtotal, 0);
+  const itemSubtotalBeforeMinimum = money(bundleSubtotal);
 
   const minOrderValue = Math.max(0, toNumber(cfg.min_order_value, 0));
   const minOrderAdjustment = money(Math.max(0, minOrderValue - itemSubtotalBeforeMinimum));
@@ -343,6 +491,8 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
       quantity,
       volumeCm3,
       dimensions,
+      models: models.map(publicModel),
+      modelCount: models.length,
     },
     lineItems: {
       ratePerCm3: money(ratePerCm3),
@@ -352,6 +502,7 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
       itemSubtotalBeforeMinimum,
       minOrderAdjustment,
       itemSubtotal,
+      models: modelLineItems,
       shipping: shippingAmount,
       tax,
       roundingAdjustment,
