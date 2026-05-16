@@ -85,7 +85,7 @@
     .advanced-filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px; margin-top: 10px; }
     .filter-hint { color: var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.45; }
     .discovery-panel { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 18px; }
-    .discovery-row { display: grid; grid-template-columns: minmax(220px, 1fr) 170px 130px 110px 110px auto; gap: 10px; align-items: end; }
+    .discovery-row { display: grid; grid-template-columns: 150px minmax(220px, 1fr) 150px 130px 110px 110px auto; gap: 10px; align-items: end; }
     .discovery-status { color: var(--muted); font-size: 13px; margin-top: 10px; }
     .discovery-log { margin-top: 12px; max-height: 128px; overflow: auto; background: #111827; color: #E5E7EB; border-radius: var(--radius); padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.45; }
     .field { display: flex; flex-direction: column; gap: 6px; }
@@ -364,7 +364,7 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
     <section class="topbar">
       <div>
         <h1>Prospect Research</h1>
-        <p class="subtitle">A standalone lead list for NZ 3D printing businesses. Score how Trennen could help each business turn traffic into quote requests, then export an outreach-ready CSV.</p>
+        <p class="subtitle">A standalone lead list for custom FDM 3D printing services. Search by country and area, score how Trennen could help each business turn traffic into quote requests, then export an outreach-ready CSV.</p>
       </div>
       <div class="actions">
         <button class="btn" id="importBtn" type="button">Import CSV / discovery JSON</button>
@@ -401,7 +401,15 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
 
     <section class="discovery-panel">
       <div class="discovery-row">
-        <div class="field"><label for="discoveryCities">Discovery cities</label><input id="discoveryCities" value="Auckland,Wellington,Christchurch"></div>
+        <div class="field"><label for="countryPreset">Country preset</label><select id="countryPreset">
+          <option value="nz">New Zealand</option>
+          <option value="au">Australia</option>
+          <option value="us">United States</option>
+          <option value="uk">United Kingdom</option>
+          <option value="ca">Canada</option>
+          <option value="global">Custom / Global</option>
+        </select></div>
+        <div class="field"><label for="discoveryAreas">Areas to search</label><input id="discoveryAreas" value="Auckland,Wellington,Christchurch"></div>
         <div class="field"><label for="prospectScope">Prospect scope</label><select id="prospectScope">
           <option value="target_review">Target + review</option>
           <option value="target_only">Target only</option>
@@ -755,6 +763,14 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
 
     const $ = id => document.getElementById(id);
     const esc = value => String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const COUNTRY_PRESET_AREAS = {
+      nz: 'Auckland,Wellington,Christchurch',
+      au: 'Sydney,Melbourne,Brisbane,Perth,Adelaide,Canberra',
+      us: 'Los Angeles,New York,Chicago,Houston,Phoenix,Seattle',
+      uk: 'London,Manchester,Birmingham,Leeds,Glasgow,Bristol',
+      ca: 'Toronto,Vancouver,Montreal,Calgary,Ottawa,Edmonton',
+      global: 'Sydney Australia,Los Angeles United States,Manchester United Kingdom',
+    };
 
     function loadLeads() {
       try {
@@ -804,7 +820,7 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
         discoveryBridgeHasKey = Boolean(status.hasKey);
         $('discoveryStatus').textContent = status.hasKey
           ? status.running ? 'Discovery is running.' : 'Discovery bridge ready.'
-          : 'Discovery bridge ready for seed website audit. Add Google Places key for city search.';
+          : 'Discovery bridge ready for seed website audit. Add Google Places key for area search.';
         refreshDiscoveryStartState(status.running);
         if (status.running) startPollingDiscovery();
       } catch {
@@ -830,15 +846,18 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
       const knownLeadKeys = core.knownLeadKeys(leads);
       const seedText = $('seedWebsites').value.trim();
       const newLeadTarget = $('newLeadTarget').value || 10;
+      const countryLabel = $('countryPreset').selectedOptions[0]?.textContent || 'selected country';
+      const areaText = $('discoveryAreas').value.trim();
       currentDiscoveryBatch = `discovery-${Date.now()}`;
-      appendDiscoveryLog(`Starting ${seedText ? 'seed + Places' : 'Places'} discovery for ${newLeadTarget} new businesses; skipping ${leads.length} already-added business(es) before crawling.`);
+      appendDiscoveryLog(`Starting ${seedText ? 'seed + Places' : 'Places'} discovery in ${countryLabel} (${areaText || 'preset areas'}) for ${newLeadTarget} new businesses; skipping ${leads.length} already-added business(es) before crawling.`);
       appendDiscoveryLog(`requested ${newLeadTarget} new businesses; completion will show new businesses added, already-added skips, non-target skips, and searches attempted.`);
       lastDiscoveryEventId = 0;
       const r = await fetch('/api/discovery/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cities: $('discoveryCities').value,
+          countryPreset: $('countryPreset').value,
+          areas: $('discoveryAreas').value,
           targetScope: $('prospectScope').value,
           newLeadTarget: $('newLeadTarget').value,
           maxResults: $('maxResults').value,
@@ -1533,6 +1552,9 @@ details.evidence-details summary { cursor: pointer; color: var(--muted); font-si
       $(id).addEventListener('change', render);
     });
     $('seedWebsites').addEventListener('input', () => refreshDiscoveryStartState());
+    $('countryPreset').addEventListener('change', () => {
+      $('discoveryAreas').value = COUNTRY_PRESET_AREAS[$('countryPreset').value] || '';
+    });
     $('newLeadBtn').addEventListener('click', () => openDrawer());
     $('startDiscoveryBtn').addEventListener('click', startDiscovery);
     $('closeDrawer').addEventListener('click', closeDrawer);

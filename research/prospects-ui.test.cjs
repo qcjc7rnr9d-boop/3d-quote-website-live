@@ -20,6 +20,13 @@ test('company brief drawer renders scan-friendly sales prep sections', () => {
 
 test('discovery UI asks for new stores and sends newLeadTarget with known keys', () => {
   assert.match(html, /New stores to find/);
+  assert.match(html, /Country preset/);
+  assert.match(html, /Areas to search/);
+  assert.match(html, /Australia/);
+  assert.match(html, /United States/);
+  assert.match(html, /Custom \/ Global/);
+  assert.match(html, /countryPreset:\s*\$\('countryPreset'\)\.value/);
+  assert.match(html, /areas:\s*\$\('discoveryAreas'\)\.value/);
   assert.doesNotMatch(html, /<label for="maxQueries">Queries<\/label>/);
   assert.match(html, /newLeadTarget:\s*\$\('newLeadTarget'\)\.value/);
   assert.match(html, /knownLeadKeys/);

@@ -5,7 +5,7 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { refreshLeadEvidence, runDiscovery } from './discover-prospects.mjs';
+import { normalizeDiscoveryScope, refreshLeadEvidence, runDiscovery } from './discover-prospects.mjs';
 
 const require = createRequire(import.meta.url);
 const { normalizeNewLeadTarget, parseEnvText, sanitizeKnownLeadKeys } = require('./discovery-server-core.cjs');
@@ -89,11 +89,20 @@ function readBody(req) {
 }
 
 function discoveryOptions(body = {}) {
-  const cityText = String(body.cities || 'Auckland,Wellington,Christchurch').trim();
+  const areaText = String(body.areas || body.cities || '').trim();
+  const areas = areaText ? areaText.split(',').map(area => area.trim()).filter(Boolean) : undefined;
+  const scope = normalizeDiscoveryScope({
+    countryPreset: body.countryPreset || 'nz',
+    areas,
+    cities: areas,
+  });
   const seedText = String(body.seedText || '').slice(0, 20000);
   const newLeadTarget = normalizeNewLeadTarget(body.newLeadTarget);
   return {
-    cities: cityText.split(',').map(city => city.trim()).filter(Boolean),
+    countryPreset: scope.countryPreset,
+    countryName: scope.countryName,
+    regionCode: scope.regionCode,
+    areas: scope.areas,
     keywords: ['custom FDM 3D printing service', 'PLA PETG 3D printing service', 'upload STL 3D printing', 'custom 3D print quote', 'custom order 3D printing miniatures', 'send STL 3D printing service'],
     newLeadTarget,
     maxQueries: Math.max(10, Math.min(120, Number(body.maxQueries) || newLeadTarget * 6)),

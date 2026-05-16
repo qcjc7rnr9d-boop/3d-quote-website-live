@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { calculateQuoteForShopSlug, PricingError } from '../lib/pricing-engine.js';
+import { parseInfillTiers } from '../lib/infill-tiers.js';
 
 const db = new DatabaseSync('data/rfdewi.db');
 
@@ -52,8 +53,12 @@ try {
   assert(material, 'PETG material is missing');
   const colour = (parseJson(material.colours, []) || []).find(c => c.enabled !== false);
   const finish = (parseJson(material.finishes, []) || []).find(f => f.enabled !== false);
+  const pricingRows = db.prepare('SELECT infill_tiers FROM pricing_config WHERE shop_id = ?').get(shop.id) || {};
+  const infill = parseInfillTiers(pricingRows.infill_tiers).find(t => t.active !== false);
   const shippingRows = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
   const shipping = (parseJson(shippingRows.shipping_zones, []) || []).find(s => s.active !== false);
+  assert(infill?.id, 'Mahi3D infill tier is missing');
+  assert(shipping?.id, 'Mahi3D shipping option is missing');
 
   const single = calculateQuoteForShopSlug(db, 'mahi3d', {
     materialId: material.id,
@@ -61,6 +66,7 @@ try {
     dimensions: { xMm: 20, yMm: 20, zMm: 20 },
     colourId: colour?.id,
     finishId: finish?.id,
+    infillTierId: infill?.id,
     quantity: 1,
     shippingId: shipping?.id,
   });
@@ -73,6 +79,7 @@ try {
     ],
     colourId: colour?.id,
     finishId: finish?.id,
+    infillTierId: infill?.id,
     quantity: 999,
     shippingId: shipping?.id,
   });
@@ -92,6 +99,7 @@ try {
     ],
     colourId: colour?.id,
     finishId: finish?.id,
+    infillTierId: infill?.id,
     shippingId: shipping?.id,
   });
   const copiedBundle = calculateQuoteForShopSlug(db, 'mahi3d', {
@@ -102,6 +110,7 @@ try {
     ],
     colourId: colour?.id,
     finishId: finish?.id,
+    infillTierId: infill?.id,
     shippingId: shipping?.id,
   });
   assert(copiedBundle.lineItems.itemSubtotal > oneEachBundle.lineItems.itemSubtotal, 'increasing a model quantity must increase the final item subtotal');
@@ -117,6 +126,7 @@ try {
       })),
       colourId: colour?.id,
       finishId: finish?.id,
+      infillTierId: infill?.id,
       shippingId: shipping?.id,
     });
     throw new Error('oversized model bundle was accepted');
@@ -137,6 +147,8 @@ try {
       ],
       colourId: colour?.id,
       finishId: finish?.id,
+      infillTierId: infill?.id,
+      shippingId: shipping?.id,
     });
     throw new Error('over-limit per-model quantity was accepted');
   } catch (err) {
@@ -147,15 +159,19 @@ try {
   }
 
   const tempMaterial = db.prepare(`
-    INSERT INTO materials (shop_id, name, active, base_price, max_x_mm, max_y_mm, max_z_mm)
-    VALUES (?, 'Bundle Smoke Limit', 1, 1, 30, 30, 10)
-  `).run(shop.id).lastInsertRowid;
+    INSERT INTO materials (shop_id, name, active, base_price, max_x_mm, max_y_mm, max_z_mm, colours, finishes)
+    VALUES (?, 'Bundle Smoke Limit', 1, 1, 30, 30, 10, ?, ?)
+  `).run(shop.id, material.colours, material.finishes).lastInsertRowid;
   try {
     calculateQuoteForShopSlug(db, 'mahi3d', {
       materialId: tempMaterial,
       models: [
         { name: 'Too Tall.stl', size: 100, volumeCm3: 1, dimensions: { xMm: 5, yMm: 5, zMm: 25 } },
       ],
+      colourId: colour?.id,
+      finishId: finish?.id,
+      infillTierId: infill?.id,
+      shippingId: shipping?.id,
     });
     throw new Error('oversized bundle model was accepted');
   } catch (err) {

@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS shops (
   stripe_charges_enabled INTEGER NOT NULL DEFAULT 0,
   stripe_payouts_enabled INTEGER NOT NULL DEFAULT 0,
   stripe_details_submitted INTEGER NOT NULL DEFAULT 0,
+  shopify_shop_domain TEXT UNIQUE,
+  shopify_installed_at TEXT,
+  shopify_uninstalled_at TEXT,
   updated_at         TEXT    NOT NULL DEFAULT (datetime('now')),
   created_at         TEXT    NOT NULL DEFAULT (datetime('now'))
 );
@@ -211,6 +214,71 @@ CREATE TABLE IF NOT EXISTS customer_saved_quotes (
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
   FOREIGN KEY (customer_account_id) REFERENCES customer_accounts(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS exchange_rate_cache (
+  provider        TEXT NOT NULL,
+  base_currency   TEXT NOT NULL,
+  quote_currency  TEXT NOT NULL,
+  rate            REAL NOT NULL,
+  provider_date   TEXT,
+  fetched_at      TEXT NOT NULL,
+  PRIMARY KEY (provider, base_currency, quote_currency)
+);
+
+CREATE INDEX IF NOT EXISTS idx_exchange_rate_cache_fetched
+  ON exchange_rate_cache(provider, base_currency, fetched_at);
+
+-- ── Shopify custom app integration ─────────────────────────
+CREATE TABLE IF NOT EXISTS shopify_sessions (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id             INTEGER NOT NULL,
+  shopify_shop_domain TEXT NOT NULL,
+  access_token        TEXT NOT NULL,
+  scope               TEXT,
+  installed_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  uninstalled_at      TEXT,
+  UNIQUE(shopify_shop_domain),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS shopify_quote_sessions (
+  id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+  token                    TEXT UNIQUE NOT NULL,
+  shop_id                  INTEGER NOT NULL,
+  shopify_shop_domain      TEXT NOT NULL,
+  customer_email           TEXT,
+  customer_name            TEXT,
+  file_metadata            TEXT NOT NULL DEFAULT '[]',
+  cart_snapshot            TEXT NOT NULL DEFAULT '{}',
+  quote_snapshot           TEXT NOT NULL DEFAULT '{}',
+  status                   TEXT NOT NULL DEFAULT 'created',
+  shopify_draft_order_id   TEXT,
+  shopify_draft_order_name TEXT,
+  shopify_invoice_url      TEXT,
+  shopify_order_id         TEXT,
+  created_at               TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at               TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS shopify_webhook_events (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  shopify_shop_domain TEXT NOT NULL,
+  topic               TEXT NOT NULL,
+  payload             TEXT NOT NULL DEFAULT '{}',
+  processed_at         TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_shops_shopify_domain
+  ON shops(shopify_shop_domain)
+  WHERE shopify_shop_domain IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_shopify_quote_sessions_shop
+  ON shopify_quote_sessions(shop_id, updated_at);
+CREATE INDEX IF NOT EXISTS idx_shopify_quote_sessions_draft
+  ON shopify_quote_sessions(shopify_draft_order_id);
+CREATE INDEX IF NOT EXISTS idx_shopify_webhook_events_shop
+  ON shopify_webhook_events(shopify_shop_domain, processed_at);
 
 -- ── Discount codes ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS discount_codes (

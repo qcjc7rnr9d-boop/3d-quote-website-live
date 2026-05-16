@@ -156,6 +156,7 @@ await expectStatus('/api/materials', [401]);
 await expectStatus('/api/customer/me', [401]);
 await expectStatus('/api/customer/orders', [401]);
 await expectJson('/api/customer/catalog?shop=mahi3d', ['materials', 'settings']);
+await expectJson('/api/customer/exchange-rates?base=NZD&quotes=AUD,USD,GBP,EUR,CAD,JPY,SGD,HKD,CHF,CNY', ['base', 'rates', 'provider', 'stale']);
 await expectPostJson('/api/customer/quote-preview', { shopSlug: 'mahi3d' }, [400]);
 await expectPostJson('/api/materials/assets', {}, [401]);
 await expectPostJson('/api/stripe/create-payment-intent', {}, [400, 429]);

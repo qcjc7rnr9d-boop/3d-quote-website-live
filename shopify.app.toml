@@ -1,0 +1,35 @@
+name = "Trennen 3D Quote"
+client_id = "REPLACE_WITH_SHOPIFY_API_KEY"
+application_url = "https://REPLACE_WITH_APP_DOMAIN"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[access_scopes]
+scopes = "write_draft_orders,read_draft_orders,read_orders,write_app_proxy"
+
+[auth]
+redirect_urls = [
+  "https://REPLACE_WITH_APP_DOMAIN/api/shopify/auth/callback"
+]
+
+[webhooks]
+api_version = "2026-04"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/api/shopify/webhooks"
+
+[[webhooks.subscriptions]]
+topics = ["orders/paid"]
+uri = "/api/shopify/webhooks"
+
+[[webhooks.subscriptions]]
+topics = ["orders/create"]
+uri = "/api/shopify/webhooks"
+
+[app_proxy]
+url = "/apps/3d-quote"
+prefix = "apps"
+subpath = "3d-quote"

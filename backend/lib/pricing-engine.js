@@ -385,7 +385,10 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
     colour = colours.find(c => c.name === input.colour) || null;
     if (!colour && colours.length) throw new PricingError('Selected colour is not available.', 400, 'COLOUR_UNAVAILABLE');
   } else {
-    colour = colours[0] || null;
+    if (!colours.length) {
+      throw new PricingError('No colours are configured for this material.', 400, 'COLOUR_UNAVAILABLE');
+    }
+    throw new PricingError('Choose a colour before continuing.', 400, 'COLOUR_REQUIRED');
   }
   if (colours.length && !colour) {
     throw new PricingError('Selected colour is not available.', 400, 'COLOUR_UNAVAILABLE');
@@ -399,7 +402,10 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
       || null;
     if (!finish && finishes.length) throw new PricingError('Selected finish is not available.', 400, 'FINISH_UNAVAILABLE');
   } else {
-    finish = finishes.find(f => f.default) || finishes[0] || null;
+    if (!finishes.length) {
+      throw new PricingError('No print-quality options are configured for this material.', 400, 'FINISH_UNAVAILABLE');
+    }
+    throw new PricingError('Choose a print quality before continuing.', 400, 'FINISH_REQUIRED');
   }
   if (finishes.length && !finish) {
     throw new PricingError('Selected finish is not available.', 400, 'FINISH_UNAVAILABLE');
@@ -411,7 +417,10 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
     infill = activeInfill.find(t => String(t.id) === String(input.infillTierId)) || null;
     if (!infill) throw new PricingError('Selected infill option is not available.', 400, 'INFILL_UNAVAILABLE');
   } else {
-    infill = activeInfill.find(t => t.is_default) || activeInfill[0] || null;
+    if (!activeInfill.length) {
+      throw new PricingError('No infill options are configured for this store.', 400, 'INFILL_UNAVAILABLE');
+    }
+    throw new PricingError('Choose an infill option before continuing.', 400, 'INFILL_REQUIRED');
   }
 
   const pricingModel = String(material.pricing_model || 'per_cm3');
@@ -464,6 +473,11 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
     shippingAmount = money(shipping.price);
   } else if (toNumber(input.shipping, 0) > 0) {
     throw new PricingError('Shipping option must be selected from this store.', 400, 'SHIPPING_REQUIRED');
+  } else {
+    if (!shippingZones.length) {
+      throw new PricingError('No shipping options are configured for this store.', 400, 'SHIPPING_UNAVAILABLE');
+    }
+    throw new PricingError('Choose a shipping option before continuing.', 400, 'SHIPPING_REQUIRED');
   }
 
   const taxableSubtotal = money(itemSubtotal + shippingAmount);

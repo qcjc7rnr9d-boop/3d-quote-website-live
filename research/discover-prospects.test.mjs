@@ -4,7 +4,70 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { normaliseSeedUrls, refreshLeadEvidence, runDiscovery } from './discover-prospects.mjs';
+import { buildQueries, normaliseSeedUrls, placesTextSearch, refreshLeadEvidence, runDiscovery } from './discover-prospects.mjs';
+
+test('buildQueries supports country presets and area-based global searches', () => {
+  const australia = buildQueries({
+    areas: ['Sydney'],
+    keywords: ['custom FDM 3D printing service', 'upload STL 3D printing'],
+    countryName: 'Australia',
+    maxQueries: 10,
+  });
+  assert.deepEqual(australia.slice(0, 2), [
+    'custom FDM 3D printing service Sydney Australia',
+    'upload STL 3D printing Sydney Australia',
+  ]);
+
+  const unitedStates = buildQueries({
+    areas: ['Los Angeles'],
+    keywords: ['custom 3D print quote'],
+    countryName: 'United States',
+  });
+  assert.equal(unitedStates[0], 'custom 3D print quote Los Angeles United States');
+
+  const customGlobal = buildQueries({
+    areas: ['Berlin Germany'],
+    keywords: ['custom FDM 3D printing service'],
+    countryName: '',
+  });
+  assert.equal(customGlobal[0], 'custom FDM 3D printing service Berlin Germany');
+});
+
+test('buildQueries keeps old cities input as areas and defaults to New Zealand', () => {
+  const queries = buildQueries({
+    cities: ['Auckland'],
+    keywords: ['custom FDM 3D printing service'],
+    maxQueries: 3,
+  });
+
+  assert.equal(queries[0], 'custom FDM 3D printing service Auckland New Zealand');
+  assert.ok(queries.every(query => /New Zealand/.test(query)));
+});
+
+test('placesTextSearch uses selected regionCode instead of hard-coded NZ', async () => {
+  const originalFetch = globalThis.fetch;
+  let requestBody = null;
+  try {
+    globalThis.fetch = async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ places: [] }),
+      };
+    };
+
+    await placesTextSearch('fake-api-key', 'custom FDM 3D printing service Sydney Australia', 5, {
+      regionCode: 'AU',
+      countryName: 'Australia',
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(requestBody.regionCode, 'AU');
+  assert.equal(requestBody.textQuery, 'custom FDM 3D printing service Sydney Australia');
+});
 
 test('normaliseSeedUrls strips tracking noise and dedupes seed websites', () => {
   const seeds = normaliseSeedUrls([
@@ -142,6 +205,39 @@ test('runDiscovery keeps querying until requested fresh importable leads are fou
   assert.equal(crawlCalls, 10);
   assert.equal(result.leads.length, 10);
   assert.equal(result.existingSkipped.length, 5);
+});
+
+test('runDiscovery preserves non-NZ country context on discovered leads', async () => {
+  const outputBase = join(await mkdtemp(join(tmpdir(), 'prospect-au-')), 'discovered');
+
+  const result = await runDiscovery('fake-api-key', {
+    areas: ['Sydney'],
+    countryName: 'Australia',
+    regionCode: 'AU',
+    keywords: ['custom FDM 3D printing service'],
+    maxQueries: 1,
+    maxResultsPerQuery: 1,
+    maxPagesPerSite: 1,
+    newLeadTarget: 1,
+    queryDelayMs: 0,
+    targetScope: 'target_review',
+    outputBase,
+    placesTextSearch: async (_apiKey, query, _maxResults, searchOptions) => [{
+      company_name: 'Sydney FDM',
+      website: 'https://sydney-fdm.example/',
+      google_place_id: 'places/sydney-fdm',
+      discovery_source_query: query,
+      region: searchOptions.countryName,
+      country: searchOptions.countryName,
+    }],
+    crawlWebsite: async url => [
+      { url, text: 'Custom FDM 3D printing service using PLA and PETG. Request a quote.' },
+    ],
+  });
+
+  assert.equal(result.leads.length, 1);
+  assert.equal(result.leads[0].region, 'Australia');
+  assert.match(result.leads[0].source, /Sydney Australia/);
 });
 
 test('runDiscovery skips already-added candidates by place, website, phone, and name before crawling', async () => {

@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import dotenv from 'dotenv';
+import { parseInfillTiers } from '../lib/infill-tiers.js';
 
 dotenv.config();
 
@@ -86,7 +87,10 @@ try {
   assert(finish?.id, 'PETG finish is missing');
   const shippingRows = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(account.shop_id) || {};
   const shipping = firstEnabled(parseJson(shippingRows.shipping_zones, []));
+  const pricingRows = db.prepare('SELECT infill_tiers FROM pricing_config WHERE shop_id = ?').get(account.shop_id) || {};
+  const infill = firstEnabled(parseInfillTiers(pricingRows.infill_tiers));
   assert(shipping?.id, 'Mahi3D shipping zone is missing');
+  assert(infill?.id, 'Mahi3D infill tier is missing');
 
   const quoteRequest = {
     shopSlug: 'mahi3d',
@@ -94,6 +98,7 @@ try {
     volumeCm3: 12.5,
     colourId: colour.id,
     finishId: finish.id,
+    infillTierId: infill.id,
     quantity: 2,
     shippingId: shipping.id,
     dimensions: { xMm: 42, yMm: 28, zMm: 16 },

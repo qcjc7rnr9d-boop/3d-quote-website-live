@@ -7,7 +7,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://js.stripe.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/shared.css">
   <style>
     /* ── Page layout ─────────────────────────────────────── */
@@ -74,6 +74,7 @@
     }
 
     .file-name {
+      font-family: var(--font-code);
       font-size: 14px;
       font-weight: 500;
       color: var(--ink);
@@ -83,6 +84,7 @@
     }
 
     .file-size {
+      font-family: var(--font-code);
       font-size: 12px;
       color: var(--muted);
       font-weight: 400;
@@ -90,6 +92,7 @@
     }
 
     .file-dimensions {
+      font-family: var(--font-code);
       display: none;
       margin-top: 3px;
       font-size: 12px;
@@ -165,6 +168,7 @@
       font-size: 12px;
     }
     .cart-item-file strong {
+      font-family: var(--font-code);
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -172,6 +176,7 @@
       color: var(--ink);
     }
     .cart-item-file span {
+      font-family: var(--font-code);
       text-align: right;
       font-variant-numeric: tabular-nums;
     }
@@ -191,6 +196,7 @@
       gap: 12px;
       color: var(--muted);
       font-size: 12px;
+      font-family: var(--font-code);
       font-variant-numeric: tabular-nums;
     }
     .cart-item-price-row + .cart-item-price-row {
@@ -329,7 +335,7 @@
       width: 14px;
       height: 14px;
       border-radius: 50%;
-      border: 1px solid rgba(0,0,0,0.12);
+      border: 1px solid var(--border-strong);
       flex-shrink: 0;
     }
 

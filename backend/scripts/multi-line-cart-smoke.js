@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { normaliseCart, validateCartForShop } from '../lib/cart.js';
+import { parseInfillTiers } from '../lib/infill-tiers.js';
 
 const db = new DatabaseSync('data/rfdewi.db');
 
@@ -31,6 +32,12 @@ try {
     ORDER BY name
   `).all(shop.id);
   assert(materials.length >= 2, 'PETG and ASA demo materials are required for cart smoke');
+  const pricingRows = db.prepare('SELECT infill_tiers FROM pricing_config WHERE shop_id = ?').get(shop.id) || {};
+  const infill = parseInfillTiers(pricingRows.infill_tiers).find(t => t.active !== false);
+  const shippingRows = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
+  const shipping = (parseJson(shippingRows.shipping_zones, []) || []).find(s => s.active !== false);
+  assert(infill?.id, 'Mahi3D infill tier is missing');
+  assert(shipping?.id, 'Mahi3D shipping option is missing');
 
   const itemFor = (material, name, volumeCm3) => {
     const colour = (parseJson(material.colours, []) || []).find(c => c.enabled !== false);
@@ -41,7 +48,9 @@ try {
       materialId: material.id,
       colorId: colour?.id,
       finishId: finish?.id,
+      infillTierId: infill?.id,
       quantity: 1,
+      shipping: { id: shipping?.id, label: shipping?.service || shipping?.courier || 'Shipping', price: Number(shipping?.price) || 0 },
       file: {
         name,
         size: 2048,

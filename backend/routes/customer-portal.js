@@ -10,6 +10,7 @@ import { parseInfillTiers } from '../lib/infill-tiers.js';
 import { parseMaterialRow, safeJson } from '../lib/material-config.js';
 import { calculateQuoteForShopSlug, PricingError } from '../lib/pricing-engine.js';
 import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
+import { getExchangeRates, normaliseQuoteCurrencies } from '../lib/exchange-rates.js';
 
 const router = Router();
 const customerLoginLimiter = rateLimit({
@@ -92,6 +93,23 @@ function toNumber(value, fallback = 0) {
 
 function money(value) {
   return Math.round((toNumber(value, 0) + Number.EPSILON) * 100) / 100;
+}
+
+function normaliseCustomerEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isValidCustomerEmail(value) {
+  const email = normaliseCustomerEmail(value);
+  if (!email || email.length > 254) return false;
+  if (email.includes('..')) return false;
+  const [local, domain, ...extra] = email.split('@');
+  if (!local || !domain || extra.length) return false;
+  if (local.length > 64 || domain.length > 253) return false;
+  if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(local)) return false;
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain)) return false;
+  if (domain.split('.').some(part => !part || part.startsWith('-') || part.endsWith('-'))) return false;
+  return true;
 }
 
 function statusLabel(status) {
@@ -411,6 +429,23 @@ router.get('/pricing', (req, res) => {
   });
 });
 
+// ── GET /api/customer/exchange-rates?base=NZD&quotes=AUD,USD ──
+router.get('/exchange-rates', async (req, res) => {
+  try {
+    const base = String(req.query.base || 'NZD').toUpperCase();
+    const quotes = normaliseQuoteCurrencies(req.query.quotes);
+    const payload = await getExchangeRates(db, { base, quotes });
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.json(payload);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status >= 500) console.error('Exchange rate error:', err);
+    res.status(status).json({
+      error: err.message || 'Could not load exchange rates.',
+    });
+  }
+});
+
 // ── GET /api/customer/catalog?shop=X  (public materials) ─────
 router.get('/catalog', (req, res) => {
   const { shop: slug } = req.query;
@@ -480,6 +515,10 @@ router.post('/register', customerRegisterLimiter, async (req, res) => {
     if (!shopSlug || !name || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
+    const normalisedEmail = normaliseCustomerEmail(email);
+    if (!isValidCustomerEmail(normalisedEmail)) {
+      return res.status(400).json({ error: 'Enter a valid email address' });
+    }
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
@@ -493,7 +532,7 @@ router.post('/register', customerRegisterLimiter, async (req, res) => {
       const result = db.prepare(`
         INSERT INTO customer_accounts (shop_id, email, name, password_hash)
         VALUES (?, ?, ?, ?)
-      `).run(shop.id, email.trim().toLowerCase(), name.trim(), hash);
+      `).run(shop.id, normalisedEmail, name.trim(), hash);
 
       req.session.customerId  = result.lastInsertRowid;
       req.session.customerShopId = shop.id;
@@ -517,13 +556,17 @@ router.post('/login', customerLoginLimiter, async (req, res) => {
     if (!shopSlug || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
+    const normalisedEmail = normaliseCustomerEmail(email);
+    if (!isValidCustomerEmail(normalisedEmail)) {
+      return res.status(401).json({ error: 'Incorrect email or password' });
+    }
 
     const shop = db.prepare('SELECT id FROM shops WHERE slug = ?').get(shopSlug);
     if (!shop) return res.status(401).json({ error: 'Incorrect email or password' });
 
     const account = db.prepare(
       'SELECT * FROM customer_accounts WHERE shop_id = ? AND email = ?'
-    ).get(shop.id, email.trim().toLowerCase());
+    ).get(shop.id, normalisedEmail);
 
     if (!account) return res.status(401).json({ error: 'Incorrect email or password' });
 
@@ -545,8 +588,8 @@ router.post('/forgot-password', customerResetLimiter, async (req, res) => {
   try {
     ensureCustomerResetTokensTable();
     const shopSlug = String(req.body?.shopSlug || req.body?.shop || '').trim();
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    if (!shopSlug || !email) {
+    const email = normaliseCustomerEmail(req.body?.email);
+    if (!shopSlug || !email || !isValidCustomerEmail(email)) {
       return res.json({ ok: true, message });
     }
 

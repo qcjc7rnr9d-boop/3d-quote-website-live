@@ -7,7 +7,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/shared.css">
   <link rel="stylesheet" href="../assets/admin.css">
   <style>
@@ -78,8 +78,8 @@
       word-wrap: break-word;
     }
     .pill-editor:focus {
-      border-color: var(--sage-dark, #3a5a40);
-      box-shadow: 0 0 0 3px rgba(74,112,80,0.10);
+      border-color: var(--sage-dark, #466C49);
+      box-shadow: 0 0 0 3px rgba(91,135,94,0.12);
     }
     .pill-editor.pill-editor-body { min-height: 180px; }
     .pill-editor:empty::before {
@@ -94,9 +94,9 @@
       gap: 4px;
       padding: 1px 9px 2px;
       margin: 0 1px;
-      background: rgba(74,112,80,0.10);
-      color: var(--sage-dark, #3a5a40);
-      border: 1px solid rgba(74,112,80,0.28);
+      background: var(--sage-bg);
+      color: var(--sage-dark, #466C49);
+      border: 1px solid var(--sage-light);
       border-radius: 999px;
       font-size: 12px;
       font-weight: 500;
@@ -109,14 +109,14 @@
       content: '';
       width: 5px; height: 5px;
       border-radius: 50%;
-      background: var(--sage-dark, #3a5a40);
+      background: var(--sage-dark, #466C49);
       opacity: 0.55;
     }
     .var-pill[data-rich="true"] {
-      background: rgba(74,112,80,0.16);
+      background: var(--sage-bg);
     }
     .var-pill[data-rich="true"]::before {
-      background: var(--sage-dark, #3a5a40);
+      background: var(--sage-dark, #466C49);
       opacity: 0.9;
       transform: rotate(45deg);
       border-radius: 1px;
@@ -133,7 +133,7 @@
     .var-help {
       margin-top: 6px;
       margin-bottom: 8px;
-      background: var(--off-white, #f7f4ee);
+      background: var(--off-white, #F7F5F0);
       border: 1px solid var(--border, #e5e1da);
       border-radius: 10px;
       padding: 10px 14px;
@@ -662,7 +662,7 @@
       const listEl = document.getElementById('emailsList');
       listEl.innerHTML = EMAIL_TYPES.map(t => `
         <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-top:1px solid var(--stone);">
-          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sage-dark, #3a5a40);margin-top:7px;flex-shrink:0;"></span>
+          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sage-dark, #466C49);margin-top:7px;flex-shrink:0;"></span>
           <div>
             <div style="font-size:13px;font-weight:500;color:var(--ink);">${escHtml(t.label)}</div>
             <div style="font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5;">${escHtml(t.desc)}</div>

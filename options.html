@@ -7,17 +7,17 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:#f7f4ee; --card:#fff; --ink:#111312; --muted:#74766f; --line:#dedbd2;
-      --soft:#f1eee7; --sage:#3f733f; --sage-dark:#2f5f32; --sage-soft:#edf4eb;
-      --font-heading:'Space Grotesk','Inter',system-ui,sans-serif; --font-ui:'Inter',system-ui,sans-serif;
-      --shadow:0 18px 45px rgba(31,28,23,.08),0 2px 8px rgba(31,28,23,.04);
+      --bg:#F7F5F0; --card:#fff; --ink:#191B19; --muted:#6F746E; --line:#E4E6E0;
+      --soft:#FCFBF8; --sage:#5B875E; --sage-dark:#466C49; --sage-soft:#EAF3EA;
+      --font-heading:'Space Grotesk','Inter',system-ui,sans-serif; --font-ui:'Inter',system-ui,sans-serif; --font-code:'IBM Plex Mono','SF Mono',monospace;
+      --shadow:0 8px 24px rgba(16,20,16,.05);
     }
     *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-ui);-webkit-font-smoothing:antialiased}
     a{color:inherit;text-decoration:none} button{font:inherit}
-    button:focus-visible,a:focus-visible{outline:3px solid rgba(63,115,63,.28);outline-offset:3px}
+    button:focus-visible,a:focus-visible{outline:3px solid rgba(91,135,94,.28);outline-offset:3px}
     .topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.9);backdrop-filter:blur(18px);border-bottom:1px solid var(--line);height:76px;display:grid;grid-template-columns:190px 1fr 250px;align-items:center;padding:0 36px;gap:22px}
     .brand{font-family:var(--font-heading);font-size:23px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
     .progress{display:flex;justify-content:center;align-items:center;gap:14px;font-weight:700;font-size:15px}
@@ -35,16 +35,17 @@
     .model-panel,.material-panel{padding:16px 18px;background:transparent;border:0;box-shadow:none;border-radius:0}
     .model-panel{display:grid;grid-template-columns:1fr auto;gap:12px}.material-panel{border-left:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:14px}
     .kicker{font-size:11px;text-transform:uppercase;letter-spacing:.16em;font-weight:850;color:var(--sage);margin:0 0 6px}.model-panel h2{font-family:var(--font-heading);font-size:25px;line-height:1.05;margin:0 0 5px;letter-spacing:-.02em}.model-panel p{margin:0;color:var(--muted);font-size:14px;line-height:1.35}
-    .model-list{grid-column:1/-1;display:grid;gap:7px;max-height:108px;overflow:auto;padding-right:4px;scrollbar-gutter:stable}.model-row{display:flex;justify-content:space-between;gap:14px;border:1px solid var(--line);border-radius:12px;padding:8px 11px;background:rgba(255,255,255,.72)}.model-row strong{font-size:14px}.model-row span{color:var(--muted);white-space:nowrap;font-size:13px}
+    .model-list{grid-column:1/-1;display:grid;gap:7px;max-height:108px;overflow:auto;padding-right:4px;scrollbar-gutter:stable}.model-row{display:flex;justify-content:space-between;gap:14px;border:1px solid var(--line);border-radius:12px;padding:8px 11px;background:rgba(255,255,255,.72)}.model-row strong{font-family:var(--font-code);font-size:14px}.model-row span{font-family:var(--font-code);color:var(--muted);white-space:nowrap;font-size:13px}
     .edit-link,.back-link{border:1px solid var(--line);border-radius:999px;padding:9px 14px;font-weight:800;background:#fff;color:var(--sage-dark);font-size:14px;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;min-height:38px}
     .material-name{font-family:var(--font-heading);font-size:22px;font-weight:700;line-height:1.1}.material-desc{color:var(--muted);margin-top:4px;font-size:14px;line-height:1.35}
-    .options-grid{display:grid;grid-template-columns:.9fr 1.1fr 1fr;gap:14px;align-items:start}.option-card{position:relative;padding:16px;max-height:calc(100vh - 300px);min-height:220px;overflow:auto;scrollbar-gutter:stable}.option-card.has-more{padding-bottom:42px}.option-card.has-more::after{content:"";position:sticky;left:0;right:0;bottom:-16px;display:block;height:42px;margin:0 -16px -42px;background:linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,.96) 68%);pointer-events:none}.option-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px 12px;margin-bottom:12px}.option-head h2{font-family:var(--font-heading);font-size:20px;margin:0;letter-spacing:-.02em}.option-head p{margin:3px 0 0;color:var(--muted);font-size:13px;line-height:1.35}.selected-pill{border:1px solid rgba(63,115,63,.22);background:var(--sage-soft);color:var(--sage-dark);border-radius:999px;padding:5px 9px;font-size:12px;font-weight:850;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
-    .swatch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}.swatch{width:100%;min-height:38px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px 6px 6px;display:flex;gap:8px;align-items:center;justify-content:flex-start;font-weight:800;cursor:pointer;font-size:13px;min-width:0;overflow:hidden}.swatch-dot{width:23px;height:23px;border-radius:50%;background:var(--c);border:1px solid rgba(0,0,0,.16);box-shadow:inset 0 0 0 3px rgba(255,255,255,.72);flex:0 0 auto}.swatch span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.swatch.selected{border-color:var(--sage);background:var(--sage-soft);color:var(--sage-dark);box-shadow:0 0 0 1px rgba(63,115,63,.12)}
-    .choice-grid{display:grid;grid-template-columns:1fr;gap:9px}.choice{width:100%;border:1px solid var(--line);background:#fff;border-radius:14px;padding:11px 12px;text-align:left;cursor:pointer;min-height:76px;display:grid;grid-template-columns:minmax(0,1fr) max-content;gap:4px 12px;align-items:start}.choice strong{display:block;font-size:15px;line-height:1.2;min-width:0;overflow:hidden;text-overflow:ellipsis}.choice .meta{display:block;color:var(--sage-dark);font-weight:800;font-size:13px;line-height:1.2;white-space:nowrap;justify-self:end}.choice p{grid-column:1/-1;margin:0;color:var(--muted);line-height:1.32;font-size:13px}.choice:hover,.swatch:hover,.edit-link:hover,.back-link:hover{border-color:rgba(63,115,63,.42)}.choice.selected{border-color:var(--sage);background:var(--sage-soft);box-shadow:0 0 0 1px rgba(63,115,63,.14)}
-    .scroll-hint{position:sticky;bottom:0;z-index:2;width:max-content;margin:10px auto -30px;padding:6px 10px;border:1px solid rgba(63,115,63,.18);border-radius:999px;background:rgba(237,244,235,.96);color:var(--sage-dark);font-size:12px;font-weight:850;box-shadow:0 8px 18px rgba(31,28,23,.08);pointer-events:none}
+    .options-grid{display:grid;grid-template-columns:.9fr 1.1fr 1fr;gap:14px;align-items:start}.option-card{position:relative;padding:16px;max-height:calc(100vh - 300px);min-height:220px;overflow:auto;scrollbar-gutter:stable}.option-card.has-more{padding-bottom:42px}.option-card.has-more::after{content:"";position:sticky;left:0;right:0;bottom:-16px;display:block;height:42px;margin:0 -16px -42px;background:linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,.96) 68%);pointer-events:none}.option-card.invalid{border-color:rgba(201,90,82,.56);background:#fff8f6;box-shadow:0 0 0 1px rgba(201,90,82,.12),var(--shadow-md)}.option-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px 12px;margin-bottom:12px}.option-head h2{font-family:var(--font-heading);font-size:20px;margin:0;letter-spacing:-.02em}.option-head p{margin:3px 0 0;color:var(--muted);font-size:13px;line-height:1.35}.selected-pill{border:1px solid rgba(91,135,94,.22);background:var(--sage-soft);color:var(--sage-dark);border-radius:999px;padding:5px 9px;font-size:12px;font-weight:850;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}.option-card.invalid .selected-pill{border-color:rgba(201,90,82,.35);background:rgba(201,90,82,.1);color:#8a241a}.option-error{margin:10px 0 0;color:#8a241a;font-size:12px;font-weight:800}
+    .swatch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}.swatch{width:100%;min-height:38px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px 6px 6px;display:flex;gap:8px;align-items:center;justify-content:flex-start;font-weight:800;cursor:pointer;font-size:13px;min-width:0;overflow:hidden}.swatch-dot{width:23px;height:23px;border-radius:50%;background:var(--c);border:1px solid var(--border-strong);box-shadow:inset 0 0 0 3px rgba(255,255,255,.72);flex:0 0 auto}.swatch span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.swatch.selected{border-color:var(--sage);background:var(--sage-soft);color:var(--sage-dark);box-shadow:0 0 0 1px rgba(91,135,94,.12)}
+    .choice-grid{display:grid;grid-template-columns:1fr;gap:9px}.choice{width:100%;border:1px solid var(--line);background:#fff;border-radius:14px;padding:11px 12px;text-align:left;cursor:pointer;min-height:76px;display:grid;grid-template-columns:minmax(0,1fr) max-content;gap:4px 12px;align-items:start}.choice strong{display:block;font-size:15px;line-height:1.2;min-width:0;overflow:hidden;text-overflow:ellipsis}.choice .meta{display:block;color:var(--sage-dark);font-weight:800;font-size:13px;line-height:1.2;white-space:nowrap;justify-self:end}.choice p{grid-column:1/-1;margin:0;color:var(--muted);line-height:1.32;font-size:13px}.choice:hover,.swatch:hover,.edit-link:hover,.back-link:hover{border-color:rgba(91,135,94,.42)}.choice.selected{border-color:var(--sage);background:var(--sage-soft);box-shadow:0 0 0 1px rgba(91,135,94,.14)}
+    .scroll-hint{position:sticky;bottom:0;z-index:2;width:max-content;margin:10px auto -30px;padding:6px 10px;border:1px solid rgba(91,135,94,.18);border-radius:999px;background:rgba(234,243,234,.96);color:var(--sage-dark);font-size:12px;font-weight:850;box-shadow:var(--shadow-sm);pointer-events:none}
     .option-card.at-bottom .scroll-hint{display:none}
     .option-card.at-bottom::after{display:none}
-    .summary-bar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);width:min(100% - 56px,1420px);display:grid;grid-template-columns:1fr 1fr 1fr auto;align-items:center;gap:0;padding:9px;z-index:25}.summary-item{padding:0 16px;border-right:1px solid var(--line);min-width:0}.summary-label{display:block;color:var(--muted);font-size:12px}.summary-value{display:flex;align-items:center;gap:9px;font-size:18px;font-weight:850;min-width:0}.summary-value span:last-child,.summary-value{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.continue-btn{background:var(--sage);color:#fff;border-radius:13px;padding:15px 34px;font-weight:900;text-align:center;box-shadow:0 10px 24px rgba(47,95,50,.22);white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;min-height:52px}.continue-btn[aria-disabled="true"]{background:#9da49b;pointer-events:none}
+    .summary-bar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);width:min(100% - 56px,1420px);display:grid;grid-template-columns:1fr 1fr 1fr auto;align-items:center;gap:0;padding:9px;z-index:25}.summary-item{padding:0 16px;border-right:1px solid var(--line);min-width:0}.summary-item.invalid{border-color:rgba(201,90,82,.45);background:rgba(201,90,82,.08);border-radius:12px;padding-top:8px;padding-bottom:8px}.summary-label{display:block;color:var(--muted);font-size:12px}.summary-value{display:flex;align-items:center;gap:9px;font-size:18px;font-weight:850;min-width:0}.summary-value span:last-child,.summary-value{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.continue-btn{background:var(--sage);color:#fff;border-radius:13px;padding:15px 34px;font-weight:900;text-align:center;box-shadow:0 10px 24px rgba(47,95,50,.22);white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;min-height:52px}.continue-btn[aria-disabled="true"]{background:#9da49b;cursor:not-allowed}
+    .validation-toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(10px);width:min(calc(100% - 32px),620px);padding:12px 16px;border:1px solid rgba(201,90,82,.34);border-radius:999px;background:#fff5f3;color:#8a241a;box-shadow:0 14px 34px rgba(40,26,22,.14);font-size:13px;font-weight:850;text-align:center;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:70}.validation-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
     .empty{border:1px dashed var(--line);border-radius:18px;padding:22px;color:var(--muted);background:#fff}
     @media(max-width:1100px){.topbar{grid-template-columns:170px 1fr 190px;padding:0 24px}.progress-line{min-width:36px}.nav-actions a{display:none}.options-grid{grid-template-columns:1fr 1fr}.options-grid .option-card:first-child{grid-column:1/-1}.option-card{max-height:none}}
     @media(max-width:900px){.topbar{height:auto;grid-template-columns:1fr;padding:16px}.progress{order:3;overflow-x:auto;justify-content:flex-start}.progress-line{min-width:28px}.page{width:min(100% - 28px,560px);padding:18px 0 230px}.hero-row{display:grid;grid-template-columns:1fr}.helper{max-width:none}.context-strip{grid-template-columns:1fr}.material-panel{border-left:0;border-top:1px solid var(--line)}.model-panel{grid-template-columns:1fr}.model-row{flex-direction:column}.model-row span{white-space:normal}.options-grid{grid-template-columns:1fr}.option-card{min-height:0}.selected-pill{max-width:180px}.swatch-grid{grid-template-columns:repeat(auto-fit,minmax(132px,1fr))}.choice{grid-template-columns:1fr;min-height:0}.choice strong{white-space:normal}.choice .meta{white-space:normal;justify-self:start}.summary-bar{width:calc(100% - 24px);bottom:12px;grid-template-columns:1fr}.summary-item{border-right:0;border-bottom:1px solid var(--line);padding:8px 12px}.continue-btn{padding:15px}}
@@ -94,11 +95,12 @@
   </main>
 
   <aside class="summary-bar" aria-label="Current options">
-    <div class="summary-item"><span class="summary-label">Colour</span><span class="summary-value"><span class="swatch-dot" id="summarySwatch"></span><span id="summaryColour">-</span></span></div>
-    <div class="summary-item"><span class="summary-label">Finish</span><span class="summary-value" id="summaryFinish">-</span></div>
-    <div class="summary-item"><span class="summary-label">Infill</span><span class="summary-value" id="summaryInfill">-</span></div>
+    <div class="summary-item" id="summaryColourItem"><span class="summary-label">Colour</span><span class="summary-value"><span class="swatch-dot" id="summarySwatch"></span><span id="summaryColour">-</span></span></div>
+    <div class="summary-item" id="summaryFinishItem"><span class="summary-label">Finish</span><span class="summary-value" id="summaryFinish">-</span></div>
+    <div class="summary-item" id="summaryInfillItem"><span class="summary-label">Infill</span><span class="summary-value" id="summaryInfill">-</span></div>
     <a class="continue-btn" id="continueBtn" href="quote.html" aria-disabled="true">Continue to Quote <span aria-hidden="true">→</span></a>
   </aside>
+  <div class="validation-toast" id="validationToast" role="alert" aria-live="assertive"></div>
 
   <script>
     const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'mahi3d';
@@ -113,6 +115,23 @@
     let finishes = [];
     let infillTiers = [];
     let selection = {};
+    let showOptionValidation = false;
+    let validationToastTimer = null;
+
+    function requiredSelections() {
+      return selection.requiredSelections || {};
+    }
+    function markRequiredSelected(key) {
+      selection.requiredSelections = { ...requiredSelections(), [key]: true };
+    }
+    function showValidationToast(message) {
+      const toast = document.getElementById('validationToast');
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(validationToastTimer);
+      validationToastTimer = setTimeout(() => toast.classList.remove('show'), 3400);
+    }
 
     document.querySelectorAll('[data-catalog-link]').forEach(link => link.href = `catalog.html?shop=${encodeURIComponent(SHOP_SLUG)}`);
     document.querySelectorAll('[data-quote-link]').forEach(link => link.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`);
@@ -162,6 +181,7 @@
       const infill = currentInfill();
       selection = {
         ...selection,
+        requiredSelections: { ...requiredSelections(), material: true },
         shopSlug: SHOP_SLUG,
         materialId: material.id,
         materialName: material.name,
@@ -188,18 +208,17 @@
       localStorage.setItem('form_selection', JSON.stringify(selection));
     }
     function currentColour() {
-      return colours.find(c => String(c.id) === String(selection.colorId || selection.colourId)) || colours[0] || null;
+      if (!requiredSelections().colour) return null;
+      return colours.find(c => String(c.id) === String(selection.colorId || selection.colourId)) || null;
     }
     function currentFinish() {
+      if (!requiredSelections().finish) return null;
       return finishes.find(f => String(f.id) === String(selection.finishId || selection.finish))
-        || finishes.find(f => f.default)
-        || finishes[0]
         || null;
     }
     function currentInfill() {
+      if (!requiredSelections().infill) return null;
       return infillTiers.find(t => String(t.id) === String(selection.infillTierId))
-        || infillTiers.find(t => t.is_default)
-        || infillTiers[0]
         || null;
     }
     function finishMeta(finish) {
@@ -273,26 +292,30 @@
       `;
     }
     function renderOptions() {
+      const missing = validationState();
       optionsGrid.innerHTML = `
-        <section class="option-card ${colours.length > 8 ? 'has-more' : ''}" data-option-card="colour">
+        <section class="option-card ${colours.length > 8 ? 'has-more' : ''} ${showOptionValidation && missing.colour ? 'invalid' : ''}" data-option-card="colour">
           <div class="option-head"><div><h2>Colour</h2><p>Choose one colour for every model in this group.</p></div><span class="selected-pill">${esc(currentColour()?.name || 'Required')}</span></div>
           <div class="swatch-grid">
             ${colours.map(c => `<button class="swatch ${String(currentColour()?.id) === String(c.id) ? 'selected' : ''}" type="button" data-colour="${esc(c.id)}" aria-pressed="${String(currentColour()?.id) === String(c.id) ? 'true' : 'false'}"><span class="swatch-dot" style="--c:${esc(c.hex || '#cccccc')}"></span>${esc(c.name)}</button>`).join('') || '<div class="empty">No colours configured for this material.</div>'}
           </div>
+          ${showOptionValidation && missing.colour ? '<div class="option-error">Choose a colour to continue.</div>' : ''}
           ${colours.length > 8 ? '<div class="scroll-hint">Scroll for more ↓</div>' : ''}
         </section>
-        <section class="option-card ${finishes.length > 4 ? 'has-more' : ''}" data-option-card="finish">
+        <section class="option-card ${finishes.length > 4 ? 'has-more' : ''} ${showOptionValidation && missing.finish ? 'invalid' : ''}" data-option-card="finish">
           <div class="option-head"><div><h2>Print quality</h2><p>Choose the finish and layer-height preset.</p></div><span class="selected-pill">${esc(currentFinish()?.name || 'Required')}</span></div>
           <div class="choice-grid">
             ${finishes.map(f => `<button class="choice ${String(currentFinish()?.id) === String(f.id) ? 'selected' : ''}" type="button" data-finish="${esc(f.id)}" aria-pressed="${String(currentFinish()?.id) === String(f.id) ? 'true' : 'false'}"><strong>${esc(f.name)}</strong>${(f.layerHeight || f.layer_height) ? `<span class="meta">${esc(f.layerHeight || f.layer_height)}</span>` : ''}<p>${esc(f.description || 'Configured print quality option.')}</p></button>`).join('') || '<div class="empty">No finish presets configured for this material.</div>'}
           </div>
+          ${showOptionValidation && missing.finish ? '<div class="option-error">Choose a print quality to continue.</div>' : ''}
           ${scrollHint(finishes)}
         </section>
-        <section class="option-card ${infillTiers.length > 4 ? 'has-more' : ''}" data-option-card="infill">
-          <div class="option-head"><div><h2>Infill</h2><p>Choose the internal density or strength setting for this group.</p></div><span class="selected-pill">${esc(currentInfill()?.label || currentInfill()?.name || 'Default')}</span></div>
+        <section class="option-card ${infillTiers.length > 4 ? 'has-more' : ''} ${showOptionValidation && missing.infill ? 'invalid' : ''}" data-option-card="infill">
+          <div class="option-head"><div><h2>Infill</h2><p>Choose the internal density or strength setting for this group.</p></div><span class="selected-pill">${esc(currentInfill()?.label || currentInfill()?.name || 'Required')}</span></div>
           <div class="choice-grid">
             ${infillTiers.map(t => `<button class="choice ${String(currentInfill()?.id) === String(t.id) ? 'selected' : ''}" type="button" data-infill="${esc(t.id)}" aria-pressed="${String(currentInfill()?.id) === String(t.id) ? 'true' : 'false'}"><strong>${esc(t.label || t.name || 'Infill')}</strong><span class="meta">${esc(infillMeta(t))}</span><p>${esc(infillDescription(t))}</p></button>`).join('') || '<div class="empty">No infill options configured. Pricing will use the default.</div>'}
           </div>
+          ${showOptionValidation && missing.infill ? '<div class="option-error">Choose an infill option to continue.</div>' : ''}
           ${scrollHint(infillTiers)}
         </section>
       `;
@@ -300,6 +323,8 @@
         const scrollPositions = optionScrollPositions();
         selection.colorId = btn.dataset.colour;
         selection.colourId = btn.dataset.colour;
+        markRequiredSelected('colour');
+        showOptionValidation = false;
         saveSelection();
         renderOptions();
         updateSummary();
@@ -309,6 +334,8 @@
         const scrollPositions = optionScrollPositions();
         selection.finishId = btn.dataset.finish;
         selection.finish = btn.dataset.finish;
+        markRequiredSelected('finish');
+        showOptionValidation = false;
         saveSelection();
         renderOptions();
         updateSummary();
@@ -317,6 +344,8 @@
       optionsGrid.querySelectorAll('[data-infill]').forEach(btn => btn.addEventListener('click', () => {
         const scrollPositions = optionScrollPositions();
         selection.infillTierId = btn.dataset.infill;
+        markRequiredSelected('infill');
+        showOptionValidation = false;
         saveSelection();
         renderOptions();
         updateSummary();
@@ -327,21 +356,51 @@
       });
       requestAnimationFrame(updateScrollHints);
     }
+    function validationState() {
+      return {
+        colour: colours.length > 0 && !currentColour(),
+        finish: finishes.length > 0 && !currentFinish(),
+        infill: infillTiers.length > 0 && !currentInfill(),
+      };
+    }
+    function missingOptionLabels() {
+      const missing = validationState();
+      return [
+        missing.colour ? 'colour' : '',
+        missing.finish ? 'print quality' : '',
+        missing.infill ? 'infill' : '',
+      ].filter(Boolean);
+    }
+    function missingOptionsSentence(labels) {
+      if (labels.length === 0) return '';
+      if (labels.length === 1) return labels[0];
+      return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
+    }
     function updateSummary() {
       const colour = currentColour();
       const finish = currentFinish();
       const infill = currentInfill();
+      const missing = validationState();
       document.getElementById('summaryColour').textContent = colour?.name || '-';
       document.getElementById('summarySwatch').style.setProperty('--c', colour?.hex || '#cccccc');
       document.getElementById('summaryFinish').textContent = [finish?.name, finish?.layerHeight || finish?.layer_height].filter(Boolean).join(' — ') || '-';
-      document.getElementById('summaryInfill').textContent = [infill?.label || infill?.name, infill ? infillMeta(infill) : ''].filter(Boolean).join(' — ') || 'Default';
+      document.getElementById('summaryInfill').textContent = [infill?.label || infill?.name, infill ? infillMeta(infill) : ''].filter(Boolean).join(' — ') || '-';
+      document.getElementById('summaryColourItem')?.classList.toggle('invalid', showOptionValidation && missing.colour);
+      document.getElementById('summaryFinishItem')?.classList.toggle('invalid', showOptionValidation && missing.finish);
+      document.getElementById('summaryInfillItem')?.classList.toggle('invalid', showOptionValidation && missing.infill);
       continueBtn.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
-      continueBtn.setAttribute('aria-disabled', material ? 'false' : 'true');
+      continueBtn.setAttribute('aria-disabled', material && missingOptionLabels().length === 0 ? 'false' : 'true');
     }
 
     continueBtn.addEventListener('click', e => {
-      if (!material) {
+      const missing = missingOptionLabels();
+      if (!material || missing.length) {
         e.preventDefault();
+        e.stopPropagation();
+        showOptionValidation = true;
+        renderOptions();
+        updateSummary();
+        if (missing.length) showValidationToast(`Choose a ${missingOptionsSentence(missing)} before continuing.`);
         return;
       }
       saveSelection();
@@ -377,7 +436,6 @@
       finishes = (Array.isArray(material.finishes) ? material.finishes : []).filter(f => f.enabled !== false);
       if (finishes.length && !finishes.some(f => f.default)) finishes = finishes.map((f, i) => ({ ...f, default: i === 0 }));
       infillTiers = (Array.isArray(pricing.infill_tiers) ? pricing.infill_tiers : []).filter(t => t.active !== false);
-      saveSelection();
       renderModelPanel();
       renderMaterialPanel();
       renderOptions();

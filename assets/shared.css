@@ -6,7 +6,7 @@
    https://fonts.googleapis.com/css2?
      family=Space+Grotesk:wght@400;600;700
      &family=Inter:ital,wght@0,400;0,500;0,600;1,400
-     &family=IBM+Plex+Sans:wght@400;500;600
+    &family=IBM+Plex+Mono:wght@400;500;600
      &display=swap
 
    Usage guide
@@ -19,16 +19,16 @@
    Inter 500          →  buttons, nav links, form labels
    Inter 600          →  UI section titles, sidebar labels, emphasis
 
-   IBM Plex Sans 400  →  docs body, technical descriptions
-   IBM Plex Sans 500  →  docs headings, parameter names
-   IBM Plex Sans 600  →  API method names, spec titles
+   IBM Plex Mono 400  →  file names, dimensions, measurements
+   IBM Plex Mono 500  →  layer heights, material specs, system values
+   IBM Plex Mono 600  →  technical labels and metadata emphasis
    ============================================================ */
 
 /* ── Font family tokens ───────────────────────────────────── */
 :root {
   --font-brand:  'Space Grotesk', system-ui, sans-serif;
   --font-ui:     'Inter',         system-ui, sans-serif;
-  --font-code:   'IBM Plex Sans', 'SF Mono', 'Fira Code', monospace;
+  --font-code:   'IBM Plex Mono', 'SF Mono', 'Fira Code', monospace;
 
   /* Weight tokens */
   --fw-regular:    400;
@@ -36,25 +36,57 @@
   --fw-semibold:   600;
   --fw-bold:       700;
 
-  /* ── Colour tokens ──────────────────────────────────────── */
-  --white:       #FFFFFF;
-  --off-white:   #F7F6F3;
-  --sage:        #7A9E7E;
-  --sage-light:  #B5CEB8;
-  --sage-dark:   #4A7050;
-  --stone:       #E8E4DC;
-  --ink:         #111317;
-  --ink-2:       #2D3139;
-  --muted:       #6B7280;
-  --muted-light: #9CA3AF;
-  --border:      #D1D5DB;
-  --border-light:#E5E7EB;
-  --radius:      6px;
-  --radius-sm:   4px;
-  --radius-lg:   10px;
-  --shadow:      0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md:   0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-  --shadow-lg:   0 12px 32px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.04);
+  /* ── Premium manufacturing SaaS tokens ─────────────────── */
+  --color-bg: #F7F5F0;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #FCFBF8;
+  --color-text: #191B19;
+  --color-text-muted: #6F746E;
+  --color-text-soft: #9BA19A;
+  --color-border: #E4E6E0;
+  --color-border-strong: #CDD3CB;
+  --color-primary: #5B875E;
+  --color-primary-hover: #466C49;
+  --color-primary-soft: #EAF3EA;
+  --color-success: #5B875E;
+  --color-warning: #C28A35;
+  --color-error: #C95A52;
+  --color-info: #5A7DBA;
+
+  /* Backward-compatible aliases used across existing pages. */
+  --white: var(--color-surface);
+  --card: var(--color-surface);
+  --off-white: var(--color-bg);
+  --bg: var(--color-bg);
+  --soft: var(--color-surface-soft);
+  --sage: var(--color-primary);
+  --sage-light: var(--color-border-strong);
+  --sage-dark: var(--color-primary-hover);
+  --sage-bg: var(--color-primary-soft);
+  --sage-soft: var(--color-primary-soft);
+  --sage-line: #BBD2BC;
+  --stone: #EEECE6;
+  --ink: var(--color-text);
+  --ink-2: #2D302C;
+  --ink-soft: #343833;
+  --muted: var(--color-text-muted);
+  --muted-2: var(--color-text-soft);
+  --muted-light: var(--color-text-soft);
+  --border: var(--color-border);
+  --border-light: var(--color-border);
+  --border-soft: #EEEDE8;
+  --border-2: var(--color-border-strong);
+  --line: var(--color-border);
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+  --shadow-sm: 0 2px 6px rgba(16,20,16,0.04);
+  --shadow: 0 8px 24px rgba(16,20,16,0.05);
+  --shadow-md: 0 8px 24px rgba(16,20,16,0.05);
+  --shadow-lg: 0 16px 40px rgba(16,20,16,0.06);
 }
 
 /* ── Reset ────────────────────────────────────────────────── */
@@ -64,7 +96,7 @@
 body {
   font-family: var(--font-ui);
   font-weight: var(--fw-regular);
-  font-size: 15px;
+  font-size: 16px;
   background: var(--off-white);
   color: var(--ink);
   line-height: 1.6;
@@ -168,7 +200,7 @@ p,
 }
 
 /* ============================================================
-   DEVELOPER / DOCS TYPOGRAPHY — IBM Plex Sans
+   TECHNICAL METADATA — IBM Plex Mono
    ============================================================ */
 
 .docs-body,
@@ -209,6 +241,16 @@ kbd,
 pre {
   font-family: 'IBM Plex Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 13px;
+}
+
+.technical-value,
+.file-name,
+.dimension-value,
+.measurement-value,
+.layer-height,
+.mono {
+  font-family: var(--font-code);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================================
@@ -269,9 +311,9 @@ pre {
 
 .card {
   background: var(--white);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-md);
   padding: 28px;
 }
 
@@ -285,58 +327,58 @@ pre {
   justify-content: center;
   gap: 8px;
   font-family: var(--font-ui);
-  font-weight: var(--fw-medium);
-  font-size: 14px;
+  font-weight: var(--fw-semibold);
+  font-size: 15px;
   letter-spacing: 0.01em;
   border-radius: var(--radius);
   border: none;
   cursor: pointer;
   text-decoration: none;
   transition:
-    background 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease,
-    box-shadow 150ms ease,
-    opacity 150ms ease;
+    background 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    box-shadow 200ms ease,
+    opacity 200ms ease;
   white-space: nowrap;
 }
 
 .btn-primary {
-  background: var(--ink);
+  background: var(--sage);
   color: var(--white);
-  height: 40px;
-  padding: 0 20px;
+  min-height: 46px;
+  padding: 0 24px;
 }
 .btn-primary:hover {
-  background: var(--ink-2);
-  box-shadow: 0 2px 8px rgba(17,19,23,0.18);
+  background: var(--sage-dark);
+  box-shadow: none;
 }
-.btn-primary.lg   { height: 48px; padding: 0 32px; font-size: 15px; }
+.btn-primary.lg   { min-height: 52px; padding: 0 32px; font-size: 16px; }
 .btn-primary.full { width: 100%; }
 
 .btn-outline {
   background: var(--white);
   color: var(--ink);
   border: 1px solid var(--border);
-  height: 40px;
-  padding: 0 20px;
+  min-height: 46px;
+  padding: 0 24px;
 }
-.btn-outline:hover { border-color: var(--ink); }
+.btn-outline:hover { background: var(--soft); border-color: var(--border-2); }
 
 .btn-ghost {
   background: none;
   color: var(--muted);
-  height: 36px;
+  min-height: 40px;
   padding: 0 12px;
   font-size: 13px;
 }
-.btn-ghost:hover { color: var(--ink); background: var(--off-white); }
+.btn-ghost:hover { color: var(--ink); background: var(--sage-bg); }
 
 .btn-sage {
   background: var(--sage);
   color: var(--white);
-  height: 40px;
-  padding: 0 20px;
+  min-height: 46px;
+  padding: 0 24px;
 }
 .btn-sage:hover { background: var(--sage-dark); }
 
@@ -421,12 +463,12 @@ pre {
   padding: 2px 8px;
   line-height: 1.6;
 }
-.badge-sage  { color: var(--sage-dark);  background: rgba(74,112,80,0.08);  border: 1px solid rgba(74,112,80,0.20); }
+.badge-sage  { color: var(--sage-dark);  background: var(--sage-bg);  border: 1px solid var(--sage-light); }
 .badge-stone { color: var(--muted);      background: var(--off-white);       border: 1px solid var(--border-light); }
-.badge-green { color: #166534;           background: rgba(22,101,52,0.08);   border: 1px solid rgba(22,101,52,0.20); }
-.badge-amber { color: #92400E;           background: rgba(146,64,14,0.08);   border: 1px solid rgba(146,64,14,0.20); }
-.badge-red   { color: #991B1B;           background: rgba(153,27,27,0.08);   border: 1px solid rgba(153,27,27,0.20); }
-.badge-blue  { color: #1E40AF;           background: rgba(30,64,175,0.08);   border: 1px solid rgba(30,64,175,0.20); }
+.badge-green { color: var(--color-success); background: var(--sage-bg);      border: 1px solid var(--sage-light); }
+.badge-amber { color: var(--color-warning); background: rgba(194,138,53,0.10); border: 1px solid rgba(194,138,53,0.24); }
+.badge-red   { color: var(--color-error);   background: rgba(201,90,82,0.10);  border: 1px solid rgba(201,90,82,0.24); }
+.badge-blue  { color: var(--color-info);    background: rgba(90,125,186,0.10); border: 1px solid rgba(90,125,186,0.24); }
 
 /* ============================================================
    TOGGLE SWITCH
@@ -446,14 +488,14 @@ pre {
   position: absolute;
   left: 3px; top: 3px;
   width: 14px; height: 14px;
-  background: #fff;
+  background: var(--white);
   border-radius: 50%;
   transition: transform 200ms ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow-sm);
 }
-.toggle input:checked + .toggle-track { background: var(--ink); }
+.toggle input:checked + .toggle-track { background: var(--sage); }
 .toggle input:checked + .toggle-track::after { transform: translateX(16px); }
-.toggle input:focus-visible + .toggle-track { outline: 2px solid var(--ink); outline-offset: 2px; }
+.toggle input:focus-visible + .toggle-track { outline: 2px solid var(--sage); outline-offset: 2px; }
 
 /* ============================================================
    RADIO CARDS

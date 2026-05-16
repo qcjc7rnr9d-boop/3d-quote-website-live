@@ -7,30 +7,31 @@
   <meta name="description" content="Professional 3D printing on demand. Upload your STL or OBJ file, choose your material, and receive your print.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     /* ── Tokens ─────────────────────────────────────────────────── */
     :root {
-      --bg:          #F7F7F5;
+      --bg:          #F7F5F0;
       --white:       #FFFFFF;
-      --ink:         #111111;
-      --ink-2:       #1E1E1E;
-      --muted:       #737373;
-      --muted-2:     #9CA3AF;
-      --border:      #E5E5E2;
-      --border-2:    #D4D4D1;
-      --sage:        #5A8A5E;
-      --sage-light:  #D4E6D5;
-      --sage-bg:     #EEF5EF;
-      --radius-sm:   6px;
-      --radius:      10px;
-      --radius-lg:   16px;
+      --ink:         #191B19;
+      --ink-2:       #2D302C;
+      --muted:       #6F746E;
+      --muted-2:     #9BA19A;
+      --border:      #E4E6E0;
+      --border-2:    #CDD3CB;
+      --sage:        #5B875E;
+      --sage-light:  #CDD3CB;
+      --sage-bg:     #EAF3EA;
+      --radius-sm:   10px;
+      --radius:      14px;
+      --radius-lg:   24px;
       --radius-pill: 999px;
-      --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 4px 20px rgba(0,0,0,0.06);
-      --shadow-sm:   0 1px 3px rgba(0,0,0,0.06);
+      --shadow-card: 0 8px 24px rgba(16,20,16,0.05);
+      --shadow-sm:   0 2px 6px rgba(16,20,16,0.04);
       --font-brand:  'Space Grotesk', system-ui, sans-serif;
       --font-ui:     'Inter', system-ui, sans-serif;
-      --sage-dark:   #3d6b40;
+      --font-code:   'IBM Plex Mono', 'SF Mono', monospace;
+      --sage-dark:   #466C49;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -100,7 +101,7 @@
       border-radius: var(--radius-sm);
       transition: color 140ms ease, background 140ms ease;
     }
-    .nav-links a:hover { color: var(--ink); background: rgba(0,0,0,0.04); }
+    .nav-links a:hover { color: var(--ink); background: var(--sage-soft); }
 
     /* Materials pill */
     .nav-pill {
@@ -133,7 +134,7 @@
       font-size: 13px;
       font-weight: 500;
       color: var(--white);
-      background: var(--ink);
+      background: var(--sage);
       border: none;
       border-radius: var(--radius-sm);
       padding: 7px 16px;
@@ -142,7 +143,7 @@
       transition: background 140ms ease, box-shadow 140ms ease;
       white-space: nowrap;
     }
-    .btn-quote:hover { background: #2a2a2a; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+    .btn-quote:hover { background: var(--sage-dark); box-shadow: var(--shadow-sm); }
 
     /* Mobile nav toggle */
     .nav-toggle {
@@ -388,10 +389,11 @@
     }
     .file-meta { overflow: hidden; flex: 1; }
     .file-name {
+      font-family: var(--font-code);
       font-size: 14px; font-weight: 600; color: var(--ink);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .file-size { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .file-size { font-family: var(--font-code); font-size: 12px; color: var(--muted); margin-top: 2px; }
     .uploaded-model-list {
       display: grid;
       gap: 8px;
@@ -408,6 +410,7 @@
       min-width: 0;
     }
     .uploaded-model-row strong {
+      font-family: var(--font-code);
       display: block;
       min-width: 0;
       overflow: hidden;
@@ -417,6 +420,7 @@
       color: var(--ink);
     }
     .uploaded-model-row span {
+      font-family: var(--font-code);
       display: block;
       margin-top: 2px;
       color: var(--muted);
@@ -749,7 +753,7 @@
       background: var(--white);
       border-left: 1px solid #e5e5e0;
       border-radius: 32px 0 0 32px;
-      box-shadow: -6px 0 40px rgba(0,0,0,0.10), -1px 0 0 rgba(0,0,0,0.04);
+      box-shadow: -6px 0 40px rgba(16,20,16,0.06), -1px 0 0 rgba(16,20,16,0.04);
       display: flex;
       flex-direction: column;
       transform: translateX(100%);
@@ -1287,7 +1291,7 @@
       <div class="file-card-inner">
         <div class="file-icon-box" aria-hidden="true">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <polygon points="12,2 22,8 22,20 12,26 2,20 2,8" stroke="#5A8A5E" stroke-width="1.2" fill="none" stroke-linejoin="round"/>
+            <polygon points="12,2 22,8 22,20 12,26 2,20 2,8" stroke="#5B875E" stroke-width="1.2" fill="none" stroke-linejoin="round"/>
             <polygon points="12,2 22,8 12,14 2,8" stroke="#A3C6A5" stroke-width="1" fill="none" stroke-linejoin="round"/>
             <line x1="12" y1="14" x2="12" y2="26" stroke="#A3C6A5" stroke-width="1"/>
           </svg>

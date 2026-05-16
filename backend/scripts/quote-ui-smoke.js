@@ -43,6 +43,10 @@ function makeStlBuffer() {
 }
 
 assert(!quoteHtml.includes('window.confirm('), 'Quote page still uses a native browser confirm prompt');
+assert(!quoteHtml.includes('const RATES = {'), 'Quote page should not use a hard-coded currency rate table');
+assert(quoteHtml.includes('/api/customer/exchange-rates'), 'Quote page should load display exchange rates from the backend');
+assert(quoteHtml.includes('Converted estimate. Checkout charges NZD.'), 'Quote page should explain non-NZD prices are converted estimates');
+assert(quoteHtml.includes('<option value="CNY">CNY</option>'), 'Quote page currency selector should include the supported major currencies');
 assert(quoteHtml.includes('id="saveQuoteAuthModal"'), 'Quote page is missing the themed save-quote auth modal');
 assert(quoteHtml.includes('id="saveQuoteAuthContinue"'), 'Quote page is missing the modal continue button');
 assert(quoteHtml.includes('DoubleSide'), 'Quote viewer material should render both sides of uploaded geometry');
@@ -68,17 +72,29 @@ const browser = await chromium.launch({ headless: true });
 try {
   const catalogRes = await fetch(`${base}/api/customer/catalog?shop=mahi3d`);
   const catalog = await catalogRes.json();
+  const pricingRes = await fetch(`${base}/api/customer/pricing?shop=mahi3d`);
+  const pricing = await pricingRes.json();
+  const shippingRes = await fetch(`${base}/api/shipping/rates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shopSlug: 'mahi3d' }),
+  });
+  const shippingData = await shippingRes.json();
   const material = (catalog.materials || []).find(m => m.enabled !== false);
   assert(material?.id, 'Quote UI smoke needs at least one enabled demo material');
   const colour = (material.colours || []).find(c => c.enabled !== false) || {};
   const finish = (material.finishes || []).find(f => f.enabled !== false) || {};
+  const infill = (pricing.infill_tiers || []).find(t => t.active !== false) || {};
+  const shipping = (shippingData.rates || []).find(r => r.active !== false) || (shippingData.rates || [])[0] || {};
+  assert(infill?.id, 'Quote UI smoke needs at least one active infill tier');
+  assert(shipping?.id, 'Quote UI smoke needs at least one shipping option');
 
   const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
   const errors = [];
   page.on('pageerror', err => errors.push(err.message));
   await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'domcontentloaded' });
   const stlBase64 = makeStlBuffer().toString('base64');
-  await page.evaluate(async ({ encoded, material, colour, finish }) => {
+  await page.evaluate(async ({ encoded, material, colour, finish, infill, shipping }) => {
     const bin = atob(encoded);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
@@ -100,6 +116,12 @@ try {
       finish: finish.id || null,
       finishLabel: finish.name || '',
       finishLayerHeight: finish.layerHeight || '',
+      infillTierId: infill.id || null,
+      infillLabel: infill.label || infill.name || '',
+      shippingOptionId: shipping.id || null,
+      shippingOptionLabel: shipping.label || shipping.service || shipping.carrier || '',
+      shippingOptionPrice: shipping.price ?? shipping.finalPrice ?? null,
+      requiredSelections: { material: true, colour: true, finish: true, infill: true, shipping: true },
       qty: 1,
       currency: 'NZD',
     }));
@@ -114,7 +136,7 @@ try {
       tx.objectStore('files').put({ buffer, ext: 'stl' }, 'current_model');
       tx.oncomplete = resolve;
     });
-  }, { encoded: stlBase64, material, colour, finish });
+  }, { encoded: stlBase64, material, colour, finish, infill, shipping });
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1200);
   const state = await page.evaluate(() => ({
@@ -130,7 +152,17 @@ try {
   assert(/20 mm/.test(state.dimensions || ''), `Viewer dimensions did not render, got ${state.dimensions}`);
   assert(state.canvasWidth > 100 && state.canvasHeight > 100, 'Viewer canvas did not size correctly');
 
-  await page.evaluate(({ material, colour, finish }) => {
+  await page.selectOption('#currencySelect', 'USD');
+  await page.waitForFunction(() => document.querySelector('#currencyEstimateNote')?.classList.contains('show'), null, { timeout: 5000 });
+  const currencyState = await page.evaluate(() => ({
+    summaryCurrency: document.querySelector('#currencySelect')?.value,
+    navCurrency: document.querySelector('#navCurrency')?.value,
+    note: document.querySelector('#currencyEstimateNote')?.textContent || '',
+  }));
+  assert(currencyState.summaryCurrency === 'USD' && currencyState.navCurrency === 'USD', 'Currency selectors did not stay in sync');
+  assert(/Converted estimate/.test(currencyState.note) && /Checkout charges NZD/.test(currencyState.note), `Currency note did not explain display-only conversion: ${currencyState.note}`);
+
+  await page.evaluate(({ material, colour, finish, infill, shipping }) => {
     localStorage.setItem('form_file', JSON.stringify({
       name: '2 models',
       size: 2048,
@@ -153,10 +185,16 @@ try {
       finish: finish.id || null,
       finishLabel: finish.name || '',
       finishLayerHeight: finish.layerHeight || '',
+      infillTierId: infill.id || null,
+      infillLabel: infill.label || infill.name || '',
+      shippingOptionId: shipping.id || null,
+      shippingOptionLabel: shipping.label || shipping.service || shipping.carrier || '',
+      shippingOptionPrice: shipping.price ?? shipping.finalPrice ?? null,
+      requiredSelections: { material: true, colour: true, finish: true, infill: true, shipping: true },
       qty: 1,
       currency: 'NZD',
     }));
-  }, { material, colour, finish });
+  }, { material, colour, finish, infill, shipping });
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(900);
   const beforeQtyPrice = await page.locator('#sumSubtotal').innerText();
@@ -184,7 +222,7 @@ try {
   const modalText = await page.locator('#saveQuoteAuthModal').innerText();
   assert(/Sign in or create account/.test(modalText), 'Save quote auth modal did not show themed account action');
 
-  await page.evaluate(({ material, colour, finish }) => {
+  await page.evaluate(({ material, colour, finish, infill, shipping }) => {
     localStorage.setItem('cart', JSON.stringify({
       shopSlug: 'mahi3d',
       items: [{
@@ -196,6 +234,9 @@ try {
         colorName: colour.name || '',
         finishId: finish.id || null,
         finishLabel: finish.name || '',
+        infillTierId: infill.id || null,
+        infillLabel: infill.label || infill.name || '',
+        shipping: { id: shipping.id || null, label: shipping.label || shipping.service || shipping.carrier || '', price: shipping.price ?? shipping.finalPrice ?? 0 },
         file: {
           name: 'Existing group.stl',
           size: 1024,
@@ -204,7 +245,7 @@ try {
           models: [{ id: 'existing-model', name: 'Existing group.stl', size: 1024, volumeCm3: 2, quantity: 1, dimensions: { xMm: 20, yMm: 20, zMm: 20 } }],
         },
         models: [{ id: 'existing-model', name: 'Existing group.stl', size: 1024, volumeCm3: 2, quantity: 1, dimensions: { xMm: 20, yMm: 20, zMm: 20 } }],
-        quoteSnapshot: { selected: { material, colour, finish, quantity: 1, models: [] }, lineItems: { itemSubtotal: 9, total: 9 }, totalCents: 900 },
+        quoteSnapshot: { selected: { material, colour, finish, infill, shipping, quantity: 1, models: [] }, lineItems: { itemSubtotal: 9, shipping: shipping.price ?? 0, total: 9 }, totalCents: 900 },
         totalNzd: 9,
         totalCents: 900,
       }],
@@ -216,8 +257,23 @@ try {
       dimensions: { xMm: 20, yMm: 20, zMm: 20 },
       models: [{ id: 'current-model', name: 'Current group.stl', size: 1024, volumeCm3: 2, quantity: 1, dimensions: { xMm: 20, yMm: 20, zMm: 20 } }],
     }));
-    localStorage.setItem('form_selection', JSON.stringify({ shopSlug: 'mahi3d', materialId: material.id, materialName: material.name }));
-  }, { material, colour, finish });
+    localStorage.setItem('form_selection', JSON.stringify({
+      shopSlug: 'mahi3d',
+      materialId: material.id,
+      materialName: material.name,
+      colorId: colour.id || null,
+      colorName: colour.name || '',
+      finishId: finish.id || null,
+      finish: finish.id || null,
+      finishLabel: finish.name || '',
+      infillTierId: infill.id || null,
+      infillLabel: infill.label || infill.name || '',
+      shippingOptionId: shipping.id || null,
+      shippingOptionLabel: shipping.label || shipping.service || shipping.carrier || '',
+      shippingOptionPrice: shipping.price ?? shipping.finalPrice ?? null,
+      requiredSelections: { material: true, colour: true, finish: true, infill: true, shipping: true },
+    }));
+  }, { material, colour, finish, infill, shipping });
   await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'networkidle' });
   await page.click('#addAnotherBtn');
   await page.waitForURL(/index\.html\?shop=mahi3d/, { timeout: 7000 });

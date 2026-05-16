@@ -6,31 +6,32 @@
   <title>Choose Material</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --font-brand: 'Space Grotesk', system-ui, sans-serif;
       --font-ui: 'Inter', system-ui, sans-serif;
+      --font-code: 'IBM Plex Mono', 'SF Mono', monospace;
       --white: #fff;
-      --off-white: #f7f6f3;
-      --ink: #101216;
-      --muted: #6f747c;
-      --muted-2: #8a9099;
-      --line: #e4e0d8;
-      --border: #d7d2ca;
-      --sage: #2f7d43;
-      --sage-dark: #1f6b35;
-      --sage-soft: #ecf5ed;
-      --sage-line: #bad8bf;
-      --shadow: 0 18px 45px rgba(31, 37, 31, 0.07), 0 1px 2px rgba(31, 37, 31, 0.06);
-      --radius: 18px;
+      --off-white: #F7F5F0;
+      --ink: #191B19;
+      --muted: #6F746E;
+      --muted-2: #9BA19A;
+      --line: #E4E6E0;
+      --border: #CDD3CB;
+      --sage: #5B875E;
+      --sage-dark: #466C49;
+      --sage-soft: #EAF3EA;
+      --sage-line: #BBD2BC;
+      --shadow: 0 8px 24px rgba(16,20,16,0.05);
+      --radius: 22px;
     }
 
     *, *::before, *::after { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: var(--font-ui);
-      background: radial-gradient(circle at 50% 0%, rgba(122,158,126,0.07), transparent 340px), var(--off-white);
+      background: var(--off-white);
       color: var(--ink);
       -webkit-font-smoothing: antialiased;
     }
@@ -260,12 +261,14 @@
       min-width: 0;
     }
     .model-group-item strong {
+      font-family: var(--font-code);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       font-size: 13px;
     }
     .model-group-item span {
+      font-family: var(--font-code);
       color: var(--muted);
       font-size: 12px;
       white-space: nowrap;
@@ -374,7 +377,7 @@
     .material-image {
       min-height: 154px;
       border-radius: 14px;
-      background: linear-gradient(140deg, #f9faf8, #e9ece6);
+      background: var(--sage-soft);
       overflow: hidden;
       display: grid;
       place-items: center;
@@ -469,7 +472,7 @@
       width: var(--rating);
       height: 100%;
       border-radius: inherit;
-      background: linear-gradient(90deg, var(--sage), var(--sage-dark));
+      background: var(--sage);
     }
     .rating-percent {
       color: var(--sage-dark);
@@ -487,7 +490,7 @@
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      border: 1px solid rgba(0,0,0,0.16);
+      border: 1px solid var(--border-strong);
       background: var(--c);
       cursor: pointer;
       position: relative;
@@ -586,6 +589,7 @@
       margin-bottom: 2px;
     }
     .quality-card .layer {
+      font-family: var(--font-code);
       display: block;
       font-size: 11px;
       color: var(--ink);
@@ -777,7 +781,7 @@
       height: 18px;
       border-radius: 50%;
       background: var(--c, #ccc);
-      border: 1px solid rgba(0,0,0,0.14);
+      border: 1px solid var(--border-strong);
       flex: 0 0 auto;
     }
     .continue-btn {
@@ -797,7 +801,14 @@
     }
     .continue-btn[aria-disabled="true"] {
       opacity: 0.46;
-      pointer-events: none;
+      cursor: not-allowed;
+    }
+    .summary-item.invalid {
+      border-color: rgba(201, 90, 82, 0.42);
+      background: rgba(201, 90, 82, 0.08);
+      border-radius: 12px;
+      padding-top: 8px;
+      padding-bottom: 8px;
     }
     .summary-size-warning {
       grid-column: 1 / -1;
@@ -814,6 +825,30 @@
     }
     .summary-size-warning.show {
       display: block;
+    }
+    .validation-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 92px;
+      transform: translateX(-50%) translateY(10px);
+      width: min(calc(100% - 32px), 560px);
+      padding: 12px 16px;
+      border: 1px solid rgba(201, 90, 82, 0.34);
+      border-radius: 999px;
+      background: #fff5f3;
+      color: #8a241a;
+      box-shadow: 0 14px 34px rgba(40, 26, 22, 0.14);
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+      z-index: 70;
+    }
+    .validation-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
     }
 
     @media (max-width: 1320px) {
@@ -921,7 +956,7 @@
   </main>
 
   <aside class="summary-bar" aria-label="Current selection">
-    <div class="summary-item">
+    <div class="summary-item" id="summaryMaterialItem">
       <span class="summary-label">Material</span>
       <span class="summary-value" id="summaryMaterial">Select a material</span>
     </div>
@@ -936,6 +971,7 @@
     <a class="continue-btn" id="continueBtn" href="options.html" aria-disabled="true">Continue to Options <span aria-hidden="true">→</span></a>
     <div class="summary-size-warning" id="summarySizeWarning" role="alert"></div>
   </aside>
+  <div class="validation-toast" id="validationToast" role="alert" aria-live="assertive"></div>
 
   <script>
     const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'mahi3d';
@@ -961,10 +997,21 @@
     let activeFilter = 'all';
     let selection = { materialId: null };
     let savedSizeWarning = consumeSavedSizeWarning();
+    let showSelectionValidation = false;
+    let validationToastTimer = null;
     const openSpecs = new Set();
 
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     const money = n => Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function showValidationToast(message) {
+      const toast = document.getElementById('validationToast');
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(validationToastTimer);
+      validationToastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+    }
 
     function formatMm(value) {
       const n = Number(value);
@@ -1339,6 +1386,7 @@
       const mat = materials.find(m => String(m.id) === String(id));
       if (!mat) return;
       selection.materialId = mat.id;
+      showSelectionValidation = false;
       saveSelection();
       renderMaterials();
     }
@@ -1371,6 +1419,11 @@
       const sameMaterial = String(existing.materialId || '') === String(mat.id);
       const payload = {
         ...(sameMaterial ? existing : {}),
+        requiredSelections: {
+          ...((sameMaterial && existing.requiredSelections) || {}),
+          material: true,
+          ...(sameMaterial ? {} : { colour: false, finish: false, infill: false, shipping: false }),
+        },
         materialId: mat.id,
         materialName: mat.name,
         material: mat.name,
@@ -1384,11 +1437,13 @@
     function restoreSelection() {
       let saved = null;
       try { saved = JSON.parse(localStorage.getItem('form_selection') || 'null'); } catch {}
-      const mat = saved && materials.find(m => String(m.id) === String(saved.materialId) || m.name === saved.materialName);
-      const selected = mat || materials.find(m => m.recommended) || materials[0];
-      if (!selected) return;
-      selection.materialId = selected.id;
-      saveSelection();
+      const explicitMaterial = saved?.requiredSelections?.material === true;
+      const mat = explicitMaterial && materials.find(m => String(m.id) === String(saved.materialId) || m.name === saved.materialName);
+      if (!mat) {
+        selection.materialId = null;
+        return;
+      }
+      selection.materialId = mat.id;
     }
 
     function updateSummary() {
@@ -1400,12 +1455,14 @@
       document.getElementById('summaryFinish').textContent = mat ? 'Colour, finish, infill' : '-';
       const summaryWarning = document.getElementById('summarySizeWarning');
       if (summaryWarning) {
-        summaryWarning.textContent = sizeStatus.message;
-        summaryWarning.classList.toggle('show', !sizeStatus.ok);
+        const missingMessage = showSelectionValidation && !mat ? 'Choose a material before continuing.' : '';
+        summaryWarning.textContent = missingMessage || sizeStatus.message;
+        summaryWarning.classList.toggle('show', !!missingMessage || !sizeStatus.ok);
       }
+      document.getElementById('summaryMaterialItem')?.classList.toggle('invalid', showSelectionValidation && !mat);
       continueBtn.href = `options.html?shop=${encodeURIComponent(SHOP_SLUG)}${IS_NEW_GROUP_FLOW ? '&newGroup=1' : ''}`;
       continueBtn.setAttribute('aria-disabled', mat && sizeStatus.ok ? 'false' : 'true');
-      continueBtn.title = !sizeStatus.ok ? sizeStatus.message : '';
+      continueBtn.title = !mat ? 'Choose a material before continuing.' : (!sizeStatus.ok ? sizeStatus.message : '');
     }
 
     continueBtn.addEventListener('click', e => {
@@ -1414,8 +1471,15 @@
       if (!mat || !sizeStatus.ok) {
         e.preventDefault();
         e.stopPropagation();
+        showSelectionValidation = !mat;
+        if (!mat) {
+          showValidationToast('Choose a material before continuing.');
+          updateSummary();
+          return;
+        }
         if (sizeStatus.message) {
           savedSizeWarning = { shopSlug: SHOP_SLUG, materialId: mat?.id || null, message: sizeStatus.message };
+          showValidationToast(sizeStatus.message);
           renderMaterials();
         }
       }

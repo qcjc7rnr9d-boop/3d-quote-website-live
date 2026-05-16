@@ -81,7 +81,7 @@
     .order-total { font-family: var(--font-brand); font-size: 22px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .order-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 15px; }
     .meta-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
-    .meta-value { font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .meta-value { font-family: var(--font-code); font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .meta-value.wrap { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.4; }
 
     .status-track { padding: 14px; background: var(--off-white); border: 1px solid var(--border); border-radius: 14px; }
@@ -102,7 +102,7 @@
       font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
     }
     .badge-sage { background: var(--sage-bg); color: var(--sage-dark); border-color: var(--sage-light); }
-    .badge-warm { background: #fff8ed; color: #9a5b16; border-color: #efd9b7; }
+    .badge-warm { background: rgba(194,138,53,0.10); color: var(--color-warning); border-color: rgba(194,138,53,0.24); }
 
     .tracking-box { margin-top: 14px; background: rgba(122,158,126,0.06); border: 1px solid var(--sage-light); border-radius: 14px; padding: 13px 14px; }
     .tracking-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--sage-dark); margin-bottom: 6px; }
@@ -151,8 +151,8 @@
       height: 42px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--border);
       font: 700 13px var(--font-ui); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
     }
-    .btn-primary { background: var(--sage-dark); color: var(--white); border-color: var(--sage-dark); }
-    .btn-dark { background: var(--ink); color: var(--white); border-color: var(--ink); }
+    .btn-primary { background: var(--sage); color: var(--white); border-color: var(--sage); }
+    .btn-dark { background: var(--sage); color: var(--white); border-color: var(--sage); }
     .btn-light { background: var(--white); color: var(--ink); }
     .inline-message { min-height: 18px; font-size: 12px; color: var(--muted); }
     .inline-message.error { color: #b42318; }
@@ -160,8 +160,8 @@
 
     .help-lines { display: grid; gap: 14px; }
     .help-intro {
-      border: 1px solid rgba(122,158,126,0.26); border-radius: 18px; padding: 18px;
-      background: linear-gradient(135deg, rgba(122,158,126,0.12), rgba(255,255,255,0.72));
+      border: 1px solid var(--sage-light); border-radius: 18px; padding: 18px;
+      background: var(--sage-bg);
     }
     .help-intro h2 {
       font-family: var(--font-brand); font-size: 26px; letter-spacing: -0.04em;
@@ -643,6 +643,13 @@
         shippingOptionId: shipping.id || selection.shippingId || selection.shippingOptionId || request.shippingId || null,
         shippingOptionLabel: shipping.label || selection.shippingLabel || selection.shippingOptionLabel || '',
         shippingOptionPrice: shipping.finalPrice ?? shipping.price ?? selection.shippingPrice ?? selection.shippingOptionPrice ?? null,
+      };
+      restoredSelection.requiredSelections = {
+        material: !!restoredSelection.materialId,
+        colour: !!restoredSelection.colorId,
+        finish: !!restoredSelection.finishId,
+        infill: !!restoredSelection.infillTierId,
+        shipping: !!restoredSelection.shippingOptionId,
       };
       try {
         localStorage.setItem('form_file', JSON.stringify(file));

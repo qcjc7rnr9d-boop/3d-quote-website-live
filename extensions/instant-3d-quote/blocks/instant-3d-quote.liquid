@@ -1,0 +1,46 @@
+<div class="trennen-quote-block" style="--trennen-quote-min-height: {{ block.settings.min_height }}px;">
+  {% if block.settings.heading != blank %}
+    <h2 class="trennen-quote-block__heading">{{ block.settings.heading | escape }}</h2>
+  {% endif %}
+  {% if block.settings.copy != blank %}
+    <p class="trennen-quote-block__copy">{{ block.settings.copy | escape }}</p>
+  {% endif %}
+  <iframe
+    class="trennen-quote-block__frame"
+    title="Instant 3D Quote"
+    src="/apps/3d-quote"
+    loading="lazy"
+  ></iframe>
+</div>
+
+{% schema %}
+{
+  "name": "Instant 3D Quote",
+  "target": "section",
+  "stylesheet": "instant-3d-quote.css",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Instant 3D quote"
+    },
+    {
+      "type": "text",
+      "id": "copy",
+      "label": "Intro text",
+      "default": "Upload your model and continue through Shopify checkout."
+    },
+    {
+      "type": "range",
+      "id": "min_height",
+      "label": "Frame height",
+      "min": 220,
+      "max": 720,
+      "step": 20,
+      "unit": "px",
+      "default": 360
+    }
+  ]
+}
+{% endschema %}

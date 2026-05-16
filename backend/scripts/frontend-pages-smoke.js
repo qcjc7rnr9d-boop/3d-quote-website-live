@@ -1,0 +1,97 @@
+import { chromium } from '../../research/node_modules/playwright/index.mjs';
+
+const base = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+const pages = [
+  '/',
+  '/index.html?shop=mahi3d',
+  '/catalog.html?shop=mahi3d',
+  '/materials.html?shop=mahi3d',
+  '/options.html?shop=mahi3d',
+  '/quote.html?shop=mahi3d',
+  '/checkout.html?shop=mahi3d',
+  '/confirmation.html?shop=mahi3d',
+  '/terms.html?shop=mahi3d',
+  '/privacy.html?shop=mahi3d',
+  '/customer/login.html?shop=mahi3d',
+  '/customer/forgot-password.html?shop=mahi3d',
+  '/customer/reset-password.html?shop=mahi3d&token=invalid',
+  '/customer/dashboard.html?shop=mahi3d#overview',
+  '/admin/login.html',
+  '/admin/forgot-password.html',
+  '/admin/reset-password.html?token=invalid',
+  '/admin/dashboard.html',
+  '/admin/materials.html',
+  '/admin/orders.html',
+  '/admin/pricing.html',
+  '/admin/settings.html',
+  '/admin/shipping.html',
+  '/admin/payments.html',
+  '/admin/customers.html',
+  '/admin/notifications.html',
+  '/platform/login.html',
+  '/platform/forgot-password.html',
+  '/platform/reset-password.html?token=invalid',
+  '/platform/admin.html',
+];
+
+function sameOriginLocalHref(raw) {
+  if (!raw || raw.startsWith('#')) return null;
+  if (/^(mailto:|tel:|javascript:)/i.test(raw)) return null;
+  const url = new URL(raw, base);
+  if (url.origin !== new URL(base).origin) return null;
+  return url;
+}
+
+const browser = await chromium.launch({ headless: true });
+try {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const checkedLinks = new Set();
+
+  for (const path of pages) {
+    const page = await context.newPage();
+    const pageErrors = [];
+    page.on('pageerror', err => pageErrors.push(err.message));
+    const response = await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded' });
+    assert(response && response.status() < 500, `${path} returned ${response?.status() || 'no response'}`);
+    await page.waitForTimeout(250);
+    assert(pageErrors.length === 0, `${path} runtime errors: ${pageErrors.join('; ')}`);
+
+    const title = await page.title();
+    assert(title && title.trim().length > 0, `${path} is missing a document title`);
+
+    const unlabeledVisibleInputs = await page.$$eval('input, select, textarea', controls => controls
+      .filter(el => {
+        const style = window.getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        if (el.type === 'hidden') return false;
+        if (el.disabled) return false;
+        return !el.id || !document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+      })
+      .filter(el => !el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby') && !el.closest('label'))
+      .map(el => `${el.tagName.toLowerCase()}#${el.id || '(no-id)'}`));
+    assert(unlabeledVisibleInputs.length === 0, `${path} has unlabeled visible controls: ${unlabeledVisibleInputs.join(', ')}`);
+
+    const hrefs = await page.$$eval('a[href]', links => links.map(a => a.getAttribute('href')));
+    for (const href of hrefs) {
+      const url = sameOriginLocalHref(href);
+      if (!url) continue;
+      const key = `${url.pathname}${url.search}`;
+      if (checkedLinks.has(key)) continue;
+      checkedLinks.add(key);
+      if (url.pathname.startsWith('/api/')) continue;
+      const res = await fetch(url.toString(), { redirect: 'manual' });
+      assert(res.status < 500, `Local link ${key} returned ${res.status}`);
+      assert(res.status !== 404, `Local link ${key} returned 404`);
+    }
+    await page.close();
+  }
+
+  console.log(`Frontend page smoke checks passed for ${pages.length} pages and ${checkedLinks.size} local links.`);
+} finally {
+  await browser.close();
+}

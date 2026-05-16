@@ -23,6 +23,11 @@ import stripeRouter, { stripeWebhookHandler } from './routes/stripe.js';
 import platformRouter from './routes/platform.js';
 import customerPortalRouter from './routes/customer-portal.js';
 import shippingRouter from './routes/shipping.js';
+import shopifyRouter, {
+  shopifyEmbeddedAdminPage,
+  shopifyProxyRouter,
+  shopifyWebhookHandler,
+} from './routes/shopify.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -47,8 +52,15 @@ app.disable('x-powered-by');
 
 // ── Security headers ──────────────────────────────────────────
 app.use((req, res, next) => {
+  const shopifySurface = req.path === '/app'
+    || req.path.startsWith('/apps/3d-quote')
+    || req.path.startsWith('/api/shopify');
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  if (!shopifySurface) {
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  } else {
+    res.setHeader('Content-Security-Policy', "frame-ancestors https://*.myshopify.com https://admin.shopify.com;");
+  }
   res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 });
@@ -57,6 +69,10 @@ app.use((req, res, next) => {
 app.post('/api/stripe/webhook',
   express.raw({ type: 'application/json' }),
   stripeWebhookHandler
+);
+app.post('/api/shopify/webhooks',
+  express.raw({ type: 'application/json' }),
+  shopifyWebhookHandler
 );
 
 // ── Body parsers ──────────────────────────────────────────────
@@ -126,6 +142,9 @@ app.use('/api/stripe', stripeRouter);
 app.use('/api/platform', platformRouter);
 app.use('/api/customer', customerPortalRouter);
 app.use('/api/shipping', shippingRouter);
+app.use('/api/shopify', shopifyRouter);
+app.use('/apps/3d-quote', shopifyProxyRouter);
+app.get('/app', shopifyEmbeddedAdminPage);
 
 // ── Public: platform identity (Trennen) ────────────────────────
 // Lets unauthenticated pages (admin auth screens, platform login,

@@ -12,7 +12,6 @@ function assert(condition, message) {
 const combinedCheckout = `${checkoutHtml}\n${checkoutJs}`;
 const forbidden = [
   'Shop Pay',
-  'Shopify',
   'shopPay',
   'toggleShopPay',
   'sdks.shopifycdn.com',
@@ -41,6 +40,10 @@ assert(
   'Checkout script must process payments through Stripe PaymentIntents'
 );
 assert(
+  checkoutJs.includes("checkoutProvider === 'shopify'"),
+  'Checkout script should keep Shopify checkout isolated behind explicit provider mode'
+);
+assert(
   checkoutHtml.includes('cart-item-options') && checkoutHtml.includes('cart-item-money'),
   'Checkout is missing the richer grouped order-review styles'
 );
@@ -57,4 +60,4 @@ assert(
   'Checkout script must surface quote validation failures in the order review'
 );
 
-console.log('Stripe-only checkout smoke checks passed.');
+console.log('Stripe checkout fallback smoke checks passed.');

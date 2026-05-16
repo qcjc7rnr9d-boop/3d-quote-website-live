@@ -51,6 +51,45 @@ const DEFAULT_CITIES = [
   'Napier',
 ];
 
+export const COUNTRY_PRESETS = {
+  nz: {
+    label: 'New Zealand',
+    countryName: 'New Zealand',
+    regionCode: 'NZ',
+    areas: DEFAULT_CITIES,
+  },
+  au: {
+    label: 'Australia',
+    countryName: 'Australia',
+    regionCode: 'AU',
+    areas: ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Canberra', 'Gold Coast', 'Newcastle'],
+  },
+  us: {
+    label: 'United States',
+    countryName: 'United States',
+    regionCode: 'US',
+    areas: ['Los Angeles', 'New York', 'Chicago', 'Houston', 'Phoenix', 'Seattle', 'San Francisco', 'Austin'],
+  },
+  uk: {
+    label: 'United Kingdom',
+    countryName: 'United Kingdom',
+    regionCode: 'GB',
+    areas: ['London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 'Bristol', 'Liverpool', 'Edinburgh'],
+  },
+  ca: {
+    label: 'Canada',
+    countryName: 'Canada',
+    regionCode: 'CA',
+    areas: ['Toronto', 'Vancouver', 'Montreal', 'Calgary', 'Ottawa', 'Edmonton', 'Winnipeg', 'Quebec City'],
+  },
+  global: {
+    label: 'Custom / Global',
+    countryName: '',
+    regionCode: '',
+    areas: ['Sydney Australia', 'Los Angeles United States', 'Manchester United Kingdom'],
+  },
+};
+
 const DEFAULT_KEYWORDS = [
   'custom FDM 3D printing service',
   'PLA PETG 3D printing service',
@@ -103,6 +142,7 @@ const SKIP_PATHS = [
 export function parseArgs(argv) {
   const options = {
     cities: DEFAULT_CITIES,
+    countryPreset: 'nz',
     keywords: DEFAULT_KEYWORDS,
     maxQueries: Infinity,
     maxResultsPerQuery: 20,
@@ -117,6 +157,12 @@ export function parseArgs(argv) {
     const next = argv[i + 1];
     if (arg === '--cities' && next) {
       options.cities = next.split(',').map(s => s.trim()).filter(Boolean);
+      i++;
+    } else if (arg === '--areas' && next) {
+      options.areas = next.split(',').map(s => s.trim()).filter(Boolean);
+      i++;
+    } else if (arg === '--country' && next) {
+      options.countryPreset = next;
       i++;
     } else if (arg === '--keywords' && next) {
       options.keywords = next.split(',').map(s => s.trim()).filter(Boolean);
@@ -160,7 +206,9 @@ Usage:
   GOOGLE_PLACES_API_KEY=... node research/discover-prospects.mjs [options]
 
 Options:
-  --cities "Auckland,Wellington"       Comma-separated NZ cities.
+  --country au                         Country preset: nz, au, us, uk, ca, or global.
+  --areas "Sydney,Melbourne"           Comma-separated cities, regions, or metro areas.
+  --cities "Auckland,Wellington"       Backwards-compatible alias for --areas.
   --keywords "3D printing service"     Comma-separated search keywords.
   --max-queries 2                      Limit Places queries for smoke tests.
   --new-leads 10                       Stop after this many fresh importable leads.
@@ -171,6 +219,44 @@ Options:
   --seed-file research/data/seeds.txt  Crawl seed URLs from a text/CSV file.
   --out research/data/discovered       Output base path without extension.
 `);
+}
+
+export function normalizeCountryPreset(value = 'nz') {
+  const raw = String(value || 'nz').trim().toLowerCase();
+  const aliases = {
+    new_zealand: 'nz',
+    'new zealand': 'nz',
+    australia: 'au',
+    aus: 'au',
+    united_states: 'us',
+    'united states': 'us',
+    usa: 'us',
+    america: 'us',
+    united_kingdom: 'uk',
+    'united kingdom': 'uk',
+    great_britain: 'uk',
+    'great britain': 'uk',
+    gb: 'uk',
+    canada: 'ca',
+    custom: 'global',
+    'custom / global': 'global',
+    worldwide: 'global',
+  };
+  return COUNTRY_PRESETS[raw] ? raw : aliases[raw] || 'global';
+}
+
+export function normalizeDiscoveryScope(options = {}) {
+  const countryPreset = normalizeCountryPreset(options.countryPreset || options.country || 'nz');
+  const preset = COUNTRY_PRESETS[countryPreset] || COUNTRY_PRESETS.nz;
+  const areas = (options.areas || options.cities || preset.areas || [])
+    .map(area => String(area || '').trim())
+    .filter(Boolean);
+  return {
+    countryPreset,
+    countryName: options.countryName ?? preset.countryName,
+    regionCode: options.regionCode ?? preset.regionCode,
+    areas,
+  };
 }
 
 function displayNameFromHost(url) {
@@ -255,15 +341,28 @@ async function seedCandidatesFromOptions(options = {}) {
   return normaliseSeedUrls(seedRows);
 }
 
-export function buildQueries({ cities, keywords, maxQueries }) {
+function areaQueryText(keyword, area, countryName) {
+  const cleanArea = String(area || '').trim();
+  const cleanCountry = String(countryName || '').trim();
+  if (!cleanCountry) return `${keyword} ${cleanArea}`.trim();
+  if (cleanArea.toLowerCase().includes(cleanCountry.toLowerCase())) return `${keyword} ${cleanArea}`.trim();
+  return `${keyword} ${cleanArea} ${cleanCountry}`.trim();
+}
+
+export function buildQueries(options = {}) {
+  const { areas, countryName } = normalizeDiscoveryScope(options);
+  const keywords = options.keywords || DEFAULT_KEYWORDS;
+  const maxQueries = options.maxQueries;
   const queries = [];
-  for (const city of cities) {
+  for (const area of areas) {
     for (const keyword of keywords) {
-      queries.push(`${keyword} ${city} New Zealand`);
+      queries.push(areaQueryText(keyword, area, countryName));
     }
   }
-  queries.push('custom FDM 3D printing service New Zealand');
-  queries.push('upload STL 3D print quote New Zealand');
+  if (countryName) {
+    queries.push(`custom FDM 3D printing service ${countryName}`);
+    queries.push(`upload STL 3D print quote ${countryName}`);
+  }
   return queries.slice(0, Number.isFinite(maxQueries) ? maxQueries : queries.length);
 }
 
@@ -315,7 +414,14 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
   }
 }
 
-export async function placesTextSearch(apiKey, query, maxResultCount) {
+export async function placesTextSearch(apiKey, query, maxResultCount, searchOptions = {}) {
+  const body = {
+    textQuery: query,
+    languageCode: 'en',
+    maxResultCount,
+  };
+  if (searchOptions.regionCode) body.regionCode = searchOptions.regionCode;
+
   const response = await fetchWithTimeout(PLACES_URL, {
     method: 'POST',
     headers: {
@@ -323,12 +429,7 @@ export async function placesTextSearch(apiKey, query, maxResultCount) {
       'X-Goog-Api-Key': apiKey,
       'X-Goog-FieldMask': FIELD_MASK,
     },
-    body: JSON.stringify({
-      textQuery: query,
-      regionCode: 'NZ',
-      languageCode: 'en',
-      maxResultCount,
-    }),
+    body: JSON.stringify(body),
   }, 15000);
 
   const text = await response.text();
@@ -336,7 +437,7 @@ export async function placesTextSearch(apiKey, query, maxResultCount) {
     throw new Error(`Google Places ${response.status}: ${text.slice(0, 500)}`);
   }
   const data = JSON.parse(text || '{}');
-  return (data.places || []).map(place => normalisePlaceResult(place, query));
+  return (data.places || []).map(place => normalisePlaceResult(place, query, searchOptions));
 }
 
 function absoluteUrl(href, baseUrl) {
@@ -458,6 +559,8 @@ function skippedIdentityRecord(candidate = {}, matchedKeys = [], reason = 'Skipp
 }
 
 export async function runDiscovery(apiKey, options, hooks = {}) {
+  const discoveryScope = normalizeDiscoveryScope(options);
+  options = { ...options, ...discoveryScope };
   const requestedNewLeads = normalizeRequestedNewLeads(options.newLeadTarget);
   const queries = buildQueries(options);
   const placesSearch = options.placesTextSearch || placesTextSearch;
@@ -545,14 +648,22 @@ export async function runDiscovery(apiKey, options, hooks = {}) {
   }
 
   if (apiKey && queries.length && !targetReached()) {
-    hooks.onLog?.(`Running up to ${queries.length} Google Places query/queries to find ${Number.isFinite(requestedNewLeads) ? requestedNewLeads : 'all'} fresh business(es)...`);
+    hooks.onLog?.(`Running up to ${queries.length} Google Places query/queries across ${options.countryName || 'custom/global areas'} to find ${Number.isFinite(requestedNewLeads) ? requestedNewLeads : 'all'} fresh business(es)...`);
     for (const query of queries) {
       if (targetReached()) break;
       queriesAttempted++;
       hooks.onLog?.(`Places query: ${query}`);
       try {
-        const results = await placesSearch(apiKey, query, options.maxResultsPerQuery);
-        const candidates = dedupePlaces(results).filter(candidate => candidate.website);
+        const results = await placesSearch(apiKey, query, options.maxResultsPerQuery, {
+          countryPreset: options.countryPreset,
+          countryName: options.countryName,
+          regionCode: options.regionCode,
+        });
+        const candidates = dedupePlaces(results).filter(candidate => candidate.website).map(candidate => ({
+          ...candidate,
+          region: candidate.region || options.countryName || '',
+          country: candidate.country || options.countryName || '',
+        }));
         hooks.onProgress?.({ stage: 'places', query, found: results.length });
         for (const candidate of candidates) {
           await processCandidate(candidate);
@@ -606,7 +717,7 @@ export async function refreshLeadEvidence(apiKey, lead, options = {}, hooks = {}
   const placesSearch = options.placesTextSearch || placesTextSearch;
   const crawlSite = options.crawlWebsite || crawlWebsite;
   const maxPages = Math.max(1, Math.min(10, Number(options.maxPagesPerSite) || 5));
-  const query = [lead.company_name, lead.city || lead.region, 'New Zealand'].filter(Boolean).join(' ');
+  const query = [lead.company_name, lead.city || lead.region, lead.country || ''].filter(Boolean).join(' ');
   let placeCandidate = {};
 
   if (apiKey && query.trim()) {
@@ -633,7 +744,7 @@ export async function refreshLeadEvidence(apiKey, lead, options = {}, hooks = {}
     google_place_id: placeCandidate.google_place_id || lead.google_place_id || '',
     google_rating: Number(placeCandidate.google_rating || lead.google_rating) || 0,
     google_review_count: Number(placeCandidate.google_review_count || lead.google_review_count) || 0,
-    region: lead.region || 'New Zealand',
+    region: lead.region || lead.country || 'New Zealand',
     city: lead.city || '',
     discovery_source_query: query || 'Manual evidence refresh',
   };

@@ -443,13 +443,15 @@ function normaliseName(name) {
   return cleanText(name).toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
-function normalisePlaceResult(place, sourceQuery = '') {
+function normalisePlaceResult(place, sourceQuery = '', context = {}) {
   return {
     google_place_id: place.id || place.name || place.place_id || '',
     company_name: place.displayName?.text || place.name || '',
     website: place.websiteUri || place.website || '',
     phone: place.nationalPhoneNumber || place.internationalPhoneNumber || place.formatted_phone_number || '',
     address: place.formattedAddress || place.formatted_address || '',
+    region: place.region || context.countryName || '',
+    country: place.country || context.countryName || '',
     google_rating: Number(place.rating) || 0,
     google_review_count: Number(place.userRatingCount || place.user_ratings_total) || 0,
     google_types: place.types || [],
