@@ -36,6 +36,11 @@ async function api(path, options = {}, expected = 200) {
   return { res, data };
 }
 
+async function csrfHeader(cookie, extra = {}) {
+  const { data } = await api('/api/csrf-token', { headers: { Cookie: cookie } });
+  return { Cookie: cookie, 'X-CSRF-Token': data.csrfToken, ...extra };
+}
+
 function makeShopCookie(shopId) {
   sessionId = randomUUID();
   const expires = Date.now() + 15 * 60 * 1000;
@@ -78,22 +83,23 @@ try {
   const settings = db.prepare('SELECT logo_url FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
   originalLogoUrl = settings.logo_url || null;
   const cookie = makeShopCookie(shop.id);
+  const csrf = await csrfHeader(cookie);
 
   await api('/api/settings/logo', {
     method: 'POST',
-    headers: { Cookie: cookie },
+    headers: csrf,
     body: formWithFile('logo', Buffer.from('<svg></svg>'), 'image/svg+xml', 'logo.svg'),
   }, 400);
 
   await api('/api/settings/logo', {
     method: 'POST',
-    headers: { Cookie: cookie },
+    headers: csrf,
     body: formWithFile('logo', Buffer.from('not really a png'), 'image/png', 'logo.png'),
   }, 400);
 
   const { data } = await api('/api/settings/logo', {
     method: 'POST',
-    headers: { Cookie: cookie },
+    headers: csrf,
     body: formWithFile('logo', png1x1, 'image/png', 'logo.png'),
   }, 201);
 
@@ -105,7 +111,7 @@ try {
 
   const update = await fetch(`${base}/api/settings`, {
     method: 'PUT',
-    headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    headers: await csrfHeader(cookie, { 'Content-Type': 'application/json' }),
     body: JSON.stringify({ logo_url: data.url, invoice_logo: true }),
   });
   const updated = await update.json().catch(() => ({}));
@@ -114,7 +120,7 @@ try {
 
   const preserve = await fetch(`${base}/api/settings`, {
     method: 'PUT',
-    headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    headers: await csrfHeader(cookie, { 'Content-Type': 'application/json' }),
     body: JSON.stringify({ tagline: 'Logo preserve smoke', invoice_logo: true }),
   });
   const preserved = await preserve.json().catch(() => ({}));

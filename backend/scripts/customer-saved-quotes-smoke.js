@@ -30,6 +30,11 @@ async function api(path, options = {}, expected = 200) {
   return { res, data };
 }
 
+async function csrfHeader(cookie) {
+  const { data } = await api('/api/csrf-token', { headers: { Cookie: cookie } });
+  return { Cookie: cookie, 'X-CSRF-Token': data.csrfToken };
+}
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -74,6 +79,7 @@ try {
   `).get();
   assert(account, 'Demo customer account is missing; run npm run demo:seed:mahi3d first');
   const cookie = makeCustomerCookie(account);
+  const csrfHeaders = await csrfHeader(cookie);
 
   const material = db.prepare(`
     SELECT id, name, colours, finishes
@@ -113,7 +119,7 @@ try {
   };
   const { data: created } = await api('/api/customer/quotes', {
     method: 'POST',
-    headers: { Cookie: cookie },
+    headers: csrfHeaders,
     body: JSON.stringify(forged),
   }, 201);
   savedQuoteId = created.quote?.id;
@@ -129,7 +135,7 @@ try {
   await api('/api/customer/quotes?shop=portal-smoke-other', { headers: { Cookie: cookie } }, 403);
   await api(`/api/customer/quotes/${savedQuoteId}?shop=mahi3d`, {
     method: 'DELETE',
-    headers: { Cookie: cookie },
+    headers: csrfHeaders,
   });
   savedQuoteId = null;
 

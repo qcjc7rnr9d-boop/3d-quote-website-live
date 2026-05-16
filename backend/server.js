@@ -12,6 +12,8 @@ import session from 'express-session';
 import { db, requireShopAuth } from './middleware/auth.js';
 import { SESSION_DAYS } from './config.js';
 import { SQLiteSessionStore } from './lib/sqlite-session-store.js';
+import { csrfProtection, csrfTokenHandler } from './lib/csrf.js';
+import { hasSecretEncryptionKey } from './lib/secret-vault.js';
 
 import authRouter from './routes/auth.js';
 import materialsRouter from './routes/materials.js';
@@ -42,6 +44,7 @@ function assertProductionConfig() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-jwt-secret') missing.push('JWT_SECRET');
   if (!process.env.BASE_URL || !/^https:\/\//.test(process.env.BASE_URL)) missing.push('BASE_URL=https://...');
   if (!process.env.RESEND_API_KEY && !process.env.SMTP_HOST) missing.push('RESEND_API_KEY or SMTP_HOST');
+  if (!process.env.PLATFORM_CONFIG_ENCRYPTION_KEY || !hasSecretEncryptionKey()) missing.push('PLATFORM_CONFIG_ENCRYPTION_KEY');
   if (missing.length) {
     throw new Error(`Refusing to start in production. Missing/unsafe config: ${missing.join(', ')}`);
   }
@@ -95,6 +98,8 @@ app.use(session({
 setInterval(() => {
   try { sessionStore.clearExpired(); } catch {}
 }, 60 * 60 * 1000).unref();
+app.get('/api/csrf-token', csrfTokenHandler);
+app.use(csrfProtection);
 
 // ── Static files (public website only) ───────────────────────
 const privatePrefixes = [

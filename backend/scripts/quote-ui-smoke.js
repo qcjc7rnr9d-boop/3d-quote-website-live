@@ -54,8 +54,8 @@ assert(quoteHtml.includes('previewModelId'), 'Quote page must persist the active
 assert(quoteHtml.includes('previewModelById'), 'Quote page must expose clickable model preview switching');
 assert(quoteHtml.includes('aria-current'), 'Quote model rows must expose selected state');
 assert(quoteHtml.includes('promptUpload'), 'Quote page must support upload prompt routing');
-assert(quoteHtml.includes('newGroup=1&promptUpload=1'), 'Add another group must route back to home upload with prompt params');
-assert(quoteHtml.includes('index.html?shop='), 'Add another group must route back to the home upload page');
+assert(quoteHtml.includes('newGroup=1&promptUpload=1'), 'Add another group must route back to an upload prompt with prompt params');
+assert(quoteHtml.includes('quote.html?shop='), 'Add another group must route back to the quote upload prompt');
 assert(!quoteHtml.includes('id="colourSelect"'), 'Quote review should not duplicate colour selection controls');
 assert(!quoteHtml.includes('id="infillSelect"'), 'Quote review should not duplicate infill selection controls');
 assert(!quoteHtml.includes('aria-label="Finish"'), 'Quote review should not duplicate finish selection controls');
@@ -65,8 +65,15 @@ assert(!materialsHtml.includes('data-finish-id'), 'Material step should not rend
 assert(optionsHtml.includes('Colour'), 'Options step should render colour controls');
 assert(optionsHtml.includes('Print quality'), 'Options step should render finish controls');
 assert(optionsHtml.includes('Infill'), 'Options step should render infill controls');
-assert(indexHtml.includes('New uploads'), 'Home page must show the new uploads banner copy');
-assert(indexHtml.includes('showNewUploadPrompt'), 'Home page must support opening the upload prompt for new groups');
+const homepageHasUploadPrompt = indexHtml.includes('New uploads') && indexHtml.includes('showNewUploadPrompt');
+const homepageIsSalesPage = indexHtml.includes('assets/sales.css') && indexHtml.includes('data-sales-quote-demo');
+assert(
+  homepageHasUploadPrompt || homepageIsSalesPage,
+  'Home page must either support the upload prompt directly or route into the quote flow',
+);
+if (homepageIsSalesPage && !homepageHasUploadPrompt) {
+  assert(indexHtml.includes('quote.html?shop=mahi3d'), 'Sales home page must link demo users into the quote flow');
+}
 
 const browser = await chromium.launch({ headless: true });
 try {
@@ -276,14 +283,14 @@ try {
   }, { material, colour, finish, infill, shipping });
   await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'networkidle' });
   await page.click('#addAnotherBtn');
-  await page.waitForURL(/index\.html\?shop=mahi3d/, { timeout: 7000 });
+  await page.waitForURL(/quote\.html\?shop=mahi3d/, { timeout: 7000 });
   await page.waitForSelector('#newUploadBanner.show', { timeout: 5000 });
   await page.waitForTimeout(250);
   const newGroupState = await page.evaluate(() => ({
     cartCount: JSON.parse(localStorage.getItem('cart') || '{}').items?.length || 0,
     formFile: localStorage.getItem('form_file'),
     formSelection: localStorage.getItem('form_selection'),
-    uploadDisplay: getComputedStyle(document.querySelector('#uploadZone')).display,
+    uploadDisplay: getComputedStyle(document.querySelector('#viewerEmpty')).display,
     activeElementId: document.activeElement?.id || '',
     bannerText: document.querySelector('#newUploadBanner')?.innerText || '',
     url: location.href,
@@ -291,26 +298,14 @@ try {
   assert(newGroupState.cartCount === 2, `Add-another flow should preserve the existing cart and auto-saved current group, got ${newGroupState.cartCount} items`);
   assert(newGroupState.formFile === null, 'Add-another flow should clear active form_file');
   assert(newGroupState.formSelection === null, 'Add-another flow should clear active form_selection');
-  assert(newGroupState.uploadDisplay !== 'none', `Home upload zone should be visible, got ${newGroupState.uploadDisplay}`);
-  assert(/New uploads/.test(newGroupState.bannerText), 'Home new uploads banner did not render');
+  assert(newGroupState.uploadDisplay !== 'none', `Quote upload prompt should be visible, got ${newGroupState.uploadDisplay}`);
+  assert(/New uploads/.test(newGroupState.bannerText), 'New uploads banner did not render');
 
   await page.setInputFiles('#fileInput', {
     name: 'Next material group.stl',
     mimeType: 'model/stl',
     buffer: makeStlBuffer(),
   });
-  await page.waitForSelector('#fileCard.visible', { timeout: 5000 });
-  const homeUploadState = await page.evaluate(() => ({
-    cartCount: JSON.parse(localStorage.getItem('cart') || '{}').items?.length || 0,
-    file: JSON.parse(localStorage.getItem('form_file') || 'null'),
-    uploadText: document.querySelector('#uploadedModelList')?.innerText || '',
-    continueHref: document.querySelector('#continueBtn')?.getAttribute('href') || '',
-  }));
-  assert(homeUploadState.cartCount === 2, `Home upload should preserve existing material groups, got ${homeUploadState.cartCount} items`);
-  assert(homeUploadState.file?.models?.[0]?.name === 'Next material group.stl', 'Home upload did not save the new model group');
-  assert(/Next material group\.stl/.test(homeUploadState.uploadText), 'Home upload list did not show the new uploaded model');
-  assert(/materials\.html\?shop=mahi3d&newGroup=1/.test(homeUploadState.continueHref), `Choose Material did not preserve newGroup, got ${homeUploadState.continueHref}`);
-  await page.click('#continueBtn');
   await page.waitForURL(/materials\.html\?shop=mahi3d&newGroup=1/, { timeout: 7000 });
   await page.waitForFunction(() => /Next material group\.stl/.test(document.querySelector('#modelGroupPanel')?.innerText || ''), null, { timeout: 7000 });
   const materialArrival = await page.evaluate(() => ({

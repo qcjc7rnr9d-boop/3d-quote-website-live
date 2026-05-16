@@ -1002,6 +1002,7 @@
     }
   </style>
   <script src="assets/brand.js" defer></script>
+  <script src="/assets/csrf.js"></script>
 </head>
 <body>
 
@@ -2801,6 +2802,9 @@
     syncFileDataFromModels();
     applyFileMeta();
     refreshQuotePreview({ silent: true });
+    if (SHOULD_PROMPT_UPLOAD) {
+      window.location.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1`;
+    }
   });
 
   // ── Init the viewer ────────────────────────────────────────
@@ -2882,7 +2886,7 @@
   // cart, so checkout can proceed without a separate manual cart step.
   $('addAnotherBtn')?.addEventListener('click', () => {
     clearCurrentQuoteGroup();
-    window.location.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`;
+    window.location.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`;
   });
 
   $('checkoutCartBtn')?.addEventListener('click', e => {

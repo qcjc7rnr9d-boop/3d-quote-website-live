@@ -23,9 +23,15 @@ try {
 
   assert(schema.includes('CREATE TABLE IF NOT EXISTS order_files'), 'schema must define order_files');
   assert(schema.includes('CREATE TABLE IF NOT EXISTS order_items'), 'schema must define order_items');
-  assert(indexHtml.includes('uploadedModelList'), 'landing page must render uploaded model list');
-  assert(indexHtml.includes('model:${id}'), 'landing page must store per-model buffers');
-  assert(indexHtml.includes('MAX_MODELS_PER_GROUP = 20'), 'landing page must cap uploads at 20 models per group');
+  const homepageHasUploadFlow = indexHtml.includes('uploadedModelList');
+  const homepageIsSalesPage = indexHtml.includes('assets/sales.css') && indexHtml.includes('data-sales-quote-demo');
+  assert(homepageHasUploadFlow || homepageIsSalesPage, 'homepage must either host uploads or link clearly to the quote flow');
+  if (homepageHasUploadFlow) {
+    assert(indexHtml.includes('model:${id}'), 'landing page must store per-model buffers');
+    assert(indexHtml.includes('MAX_MODELS_PER_GROUP = 20'), 'landing page must cap uploads at 20 models per group');
+  } else {
+    assert(indexHtml.includes('quote.html?shop=mahi3d'), 'sales homepage must preserve a route into the quote flow');
+  }
   assert(quoteHtml.includes('multiple'), 'quote upload input must allow multiple files');
   assert(quoteHtml.includes('MAX_MODELS_PER_GROUP = 20'), 'quote page must cap uploads at 20 models per group');
   assert(quoteHtml.includes('modelFiles'), 'quote page must track modelFiles');

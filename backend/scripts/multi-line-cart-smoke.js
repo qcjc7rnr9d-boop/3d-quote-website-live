@@ -20,7 +20,7 @@ try {
   assert(quoteHtml.includes('cart.items.push(cartItem)'), 'quote page must append cart items instead of replacing cart');
   assert(quoteHtml.includes("localStorage.removeItem('form_file')"), 'add-another flow must clear active form_file only');
   assert(!quoteHtml.includes("localStorage.removeItem('cart')"), 'add-another flow must not clear cart');
-  assert(quoteHtml.includes('index.html?shop='), 'add-another flow must return to the home upload prompt');
+  assert(quoteHtml.includes('quote.html?shop='), 'add-another flow must return to the quote upload prompt');
   assert(quoteHtml.includes('&newGroup=1&promptUpload=1'), 'add-another flow must preserve prompt params');
 
   const shop = db.prepare("SELECT * FROM shops WHERE slug = 'mahi3d'").get();

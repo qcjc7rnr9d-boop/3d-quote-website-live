@@ -1,10 +1,23 @@
 import { db } from '../middleware/auth.js';
 import { PLATFORM_FEE_PERCENT } from '../config.js';
+import { decryptSecret, encryptSecret, hasSecretEncryptionKey, isEncryptedSecret } from './secret-vault.js';
 
 export const PLATFORM_SETTINGS_ID = 1;
 
 function readPlatformSettingsRow() {
   return db.prepare('SELECT * FROM platform_settings WHERE id = ?').get(PLATFORM_SETTINGS_ID) || null;
+}
+
+function encryptLegacyStoredSecret(row) {
+  if (!row?.stripe_secret_key || isEncryptedSecret(row.stripe_secret_key) || !hasSecretEncryptionKey()) return row;
+  const encrypted = encryptSecret(row.stripe_secret_key);
+  db.prepare(`
+    UPDATE platform_settings
+    SET stripe_secret_key = ?,
+        updated_at = datetime('now')
+    WHERE id = ?
+  `).run(encrypted, PLATFORM_SETTINGS_ID);
+  return { ...row, stripe_secret_key: encrypted };
 }
 
 export function ensurePlatformSettingsRow() {
@@ -13,13 +26,13 @@ export function ensurePlatformSettingsRow() {
 }
 
 export function getPlatformSettingsRow() {
-  return readPlatformSettingsRow() || ensurePlatformSettingsRow();
+  return encryptLegacyStoredSecret(readPlatformSettingsRow() || ensurePlatformSettingsRow());
 }
 
 export function getEffectivePlatformStripeConfig() {
   const row = getPlatformSettingsRow() || {};
   const publishableKey = row.stripe_publishable_key || process.env.STRIPE_PUBLISHABLE_KEY || '';
-  const secretKey = row.stripe_secret_key || process.env.STRIPE_SECRET_KEY || '';
+  const secretKey = row.stripe_secret_key ? decryptSecret(row.stripe_secret_key) : (process.env.STRIPE_SECRET_KEY || '');
   const clientId = row.stripe_client_id || process.env.STRIPE_CLIENT_ID || '';
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
   const feePercent = Number(row.platform_fee_percent);
@@ -62,7 +75,9 @@ export function updatePlatformStripeConfig({ publishableKey, secretKey, clientId
   const current = getPlatformSettingsRow();
 
   const nextPublishable = publishableKey !== undefined ? publishableKey || null : current?.stripe_publishable_key || null;
-  const nextSecret = secretKey !== undefined ? secretKey || null : current?.stripe_secret_key || null;
+  const nextSecret = secretKey !== undefined
+    ? (secretKey ? encryptSecret(secretKey) : null)
+    : (current?.stripe_secret_key || null);
   const nextClientId = clientId !== undefined ? clientId || null : current?.stripe_client_id || null;
   const nextFee = platformFeePercent !== undefined && platformFeePercent !== null && platformFeePercent !== ''
     ? Number(platformFeePercent)
@@ -79,6 +94,11 @@ export function updatePlatformStripeConfig({ publishableKey, secretKey, clientId
   `).run(nextPublishable, nextSecret, nextClientId, nextFee, PLATFORM_SETTINGS_ID);
 
   return getMaskedPlatformStripeConfig();
+}
+
+export function platformStripeSecretStoredEncrypted() {
+  const row = getPlatformSettingsRow() || {};
+  return !row.stripe_secret_key || isEncryptedSecret(row.stripe_secret_key);
 }
 
 export function updateShopStripeReadiness(shopId, account) {

@@ -19,6 +19,7 @@ async function api(path, options = {}, expected = 200) {
     redirect: 'manual',
     ...options,
     headers: {
+      'X-Smoke-Test': '1',
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(options.headers || {}),
     },

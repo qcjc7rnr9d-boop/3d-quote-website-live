@@ -13,12 +13,14 @@ import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
 import { getExchangeRates, normaliseQuoteCurrencies } from '../lib/exchange-rates.js';
 
 const router = Router();
+const smokeRateLimitSkip = req => process.env.NODE_ENV !== 'production' && req.get('x-smoke-test') === '1';
 const customerLoginLimiter = rateLimit({
   windowMs: LOGIN_WINDOW_MINUTES * 60 * 1000,
   max: LOGIN_MAX_ATTEMPTS,
   message: { error: 'Too many login attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: smokeRateLimitSkip,
 });
 const customerRegisterLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -26,6 +28,7 @@ const customerRegisterLimiter = rateLimit({
   message: { error: 'Too many account attempts, please try again shortly.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: smokeRateLimitSkip,
 });
 const customerPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -33,6 +36,7 @@ const customerPasswordLimiter = rateLimit({
   message: { error: 'Too many password attempts, please try again shortly.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: smokeRateLimitSkip,
 });
 const customerResetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -40,6 +44,7 @@ const customerResetLimiter = rateLimit({
   message: { ok: true, message: "If that email is registered, you'll receive a reset link shortly." },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: smokeRateLimitSkip,
 });
 const customerQuoteLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -47,6 +52,7 @@ const customerQuoteLimiter = rateLimit({
   message: { error: 'Too many quote requests, please try again shortly.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: smokeRateLimitSkip,
 });
 
 function ensureSupportEmailColumns() {

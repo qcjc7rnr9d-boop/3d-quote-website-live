@@ -28,3 +28,5 @@ research/.env
 research/.env.*
 research/node_modules/
 research/data/discovered-prospects.*
+research/data/discovered-*-smoke-*.csv
+research/data/discovered-*-smoke-*.json
