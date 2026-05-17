@@ -31,6 +31,7 @@
     "explicit-selection:smoke": "node scripts/explicit-selection-smoke.js",
     "legal:smoke": "node scripts/legal-pages-smoke.js",
     "settings:logo-smoke": "node scripts/settings-logo-smoke.js",
+    "migration:catalog-smoke": "node scripts/migration-catalog-smoke.js",
     "quote:ui-smoke": "node scripts/quote-ui-smoke.js",
     "saas-launch:smoke": "node scripts/saas-launch-smoke.js",
     "exchange-rates:smoke": "node scripts/exchange-rates-smoke.js",
