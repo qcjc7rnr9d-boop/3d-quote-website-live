@@ -331,6 +331,7 @@ CREATE TABLE IF NOT EXISTS store_settings (
   email_templates TEXT   NOT NULL DEFAULT '{}',
   shipping_zones  TEXT   NOT NULL DEFAULT '[]',
   material_page_settings TEXT NOT NULL DEFAULT '{}',
+  embed_allowed_origins TEXT NOT NULL DEFAULT '[]',
   updated_at     TEXT    NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
 );

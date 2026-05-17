@@ -14,6 +14,8 @@ import { SESSION_DAYS } from './config.js';
 import { SQLiteSessionStore } from './lib/sqlite-session-store.js';
 import { csrfProtection, csrfTokenHandler } from './lib/csrf.js';
 import { hasSecretEncryptionKey } from './lib/secret-vault.js';
+import { frameAncestorsForOrigins, parseEmbedAllowedOrigins } from './lib/embed.js';
+import { shopifyFileStorageStatus } from './lib/shopify-file-storage.js';
 
 import authRouter from './routes/auth.js';
 import materialsRouter from './routes/materials.js';
@@ -36,6 +38,8 @@ const PORT = process.env.PORT || 3000;
 const ROOT_DIR = join(__dirname, '..');
 const isProduction = process.env.NODE_ENV === 'production';
 const sessionStore = new SQLiteSessionStore(db);
+const startedAt = Date.now();
+const appVersion = process.env.npm_package_version || '1.0.0';
 
 function assertProductionConfig() {
   if (!isProduction) return;
@@ -58,11 +62,14 @@ app.use((req, res, next) => {
   const shopifySurface = req.path === '/app'
     || req.path.startsWith('/apps/3d-quote')
     || req.path.startsWith('/api/shopify');
+  const embedSurface = req.path.startsWith('/embed/');
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  if (!shopifySurface) {
+  if (!shopifySurface && !embedSurface) {
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   } else {
-    res.setHeader('Content-Security-Policy', "frame-ancestors https://*.myshopify.com https://admin.shopify.com;");
+    if (shopifySurface) {
+      res.setHeader('Content-Security-Policy', "frame-ancestors https://*.myshopify.com https://admin.shopify.com;");
+    }
   }
   res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
@@ -131,6 +138,76 @@ const publicRootPages = new Set([
   '/materials.html', '/onboarding.html', '/options.html', '/privacy.html', '/quote.html',
   '/stripe-callback.html', '/terms.html'
 ]);
+
+app.get('/api/health', (req, res) => {
+  try {
+    db.prepare('SELECT 1 as ok').get();
+    res.json({
+      ok: true,
+      version: appVersion,
+      environment: process.env.NODE_ENV || 'development',
+      uptime_seconds: Math.round((Date.now() - startedAt) / 1000),
+      database: {
+        engine: 'sqlite',
+        status: 'ok',
+      },
+      storage: {
+        shopify: shopifyFileStorageStatus(),
+        uploads: {
+          mode: 'local',
+          publicPath: '/uploads',
+        },
+      },
+    });
+  } catch (err) {
+    res.status(503).json({
+      ok: false,
+      version: appVersion,
+      database: {
+        engine: 'sqlite',
+        status: 'error',
+        error: err.message,
+      },
+    });
+  }
+});
+
+app.get('/embed/v1/widget.js', (req, res) => {
+  res.type('application/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.send(`(() => {
+  const script = document.currentScript;
+  if (!script) return;
+  const shop = script.dataset.shop || script.getAttribute('data-shop');
+  if (!shop) return;
+  const scriptUrl = new URL(script.src, window.location.href);
+  const baseUrl = (script.dataset.baseUrl || scriptUrl.origin).replace(/\\/$/, '');
+  const iframe = document.createElement('iframe');
+  iframe.src = baseUrl + '/embed/quote?shop=' + encodeURIComponent(shop);
+  iframe.title = script.dataset.title || 'Instant 3D quote';
+  iframe.loading = 'lazy';
+  iframe.style.width = '100%';
+  iframe.style.minHeight = script.dataset.height || '760px';
+  iframe.style.border = '0';
+  iframe.style.display = 'block';
+  iframe.setAttribute('allow', 'payment');
+  const mountSelector = script.dataset.mount;
+  const mount = mountSelector ? document.querySelector(mountSelector) : null;
+  (mount || script.parentNode).insertBefore(iframe, mount ? null : script.nextSibling);
+})();`);
+});
+
+app.get('/embed/quote', (req, res) => {
+  const slug = String(req.query.shop || req.query.slug || '').trim();
+  if (!slug) return res.status(400).send('Shop is required.');
+  const shop = db.prepare("SELECT id, slug FROM shops WHERE slug = ? AND plan != 'suspended'").get(slug);
+  if (!shop) return res.status(404).send('Shop not found.');
+  const settings = db.prepare('SELECT embed_allowed_origins FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('Content-Security-Policy', `frame-ancestors ${frameAncestorsForOrigins(parseEmbedAllowedOrigins(settings.embed_allowed_origins))};`);
+  res.sendFile(join(ROOT_DIR, 'quote.html'));
+});
+
 app.get([...publicRootPages], (req, res) => {
   const page = req.path === '/' ? 'index.html' : req.path.slice(1);
   res.sendFile(join(ROOT_DIR, page));

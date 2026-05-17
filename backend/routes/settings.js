@@ -6,6 +6,11 @@ import { fileURLToPath } from 'url';
 import { db, requireShopAuth } from '../middleware/auth.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate, DEFAULTS as EMAIL_TEMPLATE_DEFAULTS } from '../lib/email-templates/index.js';
+import {
+  ensureEmbedSettingsColumns,
+  normaliseEmbedAllowedOrigins,
+  parseEmbedAllowedOrigins,
+} from '../lib/embed.js';
 
 const router = Router();
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -34,6 +39,7 @@ function ensureSupportEmailColumns() {
 
 function ensureSettings(shopId) {
   ensureSupportEmailColumns();
+  ensureEmbedSettingsColumns(db);
   db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shopId);
   return db.prepare('SELECT * FROM store_settings WHERE shop_id = ?').get(shopId);
 }
@@ -79,6 +85,7 @@ function parseSettings(row) {
     email_templates: templates,
     email_thank_you: thankYou,
     shipping_zones:  JSON.parse(row.shipping_zones || '[]'),
+    embed_allowed_origins: parseEmbedAllowedOrigins(row.embed_allowed_origins),
   };
 }
 
@@ -130,7 +137,8 @@ router.put('/', requireShopAuth, (req, res) => {
     const {
       name,
       tagline, about, phone, address, support_email_mode, support_email, logo_url, gst_number,
-      invoice_footer, invoice_logo, notifications, email_templates, shipping_zones
+      invoice_footer, invoice_logo, notifications, email_templates, shipping_zones,
+      embed_allowed_origins
     } = req.body;
     const supportMode = support_email_mode !== undefined
       ? (support_email_mode === 'custom' ? 'custom' : 'signup')
@@ -140,6 +148,14 @@ router.put('/', requireShopAuth, (req, res) => {
       : normaliseEmail(existing.support_email);
     if (supportMode === 'custom' && !isValidEmail(supportEmail)) {
       return res.status(400).json({ error: 'Enter a valid support email, or use the signup email option.' });
+    }
+    let embedAllowedOrigins;
+    try {
+      embedAllowedOrigins = embed_allowed_origins !== undefined
+        ? normaliseEmbedAllowedOrigins(embed_allowed_origins)
+        : parseEmbedAllowedOrigins(existing.embed_allowed_origins);
+    } catch (err) {
+      return res.status(400).json({ error: err.message || 'Enter valid embed website origins.' });
     }
 
     // Update shop display name if supplied — slug stays stable for URLs
@@ -163,6 +179,7 @@ router.put('/', requireShopAuth, (req, res) => {
         notifications = ?,
         email_templates = ?,
         shipping_zones = ?,
+        embed_allowed_origins = ?,
         updated_at = datetime('now')
       WHERE shop_id = ?
     `).run(
@@ -179,6 +196,7 @@ router.put('/', requireShopAuth, (req, res) => {
       JSON.stringify(notifications !== undefined ? (notifications || {}) : parseJsonSetting(existing.notifications, {})),
       JSON.stringify(email_templates !== undefined ? (email_templates || {}) : parseJsonSetting(existing.email_templates, {})),
       JSON.stringify(shipping_zones !== undefined ? (Array.isArray(shipping_zones) ? shipping_zones : []) : parseJsonSetting(existing.shipping_zones, [])),
+      JSON.stringify(embedAllowedOrigins),
       req.shop.id
     );
 
@@ -237,6 +255,14 @@ router.patch('/', requireShopAuth, (req, res) => {
     if (req.body.notifications && typeof req.body.notifications === 'object') {
       const cur = JSON.parse(existing.notifications || '{}');
       updates.notifications = JSON.stringify({ ...cur, ...req.body.notifications });
+    }
+
+    if (req.body.embed_allowed_origins !== undefined) {
+      try {
+        updates.embed_allowed_origins = JSON.stringify(normaliseEmbedAllowedOrigins(req.body.embed_allowed_origins));
+      } catch (err) {
+        return res.status(400).json({ error: err.message || 'Enter valid embed website origins.' });
+      }
     }
 
     if (Object.keys(updates).length === 0) {

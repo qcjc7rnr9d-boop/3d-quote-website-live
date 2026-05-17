@@ -421,12 +421,18 @@
       <!-- Branding -->
       <div class="section-card">
         <div class="section-card-header">
-          <span class="section-card-title">Branding</span>
-          <span class="badge badge-stone">Coming soon</span>
+          <span class="section-card-title">Website install</span>
         </div>
         <div class="section-card-body">
+          <div class="form-group" style="margin-bottom:16px;">
+            <label class="form-label" for="embedAllowedOrigins">Approved website origins</label>
+            <textarea class="form-textarea" id="embedAllowedOrigins" rows="4"
+              placeholder="https://example.com&#10;https://www.example.com"></textarea>
+            <span class="form-hint">One origin per line. Include only scheme and host.</span>
+          </div>
           <div class="info-box">
-            Custom domain branding coming soon — upgrade to Pro to add a custom domain and white-label your quoting portal.
+            Embed script:
+            <code>&lt;script src="https://cdn.yourdomain.com/embed/v1/widget.js" data-shop="your-shop-slug"&gt;&lt;/script&gt;</code>
           </div>
         </div>
       </div>
@@ -550,6 +556,9 @@
         img.classList.remove('hidden');
         document.getElementById('removeLogoBtn').classList.remove('hidden');
       }
+      document.getElementById('embedAllowedOrigins').value = Array.isArray(s.embed_allowed_origins)
+        ? s.embed_allowed_origins.join('\n')
+        : '';
     } catch { /* ignore */ }
   })();
 
@@ -643,6 +652,10 @@
         invoice_footer: invoiceFooterVal,
         invoice_prefix: document.getElementById('invoicePrefix').value.trim(),
         invoice_logo:   document.getElementById('invoiceLogo').checked,
+        embed_allowed_origins: document.getElementById('embedAllowedOrigins').value
+          .split(/[\n,]/)
+          .map(origin => origin.trim())
+          .filter(Boolean),
       };
       if (logoUrl) payload.logo_url = logoUrl;
       else if (removeLogoRequested) payload.logo_url = null;

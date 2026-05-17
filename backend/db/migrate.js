@@ -5,6 +5,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { mkdirSync } from 'fs';
+import { ensureEmbedSettingsColumns } from '../lib/embed.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataDir = join(__dirname, '../data');
@@ -14,6 +15,7 @@ const db = new DatabaseSync(join(dataDir, 'rfdewi.db'));
 
 const sql = readFileSync(join(__dirname, 'schema.sql'), 'utf8');
 db.exec(sql);
+ensureEmbedSettingsColumns(db);
 
 console.log('✓ Database migrated');
 db.close();
