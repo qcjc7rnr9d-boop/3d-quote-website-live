@@ -27,7 +27,7 @@ for (const [name, html] of [['terms.html', termsHtml], ['privacy.html', privacyH
   assert(html.includes('data-brand="name"') || html.includes('footer-wordmark'), `${name} must support dynamic shop branding`);
   assert(html.includes('Draft placeholder'), `${name} must visibly mark legal copy as draft placeholder content`);
   assert(html.includes('catalog.html?shop='), `${name} must link back to Materials with the shop slug`);
-  assert(html.includes('quote.html?shop='), `${name} must link back to Quote with the shop slug`);
+  assert(html.includes('index.html?shop=') && html.includes('#uploadZone'), `${name} must link back to the upload-first quote start with the shop slug`);
   assert(html.includes('customer/dashboard.html?shop='), `${name} must link to customer portal tabs with the shop slug`);
 }
 

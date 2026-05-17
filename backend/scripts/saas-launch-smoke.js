@@ -113,6 +113,14 @@ function assertNoShopifyCspDomains(relativePath) {
   assert.doesNotMatch(html, /sdks\.shopifycdn\.com|checkout\.shopify\.com/, `${relativePath} CSP should not include Shopify domains in the lean release`);
 }
 
+function assertUploadHomepage(html, label) {
+  assert.match(html, /Your 3D file/i, `${label} should serve the upload-first storefront`);
+  assert.match(html, /Drop your STL or OBJ files here/i, `${label} should include the upload zone`);
+  assert.match(html, /Browse Files/i, `${label} should include the browse button`);
+  assert.doesNotMatch(html, /assets\/sales\.css|assets\/sales\.js|demo-form|Quote Every Job/i, `${label} should not expose sales-only content`);
+  assert.doesNotMatch(html, /sdks\.shopifycdn\.com|checkout\.shopify\.com|\/api\/shopify/i, `${label} should not expose Shopify code`);
+}
+
 async function run() {
   const settingsHtml = readFileSync(resolve(root, 'admin/settings.html'), 'utf8');
   assert.match(settingsHtml, /embedAllowedOrigins/, 'admin settings should expose embed allowed origins control');
@@ -188,12 +196,12 @@ async function run() {
   assert.ok(Number.isFinite(healthData.uptime_seconds), 'health should include uptime_seconds');
 
   const rootLanding = await api('/');
-  assertStatus(rootLanding, 302, '/');
-  assert.match(rootLanding.headers.get('location') || '', /\/quote\.html\?shop=mahi3d/, 'root should redirect to quote-first experience');
+  assertStatus(rootLanding, 200, '/');
+  assertUploadHomepage(await rootLanding.text(), '/');
 
-  const indexLanding = await api('/index.html');
-  assertStatus(indexLanding, 302, '/index.html');
-  assert.match(indexLanding.headers.get('location') || '', /\/quote\.html\?shop=mahi3d/, 'index.html should not expose the sales page');
+  const indexLanding = await api('/index.html?shop=mahi3d');
+  assertStatus(indexLanding, 200, '/index.html');
+  assertUploadHomepage(await indexLanding.text(), '/index.html');
 
   const onboarding = await api('/onboarding.html');
   assertStatus(onboarding, 302, '/onboarding.html');

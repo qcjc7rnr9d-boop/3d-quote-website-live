@@ -613,13 +613,13 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" data-link="home" href="quote.html?shop=mahi3d">mahi3d</a>
+    <a class="brand" data-link="home" href="index.html?shop=mahi3d">mahi3d</a>
     <nav class="nav-links" aria-label="Main navigation">
       <a data-link="materials" href="catalog.html?shop=mahi3d" aria-current="page">Materials</a>
       <a data-link="how" href="catalog.html?shop=mahi3d">How it works</a>
     </nav>
     <div class="nav-actions">
-      <a class="btn-dark" data-link="quote" href="quote.html?shop=mahi3d">Start a Quote</a>
+      <a class="btn-dark" data-link="quote" href="index.html?shop=mahi3d#uploadZone">Start a Quote</a>
       <button class="menu-btn" type="button" aria-label="Open customer portal" data-portal-button>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
@@ -647,7 +647,7 @@
         <strong>Ready to price your part?</strong>
         <p>Start the normal quote flow when you are ready to upload a file and choose options.</p>
       </div>
-      <a class="btn-light" data-link="quote" href="quote.html?shop=mahi3d">Start a Quote &rarr;</a>
+      <a class="btn-light" data-link="quote" href="index.html?shop=mahi3d#uploadZone">Start a Quote &rarr;</a>
     </section>
 
     <div class="filters" id="filters" aria-label="Material filters"></div>
@@ -658,10 +658,10 @@
   </main>
 
   <footer class="footer">
-    <a data-link="home" href="quote.html?shop=mahi3d" class="footer-wordmark">mahi3d</a>
+    <a data-link="home" href="index.html?shop=mahi3d" class="footer-wordmark">mahi3d</a>
     <ul class="footer-links">
       <li><a data-link="materials" href="catalog.html?shop=mahi3d">Materials</a></li>
-      <li><a data-link="quote" href="quote.html?shop=mahi3d">Quote</a></li>
+      <li><a data-link="quote" href="index.html?shop=mahi3d#uploadZone">Quote</a></li>
       <li><a data-link="orders" href="customer/dashboard.html?shop=mahi3d#orders">My Orders</a></li>
       <li><a data-link="help" href="customer/dashboard.html?shop=mahi3d#help">Contact</a></li>
       <li><a data-link="terms" href="terms.html?shop=mahi3d">Terms</a></li>
@@ -694,7 +694,8 @@
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     const money = n => Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const keyFor = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    const quoteHref = () => `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    const homeHref = () => `index.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    const quoteHref = () => `${homeHref()}#uploadZone`;
 
     const MATERIAL_PLACEHOLDERS = {
       pla: { src: 'assets/material-placeholders/pla.png', alt: 'Example decorative 3D printed part' },
@@ -772,7 +773,7 @@
 
     function applyLinks() {
       const links = {
-        home: `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`,
+        home: homeHref(),
         materials: `catalog.html?shop=${encodeURIComponent(SHOP_SLUG)}`,
         how: `catalog.html?shop=${encodeURIComponent(SHOP_SLUG)}`,
         quote: quoteHref(),

@@ -7,6 +7,8 @@ function assert(condition, message) {
 }
 
 const pages = [
+  '/?shop=mahi3d',
+  '/index.html?shop=mahi3d',
   '/catalog.html?shop=mahi3d',
   '/materials.html?shop=mahi3d',
   '/options.html?shop=mahi3d',

@@ -122,13 +122,13 @@ app.use('/uploads', express.static(join(ROOT_DIR, 'uploads'), {
   },
 }));
 const publicRootPages = new Set([
-  '/catalog.html', '/checkout.html', '/confirmation.html',
+  '/catalog.html', '/checkout.html', '/confirmation.html', '/index.html',
   '/materials.html', '/options.html', '/privacy.html', '/quote.html',
   '/stripe-callback.html', '/terms.html'
 ]);
 
 app.get(['/', '/index.html'], (req, res) => {
-  res.redirect(302, '/quote.html?shop=mahi3d');
+  res.sendFile(join(ROOT_DIR, 'index.html'));
 });
 
 app.get('/onboarding.html', (req, res) => {

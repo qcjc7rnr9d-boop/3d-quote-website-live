@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mahi3d — 3D Print On Demand</title>
+  <meta name="description" content="Professional 3D printing on demand. Upload your STL or OBJ file, choose your material, and receive your print.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── Tokens ─────────────────────────────────────────────────── */
+    :root {
+      --bg:          #F7F5F0;
+      --white:       #FFFFFF;
+      --ink:         #191B19;
+      --ink-2:       #2D302C;
+      --muted:       #6F746E;
+      --muted-2:     #9BA19A;
+      --border:      #E4E6E0;
+      --border-2:    #CDD3CB;
+      --sage:        #5B875E;
+      --sage-light:  #CDD3CB;
+      --sage-bg:     #EAF3EA;
+      --radius-sm:   10px;
+      --radius:      14px;
+      --radius-lg:   24px;
+      --radius-pill: 999px;
+      --shadow-card: 0 8px 24px rgba(16,20,16,0.05);
+      --shadow-sm:   0 2px 6px rgba(16,20,16,0.04);
+      --font-brand:  'Space Grotesk', system-ui, sans-serif;
+      --font-ui:     'Inter', system-ui, sans-serif;
+      --font-code:   'IBM Plex Mono', 'SF Mono', monospace;
+      --sage-dark:   #466C49;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-ui);
+      font-weight: 400;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ── Nav ─────────────────────────────────────────────────────── */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      height: 54px;
+      background: rgba(247,247,245,0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 0 36px;
+      gap: 16px;
+    }
+
+    .nav-left { display: flex; align-items: center; }
+    .nav-center { display: flex; align-items: center; justify-content: center; }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    /* Wordmark — Space Grotesk SemiBold, tracked */
+    .wordmark {
+      font-family: var(--font-brand);
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    /* Nav links — Inter Medium */
+    .nav-links {
+      display: flex;
+      gap: 4px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 11px;
+      border-radius: var(--radius-sm);
+      transition: color 140ms ease, background 140ms ease;
+    }
+    .nav-links a:hover { color: var(--ink); background: var(--sage-soft); }
+
+    /* Materials pill */
+    .nav-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      background: var(--white);
+    }
+    .nav-pill-dot {
+      width: 6px; height: 6px;
+      background: #4ade80;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .nav-pill-check { color: var(--sage); font-size: 11px; }
+
+    /* Get a Quote button */
+    .btn-quote {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--white);
+      background: var(--sage);
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 7px 16px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 140ms ease, box-shadow 140ms ease;
+      white-space: nowrap;
+    }
+    .btn-quote:hover { background: var(--sage-dark); box-shadow: var(--shadow-sm); }
+
+    /* Mobile nav toggle */
+    .nav-toggle {
+      display: none;
+      background: none; border: none;
+      cursor: pointer; padding: 4px;
+      color: var(--ink);
+    }
+
+    /* ── Hero ────────────────────────────────────────────────────── */
+    .hero {
+      min-height: auto;
+      padding: 118px 24px 72px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    /* Badge */
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--sage);
+      background: var(--sage-bg);
+      border: 1px solid var(--sage-light);
+      border-radius: var(--radius-pill);
+      padding: 4px 14px;
+      margin-bottom: 28px;
+    }
+
+    /* Hero heading — Space Grotesk Bold */
+    .hero-heading {
+      font-family: var(--font-brand);
+      font-weight: 700;
+      font-size: clamp(52px, 8vw, 88px);
+      color: var(--ink);
+      letter-spacing: -0.04em;
+      line-height: 1.00;
+      margin-bottom: 18px;
+    }
+
+    /* Subtitle — Inter Regular */
+    .hero-sub {
+      font-family: var(--font-ui);
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--muted);
+      margin-bottom: 48px;
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Upload card ─────────────────────────────────────────────── */
+    .upload-card {
+      width: 100%;
+      max-width: 600px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    /* Dashed upload zone */
+    .upload-zone {
+      position: relative;
+      padding: 52px 40px 44px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      cursor: pointer;
+      transition: background 160ms ease;
+    }
+    .upload-zone::before {
+      content: '';
+      position: absolute;
+      inset: 16px;
+      border: 1.5px dashed var(--border-2);
+      border-radius: var(--radius);
+      pointer-events: none;
+      transition: border-color 160ms ease;
+    }
+    .upload-zone:hover::before,
+    .upload-zone.drag-over::before { border-color: var(--sage); }
+    .upload-zone:hover,
+    .upload-zone.drag-over { background: rgba(90,138,94,0.025); }
+
+    .upload-zone input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
+    }
+
+    /* Upload icon circle */
+    .upload-icon-wrap {
+      width: 52px; height: 52px;
+      background: var(--sage-bg);
+      border: 1px solid var(--sage-light);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 18px;
+      color: var(--sage);
+      transition: background 160ms ease, border-color 160ms ease;
+      position: relative; z-index: 1;
+    }
+    .upload-zone:hover .upload-icon-wrap,
+    .upload-zone.drag-over .upload-icon-wrap {
+      background: #D8EDDA;
+      border-color: var(--sage);
+    }
+
+    .upload-title {
+      font-family: var(--font-ui);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 6px;
+      position: relative; z-index: 1;
+    }
+    .upload-hint {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      margin-bottom: 22px;
+      position: relative; z-index: 1;
+    }
+
+    /* Browse Files button */
+    .btn-browse {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--white);
+      background: var(--sage);
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 9px 20px;
+      cursor: pointer;
+      pointer-events: none; /* file input sits on top */
+      transition: background 140ms ease;
+      position: relative; z-index: 0;
+    }
+    .upload-zone:hover .btn-browse { background: #4A7A4E; }
+    .new-upload-banner {
+      display: none;
+      align-items: flex-start;
+      gap: 12px;
+      margin: 0 28px 16px;
+      padding: 13px 14px;
+      border: 1px solid rgba(90,138,94,0.25);
+      border-radius: var(--radius);
+      background: rgba(90,138,94,0.08);
+      box-shadow: 0 10px 24px rgba(31,35,33,0.06);
+      text-align: left;
+    }
+    .new-upload-banner.show { display: flex; }
+    .new-upload-icon {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 999px;
+      color: var(--sage);
+      background: rgba(90,138,94,0.12);
+    }
+    .new-upload-banner strong {
+      display: block;
+      font-size: 13px;
+      color: var(--ink);
+      margin-bottom: 2px;
+    }
+    .new-upload-banner span {
+      display: block;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    /* Features strip */
+    .features-strip {
+      display: grid;
+      grid-template-columns: 1fr 1px 1fr 1px 1fr;
+      border-top: 1px solid var(--border);
+    }
+    .feature-divider { background: var(--border); }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 18px 20px;
+    }
+    .feature-icon {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .feature-text {}
+    .feature-label {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+    .feature-sub {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    /* File card (post-upload) */
+    .file-card {
+      display: none;
+      padding: 28px 32px;
+      animation: fadeUp 260ms ease-out;
+    }
+    .file-card.visible { display: block; }
+    .file-card-inner {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+    }
+    .file-icon-box {
+      width: 48px; height: 48px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .file-meta { overflow: hidden; flex: 1; }
+    .file-name {
+      font-family: var(--font-code);
+      font-size: 14px; font-weight: 600; color: var(--ink);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .file-size { font-family: var(--font-code); font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .uploaded-model-list {
+      display: grid;
+      gap: 8px;
+      margin: -8px 0 18px;
+    }
+    .uploaded-model-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.72);
+      min-width: 0;
+    }
+    .uploaded-model-row strong {
+      font-family: var(--font-code);
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      color: var(--ink);
+    }
+    .uploaded-model-row span {
+      font-family: var(--font-code);
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .btn-continue {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; height: 44px;
+      background: var(--ink); color: var(--white);
+      border: none; border-radius: var(--radius);
+      font-family: var(--font-ui); font-size: 14px; font-weight: 500;
+      cursor: pointer; text-decoration: none;
+      transition: background 140ms ease;
+    }
+    .btn-continue:hover { background: #2a2a2a; }
+
+    /* ── How it works ─────────────────────────────────────────────── */
+    .hiw-section {
+      padding: 72px 24px 96px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .hiw-label {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--sage);
+      margin-bottom: 10px;
+    }
+
+    /* Section heading — Space Grotesk */
+    .hiw-heading {
+      font-family: var(--font-brand);
+      font-weight: 700;
+      font-size: clamp(28px, 4vw, 40px);
+      letter-spacing: -0.03em;
+      color: var(--ink);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .hiw-subtitle {
+      font-family: var(--font-ui);
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 42px;
+    }
+
+    .hiw-steps {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: start;
+      gap: 52px;
+      width: 100%;
+      max-width: 920px;
+      margin-bottom: 42px;
+    }
+    .hiw-steps::before {
+      content: '';
+      position: absolute;
+      top: 18px;
+      left: 6%;
+      right: 6%;
+      height: 1px;
+      background: var(--border-2);
+      opacity: 0.7;
+      z-index: 0;
+    }
+
+    .hiw-step {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .step-num {
+      width: 36px; height: 36px;
+      background: var(--sage-bg);
+      border: 1px solid var(--sage-light);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--sage);
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 2;
+    }
+    .step-card {
+      width: 100%;
+      min-height: 210px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: var(--shadow-card);
+      padding: 34px 24px 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .step-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--sage-bg);
+      border: 1px solid var(--sage-light);
+      color: var(--ink-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 22px;
+    }
+
+    .step-title {
+      font-family: var(--font-brand);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+    .step-desc {
+      font-family: var(--font-ui);
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 210px;
+    }
+    .hiw-cta {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .hiw-cta-text {
+      font-family: var(--font-ui);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .hiw-cta-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-width: 168px;
+      height: 52px;
+      padding: 0 22px;
+      border-radius: var(--radius);
+      background: var(--sage);
+      color: var(--white);
+      font-family: var(--font-ui);
+      font-size: 15px;
+      font-weight: 500;
+      text-decoration: none;
+      box-shadow: 0 8px 22px rgba(90, 138, 94, 0.22);
+      transition: background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+    }
+    .hiw-cta-btn:hover {
+      background: #4A7A4E;
+      box-shadow: 0 10px 26px rgba(90, 138, 94, 0.28);
+      transform: translateY(-1px);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 34px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+      background: rgba(255,255,255,0.24);
+    }
+    .footer-wordmark {
+      font-family: var(--font-brand);
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .footer-links {
+      display: flex; gap: 28px; list-style: none; flex-wrap: wrap;
+    }
+    .footer-links a {
+      font-size: 13px; color: var(--muted);
+      text-decoration: none; transition: color 140ms;
+    }
+    .footer-links a:hover { color: var(--ink); }
+    .footer-copy {
+      font-size: 12px; color: var(--muted-2);
+    }
+
+    /* ── Animations ──────────────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      opacity: 0;
+      animation: fadeUp 500ms ease-out forwards;
+    }
+    .fade-in-1 { animation-delay: 60ms; }
+    .fade-in-2 { animation-delay: 140ms; }
+    .fade-in-3 { animation-delay: 220ms; }
+    .fade-in-4 { animation-delay: 320ms; }
+
+    /* ── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .nav {
+        grid-template-columns: auto 1fr auto;
+        padding: 0 20px;
+      }
+      .nav-center { display: none; }
+      .nav-toggle { display: block; }
+      .nav-pill { display: none; }
+
+      .nav-links-mobile {
+        display: none;
+        position: fixed;
+        top: 54px; left: 0; right: 0;
+        background: var(--white);
+        border-bottom: 1px solid var(--border);
+        flex-direction: column;
+        padding: 24px 20px;
+        gap: 4px;
+        z-index: 99;
+      }
+      .nav-links-mobile.open { display: flex; }
+      .nav-links-mobile a {
+        font-size: 15px; font-weight: 500; color: var(--ink);
+        text-decoration: none; padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+        display: block;
+      }
+      .nav-links-mobile a:last-child { border-bottom: none; }
+
+      .hero { padding: 90px 20px 56px; }
+      .hero-heading { letter-spacing: -0.03em; }
+
+      .features-strip {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1px auto 1px auto;
+      }
+      .feature-divider { height: 1px; width: auto; }
+
+      .hiw-section { padding: 56px 20px 76px; }
+      .hiw-subtitle { margin-bottom: 32px; }
+      .hiw-steps {
+        grid-template-columns: 1fr;
+        gap: 22px;
+        margin-bottom: 34px;
+      }
+      .hiw-steps::before { display: none; }
+      .step-num { margin-bottom: 12px; }
+      .step-card { min-height: auto; padding: 28px 22px; }
+
+      .footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      .footer-links { flex-wrap: wrap; gap: 16px; }
+    }
+
+    @media (max-width: 480px) {
+      .upload-zone { padding: 40px 20px 36px; }
+      .upload-zone::before { inset: 12px; }
+    }
+
+    /* ── Portal trigger button ────────────────────────────────────── */
+    .btn-portal {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--white);
+      border: 1.5px solid var(--sage-light);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink);
+      flex-shrink: 0;
+      transition: border-color 140ms ease, box-shadow 140ms ease;
+    }
+    .btn-portal:hover {
+      border-color: var(--sage);
+      box-shadow: 0 0 0 3px var(--sage-bg);
+    }
+    .btn-portal.active {
+      border-color: var(--sage);
+      background: var(--sage-bg);
+    }
+
+    /* ── Overlay ──────────────────────────────────────────────────── */
+    .portal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 17, 17, 0.09);
+      z-index: 199;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 300ms ease;
+    }
+    .portal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ── Drawer ───────────────────────────────────────────────────── */
+    .portal-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: clamp(420px, 34vw, 520px);
+      z-index: 200;
+      background: var(--white);
+      border-left: 1px solid #e5e5e0;
+      border-radius: 32px 0 0 32px;
+      box-shadow: -6px 0 40px rgba(16,20,16,0.06), -1px 0 0 rgba(16,20,16,0.04);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 340ms cubic-bezier(0.32, 0, 0.15, 1);
+      overflow: hidden;
+    }
+    .portal-drawer.open {
+      transform: translateX(0);
+    }
+
+    /* ── Drawer header ────────────────────────────────────────────── */
+    .portal-header {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 0;
+    }
+    .portal-close {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: none;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--muted);
+      flex-shrink: 0;
+      transition: background 120ms, color 120ms, border-color 120ms;
+    }
+    .portal-close:hover { background: var(--bg); color: var(--ink); border-color: var(--border-2); }
+    .portal-title {
+      flex: 1;
+      text-align: center;
+      font-family: var(--font-ui);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+    .portal-signout {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 5px 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: border-color 120ms, color 120ms;
+    }
+    .portal-signout:hover { border-color: var(--border-2); color: var(--ink); }
+
+    /* ── Drawer body ──────────────────────────────────────────────── */
+    .portal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 32px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .portal-body::-webkit-scrollbar { width: 3px; }
+    .portal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Welcome ──────────────────────────────────────────────────── */
+    .portal-welcome {}
+    .portal-welcome h2 {
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 22px;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 5px;
+    }
+    .portal-welcome p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── Stat cards row ───────────────────────────────────────────── */
+    .portal-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .stat-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 12px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .stat-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      line-height: 1.3;
+    }
+    .stat-value {
+      font-family: var(--font-brand);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin: 7px 0 6px;
+    }
+    .stat-link {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--sage);
+      text-decoration: none;
+      transition: color 120ms;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .stat-link:hover { color: var(--sage-dark); }
+
+    /* ── Portal card (shared shell) ───────────────────────────────── */
+    .portal-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .portal-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .portal-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+    .portal-card-link {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--sage);
+      text-decoration: none;
+      transition: color 120ms;
+    }
+    .portal-card-link:hover { color: var(--sage-dark); }
+
+    /* ── Orders ───────────────────────────────────────────────────── */
+    .order-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto 58px 74px 10px;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 18px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 120ms;
+      text-decoration: none;
+    }
+    .order-row:last-child { border-bottom: none; }
+    .order-row:hover { background: #fafaf8; }
+
+    .order-item-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .order-thumb {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--sage);
+    }
+    .order-num {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+    .order-mat {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .order-date {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .order-total {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink);
+      white-space: nowrap;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .order-chevron { color: var(--border-2); display: flex; align-items: center; }
+
+    /* Status pills */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      border-radius: var(--radius-pill);
+      padding: 3px 8px;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
+    .pill-progress { background: #EFF6FF; color: #3B82F6; border: 1px solid #BFDBFE; }
+    .pill-done     { background: var(--sage-bg); color: var(--sage-dark); border: 1px solid var(--sage-light); }
+    .pill-cancel   { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+
+    /* ── Account rows ─────────────────────────────────────────────── */
+    .account-row {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 13px 18px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 120ms;
+      text-decoration: none;
+    }
+    .account-row:last-child { border-bottom: none; }
+    .account-row:hover { background: #fafaf8; }
+    .account-row-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .account-row-text { flex: 1; min-width: 0; }
+    .account-row-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+    .account-row-desc {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+    .account-row-arrow { color: var(--border-2); flex-shrink: 0; }
+
+    /* ── Help strip ───────────────────────────────────────────────── */
+    .portal-help {
+      text-align: center;
+      padding: 4px 0 8px;
+    }
+    .portal-help-main {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+    .portal-help-main a {
+      color: var(--sage);
+      font-weight: 500;
+      text-decoration: none;
+      transition: color 120ms;
+    }
+    .portal-help-main a:hover { color: var(--sage-dark); }
+    .portal-help-sub {
+      font-size: 11px;
+      color: var(--muted-2);
+    }
+
+    /* ── Portal loading state ────────────────────────────────────── */
+    .pv-loading-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 64px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .pv-spinner {
+      width: 28px; height: 28px;
+      border: 2px solid var(--border);
+      border-top-color: var(--sage);
+      border-radius: 50%;
+      animation: pvSpin 700ms linear infinite;
+    }
+    @keyframes pvSpin { to { transform: rotate(360deg); } }
+
+    /* ── Auth / login view ────────────────────────────────────────── */
+    .pv-auth-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 0 8px;
+      gap: 0;
+    }
+    .pv-auth-icon {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: var(--sage-bg);
+      border: 1px solid var(--sage-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--sage);
+      margin-bottom: 20px;
+    }
+    .pv-auth-heading {
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .pv-auth-sub {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .pv-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .pv-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .pv-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+    .pv-input {
+      font-family: var(--font-ui);
+      font-size: 14px;
+      color: var(--ink);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 140ms, box-shadow 140ms;
+      width: 100%;
+    }
+    .pv-input:focus {
+      border-color: var(--sage);
+      box-shadow: 0 0 0 3px var(--sage-bg);
+      background: var(--white);
+    }
+    .pv-input::placeholder { color: var(--muted-2); }
+    .pv-error {
+      font-size: 12px;
+      color: #c0392b;
+      min-height: 16px;
+      line-height: 1.4;
+    }
+    .pv-btn-submit {
+      font-family: var(--font-ui);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--white);
+      background: var(--ink);
+      border: none;
+      border-radius: var(--radius);
+      padding: 11px;
+      cursor: pointer;
+      transition: background 140ms;
+      margin-top: 2px;
+    }
+    .pv-btn-submit:hover:not(:disabled) { background: #2a2a2a; }
+    .pv-btn-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+    .pv-auth-foot {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 18px;
+    }
+    .pv-link {
+      color: var(--sage);
+      font-weight: 500;
+      text-decoration: none;
+      transition: color 120ms;
+    }
+    .pv-link:hover { color: var(--sage-dark); }
+
+    /* ── Portal responsive ────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .portal-drawer {
+        width: 100%;
+        border-radius: 0;
+      }
+      .portal-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .order-row {
+        grid-template-columns: minmax(0, 1fr) auto 10px;
+      }
+      .order-date,
+      .order-total {
+        display: none;
+      }
+    }
+  </style>
+  <script src="assets/brand.js" defer></script>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="nav-left">
+    <a href="index.html?shop=mahi3d" class="wordmark" data-pv-home>mahi3d</a>
+  </div>
+  <div class="nav-center">
+    <ul class="nav-links" id="navLinks">
+      <li><a href="catalog.html?shop=mahi3d" data-pv-catalog>Materials</a></li>
+      <li><a href="#how-it-works">How it works</a></li>
+    </ul>
+  </div>
+  <div class="nav-right">
+    <a href="#uploadZone" class="btn-quote" data-start-quote>Get a Quote</a>
+    <button class="btn-portal" id="portalBtn" aria-label="Open customer portal" aria-expanded="false" aria-controls="customerPortal">
+      <svg width="16" height="14" viewBox="0 0 16 14" fill="none" aria-hidden="true">
+        <path d="M2 2h12M2 7h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile nav drawer -->
+<div class="nav-links-mobile" id="navMobile" aria-label="Mobile navigation">
+  <a href="catalog.html?shop=mahi3d" data-pv-catalog>Materials</a>
+  <a href="#how-it-works">How it works</a>
+</div>
+
+<!-- ── Hero ── -->
+<main>
+<section class="hero" aria-labelledby="hero-heading">
+
+  <div class="hero-badge fade-in fade-in-1">3D Print On Demand</div>
+
+  <h1 class="hero-heading fade-in fade-in-2" id="hero-heading">
+    Your 3D file,<br>priced instantly.
+  </h1>
+
+  <p class="hero-sub fade-in fade-in-3">
+    Upload your file, choose your material, and get an instant quote.
+  </p>
+
+  <!-- Upload card -->
+  <div class="upload-card fade-in fade-in-4" role="region" aria-label="File upload">
+    <div class="new-upload-banner" id="newUploadBanner" role="status" aria-live="polite">
+      <div class="new-upload-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+      </div>
+      <div>
+        <strong>New uploads</strong>
+        <span>Choose the next parts for a new material group. Your existing cart is saved.</span>
+      </div>
+    </div>
+
+    <!-- Upload zone — visible before file chosen -->
+    <div class="upload-zone" id="uploadZone" tabindex="0" role="button"
+         aria-label="Drop your STL or OBJ file here, or press Enter to browse">
+      <input type="file" id="fileInput" accept=".stl,.obj" multiple
+             aria-label="Select one or more 3D model files" tabindex="-1">
+
+      <div class="upload-icon-wrap" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <path d="M11 15V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M6 9.5l5-5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 18h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+        </svg>
+      </div>
+
+      <p class="upload-title">Drop your STL or OBJ files here</p>
+      <p class="upload-hint">or click to browse &nbsp;·&nbsp; up to 20 models / 250 MB</p>
+
+      <div class="btn-browse" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M1 10V11.5C1 12.05 1.45 12.5 2 12.5H12C12.55 12.5 13 12.05 13 11.5V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M1.5 5.5H5L6 3H8L9 5.5H12.5C12.78 5.5 13 5.72 13 6V9.5C13 9.78 12.78 10 12.5 10H1.5C1.22 10 1 9.78 1 9.5V6C1 5.72 1.22 5.5 1.5 5.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+        </svg>
+        Browse Files
+      </div>
+    </div>
+
+    <!-- File card — shown after upload -->
+    <div class="file-card" id="fileCard" role="region" aria-label="Selected file">
+      <div class="file-card-inner">
+        <div class="file-icon-box" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <polygon points="12,2 22,8 22,20 12,26 2,20 2,8" stroke="#5B875E" stroke-width="1.2" fill="none" stroke-linejoin="round"/>
+            <polygon points="12,2 22,8 12,14 2,8" stroke="#A3C6A5" stroke-width="1" fill="none" stroke-linejoin="round"/>
+            <line x1="12" y1="14" x2="12" y2="26" stroke="#A3C6A5" stroke-width="1"/>
+          </svg>
+        </div>
+        <div class="file-meta">
+          <div class="file-name" id="cardFileName">model.stl</div>
+          <div class="file-size" id="cardFileSize">—</div>
+        </div>
+        <button class="table-action" onclick="resetUpload()" aria-label="Remove file"
+          style="color:var(--muted);font-size:18px;padding:4px 8px;background:none;border:none;cursor:pointer;line-height:1">×</button>
+      </div>
+      <div class="uploaded-model-list" id="uploadedModelList" aria-label="Uploaded models"></div>
+      <a href="materials.html" class="btn-continue" id="continueBtn">Choose Material</a>
+    </div>
+
+    <!-- Features strip (always visible) -->
+    <div class="features-strip" aria-label="Key features" id="featuresStrip">
+      <div class="feature-item">
+        <div class="feature-icon" aria-hidden="true">
+          <!-- Lightning bolt -->
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M10.5 2L4 10h6l-2.5 6L16 8h-6l.5-6z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <div class="feature-label">Instant quotes</div>
+          <div class="feature-sub">See pricing before ordering</div>
+        </div>
+      </div>
+
+      <div class="feature-divider" aria-hidden="true"></div>
+
+      <div class="feature-item">
+        <div class="feature-icon" aria-hidden="true">
+          <!-- Layers -->
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M2 12l7 3.5 7-3.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M2 8.5l7 3.5 7-3.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M9 2L2 5.5l7 3.5 7-3.5L9 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <div class="feature-label">Custom options</div>
+          <div class="feature-sub">Select material, colour &amp; finish</div>
+        </div>
+      </div>
+
+      <div class="feature-divider" aria-hidden="true"></div>
+
+      <div class="feature-item">
+        <div class="feature-icon" aria-hidden="true">
+          <!-- Globe -->
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M2 9h14M9 2c-2 2-3 4-3 7s1 5 3 7M9 2c2 2 3 4 3 7s-1 5-3 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <div class="feature-label">Secure upload</div>
+          <div class="feature-sub">Your files stay protected</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ── How it works ── -->
+<section class="hiw-section" id="how-it-works" aria-labelledby="hiw-heading">
+  <p class="hiw-label">Quote Process</p>
+  <h2 class="hiw-heading" id="hiw-heading">How it works</h2>
+  <p class="hiw-subtitle">Upload your file, choose your options, and review your quote.</p>
+
+  <div class="hiw-steps" role="list">
+    <div class="hiw-step" role="listitem">
+      <div class="step-num" aria-hidden="true">1</div>
+      <div class="step-card">
+        <div class="step-icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+            <path d="M8 4.5h9l5 5v16H8v-21z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M17 4.5V10h5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M15 22v-8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            <path d="M11.5 17.5L15 14l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h3 class="step-title">Upload your file</h3>
+        <p class="step-desc">Drop in an STL or OBJ to start your quote.</p>
+      </div>
+    </div>
+
+    <div class="hiw-step" role="listitem">
+      <div class="step-num" aria-hidden="true">2</div>
+      <div class="step-card">
+        <div class="step-icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+            <path d="M7 9h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M7 15h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M7 21h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="12" cy="9" r="2" fill="var(--sage-bg)" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="19" cy="15" r="2" fill="var(--sage-bg)" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="14" cy="21" r="2" fill="var(--sage-bg)" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <h3 class="step-title">Choose options</h3>
+        <p class="step-desc">Select material, colour, finish, and quantity.</p>
+      </div>
+    </div>
+
+    <div class="hiw-step" role="listitem">
+      <div class="step-num" aria-hidden="true">3</div>
+      <div class="step-card">
+        <div class="step-icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+            <path d="M6.5 16.5L16 7h7v7l-9.5 9.5-7-7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            <circle cx="20" cy="10" r="1.6" fill="currentColor"/>
+            <path d="M11.5 17.5l2 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 class="step-title">Review your quote</h3>
+        <p class="step-desc">Check the price before continuing.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="hiw-cta">
+    <p class="hiw-cta-text">Ready to price your part?</p>
+    <a href="#uploadZone" class="hiw-cta-btn" id="startQuoteBtn" data-start-quote>
+      Start a Quote
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+        <path d="M4 11L11 4M11 4H5.5M11 4V9.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </div>
+</section>
+</main>
+
+<!-- ── Footer ── -->
+<footer class="footer">
+  <a href="index.html?shop=mahi3d" class="footer-wordmark" data-pv-home>mahi3d</a>
+  <ul class="footer-links">
+    <li><a href="catalog.html?shop=mahi3d" data-pv-catalog>Materials</a></li>
+    <li><a href="index.html?shop=mahi3d#uploadZone" data-pv-quote>Quote</a></li>
+    <li><a href="customer/dashboard.html?shop=mahi3d#orders" data-pv-tab="orders">My Orders</a></li>
+    <li><a href="customer/dashboard.html?shop=mahi3d#help" data-pv-tab="help">Contact</a></li>
+    <li><a href="terms.html?shop=mahi3d" data-pv-terms>Terms</a></li>
+    <li><a href="privacy.html?shop=mahi3d" data-pv-privacy>Privacy</a></li>
+  </ul>
+  <p class="footer-copy">&copy; 2026 mahi3d. All rights reserved.</p>
+</footer>
+
+<!-- ── Portal overlay ── -->
+<div class="portal-overlay" id="portalOverlay" aria-hidden="true"></div>
+
+<!-- ── Customer Portal Drawer ── -->
+<aside class="portal-drawer" id="customerPortal" role="complementary"
+       aria-label="Customer portal" aria-hidden="true">
+
+  <!-- Header -->
+  <div class="portal-header">
+    <button class="portal-close" id="portalClose" aria-label="Close customer portal">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <span class="portal-title">Customer Portal</span>
+    <button class="portal-signout" id="portalSignout">Sign out</button>
+  </div>
+
+  <!-- Scrollable body -->
+  <div class="portal-body">
+
+    <!-- ① Loading -->
+    <div id="pvLoading" style="display:none">
+      <div class="pv-loading-wrap">
+        <div class="pv-spinner" aria-hidden="true"></div>
+        <p>Loading your account…</p>
+      </div>
+    </div>
+
+    <!-- ② Login view -->
+    <div id="pvAuth" style="display:none">
+      <div class="pv-auth-wrap">
+        <div class="pv-auth-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <circle cx="11" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M3 20c0-4.42 3.58-8 8-8s8 3.58 8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h2 class="pv-auth-heading">Sign in to your account</h2>
+        <p class="pv-auth-sub">Track orders and manage your details.</p>
+
+        <form id="pvLoginForm" class="pv-form" novalidate>
+          <div class="pv-field">
+            <label class="pv-label" for="pvEmail">Email</label>
+            <input class="pv-input" type="email" id="pvEmail"
+                   autocomplete="email" placeholder="you@example.com" required>
+          </div>
+          <div class="pv-field">
+            <label class="pv-label" for="pvPassword">Password</label>
+            <input class="pv-input" type="password" id="pvPassword"
+                   autocomplete="current-password" placeholder="••••••••" required>
+          </div>
+          <p class="pv-error" id="pvLoginError" role="alert" aria-live="polite"></p>
+          <button class="pv-btn-submit" type="submit" id="pvLoginBtn">Sign in</button>
+        </form>
+
+        <p class="pv-auth-foot">
+          Don't have an account?
+          <a href="customer/login.html?shop=mahi3d&next=dashboard.html%3Fshop%3Dmahi3d%23overview" class="pv-link" data-pv-login>Create one →</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- ③ Main (authenticated) view -->
+    <div id="pvMain" style="display:none">
+
+      <!-- Welcome -->
+      <div class="portal-welcome">
+        <h2>Welcome back, <span id="pvWelcomeName">—</span> 👋</h2>
+        <p>Here's an overview of your account.</p>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="portal-stats" role="list" aria-label="Account statistics">
+        <div class="stat-card" role="listitem">
+          <span class="stat-label">Total Orders</span>
+          <span class="stat-value" id="pvStatTotal">—</span>
+          <a href="customer/dashboard.html?shop=mahi3d#orders" class="stat-link" data-pv-tab="orders">View all →</a>
+        </div>
+        <div class="stat-card" role="listitem">
+          <span class="stat-label">In Progress</span>
+          <span class="stat-value" id="pvStatProgress">—</span>
+          <a href="customer/dashboard.html?shop=mahi3d#orders" class="stat-link" data-pv-tab="orders">View all →</a>
+        </div>
+        <div class="stat-card" role="listitem">
+          <span class="stat-label">Delivered</span>
+          <span class="stat-value" id="pvStatDone">—</span>
+          <a href="customer/dashboard.html?shop=mahi3d#orders" class="stat-link" data-pv-tab="orders">View all →</a>
+        </div>
+        <div class="stat-card" role="listitem">
+          <span class="stat-label">Total Spent</span>
+          <span class="stat-value" id="pvStatSpent" style="font-size:17px;letter-spacing:-0.02em">—</span>
+          <a href="customer/dashboard.html?shop=mahi3d#orders" class="stat-link" data-pv-tab="orders">View all →</a>
+        </div>
+      </div>
+
+      <!-- Recent Orders -->
+      <div class="portal-card" role="region" aria-label="Recent orders">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Recent Orders</span>
+          <a href="customer/dashboard.html?shop=mahi3d#orders" class="portal-card-link" data-pv-tab="orders">View all →</a>
+        </div>
+        <div id="pvOrdersList" aria-live="polite"></div>
+      </div>
+
+      <!-- Account -->
+      <div class="portal-card" role="region" aria-label="Account options">
+        <div class="portal-card-header">
+          <span class="portal-card-title">Account</span>
+        </div>
+
+        <a href="customer/dashboard.html?shop=mahi3d#account" class="account-row" aria-label="Profile and Settings" data-pv-tab="account">
+          <div class="account-row-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="4.5" r="2.5" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M2 12c0-2.21 2.24-4 5-4s5 1.79 5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="account-row-text">
+            <div class="account-row-title">Profile &amp; Settings</div>
+            <div class="account-row-desc">Name, email, password</div>
+          </div>
+          <span class="account-row-arrow" aria-hidden="true">
+            <svg width="6" height="10" viewBox="0 0 6 10" fill="none"><path d="M1 1l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </a>
+
+        <a href="customer/dashboard.html?shop=mahi3d#orders" class="account-row" aria-label="My Orders" data-pv-tab="orders">
+          <div class="account-row-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect x="2" y="1.5" width="10" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M4.5 5h5M4.5 7.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="account-row-text">
+            <div class="account-row-title">My Orders</div>
+            <div class="account-row-desc">Full order history &amp; tracking</div>
+          </div>
+          <span class="account-row-arrow" aria-hidden="true">
+            <svg width="6" height="10" viewBox="0 0 6 10" fill="none"><path d="M1 1l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </a>
+
+        <a href="index.html?shop=mahi3d#uploadZone" class="account-row" aria-label="Get a Quote" data-pv-quote>
+          <div class="account-row-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2.5 1.5h9v9.5l-1.5-1-1.5 1-1.5-1-1.5 1-1.5-1-1.5 1V1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+              <path d="M5 5h4M5 7.5h2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="account-row-text">
+            <div class="account-row-title">Get a Quote</div>
+            <div class="account-row-desc">Upload a file &amp; get instant pricing</div>
+          </div>
+          <span class="account-row-arrow" aria-hidden="true">
+            <svg width="6" height="10" viewBox="0 0 6 10" fill="none"><path d="M1 1l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </a>
+
+      </div>
+
+      <!-- Help -->
+      <div class="portal-help">
+        <p class="portal-help-main">
+          Need help? <a href="customer/dashboard.html?shop=mahi3d#help" class="pv-link" data-pv-tab="help">Contact us</a> and we'll be happy to assist.
+        </p>
+        <p class="portal-help-sub">We'll get back to you within one business day.</p>
+      </div>
+
+    </div><!-- /pvMain -->
+
+  </div><!-- /portal-body -->
+</aside>
+
+<script>
+  // ── Nav toggle (mobile) ───────────────────────────────────────
+  const navToggle = document.getElementById('navToggle');
+  const navMobile = document.getElementById('navMobile');
+
+  navToggle.addEventListener('click', () => {
+    const open = navMobile.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', open);
+    navToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  });
+
+  // Close mobile nav on link click
+  navMobile.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      navMobile.classList.remove('open');
+      navToggle.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  // ── Keyboard support for upload zone ─────────────────────────
+  const MAX_MODELS_PER_GROUP = 20;
+  const HOME_URL_PARAMS = new URLSearchParams(location.search);
+  const HOME_SHOP_SLUG = (() => {
+    try {
+      const fromUrl = HOME_URL_PARAMS.get('shop');
+      if (fromUrl) return fromUrl;
+    } catch {}
+    try { return JSON.parse(localStorage.getItem('form_selection') || '{}').shopSlug || 'mahi3d'; }
+    catch { return 'mahi3d'; }
+  })();
+  const SHOULD_PROMPT_UPLOAD = HOME_URL_PARAMS.get('promptUpload') === '1' || HOME_URL_PARAMS.get('newGroup') === '1';
+  const IS_NEW_GROUP_FLOW = HOME_URL_PARAMS.get('newGroup') === '1';
+  const uploadZone = document.getElementById('uploadZone');
+  const uploadInput = document.getElementById('fileInput');
+  const newUploadBanner = document.getElementById('newUploadBanner');
+  const continueBtn = document.getElementById('continueBtn');
+  uploadZone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      uploadInput.click();
+    }
+  });
+
+  document.querySelectorAll('[data-start-quote]').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      uploadZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => uploadZone.focus({ preventScroll: true }), 420);
+    });
+  });
+
+  function scrubUploadPromptParams() {
+    if (!SHOULD_PROMPT_UPLOAD) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('promptUpload');
+    url.searchParams.delete('newGroup');
+    window.history.replaceState({}, '', url);
+  }
+
+  function showNewUploadPrompt() {
+    if (!SHOULD_PROMPT_UPLOAD) return;
+    newUploadBanner?.classList.add('show');
+    uploadZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => {
+      uploadZone.focus({ preventScroll: true });
+      uploadInput.value = '';
+      uploadInput.click();
+      scrubUploadPromptParams();
+    }, 450);
+  }
+
+  // ── STL volume parser (binary STL) ───────────────────────────
+  function parseBinaryVolumeCm3(buffer) {
+    const view = new DataView(buffer);
+    if (buffer.byteLength < 84) return null;
+    const triCount = view.getUint32(80, true);
+    const expected = 84 + triCount * 50;
+    if (Math.abs(buffer.byteLength - expected) > 200 || triCount === 0 || triCount > 5_000_000) return null;
+    let vol = 0;
+    for (let i = 0; i < triCount; i++) {
+      const o = 84 + i * 50;
+      const ax = view.getFloat32(o+12,true), ay = view.getFloat32(o+16,true), az = view.getFloat32(o+20,true);
+      const bx = view.getFloat32(o+24,true), by = view.getFloat32(o+28,true), bz = view.getFloat32(o+32,true);
+      const cx = view.getFloat32(o+36,true), cy = view.getFloat32(o+40,true), cz = view.getFloat32(o+44,true);
+      vol += (ax*(by*cz - bz*cy) + ay*(bz*cx - bx*cz) + az*(bx*cy - by*cx)) / 6;
+    }
+    const cm3 = Math.abs(vol) / 1000;
+    return cm3 > 0.001 ? cm3 : null;
+  }
+
+  function parseBinaryDimensionsMm(buffer) {
+    const view = new DataView(buffer);
+    if (buffer.byteLength < 84) return null;
+    const triCount = view.getUint32(80, true);
+    const expected = 84 + triCount * 50;
+    if (Math.abs(buffer.byteLength - expected) > 200 || triCount === 0 || triCount > 5_000_000) return null;
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+    for (let i = 0; i < triCount; i++) {
+      const o = 84 + i * 50;
+      for (const p of [12, 24, 36]) {
+        const x = view.getFloat32(o + p, true);
+        const y = view.getFloat32(o + p + 4, true);
+        const z = view.getFloat32(o + p + 8, true);
+        if (![x, y, z].every(Number.isFinite)) return null;
+        minX = Math.min(minX, x); minY = Math.min(minY, y); minZ = Math.min(minZ, z);
+        maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); maxZ = Math.max(maxZ, z);
+      }
+    }
+    return { xMm: maxX - minX, yMm: maxY - minY, zMm: maxZ - minZ };
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  function formatMm(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return `${(Math.round(n * 10) / 10).toLocaleString('en-NZ')} mm`;
+  }
+
+  function formatDimensions(dimensions) {
+    if (!dimensions) return 'Dimensions unavailable';
+    return `${formatMm(dimensions.xMm)} × ${formatMm(dimensions.yMm)} × ${formatMm(dimensions.zMm)}`;
+  }
+
+  function renderUploadedModelList(models = []) {
+    const list = document.getElementById('uploadedModelList');
+    if (!list) return;
+    list.innerHTML = models.map(model => `
+      <div class="uploaded-model-row">
+        <div>
+          <strong>${String(model.name || 'Model').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}</strong>
+          <span>${formatBytes(model.size)} · ${formatDimensions(model.dimensions)}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── IndexedDB helpers (share the uploaded model with quote.html) ──
+  // Same DB/store/key/shape as quote.html → the viewer will load it
+  // automatically when the customer reaches the quote page.
+  function _idbOpen() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('mahi3d-quote', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('files');
+      req.onsuccess       = () => resolve(req.result);
+      req.onerror         = () => reject(req.error);
+    });
+  }
+  async function persistModelBuffer(buffer, ext, key = 'current_model') {
+    try {
+      const db = await _idbOpen();
+      await new Promise((res) => {
+        const tx = db.transaction('files', 'readwrite');
+        tx.objectStore('files').put({ buffer, ext }, key);
+        tx.oncomplete = res; tx.onerror = res;
+      });
+    } catch { /* IDB unavailable — viewer just falls back to placeholder */ }
+  }
+  async function clearModelBuffer() {
+    try {
+      const db = await _idbOpen();
+      await new Promise((res) => {
+        const tx = db.transaction('files', 'readwrite');
+        const store = tx.objectStore('files');
+        store.delete('current_model');
+        try { store.clear(); } catch {}
+        tx.oncomplete = res; tx.onerror = res;
+      });
+    } catch {}
+  }
+
+  // ── Handle file selection ─────────────────────────────────────
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    if (files.length > MAX_MODELS_PER_GROUP) {
+      alert(`Please upload up to ${MAX_MODELS_PER_GROUP} models at one time.`);
+      return;
+    }
+    const invalid = files.find(file => !['.stl', '.obj'].includes(file.name.slice(file.name.lastIndexOf('.')).toLowerCase()));
+    if (invalid) {
+      alert('Please upload a .STL or .OBJ file.');
+      return;
+    }
+
+    document.getElementById('cardFileName').textContent = files.length > 1 ? `${files.length} models ready` : files[0].name;
+    document.getElementById('cardFileSize').textContent = formatBytes(files.reduce((sum, file) => sum + file.size, 0));
+
+    const models = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+      const buf = await file.arrayBuffer();
+      const parsedVol = parseBinaryVolumeCm3(buf);
+      const dimensions = ext === '.stl' ? parseBinaryDimensionsMm(buf) : null;
+      if (ext === '.stl' && (!parsedVol || !dimensions)) {
+        alert(`Could not read ${file.name}. Please try another STL or OBJ file.`);
+        return;
+      }
+      const volumeCm3 = parsedVol ?? Math.max(2, file.size / 50 * 0.0022);
+      const id = `model-${Date.now().toString(36)}-${i}`;
+      models.push({
+        id,
+        name: file.name,
+        size: file.size,
+        ext: ext.replace('.', ''),
+        volumeCm3: parseFloat(volumeCm3.toFixed(4)),
+        dimensions,
+      });
+      persistModelBuffer(buf, ext.replace('.', ''), `model:${id}`);
+      if (i === 0) {
+        // Persist the first raw buffer so the quote-page 3D viewer can render a preview.
+        persistModelBuffer(buf, ext.replace('.', ''));
+      }
+    }
+    renderUploadedModelList(models);
+    const totalVolume = models.reduce((sum, model) => sum + model.volumeCm3, 0);
+    const dims = models.map(model => model.dimensions).filter(Boolean);
+    localStorage.setItem('form_file', JSON.stringify({
+      name: models.length > 1 ? `${models.length} models` : models[0].name,
+      size: models.reduce((sum, model) => sum + model.size, 0),
+      volumeCm3: parseFloat(totalVolume.toFixed(4)),
+      dimensions: dims.length ? {
+        xMm: Math.max(...dims.map(d => d.xMm)),
+        yMm: Math.max(...dims.map(d => d.yMm)),
+        zMm: Math.max(...dims.map(d => d.zMm)),
+      } : null,
+      models,
+      previewModelId: models[0]?.id || null,
+    }));
+
+    uploadZone.style.display = 'none';
+    document.getElementById('fileCard').classList.add('visible');
+    document.getElementById('featuresStrip').style.borderTop = '1px solid var(--border)';
+    continueBtn.href = `materials.html?shop=${encodeURIComponent(HOME_SHOP_SLUG)}${IS_NEW_GROUP_FLOW ? '&newGroup=1' : ''}`;
+  }
+
+  function resetUpload() {
+    uploadZone.style.display = '';
+    document.getElementById('fileCard').classList.remove('visible');
+    uploadInput.value = '';
+    localStorage.removeItem('form_file');
+    clearModelBuffer();
+  }
+
+  uploadInput.addEventListener('change', e => handleFiles(e.target.files));
+
+  // ── Drag and drop ─────────────────────────────────────────────
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragleave', e => {
+    if (!uploadZone.contains(e.relatedTarget)) uploadZone.classList.remove('drag-over');
+  });
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+  });
+
+  continueBtn.href = `materials.html?shop=${encodeURIComponent(HOME_SHOP_SLUG)}${IS_NEW_GROUP_FLOW ? '&newGroup=1' : ''}`;
+  window.addEventListener('load', showNewUploadPrompt);
+
+  // ── Scroll-triggered animation for How it works ───────────────
+  const hiw = document.querySelector('.hiw-section');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.hiw-step, .hiw-heading, .hiw-label, .hiw-subtitle, .hiw-cta').forEach((el, i) => {
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(12px)';
+          el.style.transition = `opacity 400ms ease ${i * 80}ms, transform 400ms ease ${i * 80}ms`;
+          requestAnimationFrame(() => {
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+          });
+        });
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.2 });
+  observer.observe(hiw);
+
+  // ── Customer Portal ────────────────────────────────────────────
+  const portalBtn     = document.getElementById('portalBtn');
+  const portalClose   = document.getElementById('portalClose');
+  const portalOverlay = document.getElementById('portalOverlay');
+  const portalDrawer  = document.getElementById('customerPortal');
+  const portalSignout = document.getElementById('portalSignout');
+
+  // Resolve shop slug from stored selection or fall back to page default
+  const PORTAL_SHOP_SLUG = HOME_SHOP_SLUG;
+
+  function pvPortalHref(tab = 'overview') {
+    return `customer/dashboard.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}#${tab}`;
+  }
+
+  function pvLoginHref(tab = 'overview') {
+    const next = `dashboard.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}#${tab}`;
+    return `customer/login.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}&next=${encodeURIComponent(next)}`;
+  }
+
+  function pvApplyPortalLinks() {
+    document.querySelectorAll('[data-pv-home]').forEach(a => {
+      a.href = `index.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`;
+    });
+    document.querySelectorAll('[data-pv-tab]').forEach(a => {
+      a.href = pvPortalHref(a.dataset.pvTab || 'overview');
+    });
+    document.querySelectorAll('[data-pv-login]').forEach(a => {
+      a.href = pvLoginHref('overview');
+    });
+    document.querySelectorAll('[data-pv-quote]').forEach(a => {
+      a.href = `index.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}#uploadZone`;
+    });
+    document.querySelectorAll('[data-pv-catalog]').forEach(a => {
+      a.href = `catalog.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`;
+    });
+    document.querySelectorAll('[data-pv-terms]').forEach(a => {
+      a.href = `terms.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`;
+    });
+    document.querySelectorAll('[data-pv-privacy]').forEach(a => {
+      a.href = `privacy.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`;
+    });
+  }
+  pvApplyPortalLinks();
+
+  let _pvUser      = null;   // { id, name, email, shop, stats }
+  let _pvOrders    = [];     // full orders array
+  let _pvChecked   = false;  // true once /me has resolved at least once
+
+  // ── View switcher ─────────────────────────────────────────────
+  function pvShow(id) {
+    ['pvLoading', 'pvAuth', 'pvMain'].forEach(v => {
+      const el = document.getElementById(v);
+      if (el) el.style.display = (v === id) ? '' : 'none';
+    });
+    // Sign-out button only visible when logged in
+    portalSignout.style.visibility = (id === 'pvMain') ? 'visible' : 'hidden';
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────
+  function pvFmtMoney(n) {
+    const v = parseFloat(n) || 0;
+    return '$' + v.toFixed(2);
+  }
+  function pvFmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' });
+  }
+  const PV_STATUS = {
+    pending:       { label: 'Received',      cls: 'pill-cancel'   },
+    processing:    { label: 'Confirmed',     cls: 'pill-cancel'   },
+    in_production: { label: 'In Production', cls: 'pill-progress' },
+    shipped:       { label: 'Shipped',       cls: 'pill-progress' },
+    complete:      { label: 'Delivered',     cls: 'pill-done'     },
+    cancelled:     { label: 'Cancelled',     cls: 'pill-cancel'   },
+  };
+  function pvPill(status) {
+    const s = PV_STATUS[status] || { label: status, cls: 'pill-cancel' };
+    return `<span class="pill ${s.cls}">${s.label}</span>`;
+  }
+  function pvCubeIcon() {
+    return `<svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+      <polygon points="7.5,1.5 13,4.5 13,10.5 7.5,13.5 2,10.5 2,4.5"
+        stroke="currentColor" stroke-width="1.1" fill="none" stroke-linejoin="round"/>
+      <polygon points="7.5,1.5 13,4.5 7.5,7.5 2,4.5"
+        stroke="currentColor" stroke-width="0.9" fill="none" stroke-linejoin="round" opacity="0.55"/>
+    </svg>`;
+  }
+  function pvChevron() {
+    return `<span class="order-chevron" aria-hidden="true">
+      <svg width="6" height="10" viewBox="0 0 6 10" fill="none">
+        <path d="M1 1l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg></span>`;
+  }
+
+  // ── API calls ─────────────────────────────────────────────────
+  async function pvFetchMe() {
+    const res = await fetch(`/api/customer/me?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`);
+    if (!res.ok) throw new Error('not_auth');
+    return res.json();
+  }
+  async function pvFetchOrders() {
+    try {
+      const res = await fetch(`/api/customer/orders?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`);
+      return res.ok ? res.json() : [];
+    } catch { return []; }
+  }
+
+  function pvPortalStats() {
+    return _pvUser?.stats || {
+      total_orders: _pvUser?.order_count || 0,
+      active_orders: _pvOrders.filter(o => o.payment_status === 'paid' && !['complete','cancelled'].includes(o.fulfilment_status)).length,
+      delivered_orders: _pvOrders.filter(o => o.payment_status === 'paid' && o.fulfilment_status === 'complete').length,
+      total_spent: _pvUser?.total_spent || 0,
+      currency: 'NZD'
+    };
+  }
+
+  // ── Render main dashboard ─────────────────────────────────────
+  function pvRenderMain() {
+    const u = _pvUser;
+    const orders = _pvOrders;
+
+    // Welcome
+    document.getElementById('pvWelcomeName').textContent =
+      (u.name || 'there').split(' ')[0];
+
+    // Stats
+    const stats = pvPortalStats();
+    document.getElementById('pvStatTotal').textContent    = stats.total_orders || 0;
+    document.getElementById('pvStatProgress').textContent = stats.active_orders || 0;
+    document.getElementById('pvStatDone').textContent     = stats.delivered_orders || 0;
+    document.getElementById('pvStatSpent').textContent    = pvFmtMoney(stats.total_spent);
+
+    // Orders list (latest 4)
+    const listEl = document.getElementById('pvOrdersList');
+    const recent = orders.slice(0, 4);
+    if (!recent.length) {
+      listEl.innerHTML =
+        '<p style="padding:20px 18px;font-size:13px;color:var(--muted)">No orders yet.</p>';
+    } else {
+      listEl.innerHTML = recent.map(o => {
+        const sub = [o.material_name, o.colour, o.quantity > 1 ? `×${o.quantity}` : null]
+          .filter(Boolean).join(' · ');
+        return `<a class="order-row" href="${pvPortalHref('orders')}" role="row">
+          <div class="order-item-cell">
+            <div class="order-thumb" aria-hidden="true">${pvCubeIcon()}</div>
+            <div>
+              <div class="order-num">#MAHI-${o.id}</div>
+              <div class="order-mat">${sub || '—'}</div>
+            </div>
+          </div>
+          ${pvPill(o.fulfilment_status)}
+          <span class="order-date">${pvFmtDate(o.created_at)}</span>
+          <span class="order-total">${pvFmtMoney(o.total)}</span>
+          ${pvChevron()}
+        </a>`;
+      }).join('');
+    }
+
+    pvShow('pvMain');
+  }
+
+  // ── Check auth + load data ────────────────────────────────────
+  async function pvCheckAuth() {
+    pvShow('pvLoading');
+    try {
+      _pvUser   = await pvFetchMe();
+      _pvOrders = await pvFetchOrders();
+      _pvChecked = true;
+      pvRenderMain();
+    } catch {
+      _pvUser    = null;
+      _pvOrders  = [];
+      _pvChecked = true;
+      pvShow('pvAuth');
+    }
+  }
+
+  // ── Open / close ──────────────────────────────────────────────
+  function openPortal() {
+    portalDrawer.classList.add('open');
+    portalDrawer.setAttribute('aria-hidden', 'false');
+    portalOverlay.classList.add('active');
+    portalBtn.classList.add('active');
+    portalBtn.setAttribute('aria-expanded', 'true');
+    if (!_pvChecked) pvCheckAuth();
+  }
+  function closePortal() {
+    portalDrawer.classList.remove('open');
+    portalDrawer.setAttribute('aria-hidden', 'true');
+    portalOverlay.classList.remove('active');
+    portalBtn.classList.remove('active');
+    portalBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  portalBtn.addEventListener('click', () =>
+    portalDrawer.classList.contains('open') ? closePortal() : openPortal());
+  portalClose.addEventListener('click', closePortal);
+  portalOverlay.addEventListener('click', closePortal);
+
+  // Sign out
+  portalSignout.addEventListener('click', async () => {
+    try { await fetch('/api/customer/logout', { method: 'POST' }); } catch {}
+    _pvUser = null; _pvOrders = []; _pvChecked = false;
+    pvShow('pvAuth');
+  });
+
+  // Escape key
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && portalDrawer.classList.contains('open')) closePortal();
+  });
+
+  // ── Login form ────────────────────────────────────────────────
+  document.getElementById('pvLoginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const email    = document.getElementById('pvEmail').value.trim();
+    const password = document.getElementById('pvPassword').value;
+    const errEl    = document.getElementById('pvLoginError');
+    const btn      = document.getElementById('pvLoginBtn');
+
+    errEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+
+    try {
+      const res = await fetch('/api/customer/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shopSlug: PORTAL_SHOP_SLUG, email, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        _pvChecked = false;
+        await pvCheckAuth();
+        document.getElementById('pvPassword').value = '';
+      } else {
+        errEl.textContent = data.error || 'Sign in failed. Please try again.';
+      }
+    } catch {
+      errEl.textContent = 'Could not connect. Please try again.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    }
+  });
+</script>
+</body>
+</html>

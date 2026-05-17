@@ -160,10 +160,10 @@
 <body>
 
   <nav class="nav" role="navigation">
-    <a href="quote.html?shop=mahi3d" class="nav-wordmark">mahi3d</a>
+    <a href="index.html?shop=mahi3d" class="nav-wordmark" data-home-link>mahi3d</a>
     <ul class="nav-links" id="navLinks">
       <li><a href="materials.html">Materials</a></li>
-      <li><a href="quote.html">Quote</a></li>
+      <li><a href="index.html?shop=mahi3d#uploadZone" data-start-link>Quote</a></li>
       <li><a href="customer/dashboard.html#help">Contact</a></li>
     </ul>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
@@ -231,7 +231,7 @@
     <p class="info-text">A confirmation email will be sent to your inbox.</p>
 
     <!-- 7. CTA -->
-    <a href="quote.html?shop=mahi3d" class="btn btn-outline" style="margin-top:20px; display:inline-flex;">← Back to home</a>
+    <a href="index.html?shop=mahi3d" class="btn btn-outline" style="margin-top:20px; display:inline-flex;" data-home-link>Back to home</a>
 
     <!-- 8. Trust strip -->
     <div class="trust-strip">
@@ -260,7 +260,8 @@
     const shopSlug = params.get('shop') || 'mahi3d';
     const orderRefEl = document.getElementById('orderRef');
     document.querySelectorAll('a[href="materials.html"]').forEach(a => { a.href = `catalog.html?shop=${encodeURIComponent(shopSlug)}`; });
-    document.querySelectorAll('a[href="quote.html"]').forEach(a => { a.href = `quote.html?shop=${encodeURIComponent(shopSlug)}`; });
+    document.querySelectorAll('a[data-home-link]').forEach(a => { a.href = `index.html?shop=${encodeURIComponent(shopSlug)}`; });
+    document.querySelectorAll('a[data-start-link], a[href="quote.html"]').forEach(a => { a.href = `index.html?shop=${encodeURIComponent(shopSlug)}#uploadZone`; });
     document.querySelectorAll('a[href="customer/dashboard.html#help"]').forEach(a => { a.href = `customer/dashboard.html?shop=${encodeURIComponent(shopSlug)}#help`; });
 
     if (!orderId || !orderToken) {
