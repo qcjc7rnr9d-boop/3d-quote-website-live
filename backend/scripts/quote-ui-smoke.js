@@ -99,10 +99,14 @@ try {
     activeProgress: document.querySelector('.quote-progress-step.active')?.textContent?.replace(/\s+/g, ' ').trim() || '',
     emptyTitle: document.querySelector('#viewerEmptyTitle')?.textContent?.trim() || '',
     emptyCopy: document.querySelector('#viewerEmptyCopy')?.textContent?.trim() || '',
+    materialsDisabled: document.querySelector('[data-quote-nav="materials"]')?.getAttribute('aria-disabled') || '',
+    materialsHref: document.querySelector('[data-quote-nav="materials"]')?.getAttribute('href') || '',
   }));
   assert(/^1\s*Upload$/.test(freshState.activeProgress), `Fresh quote should start on Upload progress, got ${freshState.activeProgress}`);
   assert(freshState.emptyTitle === 'Upload your model', `Fresh quote empty title should invite the first upload, got ${freshState.emptyTitle}`);
   assert(!/next model group|same model again/i.test(freshState.emptyCopy), `Fresh quote copy should not describe add-another flow: ${freshState.emptyCopy}`);
+  assert(freshState.materialsDisabled === 'true', 'Fresh quote should disable Materials nav until a model is uploaded');
+  assert(freshState.materialsHref === '#upload', `Fresh quote Materials nav should target upload prompt, got ${freshState.materialsHref}`);
 
   const stlBase64 = makeStlBuffer().toString('base64');
   await page.evaluate(async ({ encoded, material, colour, finish, infill, shipping }) => {
@@ -156,12 +160,16 @@ try {
     dimensions: document.querySelector('#fileDimensions')?.textContent,
     canvasWidth: document.querySelector('#viewerCanvas')?.width || 0,
     canvasHeight: document.querySelector('#viewerCanvas')?.height || 0,
+    materialsDisabled: document.querySelector('[data-quote-nav="materials"]')?.getAttribute('aria-disabled') || '',
+    materialsHref: document.querySelector('[data-quote-nav="materials"]')?.getAttribute('href') || '',
   }));
   assert(errors.length === 0, `Quote page runtime errors: ${errors.join('; ')}`);
   assert(state.emptyDisplay === 'none', `Viewer empty state should be hidden after loading STL, got ${state.emptyDisplay}`);
   assert(state.fileName === 'viewer-smoke.stl', `Viewer file name did not load, got ${state.fileName}`);
   assert(/20 mm/.test(state.dimensions || ''), `Viewer dimensions did not render, got ${state.dimensions}`);
   assert(state.canvasWidth > 100 && state.canvasHeight > 100, 'Viewer canvas did not size correctly');
+  assert(state.materialsDisabled === 'false', 'Quote should enable Materials nav once a model is loaded');
+  assert(/materials\.html\?shop=mahi3d$/.test(state.materialsHref), `Loaded quote Materials nav should link to materials, got ${state.materialsHref}`);
 
   await page.selectOption('#currencySelect', 'USD');
   await page.waitForFunction(() => document.querySelector('#currencyEstimateNote')?.classList.contains('show'), null, { timeout: 5000 });

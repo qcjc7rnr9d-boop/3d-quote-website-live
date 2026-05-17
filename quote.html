@@ -116,6 +116,11 @@
       color: var(--ink);
       border-bottom-color: var(--sage);
     }
+    .nav-link.disabled {
+      color: var(--muted);
+      cursor: not-allowed;
+      border-bottom-color: transparent;
+    }
     .nav-right {
       display: flex; align-items: center; gap: 14px;
     }
@@ -1383,9 +1388,20 @@
     });
   }
 
+  function updateQuoteNavState() {
+    const materialsLink = document.querySelector('[data-quote-nav="materials"]');
+    if (!materialsLink) return;
+    const hasModel = !!fileData;
+    materialsLink.classList.toggle('disabled', !hasModel);
+    materialsLink.setAttribute('aria-disabled', hasModel ? 'false' : 'true');
+    materialsLink.setAttribute('href', hasModel ? `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}` : '#upload');
+    materialsLink.title = hasModel ? '' : 'Upload your model before choosing materials.';
+  }
+
   function updateQuotePageIntro() {
     const hasModel = !!fileData;
     setQuoteProgressStep(hasModel ? 4 : 1);
+    updateQuoteNavState();
     const title = $('quotePageTitle');
     const sub = $('quotePageSub');
     if (title) title.textContent = hasModel ? 'Your quote' : 'Start your quote';
@@ -2820,6 +2836,12 @@
   $('replaceBtn').addEventListener('click', () => $('fileInput').click());
   $('viewerEmptyChoose')?.addEventListener('click', () => openFilePicker());
   $('viewerEmptyReset')?.addEventListener('click', () => resetSavedQuoteState());
+  document.querySelector('[data-quote-nav="materials"]')?.addEventListener('click', e => {
+    if (fileData) return;
+    e.preventDefault();
+    showUploadPrompt();
+    showToast('Upload your model before choosing materials.');
+  });
   $('fileInput').addEventListener('change', async e => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
