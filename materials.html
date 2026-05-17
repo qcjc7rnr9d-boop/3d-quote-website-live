@@ -915,7 +915,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="index.html">mahi3d</a>
+    <a class="brand" href="quote.html?shop=mahi3d">mahi3d</a>
     <div class="progress" aria-label="Quote progress">
       <div class="progress-step"><span>1</span>Upload</div>
       <div class="progress-line" aria-hidden="true"></div>
@@ -1488,7 +1488,7 @@
 
     async function init() {
       if (!hasActiveModelGroup()) {
-        window.location.replace(`index.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`);
+        window.location.replace(`quote.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`);
         return;
       }
       try {

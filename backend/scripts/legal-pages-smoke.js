@@ -19,7 +19,6 @@ assert(existsSync(privacyPath), 'privacy.html must exist at the public root');
 
 const termsHtml = read('terms.html');
 const privacyHtml = read('privacy.html');
-const indexHtml = read('index.html');
 const catalogHtml = read('catalog.html');
 const serverJs = read('backend/server.js');
 
@@ -35,7 +34,7 @@ for (const [name, html] of [['terms.html', termsHtml], ['privacy.html', privacyH
 assert(serverJs.includes("'/terms.html'"), 'server public root pages must include /terms.html');
 assert(serverJs.includes("'/privacy.html'"), 'server public root pages must include /privacy.html');
 
-for (const [name, html] of [['index.html', indexHtml], ['catalog.html', catalogHtml]]) {
+for (const [name, html] of [['catalog.html', catalogHtml]]) {
   assert(html.includes('terms.html?shop='), `${name} footer must link to terms.html with shop slug`);
   assert(html.includes('privacy.html?shop='), `${name} footer must link to privacy.html with shop slug`);
   assert(!html.includes('customer/dashboard.html?shop=mahi3d#help" data-pv-tab="help">Terms'), `${name} must not route Terms to the Help tab`);

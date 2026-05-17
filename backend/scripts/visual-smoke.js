@@ -107,7 +107,7 @@ try {
   }, { formFile, formSelection, cart });
 
   const pages = [
-    ['landing', '/index.html?shop=mahi3d'],
+    ['quote-first', '/quote.html?shop=mahi3d'],
     ['materials', '/materials.html?shop=mahi3d'],
     ['options', '/options.html?shop=mahi3d'],
     ['quote', '/quote.html?shop=mahi3d'],

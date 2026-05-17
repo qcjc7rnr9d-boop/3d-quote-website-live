@@ -15,7 +15,6 @@ import { SQLiteSessionStore } from './lib/sqlite-session-store.js';
 import { csrfProtection, csrfTokenHandler } from './lib/csrf.js';
 import { hasSecretEncryptionKey } from './lib/secret-vault.js';
 import { frameAncestorsForOrigins, parseEmbedAllowedOrigins } from './lib/embed.js';
-import { shopifyFileStorageStatus } from './lib/shopify-file-storage.js';
 
 import authRouter from './routes/auth.js';
 import materialsRouter from './routes/materials.js';
@@ -27,11 +26,6 @@ import stripeRouter, { stripeWebhookHandler } from './routes/stripe.js';
 import platformRouter from './routes/platform.js';
 import customerPortalRouter from './routes/customer-portal.js';
 import shippingRouter from './routes/shipping.js';
-import shopifyRouter, {
-  shopifyEmbeddedAdminPage,
-  shopifyProxyRouter,
-  shopifyWebhookHandler,
-} from './routes/shopify.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -59,17 +53,10 @@ app.disable('x-powered-by');
 
 // ── Security headers ──────────────────────────────────────────
 app.use((req, res, next) => {
-  const shopifySurface = req.path === '/app'
-    || req.path.startsWith('/apps/3d-quote')
-    || req.path.startsWith('/api/shopify');
   const embedSurface = req.path.startsWith('/embed/');
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  if (!shopifySurface && !embedSurface) {
+  if (!embedSurface) {
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  } else {
-    if (shopifySurface) {
-      res.setHeader('Content-Security-Policy', "frame-ancestors https://*.myshopify.com https://admin.shopify.com;");
-    }
   }
   res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
@@ -80,14 +67,15 @@ app.post('/api/stripe/webhook',
   express.raw({ type: 'application/json' }),
   stripeWebhookHandler
 );
-app.post('/api/shopify/webhooks',
-  express.raw({ type: 'application/json' }),
-  shopifyWebhookHandler
-);
 
 // ── Body parsers ──────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// ── Disabled future surfaces for the lean quote + Stripe release ─
+app.all(/^\/api\/shopify(?:\/|$)/, (req, res) => res.status(404).json({ error: 'Not found' }));
+app.all(/^\/apps\/3d-quote(?:\/|$)/, (req, res) => res.status(404).send('Not found'));
+app.all('/app', (req, res) => res.status(404).send('Not found'));
 
 // ── Session ───────────────────────────────────────────────────
 app.use(session({
@@ -134,10 +122,18 @@ app.use('/uploads', express.static(join(ROOT_DIR, 'uploads'), {
   },
 }));
 const publicRootPages = new Set([
-  '/', '/index.html', '/catalog.html', '/checkout.html', '/confirmation.html',
-  '/materials.html', '/onboarding.html', '/options.html', '/privacy.html', '/quote.html',
+  '/catalog.html', '/checkout.html', '/confirmation.html',
+  '/materials.html', '/options.html', '/privacy.html', '/quote.html',
   '/stripe-callback.html', '/terms.html'
 ]);
+
+app.get(['/', '/index.html'], (req, res) => {
+  res.redirect(302, '/quote.html?shop=mahi3d');
+});
+
+app.get('/onboarding.html', (req, res) => {
+  res.redirect(302, '/admin/payments.html');
+});
 
 app.get('/api/health', (req, res) => {
   try {
@@ -152,7 +148,6 @@ app.get('/api/health', (req, res) => {
         status: 'ok',
       },
       storage: {
-        shopify: shopifyFileStorageStatus(),
         uploads: {
           mode: 'local',
           publicPath: '/uploads',
@@ -209,7 +204,7 @@ app.get('/embed/quote', (req, res) => {
 });
 
 app.get([...publicRootPages], (req, res) => {
-  const page = req.path === '/' ? 'index.html' : req.path.slice(1);
+  const page = req.path.slice(1);
   res.sendFile(join(ROOT_DIR, page));
 });
 
@@ -224,9 +219,6 @@ app.use('/api/stripe', stripeRouter);
 app.use('/api/platform', platformRouter);
 app.use('/api/customer', customerPortalRouter);
 app.use('/api/shipping', shippingRouter);
-app.use('/api/shopify', shopifyRouter);
-app.use('/apps/3d-quote', shopifyProxyRouter);
-app.get('/app', shopifyEmbeddedAdminPage);
 
 // ── Public: platform identity (Trennen) ────────────────────────
 // Lets unauthenticated pages (admin auth screens, platform login,
@@ -275,7 +267,7 @@ app.use((req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Not found' });
   }
-  res.sendFile(join(ROOT_DIR, 'index.html'));
+  res.status(404).send('Not found');
 });
 
 // ── Error handler ─────────────────────────────────────────────

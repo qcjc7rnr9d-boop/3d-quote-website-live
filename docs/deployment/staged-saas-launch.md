@@ -2,7 +2,7 @@
 
 ## Lightsail Demo Server
 
-Use Lightsail only for the first live/demo server. Attach a static IPv4, point `app.yourdomain.com` at it, and keep only ports 80 and 443 public after Nginx is working. Port 3001 should be private to localhost.
+Use Lightsail only for the first live/demo server. This lean release exposes the quote flow, Stripe checkout, admin/customer/platform essentials, and the generic embed widget. Attach a static IPv4, point `app.yourdomain.com` at it, and keep only ports 80 and 443 public after Nginx is working. Port 3001 should be private to localhost.
 
 Deploy/update from SSH:
 
@@ -38,14 +38,6 @@ JWT_SECRET=replace-with-long-random-secret
 PLATFORM_CONFIG_ENCRYPTION_KEY=replace-with-long-random-secret
 RESEND_API_KEY=replace-with-real-provider-key
 EMAIL_FROM=Trennen <hello@yourdomain.com>
-```
-
-For Shopify file uploads in production, configure S3-compatible storage:
-
-```env
-SHOPIFY_FILE_STORAGE=s3
-SHOPIFY_S3_BUCKET=your-bucket
-SHOPIFY_S3_REGION=ap-southeast-2
 ```
 
 ## Nginx

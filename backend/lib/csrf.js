@@ -4,7 +4,6 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const EXEMPT_PATHS = new Set([
   '/api/csrf-token',
   '/api/stripe/webhook',
-  '/api/shopify/webhooks',
 ]);
 
 function isSessionAuthenticated(req) {

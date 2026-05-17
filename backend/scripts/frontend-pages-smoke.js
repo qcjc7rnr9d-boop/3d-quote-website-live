@@ -7,8 +7,6 @@ function assert(condition, message) {
 }
 
 const pages = [
-  '/',
-  '/index.html?shop=mahi3d',
   '/catalog.html?shop=mahi3d',
   '/materials.html?shop=mahi3d',
   '/options.html?shop=mahi3d',
@@ -39,10 +37,10 @@ const pages = [
   '/platform/admin.html',
 ];
 
-function sameOriginLocalHref(raw) {
+function sameOriginLocalHref(raw, currentUrl) {
   if (!raw || raw.startsWith('#')) return null;
   if (/^(mailto:|tel:|javascript:)/i.test(raw)) return null;
-  const url = new URL(raw, base);
+  const url = new URL(raw, currentUrl);
   if (url.origin !== new URL(base).origin) return null;
   return url;
 }
@@ -78,7 +76,7 @@ try {
 
     const hrefs = await page.$$eval('a[href]', links => links.map(a => a.getAttribute('href')));
     for (const href of hrefs) {
-      const url = sameOriginLocalHref(href);
+      const url = sameOriginLocalHref(href, page.url());
       if (!url) continue;
       const key = `${url.pathname}${url.search}`;
       if (checkedLinks.has(key)) continue;

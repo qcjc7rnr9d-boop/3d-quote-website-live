@@ -16,6 +16,9 @@ const forbidden = [
   'toggleShopPay',
   'sdks.shopifycdn.com',
   'checkout.shopify.com',
+  '/api/shopify',
+  "checkoutProvider === 'shopify'",
+  'Shopify checkout',
   'buy-button-storefront',
 ];
 
@@ -40,8 +43,8 @@ assert(
   'Checkout script must process payments through Stripe PaymentIntents'
 );
 assert(
-  checkoutJs.includes("checkoutProvider === 'shopify'"),
-  'Checkout script should keep Shopify checkout isolated behind explicit provider mode'
+  !checkoutJs.includes('shopify_shop') && !checkoutJs.includes('shopifyShopDomain'),
+  'Checkout script should not preserve Shopify checkout state in the lean release'
 );
 assert(
   checkoutHtml.includes('cart-item-options') && checkoutHtml.includes('cart-item-money'),

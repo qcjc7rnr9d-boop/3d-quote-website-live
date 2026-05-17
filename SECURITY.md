@@ -68,15 +68,14 @@
 The following CSP is applied via `<meta>` tag on every page:
 ```
 default-src 'self';
-script-src 'self' https://js.stripe.com https://sdks.shopifycdn.com;
+script-src 'self' https://js.stripe.com;
 frame-src https://js.stripe.com;
-connect-src 'self' https://api.stripe.com https://checkout.shopify.com;
+connect-src 'self' https://api.stripe.com;
 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
 font-src https://fonts.gstatic.com;
 ```
 
 - [ ] Stripe.js loaded only from `https://js.stripe.com/v3/` — never self-hosted
-- [ ] Shopify SDK loaded only from `https://sdks.shopifycdn.com`
 - [ ] No inline `<script>` blocks other than page-specific JS (covered by 'self')
 
 ## Environment Variables

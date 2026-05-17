@@ -76,7 +76,7 @@ try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
-    await page.goto(`${base}/index.html?shop=${shop.slug}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${base}/quote.html?shop=${shop.slug}`, { waitUntil: 'domcontentloaded' });
     await page.evaluate(({ materialId, materialName }) => {
       localStorage.setItem('form_file', JSON.stringify({
         name: 'explicit-selection.stl',

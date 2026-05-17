@@ -613,10 +613,10 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" data-link="home" href="index.html?shop=mahi3d">mahi3d</a>
+    <a class="brand" data-link="home" href="quote.html?shop=mahi3d">mahi3d</a>
     <nav class="nav-links" aria-label="Main navigation">
       <a data-link="materials" href="catalog.html?shop=mahi3d" aria-current="page">Materials</a>
-      <a data-link="how" href="index.html?shop=mahi3d#how-it-works">How it works</a>
+      <a data-link="how" href="catalog.html?shop=mahi3d">How it works</a>
     </nav>
     <div class="nav-actions">
       <a class="btn-dark" data-link="quote" href="quote.html?shop=mahi3d">Start a Quote</a>
@@ -658,7 +658,7 @@
   </main>
 
   <footer class="footer">
-    <a data-link="home" href="index.html?shop=mahi3d" class="footer-wordmark">mahi3d</a>
+    <a data-link="home" href="quote.html?shop=mahi3d" class="footer-wordmark">mahi3d</a>
     <ul class="footer-links">
       <li><a data-link="materials" href="catalog.html?shop=mahi3d">Materials</a></li>
       <li><a data-link="quote" href="quote.html?shop=mahi3d">Quote</a></li>
@@ -772,9 +772,9 @@
 
     function applyLinks() {
       const links = {
-        home: `index.html?shop=${encodeURIComponent(SHOP_SLUG)}`,
+        home: `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`,
         materials: `catalog.html?shop=${encodeURIComponent(SHOP_SLUG)}`,
-        how: `index.html?shop=${encodeURIComponent(SHOP_SLUG)}#how-it-works`,
+        how: `catalog.html?shop=${encodeURIComponent(SHOP_SLUG)}`,
         quote: quoteHref(),
         orders: `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#orders`,
         help: `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#help`,

@@ -5,7 +5,6 @@ import { chromium } from '../../research/node_modules/playwright/index.mjs';
 const root = resolve(import.meta.dirname, '../..');
 const base = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const quoteHtml = readFileSync(resolve(root, 'quote.html'), 'utf8');
-const indexHtml = readFileSync(resolve(root, 'index.html'), 'utf8');
 const materialsHtml = readFileSync(resolve(root, 'materials.html'), 'utf8');
 const optionsHtml = readFileSync(resolve(root, 'options.html'), 'utf8');
 
@@ -65,15 +64,10 @@ assert(!materialsHtml.includes('data-finish-id'), 'Material step should not rend
 assert(optionsHtml.includes('Colour'), 'Options step should render colour controls');
 assert(optionsHtml.includes('Print quality'), 'Options step should render finish controls');
 assert(optionsHtml.includes('Infill'), 'Options step should render infill controls');
-const homepageHasUploadPrompt = indexHtml.includes('New uploads') && indexHtml.includes('showNewUploadPrompt');
-const homepageIsSalesPage = indexHtml.includes('assets/sales.css') && indexHtml.includes('data-sales-quote-demo');
 assert(
-  homepageHasUploadPrompt || homepageIsSalesPage,
-  'Home page must either support the upload prompt directly or route into the quote flow',
+  quoteHtml.includes('New uploads') && quoteHtml.includes('SHOULD_PROMPT_UPLOAD'),
+  'Quote page must be the quote-first upload experience',
 );
-if (homepageIsSalesPage && !homepageHasUploadPrompt) {
-  assert(indexHtml.includes('quote.html?shop=mahi3d'), 'Sales home page must link demo users into the quote flow');
-}
 
 const browser = await chromium.launch({ headless: true });
 try {

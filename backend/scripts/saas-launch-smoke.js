@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -102,6 +102,17 @@ function seedShop() {
   `).run(shopId, JSON.stringify(allowedOrigins));
 }
 
+function htmlFilesUnder(relativeDir) {
+  return readdirSync(resolve(root, relativeDir), { withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name.endsWith('.html'))
+    .map(entry => `${relativeDir}/${entry.name}`);
+}
+
+function assertNoShopifyCspDomains(relativePath) {
+  const html = readFileSync(resolve(root, relativePath), 'utf8');
+  assert.doesNotMatch(html, /sdks\.shopifycdn\.com|checkout\.shopify\.com/, `${relativePath} CSP should not include Shopify domains in the lean release`);
+}
+
 async function run() {
   const settingsHtml = readFileSync(resolve(root, 'admin/settings.html'), 'utf8');
   assert.match(settingsHtml, /embedAllowedOrigins/, 'admin settings should expose embed allowed origins control');
@@ -117,6 +128,28 @@ async function run() {
   assert.match(launchDocText, /pm2 restart 3d-quote-website/, 'deployment doc should include pm2 restart command');
   assert.match(launchDocText, /npm run migrate/, 'deployment doc should include migration command');
   assert.match(launchDocText, /80 and 443/, 'deployment doc should call out public firewall ports');
+  assert.doesNotMatch(launchDocText, /SHOPIFY_|Shopify file uploads/i, 'active deployment doc should not include Shopify setup');
+
+  const liveHtmlFiles = [
+    'catalog.html',
+    'checkout.html',
+    'confirmation.html',
+    'materials.html',
+    'options.html',
+    'privacy.html',
+    'quote.html',
+    'stripe-callback.html',
+    'terms.html',
+    ...htmlFilesUnder('admin'),
+    ...htmlFilesUnder('customer'),
+    ...htmlFilesUnder('platform'),
+  ];
+  liveHtmlFiles.forEach(assertNoShopifyCspDomains);
+
+  const checkoutJs = readFileSync(resolve(root, 'assets/checkout.js'), 'utf8');
+  assert.doesNotMatch(checkoutJs, /\/api\/shopify|checkoutProvider\s*===\s*['"]shopify['"]|Shopify checkout/i, 'checkout should not expose Shopify mode in lean release');
+  const quoteHtml = readFileSync(resolve(root, 'quote.html'), 'utf8');
+  assert.doesNotMatch(quoteHtml, /CHECKOUT_PROVIDER|shopify_shop|checkout['"],\s*['"]shopify/i, 'quote should not preserve Shopify checkout mode in lean release');
 
   seedShop();
 
@@ -150,8 +183,26 @@ async function run() {
   const healthData = await health.json();
   assert.equal(healthData.ok, true, 'health should report ok=true');
   assert.equal(healthData.database.status, 'ok', 'health should verify database status');
-  assert.equal(healthData.storage.shopify.mode, 'local', 'health should include storage mode');
+  assert.equal(healthData.storage.uploads.mode, 'local', 'health should include upload storage mode');
+  assert.equal(Object.hasOwn(healthData.storage, 'shopify'), false, 'health should not report Shopify storage in lean release');
   assert.ok(Number.isFinite(healthData.uptime_seconds), 'health should include uptime_seconds');
+
+  const rootLanding = await api('/');
+  assertStatus(rootLanding, 302, '/');
+  assert.match(rootLanding.headers.get('location') || '', /\/quote\.html\?shop=mahi3d/, 'root should redirect to quote-first experience');
+
+  const indexLanding = await api('/index.html');
+  assertStatus(indexLanding, 302, '/index.html');
+  assert.match(indexLanding.headers.get('location') || '', /\/quote\.html\?shop=mahi3d/, 'index.html should not expose the sales page');
+
+  const onboarding = await api('/onboarding.html');
+  assertStatus(onboarding, 302, '/onboarding.html');
+  assert.match(onboarding.headers.get('location') || '', /\/admin\/payments\.html/, 'onboarding should redirect to Stripe payment setup');
+
+  for (const shopifyPath of ['/api/shopify', '/api/shopify/draft-order', '/apps/3d-quote', '/app']) {
+    const res = await api(shopifyPath);
+    assertStatus(res, 404, shopifyPath);
+  }
 
   const widget = await api('/embed/v1/widget.js');
   assertStatus(widget, 200, '/embed/v1/widget.js');

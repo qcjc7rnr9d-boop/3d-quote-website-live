@@ -26,7 +26,7 @@ RF DEWI operates as a **platform** — each print shop connects their own Stripe
    - Set your platform name: "RF DEWI"
    - Set redirect URI: `https://yourdomain.com/stripe-callback.html`
    - Copy **Client ID** (starts with `ca_`) → `STRIPE_CLIENT_ID` in `.env`
-2. Connect OAuth URL used in `onboarding.html`:
+2. Connect OAuth URL used from `admin/payments.html`:
    ```
    https://connect.stripe.com/oauth/authorize
      ?response_type=code
@@ -50,19 +50,7 @@ RF DEWI operates as a **platform** — each print shop connects their own Stripe
 > **Never skip webhook signature verification** — every webhook must pass
 > `stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET)`
 
-## 5. Shop Pay / Shopify Setup
-
-Shop Pay is Shopify's accelerated checkout. To enable it:
-
-1. Create a Shopify store at https://shopify.com
-2. In **Apps → Develop apps → Create an app**, enable **Storefront API** access
-3. Grant scopes: `unauthenticated_read_product_listings`, `unauthenticated_write_checkouts`
-4. Copy the **Storefront access token** → `SHOPIFY_STOREFRONT_TOKEN` in `.env`
-5. Copy your `.myshopify.com` domain → `SHOPIFY_STORE_DOMAIN` in `.env`
-
-> Shopify handles **all payment capture** for Shop Pay — no card data ever reaches your server.
-
-## 6. HTTPS is Required Before Going Live
+## 5. HTTPS is Required Before Going Live
 
 Stripe **rejects plain HTTP** in production. Before switching to live keys:
 
@@ -70,27 +58,21 @@ Stripe **rejects plain HTTP** in production. Before switching to live keys:
 2. Set `NODE_ENV=production` in `.env`
 3. This activates `secure: true` on session cookies
 
-## 7. Deploy Your Express Backend
+## 6. Deploy Your Express Backend
 
-Recommended platforms (all have free tiers or low-cost plans):
+For the first lean release, deploy the backend on the Lightsail instance behind Nginx:
 
-| Platform   | Notes                                          |
-|------------|------------------------------------------------|
-| **Railway**   | `railway up` — easiest, persistent SQLite  |
-| **Render**    | Free tier with auto-sleep, PostgreSQL add-on|
-| **Fly.io**    | Fast cold starts, persistent volumes       |
-| **Vercel**    | Serverless functions only — needs Postgres |
-
-For Railway (recommended for this stack):
 ```bash
-npm install -g @railway/cli
-railway login
-railway init
-railway up
-railway variables set STRIPE_SECRET_KEY=sk_live_...  # set all .env vars
+cd ~/3d-quote-website-live
+git pull
+cd backend
+nvm use 24
+npm install
+npm run migrate
+pm2 restart 3d-quote-website
 ```
 
-## 8. Switch to Live Keys
+## 7. Switch to Live Keys
 
 Only after:
 - ☐ HTTPS configured

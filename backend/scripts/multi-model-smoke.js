@@ -16,22 +16,12 @@ function parseJson(value, fallback = null) {
 try {
   const schema = readFileSync('db/schema.sql', 'utf8');
   const quoteHtml = readFileSync('../quote.html', 'utf8');
-  const indexHtml = readFileSync('../index.html', 'utf8');
   const checkoutHtml = readFileSync('../checkout.html', 'utf8');
   const checkoutJs = readFileSync('../assets/checkout.js', 'utf8');
   const customerDashboard = readFileSync('../customer/dashboard.html', 'utf8');
 
   assert(schema.includes('CREATE TABLE IF NOT EXISTS order_files'), 'schema must define order_files');
   assert(schema.includes('CREATE TABLE IF NOT EXISTS order_items'), 'schema must define order_items');
-  const homepageHasUploadFlow = indexHtml.includes('uploadedModelList');
-  const homepageIsSalesPage = indexHtml.includes('assets/sales.css') && indexHtml.includes('data-sales-quote-demo');
-  assert(homepageHasUploadFlow || homepageIsSalesPage, 'homepage must either host uploads or link clearly to the quote flow');
-  if (homepageHasUploadFlow) {
-    assert(indexHtml.includes('model:${id}'), 'landing page must store per-model buffers');
-    assert(indexHtml.includes('MAX_MODELS_PER_GROUP = 20'), 'landing page must cap uploads at 20 models per group');
-  } else {
-    assert(indexHtml.includes('quote.html?shop=mahi3d'), 'sales homepage must preserve a route into the quote flow');
-  }
   assert(quoteHtml.includes('multiple'), 'quote upload input must allow multiple files');
   assert(quoteHtml.includes('MAX_MODELS_PER_GROUP = 20'), 'quote page must cap uploads at 20 models per group');
   assert(quoteHtml.includes('modelFiles'), 'quote page must track modelFiles');

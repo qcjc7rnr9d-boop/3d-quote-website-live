@@ -1009,7 +1009,7 @@
 <!-- ─── Top nav ────────────────────────────────────────────── -->
 <nav class="nav">
   <div class="nav-inner">
-    <a class="logo" href="index.html">mahi<span class="logo-dot">3d</span></a>
+    <a class="logo" href="quote.html?shop=mahi3d">mahi<span class="logo-dot">3d</span></a>
     <div class="quote-progress" aria-label="Quote progress">
       <div class="quote-progress-step"><span>1</span>Upload</div>
       <div class="quote-progress-line" aria-hidden="true"></div>
@@ -1313,8 +1313,6 @@
     if (link.dataset.quoteNav === 'portal') link.href = `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#overview`;
   });
   const URL_PARAMS = new URLSearchParams(location.search);
-  const CHECKOUT_PROVIDER = URL_PARAMS.get('checkout') === 'shopify' ? 'shopify' : 'stripe';
-  const SHOPIFY_SHOP_DOMAIN = URL_PARAMS.get('shopify_shop') || '';
   const SHOULD_PROMPT_UPLOAD = URL_PARAMS.get('promptUpload') === '1' || URL_PARAMS.get('newGroup') === '1';
   const IS_NEW_GROUP_FLOW = URL_PARAMS.get('newGroup') === '1';
   const MAX_MODELS_PER_GROUP = 20;
@@ -1914,10 +1912,6 @@
       : `${count} material groups are ready. Add another group or checkout when ready.`;
     const checkoutUrl = new URL('checkout.html', window.location.href);
     checkoutUrl.searchParams.set('shop', SHOP_SLUG);
-    if (CHECKOUT_PROVIDER === 'shopify') {
-      checkoutUrl.searchParams.set('checkout', 'shopify');
-      if (SHOPIFY_SHOP_DOMAIN) checkoutUrl.searchParams.set('shopify_shop', SHOPIFY_SHOP_DOMAIN);
-    }
     $('checkoutCartBtn').href = checkoutUrl.pathname + checkoutUrl.search;
     actions.classList.toggle('hidden', count === 0);
   }

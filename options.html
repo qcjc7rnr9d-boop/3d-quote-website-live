@@ -56,7 +56,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="index.html">mahi3d</a>
+    <a class="brand" href="quote.html?shop=mahi3d">mahi3d</a>
     <div class="progress" aria-label="Quote progress">
       <div class="progress-step"><span>1</span>Upload</div><div class="progress-line" aria-hidden="true"></div>
       <div class="progress-step"><span>2</span>Material</div><div class="progress-line" aria-hidden="true"></div>
@@ -276,7 +276,7 @@
           <h2>${esc(count)}</h2>
           <p>These files will share the same material, colour, finish, and infill.</p>
         </div>
-        <a class="edit-link" href="index.html?shop=${encodeURIComponent(SHOP_SLUG)}">Edit models</a>
+        <a class="edit-link" href="quote.html?shop=${encodeURIComponent(SHOP_SLUG)}">Edit models</a>
         <div class="model-list">
           ${models.map(model => `<div class="model-row"><strong>${esc(model.name)}</strong><span>${esc(formatBytes(model.size))} · ${esc(dimensionsText(model.dimensions))} · Qty ${model.quantity}</span></div>`).join('')}
         </div>
@@ -409,7 +409,7 @@
 
     async function init() {
       if (!readModelGroup().length) {
-        window.location.replace(`index.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`);
+        window.location.replace(`quote.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`);
         return;
       }
       try { selection = JSON.parse(localStorage.getItem('form_selection') || '{}') || {}; } catch { selection = {}; }

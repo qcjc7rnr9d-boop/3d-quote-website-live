@@ -21,7 +21,7 @@ Date: 2026-05-15
 
 ### Frontend Pages
 
-- Public: `index.html`, `catalog.html`, `materials.html`, `options.html`, `quote.html`, `checkout.html`, `confirmation.html`, `terms.html`, `privacy.html`, `onboarding.html`, `stripe-callback.html`.
+- Public lean release: `quote.html`, `catalog.html`, `materials.html`, `options.html`, `checkout.html`, `confirmation.html`, `terms.html`, `privacy.html`, `stripe-callback.html`.
 - Customer: `customer/login.html`, `customer/forgot-password.html`, `customer/reset-password.html`, `customer/dashboard.html`.
 - Shop admin: `admin/login.html`, `admin/forgot-password.html`, `admin/reset-password.html`, `admin/dashboard.html`, `admin/materials.html`, `admin/orders.html`, `admin/pricing.html`, `admin/settings.html`, `admin/shipping.html`, `admin/payments.html`, `admin/customers.html`, `admin/notifications.html`, `admin/account.html`, `admin/change-password.html`.
 - Platform: `platform/login.html`, `platform/forgot-password.html`, `platform/reset-password.html`, `platform/admin.html`.
