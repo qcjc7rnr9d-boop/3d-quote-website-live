@@ -14,6 +14,10 @@ Stores do not receive a real-time notification for every platform-owner view, bu
 
 Each store remains responsible for the accuracy of its customer-facing materials, pricing, shipping labels, support details, terms, privacy wording, fulfilment promises, and any local legal or tax obligations.
 
+## Payments
+
+Card payments are processed through Stripe Connect. Trennen configures the platform Stripe integration, and each store connects its own Stripe account through Stripe-hosted onboarding for identity, banking, and payout setup. Stores should not provide Stripe API credentials to Trennen through the shop portal.
+
 ## Before Launch
 
 - Replace this draft with final merchant terms.

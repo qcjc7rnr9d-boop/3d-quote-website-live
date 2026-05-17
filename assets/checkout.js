@@ -18,8 +18,6 @@
   try { savedSelection = JSON.parse(localStorage.getItem('form_selection') || 'null'); } catch {}
   const URL_PARAMS = new URLSearchParams(window.location.search);
   const urlShop = URL_PARAMS.get('shop');
-  const checkoutProvider = URL_PARAMS.get('checkout') === 'shopify' ? 'shopify' : 'stripe';
-  const shopifyShopDomain = URL_PARAMS.get('shopify_shop') || cart?.shopifyShopDomain || savedSelection?.shopifyShopDomain || '';
   const shopSlug = cart?.shopSlug || urlShop || savedSelection?.shopSlug || 'mahi3d';
   cart = normaliseCart(cart, shopSlug);
   const hasData = cart.items.length > 0;
@@ -27,10 +25,6 @@
   function shopHref(path) {
     const url = new URL(path, window.location.href);
     url.searchParams.set('shop', shopSlug);
-    if (checkoutProvider === 'shopify') {
-      url.searchParams.set('checkout', 'shopify');
-      if (shopifyShopDomain) url.searchParams.set('shopify_shop', shopifyShopDomain);
-    }
     return url.pathname + url.search;
   }
 
@@ -288,13 +282,10 @@
   function updatePayButton(message) {
     const payBtn = document.getElementById('payBtn');
     if (!payBtn) return;
-    const providerReady = checkoutProvider === 'shopify' || stripeReady;
     if (totalNzd > 0) {
-      const defaultLabel = checkoutProvider === 'shopify'
-        ? 'Continue to Shopify checkout'
-        : 'Pay ' + fmtNzd(totalNzd);
+      const defaultLabel = 'Pay ' + fmtNzd(totalNzd);
       payBtn.textContent = paymentUnavailable ? 'Payment unavailable' : (message || defaultLabel);
-      payBtn.disabled = !(quoteValidated && providerReady) || paymentUnavailable;
+      payBtn.disabled = !(quoteValidated && stripeReady) || paymentUnavailable;
       payBtn.style.opacity = payBtn.disabled ? '0.7' : '';
       payBtn.style.cursor = payBtn.disabled ? 'not-allowed' : '';
     } else {
@@ -328,24 +319,6 @@
     setPaymentFieldsDisabled(false);
     const box = document.getElementById('paymentSetupError');
     if (box) box.classList.remove('show');
-  }
-
-  function configureShopifyCheckoutPanel() {
-    const heading = document.querySelector('#cardPanel')?.closest('.card')?.querySelector('h2');
-    const caption = document.querySelector('#cardPanel')?.closest('.card')?.querySelector('.security-caption');
-    const cardGroup = document.getElementById('card-element-wrapper')?.closest('.form-group');
-    const nameLabel = document.querySelector('label[for="cardName"]');
-    const nameInput = document.getElementById('cardName');
-    if (heading) heading.textContent = 'Shopify checkout';
-    if (caption) caption.textContent = 'Payment, taxes, and order confirmation are handled securely by Shopify.';
-    if (cardGroup) cardGroup.style.display = 'none';
-    if (nameLabel) nameLabel.textContent = 'Full name';
-    if (nameInput) {
-      nameInput.placeholder = 'Full name';
-      nameInput.autocomplete = 'name';
-    }
-    clearPaymentSetupError();
-    updatePayButton();
   }
 
   function showReviewValidationError(message) {
@@ -587,10 +560,6 @@
   let stripe, elements, cardEl;
   (async () => {
     if (!hasData) return;
-    if (checkoutProvider === 'shopify') {
-      configureShopifyCheckoutPanel();
-      return;
-    }
     try {
       const r = await fetch('/api/stripe/public-key?shop=' + encodeURIComponent(shopSlug));
       const data = await r.json();
@@ -623,35 +592,6 @@
     }
   })();
 
-  async function continueWithShopifyCheckout({ name, email }) {
-    const res = await fetch('/api/shopify/draft-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        shopSlug,
-        shopDomain: shopifyShopDomain,
-        customerEmail: email,
-        customerName: name,
-        cart,
-      }),
-    });
-    const data = await res.json();
-    if (res.status === 409 && data.quote) {
-      if (data.quote.cart) cart = normaliseCart(data.quote.cart, shopSlug);
-      persistCart();
-      renderCart();
-      throw new Error('The price changed. Please review the updated total, then continue again.');
-    }
-    if (!res.ok || data.error) throw new Error(data.error || 'Could not start Shopify checkout.');
-    if (!data.invoiceUrl && !data.dryRun) throw new Error('Shopify did not return a checkout URL.');
-    try { localStorage.removeItem('cart'); } catch {}
-    if (data.invoiceUrl) {
-      window.location.href = data.invoiceUrl;
-      return true;
-    }
-    return false;
-  }
-
   // Pay handler
   document.getElementById('payBtn').addEventListener('click', async (e) => {
     if (!hasData) return;
@@ -671,22 +611,6 @@
     }
     if (!quoteValidated) {
       errEl.textContent = 'Checkout total is still being validated. Please try again in a moment.';
-      return;
-    }
-    if (checkoutProvider === 'shopify') {
-      btn.disabled = true;
-      const origLabel = btn.textContent;
-      btn.textContent = 'Opening Shopify checkout...';
-      try {
-        const redirected = await continueWithShopifyCheckout({ name, email });
-        if (redirected) return;
-        btn.disabled = false;
-        btn.textContent = origLabel;
-      } catch (err) {
-        errEl.textContent = err.message || 'Could not start Shopify checkout.';
-        btn.disabled = false;
-        btn.textContent = origLabel;
-      }
       return;
     }
     if (!stripe || !cardEl || !stripeReady) {

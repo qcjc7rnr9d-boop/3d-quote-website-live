@@ -18,7 +18,7 @@ Set these in the production/staging environment before starting the backend:
 - `JWT_SECRET` with a separate long random value
 - `PLATFORM_CONFIG_ENCRYPTION_KEY` with a separate long random value
 - `RESEND_API_KEY` or SMTP settings
-- Stripe platform keys in either environment variables or the platform portal
+- Stripe platform configuration in either environment variables or the platform portal
 - `STRIPE_WEBHOOK_SECRET` for live webhook processing
 
 Production startup intentionally refuses unsafe/missing secrets.
@@ -46,9 +46,12 @@ npm run qa:full
 
 Run these with safe test credentials only:
 
+- Confirm platform Stripe is configured once by Trennen; stores should not enter Stripe API credentials.
 - Stripe Connect onboarding for a test store.
+- Confirm the shop Payments page only offers Stripe Connect onboarding/resume/disconnect actions.
 - Stripe PaymentIntent success using a Stripe test card.
 - Stripe decline and incomplete onboarding flows.
+- Confirm end-customer checkout charges through Stripe only and transfers funds to the connected store account with the configured platform fee.
 - Resend/SMTP password reset email to a controlled inbox.
 - Notification test email from the shop admin portal.
 - Customer saved quote sign-in/register flow.

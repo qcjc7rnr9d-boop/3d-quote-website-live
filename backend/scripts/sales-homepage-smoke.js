@@ -26,57 +26,28 @@ try {
   assert(pageErrors.length === 0, `Homepage runtime errors: ${pageErrors.join('; ')}`);
 
   const title = await page.title();
-  assert(/Trennen/i.test(title), 'Homepage title should use Trennen branding');
+  assert(/3D Print On Demand/i.test(title), 'Homepage title should be the customer quote storefront');
 
-  const brandScriptCount = await page.locator('script[src*="brand.js"]').count();
-  assert(brandScriptCount === 0, 'Sales homepage must not load brand.js');
+  assert(await page.locator('script[src*="brand.js"]').count() === 1, 'Software homepage should load brand.js');
+  assert(await page.locator('link[href="assets/sales.css"]').count() === 0, 'Software homepage should not load sales.css');
+  assert(await page.locator('script[src="assets/sales.js"]').count() === 0, 'Software homepage should not load sales.js');
 
-  const stylesheetCount = await page.locator('link[href="assets/sales.css"]').count();
-  assert(stylesheetCount === 1, 'Sales homepage should load assets/sales.css');
+  const h1 = await expectVisible(page, 'h1', 'quote homepage headline');
+  assert(/Your 3D file/i.test(await h1.textContent()), 'Hero headline should be the quote-upload message');
 
-  const scriptCount = await page.locator('script[src="assets/sales.js"]').count();
-  assert(scriptCount === 1, 'Sales homepage should load assets/sales.js');
+  const uploadZone = await expectVisible(page, '#uploadZone', 'upload zone');
+  assert(/Drop your STL or OBJ files here/i.test(await uploadZone.textContent()), 'Upload zone should invite STL/OBJ uploads');
 
-  const h1 = await expectVisible(page, 'h1', 'hero headline');
-  assert(/instant quoting software/i.test(await h1.textContent()), 'Hero headline should pitch instant quoting software');
+  const fileInputMultiple = await page.locator('#fileInput').evaluate(input => input.hasAttribute('multiple'));
+  assert(fileInputMultiple, 'Homepage upload input should support multiple models');
 
-  const heroImage = await expectVisible(page, '.hero-product-image', 'hero product image');
-  const imageReady = await heroImage.evaluate(img => img.complete && img.naturalWidth > 600 && img.naturalHeight > 350);
-  assert(imageReady, 'Hero product image should load with useful dimensions');
+  const continueHref = await page.locator('#continueBtn').getAttribute('href');
+  assert(/materials\.html\?shop=mahi3d/.test(continueHref || ''), 'Choose Material should route into the material selection step');
 
-  const primaryCta = await expectVisible(page, 'a[href="#demo"]', 'book demo CTA');
-  assert(/book a demo/i.test(await primaryCta.textContent()), 'Primary CTA should invite demo booking');
+  assert(await page.locator('#demo-form').count() === 0, 'Sales demo form should not be present on the software homepage');
+  assert(!/Quote Every Job/i.test(await page.textContent('body')), 'Dark software-sales copy should not be present');
 
-  const secondaryHref = await page.locator('a[data-sales-quote-demo]').first().getAttribute('href');
-  assert(secondaryHref === 'quote.html?shop=mahi3d', 'Secondary CTA should point to the existing quote flow');
-
-  assert(await page.locator('#demo-form').count() === 1, 'Demo form should exist');
-  assert(await page.locator('#uploadZone').count() === 0, 'Legacy homepage upload zone should be removed');
-
-  await page.locator('#demo-form button[type="submit"]').click();
-  await expectVisible(page, '#demo-form [data-field-error="name"]', 'name validation error');
-  await expectVisible(page, '#demo-form [data-field-error="email"]', 'email validation error');
-
-  await page.fill('#demo-name', 'Alex Taylor');
-  await page.fill('#demo-email', 'not-an-email');
-  await page.fill('#demo-company', 'LayerWorks');
-  await page.selectOption('#demo-volume', '26-100');
-  await page.fill('#demo-message', 'We quote a lot of FDM parts and need a better intake flow.');
-  await page.locator('#demo-form button[type="submit"]').click();
-  const emailError = await expectVisible(page, '#demo-form [data-field-error="email"]', 'invalid email validation error');
-  assert(/valid work email/i.test(await emailError.textContent()), 'Invalid email should show a specific validation message');
-
-  await page.fill('#demo-email', 'alex@layerworks.example');
-  await page.locator('#demo-form button[type="submit"]').click();
-  const success = await expectVisible(page, '#demo-success', 'demo form success state');
-  assert(/prototype only/i.test(await success.textContent()), 'Demo form success should make frontend-only behavior clear');
-
-  await page.setViewportSize({ width: 390, height: 860 });
-  await page.locator('.nav-toggle').click();
-  const mobileOpen = await page.locator('.site-nav').evaluate(nav => nav.classList.contains('is-open'));
-  assert(mobileOpen, 'Mobile navigation should open from the toggle');
-
-  console.log('Sales homepage smoke checks passed.');
+  console.log('Software homepage smoke checks passed.');
 } finally {
   await browser.close();
 }

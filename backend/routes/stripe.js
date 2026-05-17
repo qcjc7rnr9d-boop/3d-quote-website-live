@@ -155,13 +155,13 @@ router.get('/public-key', (req, res) => {
   const { publishableKey, secretKey } = getEffectivePlatformStripeConfig();
   if (!publishableKey) {
     return res.status(503).json({
-      error: 'Stripe is not configured - add a publishable key in the platform portal.',
+      error: 'Stripe platform setup is incomplete.',
       code: 'NO_PUBLIC_KEY',
     });
   }
   if (!secretKey) {
     return res.status(503).json({
-      error: 'Stripe is not configured - add a secret key in the platform portal.',
+      error: 'Stripe platform setup is incomplete.',
       code: 'NO_SECRET_KEY',
     });
   }

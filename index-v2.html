@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trennen — 3D Print Quoting Software</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─────────────────────────────────────────────────────────
+       DESIGN TOKENS — LUMINOUS PALETTE
+    ───────────────────────────────────────────────────────── */
+    :root {
+      --bg:        #F8F7FF;
+      --bg-2:      #FFFFFF;
+      --surface:   rgba(255,255,255,0.72);
+      --surface-2: rgba(255,255,255,0.45);
+      --border:    rgba(120,90,220,0.12);
+      --border-2:  rgba(120,90,220,0.22);
+
+      --violet-950: #1A0848;
+      --violet-800: #3B1094;
+      --violet-600: #6D28D9;
+      --violet-500: #7C3AED;
+      --violet-400: #8B5CF6;
+      --violet-300: #A78BFA;
+      --violet-100: #EDE9FE;
+
+      --blue-500:  #3B82F6;
+      --blue-400:  #60A5FA;
+      --cyan-500:  #06B6D4;
+      --cyan-300:  #67E8F9;
+      --teal-400:  #2DD4BF;
+      --amber-400: #FBBF24;
+
+      --text:      #0D0927;
+      --text-2:    #4A3F72;
+      --text-3:    #8B7EAD;
+      --white:     #FFFFFF;
+
+      --font-head: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+
+      --ease-butter:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      --ease-spring:  cubic-bezier(0.34, 1.38, 0.64, 1);
+      --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+
+      --r:   10px;
+      --r-lg: 22px;
+      --r-xl: 32px;
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       RESET & BASE
+    ───────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-head);
+      font-size: 16px;
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    /* ─────────────────────────────────────────────────────────
+       SCROLL PROGRESS BAR
+    ───────────────────────────────────────────────────────── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--violet-500), var(--cyan-500));
+      width: 0%;
+      z-index: 200;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 8px rgba(124,58,237,0.6);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       SCROLLBAR
+    ───────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--violet-100); }
+    ::-webkit-scrollbar-thumb { background: var(--violet-400); border-radius: 3px; }
+
+    /* ─────────────────────────────────────────────────────────
+       UTILITY
+    ───────────────────────────────────────────────────────── */
+    .container { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--violet-600);
+      background: rgba(124,58,237,0.08);
+      border: 1px solid rgba(124,58,237,0.2);
+      padding: 6px 14px;
+      border-radius: 100px;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--violet-500), var(--cyan-500));
+      animation: badge-pulse 2.4s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes badge-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%       { transform: scale(0.55); opacity: 0.4; }
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       BUTTONS
+    ───────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 15px;
+      padding: 14px 28px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.5s var(--ease-spring), box-shadow 0.4s var(--ease-butter);
+      position: relative;
+      overflow: hidden;
+      white-space: nowrap;
+      will-change: transform;
+    }
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.25), transparent 60%);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .btn:hover::after { opacity: 1; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--violet-500) 0%, var(--blue-500) 100%);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 16px 48px rgba(124,58,237,0.38), 0 4px 12px rgba(59,130,246,0.2);
+    }
+
+    .btn-ghost {
+      background: var(--surface);
+      color: var(--violet-600);
+      border: 1.5px solid var(--border-2);
+      backdrop-filter: blur(12px);
+    }
+    .btn-ghost:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(124,58,237,0.12);
+      border-color: var(--violet-400);
+    }
+
+    .btn-lg { font-size: 17px; padding: 17px 34px; }
+    .btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+
+    /* ─────────────────────────────────────────────────────────
+       GLASSMORPHISM MIXIN
+    ───────────────────────────────────────────────────────── */
+    .glass {
+      background: var(--surface);
+      backdrop-filter: blur(20px) saturate(1.5);
+      -webkit-backdrop-filter: blur(20px) saturate(1.5);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       NAVIGATION
+    ───────────────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 16px; left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 48px);
+      max-width: 1120px;
+      z-index: 100;
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(248,247,255,0.78);
+      backdrop-filter: blur(24px) saturate(2);
+      border: 1px solid rgba(124,58,237,0.1);
+      border-radius: var(--r-xl);
+      box-shadow: 0 4px 32px rgba(109,40,217,0.07), 0 1px 0 rgba(255,255,255,0.8) inset;
+      transition: all 0.6s var(--ease-butter);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      background: linear-gradient(135deg, var(--violet-500), var(--cyan-500));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-2);
+      transition: color 0.3s var(--ease-butter);
+    }
+    .nav-links a:hover { color: var(--violet-600); }
+
+    .nav-actions { display: flex; gap: 10px; align-items: center; }
+    .nav-actions .btn { padding: 10px 20px; font-size: 13.5px; border-radius: 100px; }
+
+    /* ─────────────────────────────────────────────────────────
+       LOGO MARK
+    ───────────────────────────────────────────────────────── */
+    .logo-mark { width: 32px; height: 32px; }
+
+    /* ─────────────────────────────────────────────────────────
+       HERO
+    ───────────────────────────────────────────────────────── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding-top: 100px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Morphing blobs */
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(72px);
+      opacity: 0.55;
+      pointer-events: none;
+      will-change: transform, border-radius;
+    }
+    .blob-1 {
+      width: 680px; height: 680px;
+      background: radial-gradient(circle, rgba(139,92,246,0.5), rgba(96,165,250,0.2));
+      top: -200px; left: -200px;
+      animation: morph-1 18s var(--ease-butter) infinite;
+    }
+    .blob-2 {
+      width: 520px; height: 520px;
+      background: radial-gradient(circle, rgba(6,182,212,0.35), rgba(45,212,191,0.2));
+      bottom: -100px; right: -100px;
+      animation: morph-2 14s var(--ease-butter) infinite;
+    }
+    .blob-3 {
+      width: 360px; height: 360px;
+      background: radial-gradient(circle, rgba(251,191,36,0.2), transparent);
+      top: 40%; left: 55%;
+      animation: morph-3 22s var(--ease-butter) infinite;
+    }
+    @keyframes morph-1 {
+      0%   { transform: translate(0,0) scale(1);     border-radius: 60% 40% 70% 30% / 55% 60% 40% 45%; }
+      33%  { transform: translate(60px,-40px) scale(1.08); border-radius: 40% 60% 30% 70% / 65% 35% 65% 35%; }
+      66%  { transform: translate(-30px,50px) scale(0.95); border-radius: 70% 30% 50% 50% / 40% 60% 40% 60%; }
+      100% { transform: translate(0,0) scale(1);     border-radius: 60% 40% 70% 30% / 55% 60% 40% 45%; }
+    }
+    @keyframes morph-2 {
+      0%   { transform: translate(0,0) scale(1);      border-radius: 40% 60% 60% 40% / 70% 30% 70% 30%; }
+      50%  { transform: translate(-50px,-30px) scale(1.12); border-radius: 60% 40% 30% 70% / 50% 60% 40% 50%; }
+      100% { transform: translate(0,0) scale(1);      border-radius: 40% 60% 60% 40% / 70% 30% 70% 30%; }
+    }
+    @keyframes morph-3 {
+      0%   { transform: translate(0,0) scale(1);    border-radius: 55% 45% 55% 45% / 45% 55% 45% 55%; }
+      40%  { transform: translate(40px,60px) scale(1.2); border-radius: 40% 60% 40% 60% / 60% 40% 60% 40%; }
+      80%  { transform: translate(-30px,20px) scale(0.9); border-radius: 65% 35% 65% 35% / 35% 65% 35% 65%; }
+      100% { transform: translate(0,0) scale(1);    border-radius: 55% 45% 55% 45% / 45% 55% 45% 55%; }
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 72px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-content {}
+
+    .hero-badge { margin-bottom: 28px; }
+    .hero-h1 {
+      font-size: clamp(46px, 5.5vw, 74px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.04;
+      color: var(--text);
+      margin-bottom: 24px;
+    }
+    .hero-h1 .grad {
+      background: linear-gradient(135deg, var(--violet-500) 0%, var(--cyan-500) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 18px;
+      line-height: 1.75;
+      color: var(--text-2);
+      max-width: 460px;
+      margin-bottom: 40px;
+      font-weight: 400;
+    }
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+    .hero-trust {
+      margin-top: 48px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .trust-avatars {
+      display: flex;
+    }
+    .trust-avatars span {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--bg-2);
+      margin-left: -10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .trust-avatars span:first-child { margin-left: 0; }
+    .trust-avatars span:nth-child(1) { background: linear-gradient(135deg, #7C3AED, #3B82F6); }
+    .trust-avatars span:nth-child(2) { background: linear-gradient(135deg, #06B6D4, #6D28D9); }
+    .trust-avatars span:nth-child(3) { background: linear-gradient(135deg, #2DD4BF, #7C3AED); }
+    .trust-text {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-3);
+    }
+    .trust-text strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-2);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       HERO GLASS MOCKUP
+    ───────────────────────────────────────────────────────── */
+    .hero-visual {
+      position: relative;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    .mockup-wrap {
+      position: relative;
+      animation: butter-float 9s var(--ease-butter) infinite;
+      will-change: transform;
+    }
+    @keyframes butter-float {
+      0%, 100% { transform: translateY(0) rotate(0.6deg); }
+      50%       { transform: translateY(-22px) rotate(-0.6deg); }
+    }
+
+    .mockup {
+      width: 380px;
+      padding: 28px;
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(28px) saturate(1.8);
+      -webkit-backdrop-filter: blur(28px) saturate(1.8);
+      border: 1px solid rgba(124,58,237,0.14);
+      border-radius: var(--r-xl);
+      box-shadow:
+        0 32px 80px rgba(109,40,217,0.14),
+        0 8px 24px rgba(0,0,0,0.04),
+        0 1px 0 rgba(255,255,255,0.9) inset;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Holographic shimmer sweep */
+    .mockup::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: conic-gradient(from 0deg at 50% 0%, transparent 0deg, rgba(124,58,237,0.05) 40deg, rgba(6,182,212,0.08) 80deg, transparent 120deg);
+      opacity: 0;
+      transition: opacity 0.8s var(--ease-butter);
+      border-radius: inherit;
+    }
+    .mockup:hover::before { opacity: 1; }
+
+    .mockup-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(124,58,237,0.1);
+    }
+    .mockup-dots { display: flex; gap: 6px; }
+    .mockup-dots span {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .mockup-dots span:nth-child(1) { background: #FF5F57; }
+    .mockup-dots span:nth-child(2) { background: #FEBC2E; }
+    .mockup-dots span:nth-child(3) { background: #28C840; }
+    .mockup-window-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-3);
+      letter-spacing: 0.05em;
+    }
+    .mockup-chip {
+      margin-left: auto;
+      background: linear-gradient(135deg, rgba(6,182,212,0.12), rgba(45,212,191,0.08));
+      border: 1px solid rgba(6,182,212,0.25);
+      color: #0891B2;
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 4px 10px;
+      border-radius: 100px;
+      text-transform: uppercase;
+    }
+
+    .mockup-job {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .m-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(109,40,217,0.06);
+    }
+    .m-row:last-of-type { border-bottom: none; }
+    .m-label { font-size: 13px; color: var(--text-3); font-weight: 500; }
+    .m-val {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 700;
+    }
+    .m-val.positive { color: var(--violet-600); }
+
+    .mockup-total {
+      margin-top: 16px;
+      padding: 16px 18px;
+      background: linear-gradient(135deg, rgba(124,58,237,0.07), rgba(6,182,212,0.04));
+      border: 1px solid rgba(124,58,237,0.14);
+      border-radius: var(--r);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .m-total-label { font-size: 13px; font-weight: 600; color: var(--text-2); }
+    .m-total-val {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, var(--violet-600), var(--blue-500));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .mockup-send {
+      width: 100%;
+      margin-top: 14px;
+      padding: 13px;
+      background: linear-gradient(135deg, var(--violet-500), var(--blue-500));
+      color: #fff;
+      border: none;
+      border-radius: var(--r);
+      font-family: var(--font-head);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.5s var(--ease-spring);
+    }
+    .mockup-send:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(124,58,237,0.35);
+    }
+
+    /* Floating pills around mockup */
+    .pill {
+      position: absolute;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-2);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      box-shadow: 0 8px 24px rgba(109,40,217,0.1);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+      will-change: transform;
+    }
+    .pill-1 {
+      top: -16px; right: -12px;
+      animation: pill-float-a 7s var(--ease-butter) infinite;
+      color: var(--violet-600);
+    }
+    .pill-2 {
+      bottom: 16px; left: -60px;
+      animation: pill-float-b 9s var(--ease-butter) infinite;
+      animation-delay: -3s;
+    }
+    .pill-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+    .pill-dot.green { background: #22C55E; box-shadow: 0 0 6px #22C55E; }
+    .pill-dot.purple { background: var(--violet-500); box-shadow: 0 0 6px var(--violet-400); }
+    @keyframes pill-float-a {
+      0%, 100% { transform: translateY(0) rotate(-1deg); }
+      50%       { transform: translateY(-12px) rotate(1deg); }
+    }
+    @keyframes pill-float-b {
+      0%, 100% { transform: translateY(0) rotate(1.5deg); }
+      50%       { transform: translateY(-9px) rotate(-1.5deg); }
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       STATS MARQUEE BAND
+    ───────────────────────────────────────────────────────── */
+    #stats {
+      margin: 0;
+      padding: 12px 0;
+      background: linear-gradient(135deg, var(--violet-500), var(--blue-500) 50%, var(--cyan-500));
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
+    }
+    .marquee-track {
+      display: flex;
+      gap: 0;
+      animation: marquee 28s linear infinite;
+      will-change: transform;
+    }
+    @keyframes marquee {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .marquee-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 36px;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.9);
+      letter-spacing: 0.03em;
+      border-right: 1px solid rgba(255,255,255,0.2);
+    }
+    .marquee-item span { font-family: var(--font-mono); font-size: 16px; color: #fff; }
+    .marquee-sep { color: rgba(255,255,255,0.4); font-size: 18px; }
+
+    /* ─────────────────────────────────────────────────────────
+       SECTION BASE
+    ───────────────────────────────────────────────────────── */
+    section { position: relative; z-index: 1; }
+    .section-pad { padding: 128px 0; }
+    .section-head { text-align: center; margin-bottom: 76px; }
+
+    .section-h2 {
+      font-size: clamp(36px, 4vw, 54px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+    .section-h2 .grad {
+      background: linear-gradient(135deg, var(--violet-500), var(--cyan-500));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .section-sub {
+      font-size: 17px;
+      color: var(--text-2);
+      max-width: 500px;
+      margin: 0 auto;
+      line-height: 1.75;
+      font-weight: 400;
+    }
+    .badge-wrap { margin-bottom: 20px; }
+
+    /* ─────────────────────────────────────────────────────────
+       PROBLEM SECTION
+    ───────────────────────────────────────────────────────── */
+    #problem { background: var(--bg); }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .prob-card {
+      padding: 40px 32px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.6s var(--ease-spring), box-shadow 0.6s var(--ease-butter), border-color 0.4s;
+    }
+    .prob-card::after {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,58,237,0.08), transparent);
+      pointer-events: none;
+    }
+    .prob-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 24px 60px rgba(109,40,217,0.1);
+      border-color: var(--border-2);
+    }
+    .prob-num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--text-3);
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+    .prob-icon {
+      font-size: 32px;
+      margin-bottom: 18px;
+      display: block;
+    }
+    .prob-h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+    .prob-p { font-size: 14.5px; color: var(--text-2); line-height: 1.72; font-weight: 400; }
+
+    /* ─────────────────────────────────────────────────────────
+       FEATURES
+    ───────────────────────────────────────────────────────── */
+    #features {
+      background: linear-gradient(180deg, var(--bg) 0%, rgba(237,233,254,0.4) 50%, var(--bg) 100%);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .feat-card {
+      padding: 40px 32px 36px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.6s var(--ease-spring), box-shadow 0.6s var(--ease-butter);
+      cursor: default;
+    }
+    /* Aurora hover shimmer */
+    .feat-card::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: conic-gradient(from 0deg, transparent 0deg, rgba(124,58,237,0.06) 60deg, rgba(6,182,212,0.07) 120deg, rgba(45,212,191,0.05) 180deg, transparent 240deg);
+      opacity: 0;
+      transition: opacity 0.8s var(--ease-butter);
+      animation: aurora-spin 8s linear infinite paused;
+    }
+    .feat-card:hover::before {
+      opacity: 1;
+      animation-play-state: running;
+    }
+    @keyframes aurora-spin { to { transform: rotate(360deg); } }
+
+    .feat-card:hover {
+      transform: translateY(-7px);
+      box-shadow: 0 28px 70px rgba(109,40,217,0.12);
+    }
+
+    .feat-icon-wrap {
+      width: 54px; height: 54px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .feat-icon-wrap.purple { background: rgba(124,58,237,0.09); }
+    .feat-icon-wrap.blue   { background: rgba(59,130,246,0.09); }
+    .feat-icon-wrap.cyan   { background: rgba(6,182,212,0.09); }
+
+    .feat-h3 {
+      font-size: 21px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+      position: relative;
+    }
+    .feat-p { font-size: 15px; color: var(--text-2); line-height: 1.72; margin-bottom: 24px; position: relative; font-weight: 400; }
+    .feat-list { list-style: none; display: flex; flex-direction: column; gap: 9px; position: relative; }
+    .feat-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13.5px;
+      color: var(--text-2);
+      font-weight: 500;
+    }
+    .feat-list .tick {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--violet-400), var(--cyan-500));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       HOW IT WORKS
+    ───────────────────────────────────────────────────────── */
+    #how { background: var(--bg-2); }
+
+    .steps-wrap {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+      position: relative;
+    }
+    /* Animated connecting line */
+    .steps-wrap::before {
+      content: '';
+      position: absolute;
+      top: 28px;
+      left: calc(16.67% + 28px);
+      right: calc(16.67% + 28px);
+      height: 1.5px;
+      background: linear-gradient(90deg, var(--violet-400), var(--cyan-500));
+      z-index: 0;
+      border-radius: 2px;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+    .step-num {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--violet-500), var(--cyan-500));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 28px;
+      box-shadow: 0 0 0 6px var(--bg-2), 0 0 0 7px rgba(124,58,237,0.2), 0 8px 24px rgba(124,58,237,0.3);
+      position: relative;
+      animation: step-pulse 3s var(--ease-butter) infinite;
+    }
+    @keyframes step-pulse {
+      0%, 100% { box-shadow: 0 0 0 6px var(--bg-2), 0 0 0 7px rgba(124,58,237,0.2), 0 8px 24px rgba(124,58,237,0.3); }
+      50%       { box-shadow: 0 0 0 6px var(--bg-2), 0 0 0 12px rgba(124,58,237,0.1), 0 8px 32px rgba(124,58,237,0.4); }
+    }
+    .step-num:nth-child(1) { animation-delay: 0s; }
+    .step-num:nth-child(2) { animation-delay: 1s; }
+    .step-num:nth-child(3) { animation-delay: 2s; }
+
+    .step-h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+    .step-p { font-size: 15px; color: var(--text-2); line-height: 1.72; font-weight: 400; }
+
+    /* ─────────────────────────────────────────────────────────
+       TESTIMONIALS
+    ───────────────────────────────────────────────────────── */
+    #testimonials {
+      background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
+    }
+    .testi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    .testi-card {
+      padding: 40px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.6s var(--ease-spring), box-shadow 0.6s var(--ease-butter);
+    }
+    .testi-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 24px 60px rgba(109,40,217,0.1);
+    }
+    .testi-card::before {
+      content: '\201C';
+      position: absolute;
+      top: 16px; right: 24px;
+      font-size: 96px;
+      line-height: 1;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--violet-300), var(--cyan-300));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      opacity: 0.3;
+    }
+    .testi-stars { display: flex; gap: 3px; margin-bottom: 16px; }
+    .testi-stars span { color: var(--amber-400); font-size: 15px; }
+    .testi-text { font-size: 16.5px; color: var(--text-2); line-height: 1.72; margin-bottom: 28px; font-style: italic; font-weight: 400; }
+    .testi-author { display: flex; align-items: center; gap: 14px; }
+    .testi-avi {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .avi-1 { background: linear-gradient(135deg, var(--violet-500), var(--blue-500)); }
+    .avi-2 { background: linear-gradient(135deg, var(--cyan-500), var(--violet-500)); }
+    .testi-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .testi-role { font-size: 13px; color: var(--text-3); font-weight: 400; }
+
+    /* ─────────────────────────────────────────────────────────
+       PRICING
+    ───────────────────────────────────────────────────────── */
+    #pricing { background: var(--bg); }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 72px;
+    }
+    .price-card {
+      padding: 40px 32px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      position: relative;
+      transition: transform 0.6s var(--ease-spring), box-shadow 0.6s var(--ease-butter);
+    }
+    .price-card:hover { transform: translateY(-6px); box-shadow: 0 24px 60px rgba(109,40,217,0.1); }
+
+    .price-card.featured {
+      background: linear-gradient(160deg, rgba(124,58,237,0.05), rgba(6,182,212,0.03));
+      border-color: transparent;
+      box-shadow: 0 0 0 1.5px var(--violet-400), 0 24px 60px rgba(124,58,237,0.15);
+    }
+    .price-card.featured:hover {
+      box-shadow: 0 0 0 1.5px var(--violet-400), 0 32px 80px rgba(124,58,237,0.2);
+    }
+
+    .price-pill {
+      position: absolute;
+      top: -13px; left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--violet-500), var(--cyan-500));
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+
+    .price-tier {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      margin-bottom: 14px;
+    }
+    .price-amount {
+      font-size: 54px;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .price-amount.grad {
+      background: linear-gradient(135deg, var(--violet-600), var(--blue-500));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .price-amount sup { font-size: 22px; vertical-align: top; margin-top: 12px; }
+    .price-period { font-size: 13px; color: var(--text-3); margin-bottom: 26px; font-weight: 400; }
+    .price-desc { font-size: 14.5px; color: var(--text-2); line-height: 1.65; margin-bottom: 26px; padding-bottom: 26px; border-bottom: 1px solid var(--border); font-weight: 400; }
+    .price-feats { list-style: none; display: flex; flex-direction: column; gap: 11px; margin-bottom: 32px; }
+    .price-feats li { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text-2); font-weight: 500; }
+    .price-feats .ck { width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(135deg, var(--violet-400), var(--cyan-500)); display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff; flex-shrink: 0; }
+    .price-feats .off { color: var(--text-3); }
+    .price-feats .off-ck { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid rgba(124,58,237,0.15); flex-shrink: 0; }
+
+    /* ─────────────────────────────────────────────────────────
+       CTA SECTION
+    ───────────────────────────────────────────────────────── */
+    #cta {
+      padding: 140px 0;
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
+    #cta .blob-cta {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+    #cta .bc-1 {
+      width: 600px; height: 500px;
+      background: radial-gradient(circle, rgba(124,58,237,0.22), transparent);
+      top: -150px; left: -100px;
+      animation: morph-1 20s var(--ease-butter) infinite;
+    }
+    #cta .bc-2 {
+      width: 500px; height: 400px;
+      background: radial-gradient(circle, rgba(6,182,212,0.18), transparent);
+      bottom: -120px; right: -80px;
+      animation: morph-2 16s var(--ease-butter) infinite;
+    }
+    #cta .container { position: relative; z-index: 1; }
+
+    .cta-h2 {
+      font-size: clamp(40px, 5vw, 64px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+    .cta-h2 .grad {
+      background: linear-gradient(135deg, var(--violet-500), var(--cyan-500));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .cta-sub { font-size: 18px; color: var(--text-2); margin-bottom: 48px; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.75; font-weight: 400; }
+    .cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .cta-note { margin-top: 20px; font-size: 13px; color: var(--text-3); font-family: var(--font-mono); letter-spacing: 0.05em; }
+
+    /* ─────────────────────────────────────────────────────────
+       FOOTER
+    ───────────────────────────────────────────────────────── */
+    footer {
+      background: var(--text);
+      padding: 60px 0 32px;
+      color: rgba(255,255,255,0.7);
+    }
+    .footer-inner {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 60px;
+      margin-bottom: 52px;
+    }
+    .footer-brand .nav-logo { color: #fff; margin-bottom: 14px; }
+    .footer-brand p { font-size: 14px; line-height: 1.7; max-width: 260px; font-weight: 400; }
+    .footer-col h4 {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 18px;
+    }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-col ul li a { font-size: 14px; color: rgba(255,255,255,0.55); transition: color 0.3s; font-weight: 400; }
+    .footer-col ul li a:hover { color: #fff; }
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 26px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-copy { font-size: 13px; font-family: var(--font-mono); color: rgba(255,255,255,0.35); }
+    .footer-nz { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); }
+
+    /* ─────────────────────────────────────────────────────────
+       SCROLL REVEAL
+    ───────────────────────────────────────────────────────── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out);
+    }
+    .reveal.up {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* stagger children */
+    .stagger > * {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out);
+    }
+    .stagger.up > *:nth-child(1) { opacity:1; transform:none; transition-delay: 0.05s; }
+    .stagger.up > *:nth-child(2) { opacity:1; transform:none; transition-delay: 0.16s; }
+    .stagger.up > *:nth-child(3) { opacity:1; transform:none; transition-delay: 0.27s; }
+    .stagger.up > *:nth-child(4) { opacity:1; transform:none; transition-delay: 0.38s; }
+
+    /* ─────────────────────────────────────────────────────────
+       RESPONSIVE
+    ───────────────────────────────────────────────────────── */
+    @media (max-width: 920px) {
+      nav { top: 10px; width: calc(100% - 24px); border-radius: 16px; }
+      .hero-inner { grid-template-columns: 1fr; }
+      .hero-visual { display: none; }
+      .problem-grid { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: 1fr; }
+      .steps-wrap { grid-template-columns: 1fr; gap: 32px; }
+      .steps-wrap::before { display: none; }
+      .step { align-items: flex-start; text-align: left; }
+      .testi-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .footer-inner { grid-template-columns: 1fr 1fr; gap: 40px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- ════════════════════════════════════ NAV ══════════════════════ -->
+<nav id="main-nav">
+  <a href="#" class="nav-logo">
+    <svg class="logo-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="9" fill="url(#lg)"/>
+      <rect x="4" y="8" width="24" height="5" rx="2" fill="white" opacity="0.95"/>
+      <rect x="12" y="13" width="8" height="11" rx="2" fill="white" opacity="0.95"/>
+      <rect x="4" y="17" width="8" height="1.2" rx="0.6" fill="white" opacity="0.35"/>
+      <rect x="20" y="17" width="8" height="1.2" rx="0.6" fill="white" opacity="0.35"/>
+      <rect x="4" y="20" width="8" height="1.2" rx="0.6" fill="white" opacity="0.18"/>
+      <rect x="20" y="20" width="8" height="1.2" rx="0.6" fill="white" opacity="0.18"/>
+      <defs>
+        <linearGradient id="lg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#7C3AED"/>
+          <stop offset="1" stop-color="#06B6D4"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    Tr<span>enn</span>en
+  </a>
+
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how">How it Works</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#testimonials">Reviews</a></li>
+  </ul>
+
+  <div class="nav-actions">
+    <a href="#pricing" class="btn btn-ghost">View Pricing</a>
+    <a href="#cta" class="btn btn-primary">Book a Demo</a>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════ HERO ═════════════════════ -->
+<section id="hero">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <div class="container">
+    <div class="hero-inner">
+
+      <!-- Left: Content -->
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge"><span class="badge-dot"></span>3D Print Quoting Software</span>
+        </div>
+
+        <h1 class="hero-h1" id="hero-h1">
+          Quote Every Job.<br>
+          <span class="grad">Win Every Deal.</span>
+        </h1>
+
+        <p class="hero-sub">
+          Trennen gives your 3D printing business instant, accurate quotes your customers trust — so you spend less time calculating and more time printing.
+        </p>
+
+        <div class="hero-actions">
+          <a href="#cta" class="btn btn-primary btn-lg" data-magnetic>
+            Start Free Trial
+            <svg viewBox="0 0 17 17" fill="none"><path d="M3 8.5h11M9 4l5 4.5-5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#how" class="btn btn-ghost btn-lg">See How It Works</a>
+        </div>
+
+        <div class="hero-trust">
+          <div class="trust-avatars">
+            <span>JM</span><span>SR</span><span>TK</span>
+          </div>
+          <div class="trust-text">
+            <strong>500+ businesses</strong>
+            already quoting with Trennen
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Glass Mockup -->
+      <div class="hero-visual">
+        <div class="mockup-wrap">
+          <div class="pill pill-1"><span class="pill-dot green"></span> Quote generated in 2.1s</div>
+          <div class="pill pill-2"><span class="pill-dot purple"></span> Sent to client</div>
+
+          <div class="mockup">
+            <div class="mockup-top">
+              <div class="mockup-dots"><span></span><span></span><span></span></div>
+              <span class="mockup-window-title">trennen.co.nz — Quote Builder</span>
+              <span class="mockup-chip">Ready</span>
+            </div>
+
+            <div class="mockup-job">Custom Bracket — PLA, 4 units</div>
+
+            <div class="m-row">
+              <span class="m-label">Material cost</span>
+              <span class="m-val">$14.80</span>
+            </div>
+            <div class="m-row">
+              <span class="m-label">Print time (6.2 hrs)</span>
+              <span class="m-val">$48.00</span>
+            </div>
+            <div class="m-row">
+              <span class="m-label">Post-processing</span>
+              <span class="m-val">$12.00</span>
+            </div>
+            <div class="m-row">
+              <span class="m-label">Margin (32%)</span>
+              <span class="m-val positive">+$23.62</span>
+            </div>
+
+            <div class="mockup-total">
+              <span class="m-total-label">Total Quote</span>
+              <span class="m-total-val">$98.42</span>
+            </div>
+            <button class="mockup-send">Send Quote to Client →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ STATS MARQUEE ════════════ -->
+<div id="stats">
+  <div class="marquee-track" id="marquee">
+    <!-- first set -->
+    <div class="marquee-item"><span>500+</span> Businesses Using Trennen</div>
+    <div class="marquee-item"><span>40,000+</span> Quotes Generated</div>
+    <div class="marquee-item"><span>3hrs</span> Saved Per Week</div>
+    <div class="marquee-item"><span>98%</span> Quote Accuracy</div>
+    <div class="marquee-item"><span>14-Day</span> Free Trial</div>
+    <div class="marquee-item"><span>NZ</span> Owned &amp; Operated</div>
+    <div class="marquee-item"><span>$0</span> To Get Started</div>
+    <div class="marquee-item"><span>2 min</span> Average Quote Time</div>
+    <!-- duplicate set for seamless loop -->
+    <div class="marquee-item"><span>500+</span> Businesses Using Trennen</div>
+    <div class="marquee-item"><span>40,000+</span> Quotes Generated</div>
+    <div class="marquee-item"><span>3hrs</span> Saved Per Week</div>
+    <div class="marquee-item"><span>98%</span> Quote Accuracy</div>
+    <div class="marquee-item"><span>14-Day</span> Free Trial</div>
+    <div class="marquee-item"><span>NZ</span> Owned &amp; Operated</div>
+    <div class="marquee-item"><span>$0</span> To Get Started</div>
+    <div class="marquee-item"><span>2 min</span> Average Quote Time</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ PROBLEM ══════════════════ -->
+<section id="problem" class="section-pad">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="badge-wrap"><span class="badge"><span class="badge-dot"></span>The Problem</span></div>
+      <h2 class="section-h2">Manual quoting is <span class="grad">killing your margins</span></h2>
+      <p class="section-sub">Most 3D printing businesses still use spreadsheets or gut-feel for pricing. That's costing you money and customers.</p>
+    </div>
+    <div class="problem-grid stagger">
+      <div class="prob-card">
+        <div class="prob-num">01 / Problem</div>
+        <span class="prob-icon">⏱️</span>
+        <h3 class="prob-h3">Hours Lost to Calculation</h3>
+        <p class="prob-p">Manually working out material costs, labour rates, and margins for every job is slow, inconsistent, and prone to error. A missed decimal costs you real money.</p>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">02 / Problem</div>
+        <span class="prob-icon">💸</span>
+        <h3 class="prob-h3">Underpricing &amp; Lost Profit</h3>
+        <p class="prob-p">Without a system, you're likely undercharging. Forgetting post-processing time, support removal, or electricity costs eats directly into your profit margins.</p>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">03 / Problem</div>
+        <span class="prob-icon">🤝</span>
+        <h3 class="prob-h3">Slow Responses Lose Deals</h3>
+        <p class="prob-p">Customers expect quotes fast. If you take 2 days to respond, they've already gone to a competitor. Speed is the competitive edge you're missing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ FEATURES ═════════════════ -->
+<section id="features" class="section-pad">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="badge-wrap"><span class="badge"><span class="badge-dot"></span>Features</span></div>
+      <h2 class="section-h2">Everything to <span class="grad">quote with confidence</span></h2>
+      <p class="section-sub">Purpose-built for 3D printing businesses. Not a generic tool you'll spend weeks configuring.</p>
+    </div>
+    <div class="features-grid stagger">
+      <div class="feat-card">
+        <div class="feat-icon-wrap purple">🎯</div>
+        <h3 class="feat-h3">Instant Material Pricing</h3>
+        <p class="feat-p">Set your material costs per gram and Trennen automatically calculates every job based on your printer's actual consumption data.</p>
+        <ul class="feat-list">
+          <li><span class="tick">✓</span> PLA, ABS, PETG, TPU, Nylon &amp; more</li>
+          <li><span class="tick">✓</span> Cost per gram + waste factor built in</li>
+          <li><span class="tick">✓</span> Supports multi-material jobs</li>
+          <li><span class="tick">✓</span> Update prices globally in one click</li>
+        </ul>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon-wrap blue">⚙️</div>
+        <h3 class="feat-h3">Time &amp; Labour Calculator</h3>
+        <p class="feat-p">Factor in print time, post-processing, support removal, painting, and any other services. Never forget a cost again.</p>
+        <ul class="feat-list">
+          <li><span class="tick">✓</span> Hourly machine rate configuration</li>
+          <li><span class="tick">✓</span> Labour &amp; finishing time tracking</li>
+          <li><span class="tick">✓</span> Electricity cost modelling</li>
+          <li><span class="tick">✓</span> Custom service line items</li>
+        </ul>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon-wrap cyan">📄</div>
+        <h3 class="feat-h3">Client-Ready Quotes</h3>
+        <p class="feat-p">Send professional, branded quote PDFs your customers love. One click — it lands in their inbox looking polished and trustworthy.</p>
+        <ul class="feat-list">
+          <li><span class="tick">✓</span> Branded PDF quote templates</li>
+          <li><span class="tick">✓</span> Automated email delivery</li>
+          <li><span class="tick">✓</span> Quote accept / decline tracking</li>
+          <li><span class="tick">✓</span> Follow-up reminders</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ HOW IT WORKS ════════════ -->
+<section id="how" class="section-pad">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="badge-wrap"><span class="badge"><span class="badge-dot"></span>How It Works</span></div>
+      <h2 class="section-h2">Up and running in <span class="grad">under 10 minutes</span></h2>
+      <p class="section-sub">No technical knowledge required. Trennen is designed for people who make things — not software engineers.</p>
+    </div>
+    <div class="steps-wrap stagger">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3 class="step-h3">Set Up Your Rates</h3>
+        <p class="step-p">Enter your material costs, machine hourly rate, labour cost, and any finishing services. Takes under 10 minutes — no spreadsheet wizardry required.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3 class="step-h3">Enter the Job Details</h3>
+        <p class="step-p">Paste in the print time, select the material and quantity, tick any extras — Trennen does the maths instantly, including your target margin.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3 class="step-h3">Send &amp; Win the Job</h3>
+        <p class="step-p">Hit send. Your client receives a polished, professional quote. Track when they open it and accept — then get printing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ TESTIMONIALS ════════════ -->
+<section id="testimonials" class="section-pad">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="badge-wrap"><span class="badge"><span class="badge-dot"></span>Reviews</span></div>
+      <h2 class="section-h2">What 3D printing <span class="grad">businesses say</span></h2>
+    </div>
+    <div class="testi-grid stagger">
+      <div class="testi-card">
+        <div class="testi-stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+        <p class="testi-text">"Before Trennen, quoting a complex job would take me 45 minutes. Now it's literally two minutes. I've won more jobs since switching because I respond to enquiries so much faster."</p>
+        <div class="testi-author">
+          <div class="testi-avi avi-1">JM</div>
+          <div>
+            <div class="testi-name">James M.</div>
+            <div class="testi-role">Owner, PrintForge Auckland</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+        <p class="testi-text">"I was undercharging by about 20% before I used Trennen. The material waste factor and electricity cost fields alone paid for the subscription in the first week."</p>
+        <div class="testi-author">
+          <div class="testi-avi avi-2">SR</div>
+          <div>
+            <div class="testi-name">Sarah R.</div>
+            <div class="testi-role">Founder, LayerUp Christchurch</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ PRICING ══════════════════ -->
+<section id="pricing" class="section-pad">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="badge-wrap"><span class="badge"><span class="badge-dot"></span>Pricing</span></div>
+      <h2 class="section-h2">Transparent pricing. <span class="grad">No surprises.</span></h2>
+      <p class="section-sub">Start free. Upgrade when you're ready. Cancel anytime — no lock-in contracts.</p>
+    </div>
+    <div class="pricing-grid stagger">
+
+      <div class="price-card">
+        <div class="price-tier">Starter</div>
+        <div class="price-amount"><sup>$</sup>0</div>
+        <div class="price-period">Free forever</div>
+        <div class="price-desc">Perfect for sole operators just getting started with professional quoting.</div>
+        <ul class="price-feats">
+          <li><span class="ck">✓</span> Up to 10 quotes/month</li>
+          <li><span class="ck">✓</span> Material &amp; time calculator</li>
+          <li><span class="ck">✓</span> PDF quote export</li>
+          <li><span class="price-feats off-ck"></span> <span class="off">Branded quotes</span></li>
+          <li><span class="price-feats off-ck"></span> <span class="off">Email delivery</span></li>
+          <li><span class="price-feats off-ck"></span> <span class="off">Quote tracking</span></li>
+        </ul>
+        <a href="#cta" class="btn btn-ghost" style="width:100%; justify-content:center;">Get Started Free</a>
+      </div>
+
+      <div class="price-card featured">
+        <div class="price-pill">Most Popular</div>
+        <div class="price-tier">Pro</div>
+        <div class="price-amount grad"><sup>$</sup>49</div>
+        <div class="price-period">per month, billed monthly</div>
+        <div class="price-desc">For growing 3D printing businesses that want to win more jobs and look more professional.</div>
+        <ul class="price-feats">
+          <li><span class="ck">✓</span> Unlimited quotes</li>
+          <li><span class="ck">✓</span> Material &amp; time calculator</li>
+          <li><span class="ck">✓</span> Branded PDF quotes</li>
+          <li><span class="ck">✓</span> Email delivery</li>
+          <li><span class="ck">✓</span> Quote open &amp; accept tracking</li>
+          <li><span class="ck">✓</span> Follow-up reminders</li>
+        </ul>
+        <a href="#cta" class="btn btn-primary" style="width:100%; justify-content:center;">Start 14-Day Free Trial</a>
+      </div>
+
+      <div class="price-card">
+        <div class="price-tier">Studio</div>
+        <div class="price-amount"><sup>$</sup>129</div>
+        <div class="price-period">per month, billed monthly</div>
+        <div class="price-desc">For multi-operator studios and print farms that need team access and advanced reporting.</div>
+        <ul class="price-feats">
+          <li><span class="ck">✓</span> Everything in Pro</li>
+          <li><span class="ck">✓</span> Up to 5 team members</li>
+          <li><span class="ck">✓</span> Customer CRM</li>
+          <li><span class="ck">✓</span> Revenue reporting</li>
+          <li><span class="ck">✓</span> Priority support</li>
+          <li><span class="ck">✓</span> Custom domain quotes</li>
+        </ul>
+        <a href="#cta" class="btn btn-ghost" style="width:100%; justify-content:center;">Talk to Sales</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ CTA ══════════════════════ -->
+<section id="cta">
+  <div class="blob-cta bc-1"></div>
+  <div class="blob-cta bc-2"></div>
+  <div class="container">
+    <div class="reveal">
+      <div class="badge-wrap" style="display:flex;justify-content:center;"><span class="badge"><span class="badge-dot"></span>Get Started Today</span></div>
+      <h2 class="cta-h2">Your next quote could be<br><span class="grad">your best-ever margin.</span></h2>
+      <p class="cta-sub">Join 500+ 3D printing businesses across New Zealand using Trennen to quote faster, charge more, and win more jobs.</p>
+      <div class="cta-actions">
+        <a href="https://trennen.co.nz/signup" class="btn btn-primary btn-lg" data-magnetic>
+          Start Free Trial — No Card Needed
+          <svg viewBox="0 0 17 17" fill="none"><path d="M3 8.5h11M9 4l5 4.5-5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="mailto:hello@trennen.co.nz" class="btn btn-ghost btn-lg">Book a Demo</a>
+      </div>
+      <p class="cta-note">✦ No credit card required &nbsp;·&nbsp; 14-day free trial &nbsp;·&nbsp; Cancel anytime</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ FOOTER ═══════════════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="#" class="nav-logo">
+          <svg class="logo-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="9" fill="url(#lg2)"/>
+            <rect x="4" y="8" width="24" height="5" rx="2" fill="white" opacity="0.95"/>
+            <rect x="12" y="13" width="8" height="11" rx="2" fill="white" opacity="0.95"/>
+            <rect x="4" y="17" width="8" height="1.2" rx="0.6" fill="white" opacity="0.35"/>
+            <rect x="20" y="17" width="8" height="1.2" rx="0.6" fill="white" opacity="0.35"/>
+            <defs>
+              <linearGradient id="lg2" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#7C3AED"/><stop offset="1" stop-color="#06B6D4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          Trennen
+        </a>
+        <p>Quoting software built for New Zealand's 3D printing industry. Quote faster. Charge fairly. Win more.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#how">How It Works</a></li>
+          <li><a href="#">Changelog</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Contact</a></li>
+          <li><a href="#">Careers</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Use</a></li>
+          <li><a href="#">Security</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2026 Trennen Limited. All rights reserved.</span>
+      <div class="footer-nz"><span>🇳🇿</span><span>Proudly made in New Zealand</span></div>
+    </div>
+  </div>
+</footer>
+
+<!-- ════════════════════════════════════ SCRIPTS ══════════════════ -->
+<script>
+  /* ── SCROLL PROGRESS ── */
+  const bar = document.getElementById('progress-bar');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (window.scrollY / (h.scrollHeight - h.clientHeight)) * 100;
+    bar.style.width = pct + '%';
+  }, { passive: true });
+
+  /* ── BUTTER SCROLL REVEAL ── */
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('up');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal, .stagger').forEach(el => io.observe(el));
+
+  /* ── NAV SCROLL STYLE ── */
+  const nav = document.getElementById('main-nav');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 80) {
+      nav.style.boxShadow = '0 8px 48px rgba(109,40,217,0.12)';
+    } else {
+      nav.style.boxShadow = '0 4px 32px rgba(109,40,217,0.07)';
+    }
+  }, { passive: true });
+
+  /* ── MAGNETIC BUTTONS ── */
+  document.querySelectorAll('[data-magnetic]').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+      const rect = btn.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) * 0.22;
+      const dy = (e.clientY - cy) * 0.22;
+      btn.style.transform = `translate(${dx}px, ${dy}px) translateY(-3px) scale(1.02)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = '';
+    });
+  });
+
+  /* ── HERO HEADING WORD REVEAL ── */
+  const h1 = document.getElementById('hero-h1');
+  if (h1) {
+    h1.style.opacity = '0';
+    h1.style.transform = 'translateY(20px)';
+    setTimeout(() => {
+      h1.style.transition = 'opacity 1.1s cubic-bezier(0.16,1,0.3,1), transform 1.1s cubic-bezier(0.16,1,0.3,1)';
+      h1.style.opacity = '1';
+      h1.style.transform = 'none';
+    }, 200);
+  }
+
+  /* ── MOCKUP SEND BUTTON RIPPLE ── */
+  document.querySelector('.mockup-send')?.addEventListener('click', function(e) {
+    this.textContent = '✓ Quote Sent!';
+    this.style.background = 'linear-gradient(135deg,#22C55E,#14B8A6)';
+    setTimeout(() => {
+      this.textContent = 'Send Quote to Client →';
+      this.style.background = '';
+    }, 2200);
+  });
+
+  /* ── SMOOTH PARALLAX BLOBS (very gentle) ── */
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const sy = window.scrollY;
+        const b1 = document.querySelector('.blob-1');
+        const b2 = document.querySelector('.blob-2');
+        const b3 = document.querySelector('.blob-3');
+        if (b1) b1.style.transform = `translateY(${sy * 0.12}px)`;
+        if (b2) b2.style.transform = `translateY(${-sy * 0.08}px)`;
+        if (b3) b3.style.transform = `translateY(${sy * 0.05}px)`;
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+
+  /* ── CARD TILT EFFECT ── */
+  document.querySelectorAll('.feat-card, .testi-card, .price-card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const rect = card.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width - 0.5) * 6;
+      const y = ((e.clientY - rect.top) / rect.height - 0.5) * -6;
+      card.style.transition = 'transform 0.1s ease';
+      card.style.transform = `perspective(800px) rotateX(${y}deg) rotateY(${x}deg) translateY(-6px)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transition = 'transform 0.7s cubic-bezier(0.34,1.38,0.64,1)';
+      card.style.transform = '';
+    });
+  });
+</script>
+
+</body>
+</html>
