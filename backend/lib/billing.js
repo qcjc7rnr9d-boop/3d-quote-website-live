@@ -8,6 +8,8 @@ export const BILLING_STATUSES = new Set([
 ]);
 
 export const BILLING_ACTIVE_STATUSES = new Set(['active', 'trialing']);
+export const FREE_BILLING_PLANS = new Set(['starter']);
+export const PAID_BILLING_PLANS = new Set(['pro']);
 
 export const BILLING_STATUS_LABELS = {
   pending_subscription: 'Pending subscription',
@@ -19,7 +21,6 @@ export const BILLING_STATUS_LABELS = {
 };
 
 const PLAN_PRICE_ENV = {
-  starter: 'STRIPE_BILLING_STARTER_PRICE_ID',
   pro: 'STRIPE_BILLING_PRO_PRICE_ID',
 };
 
@@ -45,25 +46,35 @@ export function normaliseBillingStatus(status) {
   return 'pending_subscription';
 }
 
-export function billingStatusIsActive(status) {
+export function isFreeBillingPlan(plan) {
+  return FREE_BILLING_PLANS.has(String(plan || 'starter').trim().toLowerCase());
+}
+
+export function isPaidBillingPlan(plan) {
+  return PAID_BILLING_PLANS.has(String(plan || '').trim().toLowerCase());
+}
+
+export function billingStatusIsActive(status, plan = null) {
+  if (plan && isFreeBillingPlan(plan)) return true;
   return BILLING_ACTIVE_STATUSES.has(normaliseBillingStatus(status));
 }
 
 export function getBillingPriceIdForPlan(plan, env = process.env) {
-  const key = PLAN_PRICE_ENV[String(plan || 'starter').toLowerCase()] || PLAN_PRICE_ENV.starter;
+  if (isFreeBillingPlan(plan)) return '';
+  const key = PLAN_PRICE_ENV[String(plan || 'starter').toLowerCase()];
   return env[key] || '';
 }
 
 export function getBillingPriceSetupStatus(env = process.env) {
   return {
-    starter: !!env.STRIPE_BILLING_STARTER_PRICE_ID,
+    starter: true,
     pro: !!env.STRIPE_BILLING_PRO_PRICE_ID,
   };
 }
 
 export function liveOrderReadiness(shop = {}, platformConfig = {}) {
   const billingStatus = normaliseBillingStatus(shop.billing_status);
-  const billingActive = billingStatusIsActive(billingStatus);
+  const billingActive = billingStatusIsActive(billingStatus, shop.plan);
   const connectedAccountId = shop.stripe_account_id || null;
   const chargesEnabled = !!shop.stripe_charges_enabled;
   const payoutsEnabled = !!shop.stripe_payouts_enabled;
@@ -111,6 +122,11 @@ export async function createBusinessBillingSession({
   if (!stripe) throw new Error('Stripe client is required');
   if (!shop?.id) throw new Error('Shop is required');
   if (!baseUrl) throw new Error('Base URL is required');
+  if (isFreeBillingPlan(shop.plan)) {
+    const err = new Error('Starter is free; no monthly billing checkout is required.');
+    err.code = 'FREE_PLAN_NO_BILLING_REQUIRED';
+    throw err;
+  }
   if (!priceId) {
     const err = new Error(`No Stripe Billing price ID is configured for the ${shop.plan || 'starter'} plan.`);
     err.code = 'BILLING_PRICE_NOT_CONFIGURED';

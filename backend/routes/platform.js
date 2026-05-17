@@ -14,6 +14,7 @@ import {
   billingStatusIsActive,
   createBusinessBillingSession,
   getBillingPriceIdForPlan,
+  isFreeBillingPlan,
 } from '../lib/billing.js';
 import { ensurePlatformAuditTable, logPlatformAudit } from '../lib/platform-audit.js';
 import {
@@ -124,6 +125,21 @@ function parseCustomerTarget(raw) {
 }
 
 async function createBillingActivationForShop(shop) {
+  if (isFreeBillingPlan(shop.plan)) {
+    db.prepare(`
+      UPDATE shops
+      SET billing_status = 'active',
+          billing_updated_at = datetime('now'),
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).run(shop.id);
+    return {
+      billing_checkout_url: null,
+      billing_setup_status: 'free_plan',
+      billing_setup_error: 'Starter is free; no monthly billing link is required.',
+    };
+  }
+
   const stripe = getPlatformStripeClient();
   if (!stripe) {
     return {
@@ -793,11 +809,12 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    const selectedPlan = plan || 'starter';
+    const selectedPlan = String(plan || 'starter').toLowerCase() === 'pro' ? 'pro' : 'starter';
+    const initialBillingStatus = isFreeBillingPlan(selectedPlan) ? 'active' : 'pending_subscription';
     const result = db.prepare(`
       INSERT INTO shops (name, slug, email, password_hash, plan, is_temp_password, billing_status)
-      VALUES (?, ?, ?, ?, ?, 1, 'pending_subscription')
-    `).run(name, slug.toLowerCase(), email.toLowerCase(), hash, selectedPlan);
+      VALUES (?, ?, ?, ?, ?, 1, ?)
+    `).run(name, slug.toLowerCase(), email.toLowerCase(), hash, selectedPlan, initialBillingStatus);
 
     const shopId = result.lastInsertRowid;
 
@@ -828,7 +845,7 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
     res.status(201).json({
       ...publicShop,
       ...billing,
-      billing_active: billingStatusIsActive(publicShop.billing_status),
+      billing_active: billingStatusIsActive(publicShop.billing_status, publicShop.plan),
     });
   } catch (err) {
     if (err.message && err.message.includes('UNIQUE')) {
@@ -846,9 +863,10 @@ router.post('/shops/:id/billing-session', requirePlatformAuth, async (req, res) 
 
     const billing = await createBillingActivationForShop(shop);
     if (!billing.billing_checkout_url) {
+      const freePlan = billing.billing_setup_status === 'free_plan';
       return res.status(400).json({
         error: billing.billing_setup_error || 'Billing link could not be created.',
-        code: billing.billing_setup_status,
+        code: freePlan ? 'FREE_PLAN_NO_BILLING_REQUIRED' : billing.billing_setup_status,
         ...billing,
       });
     }
@@ -882,17 +900,18 @@ router.patch('/shops/:id', requirePlatformAuth, (req, res) => {
       newPlan = suspended ? 'suspended' : 'starter';
     }
 
+    const nextBillingStatus = newPlan === 'suspended'
+      ? 'suspended'
+      : (isFreeBillingPlan(newPlan) ? 'active' : (billingStatusIsActive(shop.billing_status, shop.plan) && shop.billing_subscription_id ? shop.billing_status : 'pending_subscription'));
+
     db.prepare(`
       UPDATE shops
       SET plan = ?,
-          billing_status = CASE
-            WHEN ? = 'suspended' THEN 'suspended'
-            WHEN billing_status = 'suspended' THEN 'pending_subscription'
-            ELSE billing_status
-          END,
+          billing_status = ?,
+          billing_updated_at = datetime('now'),
           updated_at = datetime('now')
       WHERE id = ?
-    `).run(newPlan, newPlan, req.params.id);
+    `).run(newPlan, nextBillingStatus, req.params.id);
     logPlatformAudit(req, {
       action: newPlan === 'suspended' ? 'suspend_shop' : 'restore_shop',
       targetType: 'shop',

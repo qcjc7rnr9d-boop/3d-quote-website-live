@@ -1,5 +1,6 @@
 import { parseInfillTiers } from './infill-tiers.js';
 import { parseMaterialRow, safeJson } from './material-config.js';
+import { PLATFORM_FEE_PERCENT } from '../config.js';
 
 export class PricingError extends Error {
   constructor(message, status = 400, code = 'PRICING_ERROR', quote = null) {
@@ -36,6 +37,42 @@ export function fromCents(cents) {
 
 function money(value) {
   return fromCents(toCents(value));
+}
+
+function normalisePlatformFeePercent(value) {
+  const n = toNumber(value, PLATFORM_FEE_PERCENT);
+  if (!Number.isFinite(n) || n < 0) return PLATFORM_FEE_PERCENT;
+  return Math.min(95, n);
+}
+
+function platformFeePercentForDb(db) {
+  try {
+    const row = db.prepare('SELECT platform_fee_percent FROM platform_settings WHERE id = 1').get();
+    return normalisePlatformFeePercent(row?.platform_fee_percent);
+  } catch {
+    return PLATFORM_FEE_PERCENT;
+  }
+}
+
+function applyIncludedPlatformFee(quote, feePercent) {
+  const percent = normalisePlatformFeePercent(feePercent);
+  const sellerTotalCents = quote.totalCents;
+  const customerTotalCents = percent > 0
+    ? Math.ceil(sellerTotalCents / (1 - percent / 100))
+    : sellerTotalCents;
+  const platformFeeCents = Math.max(0, customerTotalCents - sellerTotalCents);
+
+  return {
+    ...quote,
+    totalCents: customerTotalCents,
+    lineItems: {
+      ...quote.lineItems,
+      sellerNetTotal: fromCents(sellerTotalCents),
+      platformFeePercent: percent,
+      platformFeeIncluded: fromCents(platformFeeCents),
+      total: fromCents(customerTotalCents),
+    },
+  };
 }
 
 function normaliseTaxRate(value) {
@@ -539,7 +576,10 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
 
 export function calculateQuoteForShop(db, shop, input = {}) {
   const parts = loadPricingInputs(db, shop, input);
-  return calculateQuote({ shop, input, ...parts });
+  return applyIncludedPlatformFee(
+    calculateQuote({ shop, input, ...parts }),
+    platformFeePercentForDb(db),
+  );
 }
 
 export function calculateQuoteForShopSlug(db, slug, input = {}) {

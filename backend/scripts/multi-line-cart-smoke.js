@@ -19,7 +19,9 @@ try {
   assert(checkoutJs.includes('orderData: cart'), 'checkout must submit the full cart to Stripe');
   assert(quoteHtml.includes('cart.items.push(cartItem)'), 'quote page must append cart items instead of replacing cart');
   assert(quoteHtml.includes("localStorage.removeItem('form_file')"), 'add-another flow must clear active form_file only');
-  assert(!quoteHtml.includes("localStorage.removeItem('cart')"), 'add-another flow must not clear cart');
+  const addAnotherHandler = quoteHtml.match(/\$\('addAnotherBtn'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*{([\s\S]*?)\n\s*}\);/)?.[1] || '';
+  assert(addAnotherHandler, 'quote page must define add-another click handler');
+  assert(!addAnotherHandler.includes("localStorage.removeItem('cart')"), 'add-another flow must not clear cart');
   assert(quoteHtml.includes('quote.html?shop='), 'add-another flow must return to the quote upload prompt');
   assert(quoteHtml.includes('&newGroup=1&promptUpload=1'), 'add-another flow must preserve prompt params');
 

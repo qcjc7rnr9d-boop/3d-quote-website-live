@@ -656,6 +656,7 @@
     return badge('Action needed', 'warm');
   }
   function billingBadge(shop) {
+    if (shop.plan === 'starter') return badge('Free', 'sage');
     const status = shop.billing_status || 'pending_subscription';
     if (status === 'active' || status === 'trialing') return badge(status.replace('_', ' '), 'sage');
     if (status === 'pending_subscription') return badge('Pending', 'warm');
@@ -835,7 +836,7 @@
     document.getElementById('platformCardsStatus').innerHTML = data.can_accept_cards ? badge('Enabled', 'sage') : badge('Not ready', 'warm');
     const prices = data.billing_prices_configured || {};
     document.getElementById('platformBillingPriceStatus').innerHTML =
-      prices.starter && prices.pro ? badge('Starter + Pro ready', 'sage') : badge('Needs env price IDs', 'warm');
+      prices.pro ? badge('Starter free / Pro ready', 'sage') : badge('Needs Pro price ID', 'warm');
   }
   async function loadAudit() {
     const data = await api('/api/platform/audit-events?limit=30');
@@ -915,15 +916,18 @@
       const billingWrap = document.getElementById('billingLinkWrap');
       const billingLink = document.getElementById('billingLink');
       const billingNote = document.getElementById('billingLinkNote');
+      const copyBillingBtn = document.getElementById('copyBillingLinkBtn');
       if (data.billing_checkout_url) {
         billingWrap.style.display = '';
         billingLink.style.display = '';
+        copyBillingBtn.style.display = '';
         billingLink.href = data.billing_checkout_url;
-        billingNote.textContent = ' Send this to the owner to activate their monthly subscription.';
+        billingNote.textContent = ' Send this to the owner to activate their $30/month Pro subscription.';
       } else {
         billingWrap.style.display = '';
         billingLink.style.display = 'none';
-        billingNote.textContent = ` ${data.billing_setup_error || 'Billing activation link is not ready yet.'}`;
+        copyBillingBtn.style.display = 'none';
+        billingNote.textContent = ` ${data.billing_setup_error || 'Starter is free; no monthly billing link is required.'}`;
       }
       document.getElementById('createShopForm').reset();
       showBox('createSuccess');
@@ -945,7 +949,7 @@
       }
       await loadShops();
     } catch (err) {
-      alert(err.message || 'Could not create billing activation link.');
+      alert(err.message || 'Could not create billing activation link. Starter stores do not need one.');
     }
   }
 
