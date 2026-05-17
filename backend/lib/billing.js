@@ -8,8 +8,8 @@ export const BILLING_STATUSES = new Set([
 ]);
 
 export const BILLING_ACTIVE_STATUSES = new Set(['active', 'trialing']);
-export const FREE_BILLING_PLANS = new Set(['starter']);
-export const PAID_BILLING_PLANS = new Set(['pro']);
+export const FREE_BILLING_PLANS = new Set(['starter', 'pro']);
+export const PAID_BILLING_PLANS = new Set();
 
 export const BILLING_STATUS_LABELS = {
   pending_subscription: 'Pending subscription',
@@ -18,10 +18,6 @@ export const BILLING_STATUS_LABELS = {
   past_due: 'Past due',
   canceled: 'Canceled',
   suspended: 'Suspended',
-};
-
-const PLAN_PRICE_ENV = {
-  pro: 'STRIPE_BILLING_PRO_PRICE_ID',
 };
 
 function timestampToIso(value) {
@@ -55,20 +51,21 @@ export function isPaidBillingPlan(plan) {
 }
 
 export function billingStatusIsActive(status, plan = null) {
+  if (normaliseBillingStatus(status) === 'suspended') return false;
   if (plan && isFreeBillingPlan(plan)) return true;
   return BILLING_ACTIVE_STATUSES.has(normaliseBillingStatus(status));
 }
 
 export function getBillingPriceIdForPlan(plan, env = process.env) {
-  if (isFreeBillingPlan(plan)) return '';
-  const key = PLAN_PRICE_ENV[String(plan || 'starter').toLowerCase()];
-  return env[key] || '';
+  void plan;
+  void env;
+  return '';
 }
 
 export function getBillingPriceSetupStatus(env = process.env) {
+  void env;
   return {
     starter: true,
-    pro: !!env.STRIPE_BILLING_PRO_PRICE_ID,
   };
 }
 
@@ -119,72 +116,13 @@ export async function createBusinessBillingSession({
   priceId = getBillingPriceIdForPlan(shop?.plan),
 }) {
   if (!db) throw new Error('Database is required');
-  if (!stripe) throw new Error('Stripe client is required');
   if (!shop?.id) throw new Error('Shop is required');
   if (!baseUrl) throw new Error('Base URL is required');
-  if (isFreeBillingPlan(shop.plan)) {
-    const err = new Error('Starter is free; no monthly billing checkout is required.');
-    err.code = 'FREE_PLAN_NO_BILLING_REQUIRED';
-    throw err;
-  }
-  if (!priceId) {
-    const err = new Error(`No Stripe Billing price ID is configured for the ${shop.plan || 'starter'} plan.`);
-    err.code = 'BILLING_PRICE_NOT_CONFIGURED';
-    throw err;
-  }
-
-  let customerId = shop.billing_customer_id || '';
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: shop.email,
-      name: shop.name,
-      metadata: {
-        shopId: String(shop.id),
-        shopSlug: shop.slug,
-        plan: shop.plan || 'starter',
-      },
-    });
-    customerId = customer.id;
-  }
-
-  const cleanBase = String(baseUrl).replace(/\/+$/, '');
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    customer: customerId,
-    client_reference_id: String(shop.id),
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${cleanBase}/admin/payments.html?billing=success`,
-    cancel_url: `${cleanBase}/admin/payments.html?billing=cancelled`,
-    metadata: {
-      shopId: String(shop.id),
-      shopSlug: shop.slug,
-      plan: shop.plan || 'starter',
-    },
-    subscription_data: {
-      metadata: {
-        shopId: String(shop.id),
-        shopSlug: shop.slug,
-        plan: shop.plan || 'starter',
-      },
-    },
-  });
-
-  db.prepare(`
-    UPDATE shops
-    SET billing_customer_id = ?,
-        billing_price_id = ?,
-        billing_checkout_session_id = ?,
-        billing_checkout_status = 'created',
-        billing_status = CASE
-          WHEN billing_status IN ('active', 'trialing', 'past_due', 'suspended') THEN billing_status
-          ELSE 'pending_subscription'
-        END,
-        billing_updated_at = datetime('now'),
-        updated_at = datetime('now')
-    WHERE id = ?
-  `).run(customerId, priceId, session.id || null, shop.id);
-
-  return session;
+  void stripe;
+  void priceId;
+  const err = new Error('Starter is free; no monthly billing checkout is required.');
+  err.code = 'FREE_PLAN_NO_BILLING_REQUIRED';
+  throw err;
 }
 
 export function updateShopBillingFromCheckoutSession(db, session = {}) {

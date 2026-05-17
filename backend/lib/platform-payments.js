@@ -75,7 +75,7 @@ export function getMaskedPlatformStripeConfig() {
     platform_fee_percent: effective.feePercent,
     webhook_configured: !!effective.webhookSecret,
     billing_prices_configured: billingPrices,
-    can_create_billing_sessions: !!(effective.secretKey && billingPrices.pro),
+    can_create_billing_sessions: false,
     from_db: effective.fromDb,
   };
 }

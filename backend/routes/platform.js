@@ -7,14 +7,10 @@ import { sendMail, mailerStatus } from '../lib/mailer.js';
 import {
   getMaskedPlatformStripeConfig,
   getEffectivePlatformStripeConfig,
-  getPlatformStripeClient,
   updatePlatformStripeConfig,
 } from '../lib/platform-payments.js';
 import {
   billingStatusIsActive,
-  createBusinessBillingSession,
-  getBillingPriceIdForPlan,
-  isFreeBillingPlan,
 } from '../lib/billing.js';
 import { ensurePlatformAuditTable, logPlatformAudit } from '../lib/platform-audit.js';
 import {
@@ -125,59 +121,21 @@ function parseCustomerTarget(raw) {
 }
 
 async function createBillingActivationForShop(shop) {
-  if (isFreeBillingPlan(shop.plan)) {
-    db.prepare(`
-      UPDATE shops
-      SET billing_status = 'active',
-          billing_updated_at = datetime('now'),
-          updated_at = datetime('now')
-      WHERE id = ?
-    `).run(shop.id);
-    return {
-      billing_checkout_url: null,
-      billing_setup_status: 'free_plan',
-      billing_setup_error: 'Starter is free; no monthly billing link is required.',
-    };
-  }
-
-  const stripe = getPlatformStripeClient();
-  if (!stripe) {
-    return {
-      billing_checkout_url: null,
-      billing_setup_status: 'platform_stripe_not_configured',
-      billing_setup_error: 'Add the platform Stripe secret key before creating billing links.',
-    };
-  }
-
-  const priceId = getBillingPriceIdForPlan(shop.plan);
-  if (!priceId) {
-    return {
-      billing_checkout_url: null,
-      billing_setup_status: 'billing_price_not_configured',
-      billing_setup_error: `Set the Stripe Billing price ID for the ${shop.plan || 'starter'} plan.`,
-    };
-  }
-
-  try {
-    const session = await createBusinessBillingSession({
-      db,
-      stripe,
-      shop,
-      baseUrl: process.env.BASE_URL || 'http://localhost:3000',
-      priceId,
-    });
-    return {
-      billing_checkout_url: session.url,
-      billing_setup_status: 'billing_link_created',
-      billing_setup_error: null,
-    };
-  } catch (err) {
-    return {
-      billing_checkout_url: null,
-      billing_setup_status: err.code || 'billing_link_failed',
-      billing_setup_error: err.message || 'Failed to create billing activation link.',
-    };
-  }
+  db.prepare(`
+    UPDATE shops
+    SET billing_status = CASE
+          WHEN plan = 'suspended' THEN 'suspended'
+          ELSE 'active'
+        END,
+        billing_updated_at = datetime('now'),
+        updated_at = datetime('now')
+    WHERE id = ?
+  `).run(shop.id);
+  return {
+    billing_checkout_url: null,
+    billing_setup_status: 'free_plan',
+    billing_setup_error: 'Starter is free; no monthly billing link is required.',
+  };
 }
 
 // ── POST /api/platform/login ──────────────────────────────────
@@ -357,6 +315,7 @@ router.get('/overview', requirePlatformAuth, (req, res) => {
         SELECT COUNT(*) as c
         FROM shops
         WHERE billing_status IN ('active', 'trialing')
+           OR (plan IN ('starter', 'pro') AND billing_status != 'suspended')
       `).get().c,
     });
   } catch (err) {
@@ -396,7 +355,7 @@ router.get('/shops/:id/overview', requirePlatformAuth, (req, res) => {
       shop: {
         ...shop,
         stripe_ready: !!(shop.stripe_account_id && shop.stripe_charges_enabled && shop.stripe_payouts_enabled && shop.stripe_details_submitted),
-        billing_active: billingStatusIsActive(shop.billing_status),
+        billing_active: billingStatusIsActive(shop.billing_status, shop.plan),
       },
       metrics: {
         ...overview,
@@ -802,15 +761,15 @@ router.put('/payments', requirePlatformAuth, (req, res) => {
 // ── POST /api/platform/shops ──────────────────────────────────
 router.post('/shops', requirePlatformAuth, async (req, res) => {
   try {
-    const { name, slug, email, password, plan } = req.body;
+    const { name, slug, email, password } = req.body;
     if (!name || !slug || !email || !password) {
       return res.status(400).json({ error: 'Name, slug, email and password are required' });
     }
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    const selectedPlan = String(plan || 'starter').toLowerCase() === 'pro' ? 'pro' : 'starter';
-    const initialBillingStatus = isFreeBillingPlan(selectedPlan) ? 'active' : 'pending_subscription';
+    const selectedPlan = 'starter';
+    const initialBillingStatus = 'active';
     const result = db.prepare(`
       INSERT INTO shops (name, slug, email, password_hash, plan, is_temp_password, billing_status)
       VALUES (?, ?, ?, ?, ?, 1, ?)
@@ -889,20 +848,19 @@ router.post('/shops/:id/billing-session', requirePlatformAuth, async (req, res) 
 // ── PATCH /api/platform/shops/:id ────────────────────────────
 router.patch('/shops/:id', requirePlatformAuth, (req, res) => {
   try {
-    const { suspended, plan } = req.body;
+    const { suspended } = req.body;
     const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.params.id);
     if (!shop) {
       return res.status(404).json({ error: 'Shop not found' });
     }
 
-    let newPlan = plan || shop.plan;
-    if (suspended !== undefined) {
-      newPlan = suspended ? 'suspended' : 'starter';
-    }
+    const newPlan = suspended === undefined
+      ? (shop.plan === 'suspended' ? 'suspended' : 'starter')
+      : (suspended ? 'suspended' : 'starter');
 
     const nextBillingStatus = newPlan === 'suspended'
       ? 'suspended'
-      : (isFreeBillingPlan(newPlan) ? 'active' : (billingStatusIsActive(shop.billing_status, shop.plan) && shop.billing_subscription_id ? shop.billing_status : 'pending_subscription'));
+      : 'active';
 
     db.prepare(`
       UPDATE shops

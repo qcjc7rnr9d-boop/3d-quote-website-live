@@ -6,23 +6,22 @@ import { calculateQuoteForShopSlug, toCents } from '../lib/pricing-engine.js';
 import { parseInfillTiers } from '../lib/infill-tiers.js';
 
 delete process.env.STRIPE_BILLING_STARTER_PRICE_ID;
-process.env.STRIPE_BILLING_PRO_PRICE_ID = process.env.STRIPE_BILLING_PRO_PRICE_ID || 'price_pro_smoke';
+delete process.env.STRIPE_BILLING_PRO_PRICE_ID;
 
 const {
   BILLING_ACTIVE_STATUSES,
   createBusinessBillingSession,
   getBillingPriceIdForPlan,
+  getBillingPriceSetupStatus,
   isFreeBillingPlan,
+  isPaidBillingPlan,
   liveOrderReadiness,
   normaliseBillingStatus,
 } = await import('../lib/billing.js');
 
 const db = new DatabaseSync('data/rfdewi.db');
 const slug = `billing-smoke-${randomUUID().slice(0, 8)}`;
-const proSlug = `billing-pro-smoke-${randomUUID().slice(0, 8)}`;
 let shopId = null;
-let proShopId = null;
-let capturedCheckoutPayload = null;
 let previousPlatformFee = null;
 
 function parseJson(value, fallback = null) {
@@ -45,9 +44,11 @@ try {
   }
 
   assert.equal(isFreeBillingPlan('starter'), true);
-  assert.equal(isFreeBillingPlan('pro'), false);
+  assert.equal(isFreeBillingPlan('pro'), true, 'legacy Pro rows should be treated as free while Pro is hidden');
+  assert.equal(isPaidBillingPlan('pro'), false);
   assert.equal(getBillingPriceIdForPlan('starter'), '');
-  assert.equal(getBillingPriceIdForPlan('pro'), 'price_pro_smoke');
+  assert.equal(getBillingPriceIdForPlan('pro'), '');
+  assert.deepEqual(getBillingPriceSetupStatus(), { starter: true });
   assert.equal(normaliseBillingStatus('does-not-exist'), 'pending_subscription');
   assert.equal(BILLING_ACTIVE_STATUSES.has('active'), true);
   assert.equal(BILLING_ACTIVE_STATUSES.has('trialing'), true);
@@ -85,75 +86,29 @@ try {
     'starter plan must not create a Stripe Billing checkout session',
   );
 
-  const proInsert = db.prepare(`
-    INSERT INTO shops (name, slug, email, password_hash, plan, is_temp_password, billing_status)
-    VALUES (?, ?, ?, ?, 'pro', 1, 'pending_subscription')
-  `).run('Billing Smoke Pro Print', proSlug, `${proSlug}@example.test`, 'not-a-real-hash');
-  proShopId = proInsert.lastInsertRowid;
-  db.prepare('INSERT INTO pricing_config (shop_id) VALUES (?)').run(proShopId);
-  db.prepare('INSERT INTO store_settings (shop_id) VALUES (?)').run(proShopId);
-
-  const fakeStripe = {
-    customers: {
-      create: async payload => {
-        assert.equal(payload.email, `${proSlug}@example.test`);
-        assert.equal(payload.metadata.shopSlug, proSlug);
-        return { id: 'cus_billing_smoke' };
-      },
-    },
-    checkout: {
-      sessions: {
-        create: async payload => {
-          capturedCheckoutPayload = payload;
-          return { id: 'cs_billing_smoke', url: 'https://checkout.stripe.test/session' };
-        },
-      },
-    },
-  };
-
-  const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(proShopId);
-  const session = await createBusinessBillingSession({
-    db,
-    stripe: fakeStripe,
-    shop,
-    baseUrl: 'https://app.example.test',
-  });
-  assert.equal(session.url, 'https://checkout.stripe.test/session');
-  assert.equal(session.id, 'cs_billing_smoke');
-  assert.equal(capturedCheckoutPayload.mode, 'subscription');
-  assert.equal(capturedCheckoutPayload.customer, 'cus_billing_smoke');
-  assert.equal(capturedCheckoutPayload.line_items[0].price, 'price_pro_smoke');
-  assert.match(capturedCheckoutPayload.success_url, /\/admin\/payments\.html\?billing=success/);
-  assert.match(capturedCheckoutPayload.cancel_url, /\/admin\/payments\.html\?billing=cancelled/);
-  assert.equal(capturedCheckoutPayload.metadata.shopId, String(proShopId));
-  assert.equal(capturedCheckoutPayload.subscription_data.metadata.shopSlug, proSlug);
-
-  const updated = db.prepare('SELECT * FROM shops WHERE id = ?').get(proShopId);
-  assert.equal(updated.billing_customer_id, 'cus_billing_smoke');
-  assert.equal(updated.billing_checkout_session_id, 'cs_billing_smoke');
-  assert.equal(updated.billing_checkout_status, 'created');
-  assert.equal(updated.billing_price_id, 'price_pro_smoke');
-
-  const inactive = liveOrderReadiness({
-    ...updated,
+  const legacyProReady = liveOrderReadiness({
+    id: shopId,
+    plan: 'pro',
+    billing_status: 'pending_subscription',
     stripe_account_id: 'acct_smoke',
     stripe_charges_enabled: 1,
     stripe_payouts_enabled: 1,
     stripe_details_submitted: 1,
   }, { publishableKey: 'pk_test_smoke', secretKey: 'sk_test_smoke' });
-  assert.equal(inactive.can_accept_live_orders, false);
-  assert.equal(inactive.code, 'SUBSCRIPTION_INACTIVE');
+  assert.equal(legacyProReady.billing_active, true);
+  assert.equal(legacyProReady.can_accept_live_orders, true);
+  assert.equal(legacyProReady.code, null);
 
-  const active = liveOrderReadiness({
-    ...updated,
-    billing_status: 'active',
-    stripe_account_id: 'acct_smoke',
-    stripe_charges_enabled: 1,
-    stripe_payouts_enabled: 1,
-    stripe_details_submitted: 1,
-  }, { publishableKey: 'pk_test_smoke', secretKey: 'sk_test_smoke' });
-  assert.equal(active.can_accept_live_orders, true);
-  assert.equal(active.code, null);
+  await assert.rejects(
+    () => createBusinessBillingSession({
+      db,
+      stripe: {},
+      shop: { ...db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId), plan: 'pro' },
+      baseUrl: 'https://app.example.test',
+    }),
+    err => err.code === 'FREE_PLAN_NO_BILLING_REQUIRED',
+    'legacy Pro rows must not create a Stripe Billing checkout session while Pro is removed',
+  );
 
   previousPlatformFee = db.prepare('SELECT platform_fee_percent FROM platform_settings WHERE id = 1').get()?.platform_fee_percent ?? null;
   db.prepare('INSERT OR IGNORE INTO platform_settings (id) VALUES (1)').run();
@@ -208,10 +163,22 @@ try {
 
   const platformRoutes = readFileSync('routes/platform.js', 'utf8');
   assert.ok(platformRoutes.includes('FREE_PLAN_NO_BILLING_REQUIRED'), 'platform route should expose a free-plan billing-session code');
-  assert.ok(platformRoutes.includes("billing_setup_status: 'free_plan'"), 'platform shop creation should return free_plan for Starter');
+  assert.ok(platformRoutes.includes("billing_setup_status: 'free_plan'"), 'platform shop creation should return free_plan for the only membership');
   assert.ok(platformRoutes.includes("router.post('/shops/:id/billing-session'"), 'platform route should expose billing session resend endpoint');
   assert.ok(platformRoutes.includes('billing_checkout_url'), 'platform shop creation should return a billing checkout URL/status');
+  assert.ok(!platformRoutes.includes('billing_link_created'), 'platform shop creation should not create paid billing links while Pro is removed');
+  assert.ok(!platformRoutes.includes('BILLING_PRICE_NOT_CONFIGURED'), 'platform shop creation should not depend on paid billing price IDs while Pro is removed');
   assert.ok(!platformRoutes.includes('res.status(201).json(shop)'), 'platform shop creation must not return raw shop rows');
+
+  const envExample = readFileSync('.env.example', 'utf8');
+  assert.ok(!envExample.includes('STRIPE_BILLING_PRO_PRICE_ID'), '.env.example should not ask for a Pro Billing price ID while Pro is removed');
+  assert.ok(!envExample.includes('$30') && !envExample.includes('Pro price'), '.env.example should not document paid Pro billing while Pro is removed');
+
+  const platformAdmin = readFileSync('../platform/admin.html', 'utf8');
+  assert.ok(!platformAdmin.includes('<option value="pro"'), 'platform admin should not expose a Pro plan option');
+  assert.ok(!platformAdmin.includes('Pro ready'), 'platform admin should not show Pro billing status');
+  assert.ok(!platformAdmin.includes('Needs Pro price ID'), 'platform admin should not require a Pro price ID');
+  assert.ok(!platformAdmin.includes('$30/month Pro'), 'platform admin should not mention a Pro subscription');
 
   console.log('Business billing smoke checks passed.');
 } finally {
@@ -220,7 +187,6 @@ try {
   } else {
     db.prepare('UPDATE platform_settings SET platform_fee_percent = ? WHERE id = 1').run(previousPlatformFee);
   }
-  if (proShopId) db.prepare('DELETE FROM shops WHERE id = ?').run(proShopId);
   if (shopId) db.prepare('DELETE FROM shops WHERE id = ?').run(shopId);
   db.close();
 }

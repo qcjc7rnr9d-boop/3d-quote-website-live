@@ -694,7 +694,7 @@ export async function seedMahi3dDemo({ dbPath = defaultDbPath } = {}) {
           email = ?,
           password_hash = ?,
           is_temp_password = 0,
-          plan = 'pro',
+          plan = 'starter',
           stripe_account_id = NULL,
           stripe_secret_key = NULL,
           stripe_client_id = NULL,
