@@ -340,8 +340,52 @@ CREATE TABLE IF NOT EXISTS store_settings (
   shipping_zones  TEXT   NOT NULL DEFAULT '[]',
   material_page_settings TEXT NOT NULL DEFAULT '{}',
   embed_allowed_origins TEXT NOT NULL DEFAULT '[]',
+  email_sending_domain TEXT,
+  email_sending_domain_status TEXT NOT NULL DEFAULT 'not_configured',
+  email_sending_domain_records TEXT NOT NULL DEFAULT '[]',
+  email_sending_domain_verified_at TEXT,
+  email_sending_domain_last_checked_at TEXT,
+  email_use_platform_fallback INTEGER NOT NULL DEFAULT 1,
   updated_at     TEXT    NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS email_delivery_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  provider TEXT NOT NULL,
+  provider_message_id TEXT,
+  idempotency_key TEXT UNIQUE,
+  shop_id INTEGER,
+  shop_slug TEXT,
+  template_id TEXT,
+  category TEXT,
+  recipient_email TEXT NOT NULL COLLATE NOCASE,
+  recipient_domain TEXT,
+  from_address TEXT,
+  reply_to TEXT,
+  status TEXT NOT NULL DEFAULT 'queued',
+  event_type TEXT,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  last_error_code TEXT,
+  last_error_message TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  sent_at TEXT,
+  delivered_at TEXT,
+  delayed_at TEXT,
+  bounced_at TEXT,
+  complained_at TEXT,
+  failed_at TEXT,
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS email_suppressions (
+  email TEXT PRIMARY KEY COLLATE NOCASE,
+  reason TEXT NOT NULL,
+  event_type TEXT,
+  provider_message_id TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- ── Sessions ───────────────────────────────────────────────
@@ -385,6 +429,9 @@ CREATE INDEX IF NOT EXISTS idx_platform_reset_token ON platform_reset_tokens(tok
 CREATE INDEX IF NOT EXISTS idx_platform_audit_created ON platform_audit_events(created_at);
 CREATE INDEX IF NOT EXISTS idx_platform_audit_shop ON platform_audit_events(shop_id);
 CREATE INDEX IF NOT EXISTS idx_platform_audit_action ON platform_audit_events(action);
+CREATE INDEX IF NOT EXISTS idx_email_delivery_provider_message ON email_delivery_events(provider, provider_message_id);
+CREATE INDEX IF NOT EXISTS idx_email_delivery_shop_created ON email_delivery_events(shop_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_email_delivery_recipient ON email_delivery_events(recipient_email);
 
 CREATE TABLE IF NOT EXISTS app_sessions (
   sid TEXT PRIMARY KEY,

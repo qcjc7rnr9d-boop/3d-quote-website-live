@@ -17,6 +17,7 @@ import {
 } from './base.js';
 import { db } from '../../middleware/auth.js';
 import { buildFromAddress, buildReplyTo } from '../email-from.js';
+import { getShopEmailSettings } from '../email-delivery.js';
 
 const fmtMoney = n => Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -483,6 +484,15 @@ function getShopThankYou(shopId) {
   } catch { return ''; }
 }
 
+function getShopSupportEmail(shopId, fallbackEmail) {
+  if (!shopId) return fallbackEmail;
+  try {
+    const row = db.prepare('SELECT support_email_mode, support_email FROM store_settings WHERE shop_id = ?').get(shopId) || {};
+    if (row.support_email_mode === 'custom' && row.support_email) return row.support_email;
+  } catch {}
+  return fallbackEmail;
+}
+
 // ── Variable substitution ────────────────────────────────────
 /**
  * Substitute {{name}} placeholders in a plain string with values from `vars`.
@@ -653,8 +663,14 @@ export function renderTemplate(templateId, data = {}) {
     shopName: data.shop?.name || 'Notifications',
     shopSlug: data.shop?.slug || 'shop',
     category,
+    emailDomain: getShopEmailSettings(db, shopId),
   });
-  const replyTo = buildReplyTo({ shop: data.shop });
+  const replyTo = buildReplyTo({
+    shop: {
+      ...data.shop,
+      support_email: getShopSupportEmail(shopId, data.shop?.support_email || data.shop?.email),
+    },
+  });
 
   // No override → use the carefully-designed recommended template.
   let rendered;
@@ -666,7 +682,7 @@ export function renderTemplate(templateId, data = {}) {
     rendered = renderFromOverride({ templateId, override, recommended, data, brand });
   }
 
-  return { ...rendered, category, from, replyTo };
+  return { ...rendered, templateId, category, from, replyTo };
 }
 
 export { TEMPLATES };

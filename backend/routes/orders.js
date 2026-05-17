@@ -208,7 +208,7 @@ router.patch('/:id', requireShopAuth, async (req, res) => {
   // Send customer email notification if requested
   if (notify_customer && existing.customer_email) {
     try {
-      const shop = db.prepare('SELECT id, name FROM shops WHERE id = ?').get(req.shop.id);
+      const shop = db.prepare('SELECT id, name, slug, email FROM shops WHERE id = ?').get(req.shop.id);
       const order = {
         ...existing,
         fulfilment_status,
@@ -217,6 +217,11 @@ router.patch('/:id', requireShopAuth, async (req, res) => {
       };
       const tpl = renderTemplate('order_status', { shop, order, customer_message });
       const result = await sendMail({
+        shopId:  req.shop.id,
+        shopSlug: req.shop.slug,
+        templateId: tpl.templateId,
+        category: tpl.category,
+        idempotencyKey: `order-status-${req.params.id}-${fulfilment_status}-${Date.now()}`,
         to:      existing.customer_email,
         from:    tpl.from,        // <slug>-orders@... or <slug>-shipping@... when shipped
         replyTo: tpl.replyTo,

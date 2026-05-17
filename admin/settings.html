@@ -383,6 +383,53 @@
         </div>
       </div>
 
+      <!-- Email sending -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Email sending</span>
+        </div>
+        <div class="section-card-body">
+          <div class="support-panel">
+            <div class="support-panel-intro">
+              <div>
+                <strong>Transactional emails</strong>
+                <span>Password resets, order updates, saved quotes, and test notifications use this sending setup.</span>
+              </div>
+              <div class="support-email-pill" id="emailDomainStatusPill">Loading</div>
+            </div>
+
+            <div class="form-group" style="margin-top:16px;">
+              <label class="form-label" for="emailSendingDomain">Client sending subdomain</label>
+              <input type="text" class="form-input" id="emailSendingDomain" placeholder="quotes.example.com" autocomplete="off">
+              <span class="form-hint">Use a subdomain dedicated to app email. It starts pending until the DNS records are verified.</span>
+            </div>
+
+            <div class="toggle-row" style="border-top:0;padding-top:4px;">
+              <div>
+                <div class="toggle-row-label">Use platform fallback while DNS is pending</div>
+                <div class="toggle-row-desc">Keeps email delivering from the verified platform domain until your subdomain is ready.</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="emailUseFallback" checked>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+
+            <div class="info-box" style="margin-top:14px;">
+              Provider: <strong id="emailProviderStatus">-</strong><br>
+              Platform fallback: <strong id="emailFallbackStatus">-</strong>
+            </div>
+
+            <div class="form-group" style="margin-top:16px;">
+              <label class="form-label" for="emailDnsRecords">DNS records to copy</label>
+              <textarea class="form-textarea" id="emailDnsRecords" rows="5" readonly placeholder="Records will appear here after the domain is prepared in Resend."></textarea>
+            </div>
+
+            <div class="info-box" id="emailRecentEvents" style="margin-top:14px;">No recent email events yet.</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Invoice -->
       <div class="section-card">
         <div class="section-card-header">
@@ -559,8 +606,60 @@
       document.getElementById('embedAllowedOrigins').value = Array.isArray(s.embed_allowed_origins)
         ? s.embed_allowed_origins.join('\n')
         : '';
+      if (s.email_domain) {
+        document.getElementById('emailSendingDomain').value = s.email_domain.domain || '';
+        document.getElementById('emailUseFallback').checked = s.email_domain.use_platform_fallback !== false;
+        document.getElementById('emailDomainStatusPill').textContent = emailStatusLabel(s.email_domain.status);
+        document.getElementById('emailDnsRecords').value = Array.isArray(s.email_domain.records) && s.email_domain.records.length
+          ? s.email_domain.records.map(r => `${r.type || ''} ${r.name || ''} ${r.value || ''}`.trim()).join('\n')
+          : '';
+      }
+      loadEmailStatus();
     } catch { /* ignore */ }
   })();
+
+  function emailStatusLabel(status) {
+    const map = {
+      verified: 'Verified',
+      pending: 'Pending DNS',
+      failed: 'Needs attention',
+      not_configured: 'Not configured',
+    };
+    return map[status] || 'Not configured';
+  }
+
+  function escapeEmailEventText(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  async function loadEmailStatus() {
+    try {
+      const r = await fetch('/api/settings/email-status');
+      if (!r.ok) return;
+      const data = await r.json();
+      document.getElementById('emailProviderStatus').textContent = String(data.provider || '-').toUpperCase();
+      document.getElementById('emailFallbackStatus').textContent = data.platform_domain || data.fallback_from || 'Not configured';
+      document.getElementById('emailDomainStatusPill').textContent = emailStatusLabel(data.email_domain?.status);
+      if (!document.getElementById('emailDnsRecords').value && Array.isArray(data.email_domain?.records)) {
+        document.getElementById('emailDnsRecords').value = data.email_domain.records
+          .map(r => `${r.type || ''} ${r.name || ''} ${r.value || ''}`.trim())
+          .join('\n');
+      }
+      const events = Array.isArray(data.recent_events) ? data.recent_events : [];
+      document.getElementById('emailRecentEvents').innerHTML = events.length
+        ? events.slice(0, 5).map(e => [
+          escapeEmailEventText(e.status || 'sent'),
+          escapeEmailEventText(e.template_id || 'email'),
+          escapeEmailEventText(e.recipient_email || ''),
+        ].join(' · ')).join('<br>')
+        : 'No recent email events yet.';
+    } catch { /* ignore */ }
+  }
 
   // ── Sync footer textareas ──────────────────────────────────
   document.getElementById('invoiceFooter').addEventListener('input', function() {
@@ -652,6 +751,8 @@
         invoice_footer: invoiceFooterVal,
         invoice_prefix: document.getElementById('invoicePrefix').value.trim(),
         invoice_logo:   document.getElementById('invoiceLogo').checked,
+        email_sending_domain: document.getElementById('emailSendingDomain').value.trim(),
+        email_use_platform_fallback: document.getElementById('emailUseFallback').checked,
         embed_allowed_origins: document.getElementById('embedAllowedOrigins').value
           .split(/[\n,]/)
           .map(origin => origin.trim())

@@ -747,6 +747,7 @@
         ${detailItem('Billing status', data.shop.billing_status || 'pending_subscription')}
         ${detailItem('Subscription ID', data.shop.billing_subscription_id || '-')}
         ${detailItem('Billing period end', data.shop.billing_current_period_end || '-')}
+        ${detailItem('Email domain', `${data.shop.email_domain?.domain || 'Platform fallback'} (${data.shop.email_domain?.status || 'not configured'})`)}
         ${detailItem('Stripe readiness', data.shop.stripe_ready ? 'Ready' : 'Action needed')}
         ${detailItem('Owner email', data.shop.email)}
       </div>

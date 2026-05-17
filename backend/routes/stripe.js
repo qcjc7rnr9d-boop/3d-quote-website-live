@@ -20,6 +20,8 @@ import {
 } from '../lib/pricing-engine.js';
 import { normaliseCart, validateCartForShop } from '../lib/cart.js';
 import { saveOrderItems } from '../lib/order-files.js';
+import { sendMail } from '../lib/mailer.js';
+import { renderTemplate } from '../lib/email-templates/index.js';
 
 const router = Router();
 const paymentIntentLimiter = rateLimit({
@@ -109,6 +111,36 @@ function newPublicOrderToken() {
   return randomBytes(24).toString('base64url');
 }
 
+async function sendPaidOrderConfirmation(orderId) {
+  const order = db.prepare(`
+    SELECT o.*, m.name AS material_name
+    FROM orders o
+    LEFT JOIN materials m ON m.id = o.material_id
+    WHERE o.id = ?
+  `).get(orderId);
+  if (!order?.customer_email) return;
+  const shop = db.prepare('SELECT id, name, slug, email FROM shops WHERE id = ?').get(order.shop_id);
+  if (!shop) return;
+  const tpl = renderTemplate('order_status', { shop, order });
+  try {
+    await sendMail({
+      shopId: shop.id,
+      shopSlug: shop.slug,
+      templateId: tpl.templateId,
+      category: tpl.category,
+      idempotencyKey: `order-paid-${order.id}`,
+      to: order.customer_email,
+      from: tpl.from,
+      replyTo: tpl.replyTo,
+      subject: tpl.subject,
+      text: tpl.text,
+      html: tpl.html,
+    });
+  } catch (err) {
+    console.error('Paid order confirmation email failed:', err.message);
+  }
+}
+
 export async function stripeWebhookHandler(req, res) {
   const sig = req.headers['stripe-signature'];
   const { secretKey, webhookSecret } = getEffectivePlatformStripeConfig();
@@ -126,6 +158,8 @@ export async function stripeWebhookHandler(req, res) {
     if (event.type === 'payment_intent.succeeded') {
       db.prepare("UPDATE orders SET payment_status = 'paid' WHERE stripe_payment_id = ?")
         .run(event.data.object.id);
+      const order = db.prepare('SELECT id FROM orders WHERE stripe_payment_id = ?').get(event.data.object.id);
+      if (order) await sendPaidOrderConfirmation(order.id);
     }
 
     if (event.type === 'payment_intent.payment_failed') {
@@ -299,6 +333,9 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       cart.totalNzd, intent.id, publicToken,
     );
     saveOrderItems(db, order.lastInsertRowid, cart.items);
+    if (intent.status === 'succeeded') {
+      await sendPaidOrderConfirmation(order.lastInsertRowid);
+    }
 
     res.json({
       clientSecret: intent.client_secret,

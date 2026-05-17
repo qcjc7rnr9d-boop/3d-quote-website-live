@@ -22,7 +22,16 @@
  *   EMAIL_FROM  (or SMTP_FROM)
  */
 
+import { setTimeout as delay } from 'node:timers/promises';
 import nodemailer from 'nodemailer';
+import { db } from '../middleware/auth.js';
+import {
+  ensureEmailDeliverySchema,
+  isRecipientSuppressed,
+  markEmailDelivery,
+  normaliseEmailAddress,
+  reserveEmailDelivery,
+} from './email-delivery.js';
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 
@@ -37,6 +46,8 @@ function defaultFromForProvider(provider) {
   if (process.env.EMAIL_FROM) return process.env.EMAIL_FROM;
   if (process.env.SMTP_FROM)  return process.env.SMTP_FROM;
   if (provider === 'smtp' && process.env.SMTP_USER) return process.env.SMTP_USER;
+  if (process.env.APP_EMAIL_FALLBACK) return process.env.APP_EMAIL_FALLBACK;
+  if (process.env.APP_EMAIL_DOMAIN) return `Trennen <hello@${process.env.APP_EMAIL_DOMAIN.trim()}>`;
   if (provider === 'resend') return 'Trennen <onboarding@resend.dev>';
   return 'Trennen <noreply@example.com>';
 }
@@ -53,34 +64,74 @@ export function mailerStatus() {
 }
 
 // ── Resend HTTP API ─────────────────────────────────────────
+function toArray(value) {
+  if (Array.isArray(value)) return value;
+  return value ? [value] : [];
+}
+
+function safeTagValue(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_.-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 256);
+}
+
+function resendTags(msg) {
+  return [
+    ['template', msg.templateId],
+    ['category', msg.category],
+    ['shop', msg.shopSlug],
+  ].filter(([, value]) => value).map(([name, value]) => ({ name, value: safeTagValue(value) }));
+}
+
+function isTransientResendError(err) {
+  if (!err.status) return true;
+  return err.status === 408 || err.status === 425 || err.status === 429 || err.status >= 500;
+}
+
 async function sendViaResend(msg) {
   const body = {
     from:    msg.from,
-    to:      Array.isArray(msg.to) ? msg.to : [msg.to],
+    to:      toArray(msg.to),
     subject: msg.subject,
   };
   if (msg.html)    body.html     = msg.html;
   if (msg.text)    body.text     = msg.text;
-  if (msg.replyTo) body.reply_to = Array.isArray(msg.replyTo) ? msg.replyTo : [msg.replyTo];
-  if (msg.cc)      body.cc       = Array.isArray(msg.cc) ? msg.cc : [msg.cc];
-  if (msg.bcc)     body.bcc      = Array.isArray(msg.bcc) ? msg.bcc : [msg.bcc];
+  if (msg.replyTo) body.reply_to = toArray(msg.replyTo);
+  if (msg.cc)      body.cc       = toArray(msg.cc);
+  if (msg.bcc)     body.bcc      = toArray(msg.bcc);
+  const tags = resendTags(msg);
+  if (tags.length) body.tags = tags;
 
-  const res = await fetch(RESEND_API_URL, {
-    method:  'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization:  `Bearer ${process.env.RESEND_API_KEY}`,
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(data.message || data.error || `Resend ${res.status}`);
-    err.code   = data.name || 'RESEND_ERROR';
-    err.status = res.status;
-    throw err;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const res = await fetch(RESEND_API_URL, {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization:  `Bearer ${process.env.RESEND_API_KEY}`,
+          'Idempotency-Key': msg.idempotencyKey,
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err = new Error(data.message || data.error || `Resend ${res.status}`);
+        err.code   = data.name || 'RESEND_ERROR';
+        err.status = res.status;
+        throw err;
+      }
+      return { ok: true, id: data.id, provider: 'resend', attemptCount: attempt };
+    } catch (err) {
+      lastErr = err;
+      if (attempt >= 2 || !isTransientResendError(err)) break;
+      await delay(100);
+    }
   }
-  return { ok: true, id: data.id, provider: 'resend' };
+  throw lastErr;
 }
 
 // ── SMTP via nodemailer ─────────────────────────────────────
@@ -168,11 +219,62 @@ export async function sendMail(opts) {
   }
   const provider = currentProvider();
   const from = opts.from || defaultFromForProvider(provider);
-  const msg = { ...opts, from };
+  const recipients = toArray(opts.to);
+  for (const recipient of recipients) {
+    const email = normaliseEmailAddress(recipient);
+    if (!email) {
+      const err = new Error('sendMail requires a valid recipient email');
+      err.code = 'INVALID_EMAIL_RECIPIENT';
+      throw err;
+    }
+    if (isRecipientSuppressed(db, email)) {
+      const err = new Error('Email recipient is suppressed due to a previous bounce or complaint.');
+      err.code = 'EMAIL_SUPPRESSED';
+      throw err;
+    }
+  }
 
-  if (provider === 'resend') return sendViaResend(msg);
-  if (provider === 'smtp')   return sendViaSmtp(msg);
-  return sendViaDev(msg);
+  ensureEmailDeliverySchema(db);
+  const reserved = reserveEmailDelivery(db, {
+    ...opts,
+    provider,
+    from,
+    to: recipients,
+    idempotencyKey: opts.idempotencyKey,
+  });
+  if (reserved.deduped) {
+    return {
+      ok: true,
+      id: reserved.row.provider_message_id,
+      provider: reserved.row.provider,
+      deduped: true,
+    };
+  }
+
+  const msg = { ...opts, from, to: recipients, idempotencyKey: reserved.idempotencyKey };
+
+  try {
+    const result = provider === 'resend'
+      ? await sendViaResend(msg)
+      : provider === 'smtp'
+        ? await sendViaSmtp(msg)
+        : await sendViaDev(msg);
+    markEmailDelivery(db, reserved.idempotencyKey, {
+      provider: result.provider,
+      providerMessageId: result.id || null,
+      status: 'sent',
+      attemptCount: result.attemptCount || 1,
+    });
+    return result;
+  } catch (err) {
+    markEmailDelivery(db, reserved.idempotencyKey, {
+      provider,
+      status: 'failed',
+      errorCode: err.code || null,
+      errorMessage: err.message || 'Email send failed',
+    });
+    throw err;
+  }
 }
 
 function stripUndefined(o) {

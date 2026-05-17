@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { db } from '../middleware/auth.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate } from '../lib/email-templates/index.js';
+import { buildEmailIdempotencyKey } from '../lib/email-delivery.js';
 import { BCRYPT_ROUNDS, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES, MIN_PASSWORD_LENGTH } from '../config.js';
 import { parseInfillTiers } from '../lib/infill-tiers.js';
 import { parseMaterialRow, safeJson } from '../lib/material-config.js';
@@ -627,6 +628,11 @@ router.post('/forgot-password', customerResetLimiter, async (req, res) => {
       resetLink,
     });
     await sendMail({
+      shopId: shop.id,
+      shopSlug: shop.slug,
+      templateId: tpl.templateId,
+      category: tpl.category,
+      idempotencyKey: buildEmailIdempotencyKey('customer-reset', account.id, token),
       to: account.email,
       from: tpl.from,
       replyTo: tpl.replyTo,

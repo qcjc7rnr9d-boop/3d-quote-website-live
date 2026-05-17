@@ -11,6 +11,12 @@ import {
   normaliseEmbedAllowedOrigins,
   parseEmbedAllowedOrigins,
 } from '../lib/embed.js';
+import {
+  ensureEmailDeliverySchema,
+  getShopEmailSettings,
+  recentEmailEventsForShop,
+  updateShopEmailDomainSettings,
+} from '../lib/email-delivery.js';
 
 const router = Router();
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -40,6 +46,7 @@ function ensureSupportEmailColumns() {
 function ensureSettings(shopId) {
   ensureSupportEmailColumns();
   ensureEmbedSettingsColumns(db);
+  ensureEmailDeliverySchema(db);
   db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shopId);
   return db.prepare('SELECT * FROM store_settings WHERE shop_id = ?').get(shopId);
 }
@@ -86,6 +93,14 @@ function parseSettings(row) {
     email_thank_you: thankYou,
     shipping_zones:  JSON.parse(row.shipping_zones || '[]'),
     embed_allowed_origins: parseEmbedAllowedOrigins(row.embed_allowed_origins),
+    email_domain: {
+      domain: row.email_sending_domain || '',
+      status: row.email_sending_domain_status || 'not_configured',
+      records: parseJsonSetting(row.email_sending_domain_records, []),
+      verified_at: row.email_sending_domain_verified_at || null,
+      last_checked_at: row.email_sending_domain_last_checked_at || null,
+      use_platform_fallback: row.email_use_platform_fallback !== 0,
+    },
   };
 }
 
@@ -138,7 +153,9 @@ router.put('/', requireShopAuth, (req, res) => {
       name,
       tagline, about, phone, address, support_email_mode, support_email, logo_url, gst_number,
       invoice_footer, invoice_logo, notifications, email_templates, shipping_zones,
-      embed_allowed_origins
+      embed_allowed_origins,
+      email_sending_domain,
+      email_use_platform_fallback
     } = req.body;
     const supportMode = support_email_mode !== undefined
       ? (support_email_mode === 'custom' ? 'custom' : 'signup')
@@ -149,6 +166,7 @@ router.put('/', requireShopAuth, (req, res) => {
     if (supportMode === 'custom' && !isValidEmail(supportEmail)) {
       return res.status(400).json({ error: 'Enter a valid support email, or use the signup email option.' });
     }
+    const shouldUpdateEmailDomain = email_sending_domain !== undefined || email_use_platform_fallback !== undefined;
     let embedAllowedOrigins;
     try {
       embedAllowedOrigins = embed_allowed_origins !== undefined
@@ -199,6 +217,12 @@ router.put('/', requireShopAuth, (req, res) => {
       JSON.stringify(embedAllowedOrigins),
       req.shop.id
     );
+    if (shouldUpdateEmailDomain) {
+      updateShopEmailDomainSettings(db, req.shop.id, {
+        email_sending_domain,
+        email_use_platform_fallback,
+      });
+    }
 
     const updated = db.prepare('SELECT * FROM store_settings WHERE shop_id = ?').get(req.shop.id);
     const shop    = db.prepare('SELECT name FROM shops WHERE id = ?').get(req.shop.id) || {};
@@ -206,6 +230,24 @@ router.put('/', requireShopAuth, (req, res) => {
   } catch (err) {
     console.error('Update settings error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/email-status', requireShopAuth, (req, res) => {
+  try {
+    ensureSettings(req.shop.id);
+    res.json({
+      provider: process.env.RESEND_API_KEY ? 'resend' : (process.env.SMTP_HOST ? 'smtp' : 'dev'),
+      platform_domain: process.env.APP_EMAIL_DOMAIN || null,
+      fallback_from: process.env.APP_EMAIL_FALLBACK || null,
+      has_resend_key: !!process.env.RESEND_API_KEY,
+      has_resend_webhook_secret: !!process.env.RESEND_WEBHOOK_SECRET,
+      email_domain: getShopEmailSettings(db, req.shop.id),
+      recent_events: recentEmailEventsForShop(db, req.shop.id, 12),
+    });
+  } catch (err) {
+    console.error('Email status error:', err);
+    res.status(500).json({ error: 'Failed to load email status' });
   }
 });
 
@@ -296,6 +338,11 @@ router.post('/notifications/test', requireShopAuth, async (req, res) => {
       recipientName: req.shop.name,
     });
     const result = await sendMail({
+      shopId: req.shop.id,
+      shopSlug: req.shop.slug,
+      templateId: tpl.templateId,
+      category: tpl.category,
+      idempotencyKey: `test-notification-${req.shop.id}-${Date.now()}`,
       to,
       from:    tpl.from,           // <slug>-alerts@<APP_EMAIL_DOMAIN>
       replyTo: tpl.replyTo,

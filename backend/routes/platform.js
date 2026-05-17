@@ -26,6 +26,13 @@ import {
   verifyPlatformResetToken,
 } from '../lib/platform-auth.js';
 import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
+import {
+  buildEmailIdempotencyKey,
+  ensureEmailDeliverySchema,
+  getShopEmailSettings,
+  recentEmailEventsForShop,
+  updateShopEmailDomainSettings,
+} from '../lib/email-delivery.js';
 
 const router = Router();
 
@@ -234,6 +241,10 @@ router.post('/forgot-password', platformForgotLimiter, async (req, res) => {
       const token = createPlatformResetToken();
       const resetLink = `${process.env.BASE_URL || 'http://localhost:3000'}/platform/reset-password.html?token=${encodeURIComponent(token)}`;
       const result = await sendMail({
+        templateId: 'platform_password_reset',
+        category: 'account',
+        shopSlug: 'platform',
+        idempotencyKey: buildEmailIdempotencyKey('platform-reset', token),
         to: admin.owner_email,
         subject: 'Reset your Trennen platform password',
         text: `Reset your Trennen platform password using this link. It expires in ${RESET_TOKEN_HOURS} hour(s):\n\n${resetLink}\n\nIf you did not request this, you can ignore this email.`,
@@ -356,6 +367,7 @@ router.get('/shops/:id/overview', requirePlatformAuth, (req, res) => {
         ...shop,
         stripe_ready: !!(shop.stripe_account_id && shop.stripe_charges_enabled && shop.stripe_payouts_enabled && shop.stripe_details_submitted),
         billing_active: billingStatusIsActive(shop.billing_status, shop.plan),
+        email_domain: getShopEmailSettings(db, shop.id),
       },
       metrics: {
         ...overview,
@@ -881,6 +893,47 @@ router.patch('/shops/:id', requirePlatformAuth, (req, res) => {
   } catch (err) {
     console.error('Update shop error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.put('/shops/:id/email-domain', requirePlatformAuth, (req, res) => {
+  try {
+    ensureEmailDeliverySchema(db);
+    const shop = db.prepare('SELECT id, slug FROM shops WHERE id = ?').get(req.params.id);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shop.id);
+
+    const emailDomain = updateShopEmailDomainSettings(db, shop.id, req.body || {}, { allowStatus: true });
+    logPlatformAudit(req, {
+      action: 'update_shop_email_domain',
+      targetType: 'shop',
+      targetId: shop.id,
+      shopId: shop.id,
+      metadata: {
+        domain: emailDomain.domain || null,
+        status: emailDomain.status,
+      },
+    });
+    res.json({ ok: true, shop_id: shop.id, email_domain: emailDomain });
+  } catch (err) {
+    const status = err.code === 'INVALID_EMAIL_DOMAIN' ? 400 : 500;
+    res.status(status).json({ error: err.message || 'Failed to update email domain.' });
+  }
+});
+
+router.get('/shops/:id/email-status', requirePlatformAuth, (req, res) => {
+  try {
+    ensureEmailDeliverySchema(db);
+    const shop = db.prepare('SELECT id, slug FROM shops WHERE id = ?').get(req.params.id);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shop.id);
+    res.json({
+      shop_id: shop.id,
+      email_domain: getShopEmailSettings(db, shop.id),
+      recent_events: recentEmailEventsForShop(db, shop.id, 20),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load email status.' });
   }
 });
 

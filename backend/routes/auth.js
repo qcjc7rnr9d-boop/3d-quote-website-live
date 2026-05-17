@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { db, requireShopAuth } from '../middleware/auth.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate } from '../lib/email-templates/index.js';
+import { buildEmailIdempotencyKey } from '../lib/email-delivery.js';
 import {
   BCRYPT_ROUNDS,
   SESSION_DAYS,
@@ -180,6 +181,11 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 
     const tpl = renderTemplate('admin_password_reset', { shop, resetLink });
     await sendMail({
+      shopId:  shop.id,
+      shopSlug: shop.slug,
+      templateId: tpl.templateId,
+      category: tpl.category,
+      idempotencyKey: buildEmailIdempotencyKey('admin-reset', shop.id, token),
       to:      shop.email,
       from:    tpl.from,         // shop-account@<APP_EMAIL_DOMAIN>
       replyTo: tpl.replyTo,

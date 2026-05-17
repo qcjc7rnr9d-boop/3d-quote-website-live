@@ -41,6 +41,12 @@ const SAFE = (s, fallback = '') =>
 const QUOTABLE_DISPLAY = name =>
   /[",<>@]/.test(name) ? `"${name.replace(/"/g, '\\"')}"` : name;
 
+function emailAddressOnly(value) {
+  const text = String(value || '').trim();
+  const match = text.match(/<([^<>]+@[^<>]+)>$/);
+  return (match ? match[1] : text).trim();
+}
+
 /**
  * Build a From header for a given shop + category.
  *
@@ -50,28 +56,36 @@ const QUOTABLE_DISPLAY = name =>
  * @param {string} opts.category   One of the keys in CATEGORY_META
  * @returns {string}               "Shop · Purpose <slug-purpose@domain>"
  */
-export function buildFromAddress({ shopName = 'Notifications', shopSlug = 'shop', category = 'support' } = {}) {
+export function buildFromAddress({
+  shopName = 'Notifications',
+  shopSlug = 'shop',
+  category = 'support',
+  emailDomain = {},
+} = {}) {
   const meta   = CATEGORY_META[category] || CATEGORY_META.support;
   const slug   = SAFE(shopSlug, 'shop') || 'shop';
+  const clientDomain = emailDomain.status === 'verified' && emailDomain.domain
+    ? String(emailDomain.domain).trim().toLowerCase()
+    : '';
 
-  // Local part: <slug>[-<suffix>]
-  const local  = meta.suffix ? `${slug}-${meta.suffix}` : slug;
+  // Client domains are already business-specific subdomains, so keep the
+  // local part clean: orders@quotes.client.com instead of shop-orders@...
+  const local = clientDomain
+    ? (meta.suffix || 'support')
+    : (meta.suffix ? `${slug}-${meta.suffix}` : slug);
 
   // Display name: "<ShopName> · <Label>"  (or just shop name if no label)
   const niceShop = String(shopName || '').trim() || 'Notifications';
   const displayRaw = meta.label ? `${niceShop} · ${meta.label}` : niceShop;
   const display    = QUOTABLE_DISPLAY(displayRaw);
 
-  const domain = (process.env.APP_EMAIL_DOMAIN || '').trim();
+  const domain = clientDomain || (process.env.APP_EMAIL_DOMAIN || '').trim();
 
   if (domain) {
     return `${display} <${local}@${domain}>`;
   }
 
-  // Sandbox fallback — Resend's default sending address, kept compatible
-  // with their account-only delivery limitation. Display name still
-  // reflects the shop + category so recipients see useful info.
-  const fallbackAddr = (process.env.APP_EMAIL_FALLBACK || 'onboarding@resend.dev').trim();
+  const fallbackAddr = emailAddressOnly(process.env.APP_EMAIL_FALLBACK || 'onboarding@resend.dev');
   return `${display} <${fallbackAddr}>`;
 }
 

@@ -23,6 +23,7 @@ import customersRouter from './routes/customers.js';
 import pricingRouter from './routes/pricing.js';
 import settingsRouter from './routes/settings.js';
 import stripeRouter, { stripeWebhookHandler } from './routes/stripe.js';
+import { resendWebhookHandler } from './routes/email-webhooks.js';
 import platformRouter from './routes/platform.js';
 import customerPortalRouter from './routes/customer-portal.js';
 import shippingRouter from './routes/shipping.js';
@@ -42,6 +43,8 @@ function assertProductionConfig() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-jwt-secret') missing.push('JWT_SECRET');
   if (!process.env.BASE_URL || !/^https:\/\//.test(process.env.BASE_URL)) missing.push('BASE_URL=https://...');
   if (!process.env.RESEND_API_KEY && !process.env.SMTP_HOST) missing.push('RESEND_API_KEY or SMTP_HOST');
+  if (process.env.RESEND_API_KEY && !process.env.RESEND_WEBHOOK_SECRET) missing.push('RESEND_WEBHOOK_SECRET');
+  if (process.env.RESEND_API_KEY && !process.env.APP_EMAIL_DOMAIN && !process.env.APP_EMAIL_FALLBACK) missing.push('APP_EMAIL_DOMAIN or APP_EMAIL_FALLBACK');
   if (!process.env.PLATFORM_CONFIG_ENCRYPTION_KEY || !hasSecretEncryptionKey()) missing.push('PLATFORM_CONFIG_ENCRYPTION_KEY');
   if (missing.length) {
     throw new Error(`Refusing to start in production. Missing/unsafe config: ${missing.join(', ')}`);
@@ -66,6 +69,10 @@ app.use((req, res, next) => {
 app.post('/api/stripe/webhook',
   express.raw({ type: 'application/json' }),
   stripeWebhookHandler
+);
+app.post('/api/email/resend-webhook',
+  express.raw({ type: 'application/json' }),
+  resendWebhookHandler
 );
 
 // ── Body parsers ──────────────────────────────────────────────
