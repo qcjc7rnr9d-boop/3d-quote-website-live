@@ -94,6 +94,16 @@ try {
   const errors = [];
   page.on('pageerror', err => errors.push(err.message));
   await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#viewerEmpty', { state: 'visible', timeout: 5000 });
+  const freshState = await page.evaluate(() => ({
+    activeProgress: document.querySelector('.quote-progress-step.active')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+    emptyTitle: document.querySelector('#viewerEmptyTitle')?.textContent?.trim() || '',
+    emptyCopy: document.querySelector('#viewerEmptyCopy')?.textContent?.trim() || '',
+  }));
+  assert(/^1\s*Upload$/.test(freshState.activeProgress), `Fresh quote should start on Upload progress, got ${freshState.activeProgress}`);
+  assert(freshState.emptyTitle === 'Upload your model', `Fresh quote empty title should invite the first upload, got ${freshState.emptyTitle}`);
+  assert(!/next model group|same model again/i.test(freshState.emptyCopy), `Fresh quote copy should not describe add-another flow: ${freshState.emptyCopy}`);
+
   const stlBase64 = makeStlBuffer().toString('base64');
   await page.evaluate(async ({ encoded, material, colour, finish, infill, shipping }) => {
     const bin = atob(encoded);
@@ -285,6 +295,8 @@ try {
     formFile: localStorage.getItem('form_file'),
     formSelection: localStorage.getItem('form_selection'),
     uploadDisplay: getComputedStyle(document.querySelector('#viewerEmpty')).display,
+    emptyTitle: document.querySelector('#viewerEmptyTitle')?.textContent || '',
+    emptyCopy: document.querySelector('#viewerEmptyCopy')?.textContent || '',
     activeElementId: document.activeElement?.id || '',
     bannerText: document.querySelector('#newUploadBanner')?.innerText || '',
     url: location.href,
@@ -293,6 +305,8 @@ try {
   assert(newGroupState.formFile === null, 'Add-another flow should clear active form_file');
   assert(newGroupState.formSelection === null, 'Add-another flow should clear active form_selection');
   assert(newGroupState.uploadDisplay !== 'none', `Quote upload prompt should be visible, got ${newGroupState.uploadDisplay}`);
+  assert(newGroupState.emptyTitle === 'Upload the next model group', `Add-another flow should keep next-group title, got ${newGroupState.emptyTitle}`);
+  assert(/same model again/i.test(newGroupState.emptyCopy), 'Add-another flow should keep next-group helper copy');
   assert(/New uploads/.test(newGroupState.bannerText), 'New uploads banner did not render');
 
   await page.setInputFiles('#fileInput', {

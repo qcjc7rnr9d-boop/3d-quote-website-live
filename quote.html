@@ -248,6 +248,16 @@
       box-shadow: 0 10px 24px rgba(90,138,94,0.2);
     }
     .viewer-empty-btn:hover { background: var(--sage-dark); }
+    .viewer-empty-reset {
+      display: none;
+      border: 0;
+      background: transparent;
+      color: var(--sage-dark);
+      font: 700 12px var(--font-ui);
+      cursor: pointer;
+    }
+    .viewer-empty-reset.show { display: inline-flex; }
+    .viewer-empty-reset:hover { text-decoration: underline; }
 
     /* Floating viewer controls */
     .viewer-ctrls {
@@ -1011,13 +1021,13 @@
   <div class="nav-inner">
     <a class="logo" href="quote.html?shop=mahi3d">mahi<span class="logo-dot">3d</span></a>
     <div class="quote-progress" aria-label="Quote progress">
-      <div class="quote-progress-step"><span>1</span>Upload</div>
+      <div class="quote-progress-step active" data-progress-step="1" aria-current="step"><span>1</span>Upload</div>
       <div class="quote-progress-line" aria-hidden="true"></div>
-      <div class="quote-progress-step"><span>2</span>Material</div>
+      <div class="quote-progress-step" data-progress-step="2"><span>2</span>Material</div>
       <div class="quote-progress-line" aria-hidden="true"></div>
-      <div class="quote-progress-step"><span>3</span>Options</div>
+      <div class="quote-progress-step" data-progress-step="3"><span>3</span>Options</div>
       <div class="quote-progress-line" aria-hidden="true"></div>
-      <div class="quote-progress-step active"><span>4</span>Quote</div>
+      <div class="quote-progress-step" data-progress-step="4"><span>4</span>Quote</div>
     </div>
     <div class="nav-links">
       <a href="materials.html?shop=mahi3d" class="nav-link" data-quote-nav="materials">Materials</a>
@@ -1044,8 +1054,8 @@
 
 <!-- ─── Page heading ───────────────────────────────────────── -->
 <header class="page-head">
-  <h1 class="page-title">Your quote</h1>
-  <p class="page-sub">Review your model and order details before checkout.</p>
+  <h1 class="page-title" id="quotePageTitle">Start your quote</h1>
+  <p class="page-sub" id="quotePageSub">Upload your 3D model to choose materials, options and checkout.</p>
 </header>
 
 <!-- ─── Main grid ──────────────────────────────────────────── -->
@@ -1077,9 +1087,10 @@
             <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
             <line x1="12" y1="22.08" x2="12" y2="12"/>
           </svg>
-          <h2 class="viewer-empty-title" id="viewerEmptyTitle">Upload the next model group</h2>
-          <p class="viewer-empty-copy" id="viewerEmptyCopy">You can upload the same model again to choose different material, colour or finish.</p>
+          <h2 class="viewer-empty-title" id="viewerEmptyTitle">Upload your model</h2>
+          <p class="viewer-empty-copy" id="viewerEmptyCopy">Choose an STL or OBJ file to get instant material and price options.</p>
           <button class="viewer-empty-btn" id="viewerEmptyChoose" type="button">Choose files</button>
+          <button class="viewer-empty-reset" id="viewerEmptyReset" type="button" hidden>Start a new quote</button>
         </div>
 
         <!-- Floating controls -->
@@ -1362,6 +1373,28 @@
 
   // ── Helpers ─────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
+
+  function setQuoteProgressStep(step) {
+    document.querySelectorAll('[data-progress-step]').forEach(el => {
+      const active = Number(el.dataset.progressStep) === step;
+      el.classList.toggle('active', active);
+      if (active) el.setAttribute('aria-current', 'step');
+      else el.removeAttribute('aria-current');
+    });
+  }
+
+  function updateQuotePageIntro() {
+    const hasModel = !!fileData;
+    setQuoteProgressStep(hasModel ? 4 : 1);
+    const title = $('quotePageTitle');
+    const sub = $('quotePageSub');
+    if (title) title.textContent = hasModel ? 'Your quote' : 'Start your quote';
+    if (sub) {
+      sub.textContent = hasModel
+        ? 'Review your model and order details before checkout.'
+        : 'Upload your 3D model to choose materials, options and checkout.';
+    }
+  }
 
   function fmtBytes(n) {
     if (!n) return '—';
@@ -2002,6 +2035,33 @@
     } catch {}
   }
 
+  function hasStaleSavedQuoteState() {
+    if (fileData || SHOULD_PROMPT_UPLOAD) return false;
+    let savedCart = null;
+    try { savedCart = JSON.parse(localStorage.getItem('cart') || 'null'); } catch {}
+    const hasCartItems = Array.isArray(savedCart?.items) && savedCart.items.length > 0;
+    const hasSelectionDetails = !!selectionData && Object.entries(selectionData).some(([key, value]) => {
+      if (['shopSlug', 'currency', 'qty', 'requiredSelections'].includes(key)) return false;
+      return value !== null && value !== undefined && value !== '';
+    });
+    return hasCartItems || hasSelectionDetails;
+  }
+
+  function resetSavedQuoteState() {
+    clearCurrentQuoteGroup();
+    try {
+      localStorage.removeItem('cart');
+      localStorage.removeItem(SIZE_WARNING_KEY);
+    } catch {}
+    selectionData = { shopSlug: SHOP_SLUG };
+    qty = 1;
+    serverQuote = null;
+    renderPrice();
+    updateCartActions(readCart());
+    updateQuotePageIntro();
+    showUploadPrompt();
+  }
+
   function scrubPromptParams() {
     if (!SHOULD_PROMPT_UPLOAD) return;
     const url = new URL(window.location.href);
@@ -2030,8 +2090,16 @@
     showNewUploadBanner();
     empty.style.display = 'flex';
     empty.setAttribute('tabindex', '-1');
-    $('viewerEmptyTitle').textContent = 'Upload the next model group';
-    $('viewerEmptyCopy').textContent = 'You can upload the same model again to choose different material, colour or finish.';
+    $('viewerEmptyTitle').textContent = SHOULD_PROMPT_UPLOAD ? 'Upload the next model group' : 'Upload your model';
+    $('viewerEmptyCopy').textContent = SHOULD_PROMPT_UPLOAD
+      ? 'You can upload the same model again to choose different material, colour or finish.'
+      : 'Choose an STL or OBJ file to get instant material and price options.';
+    const resetBtn = $('viewerEmptyReset');
+    if (resetBtn) {
+      const showReset = hasStaleSavedQuoteState();
+      resetBtn.hidden = !showReset;
+      resetBtn.classList.toggle('show', showReset);
+    }
     requestAnimationFrame(() => empty.focus({ preventScroll: true }));
     if (autoOpen) {
       setTimeout(() => openFilePicker(), 80);
@@ -2751,6 +2819,7 @@
   // ── File replace flow ──────────────────────────────────────
   $('replaceBtn').addEventListener('click', () => $('fileInput').click());
   $('viewerEmptyChoose')?.addEventListener('click', () => openFilePicker());
+  $('viewerEmptyReset')?.addEventListener('click', () => resetSavedQuoteState());
   $('fileInput').addEventListener('change', async e => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -2802,6 +2871,7 @@
   });
 
   // ── Init the viewer ────────────────────────────────────────
+  updateQuotePageIntro();
   const loaded = await tryLoadStoredModel();
   if (!loaded) {
     placePlaceholder();
