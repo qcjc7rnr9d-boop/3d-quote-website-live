@@ -7,8 +7,14 @@ import { sendMail, mailerStatus } from '../lib/mailer.js';
 import {
   getMaskedPlatformStripeConfig,
   getEffectivePlatformStripeConfig,
+  getPlatformStripeClient,
   updatePlatformStripeConfig,
 } from '../lib/platform-payments.js';
+import {
+  billingStatusIsActive,
+  createBusinessBillingSession,
+  getBillingPriceIdForPlan,
+} from '../lib/billing.js';
 import { ensurePlatformAuditTable, logPlatformAudit } from '../lib/platform-audit.js';
 import {
   bootstrapPlatformAdmin,
@@ -115,6 +121,47 @@ function parseCustomerTarget(raw) {
   const email = text.slice(idx + 1).trim().toLowerCase();
   if (!Number.isFinite(shopId) || !email) return null;
   return { shopId, email };
+}
+
+async function createBillingActivationForShop(shop) {
+  const stripe = getPlatformStripeClient();
+  if (!stripe) {
+    return {
+      billing_checkout_url: null,
+      billing_setup_status: 'platform_stripe_not_configured',
+      billing_setup_error: 'Add the platform Stripe secret key before creating billing links.',
+    };
+  }
+
+  const priceId = getBillingPriceIdForPlan(shop.plan);
+  if (!priceId) {
+    return {
+      billing_checkout_url: null,
+      billing_setup_status: 'billing_price_not_configured',
+      billing_setup_error: `Set the Stripe Billing price ID for the ${shop.plan || 'starter'} plan.`,
+    };
+  }
+
+  try {
+    const session = await createBusinessBillingSession({
+      db,
+      stripe,
+      shop,
+      baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+      priceId,
+    });
+    return {
+      billing_checkout_url: session.url,
+      billing_setup_status: 'billing_link_created',
+      billing_setup_error: null,
+    };
+  } catch (err) {
+    return {
+      billing_checkout_url: null,
+      billing_setup_status: err.code || 'billing_link_failed',
+      billing_setup_error: err.message || 'Failed to create billing activation link.',
+    };
+  }
 }
 
 // ── POST /api/platform/login ──────────────────────────────────
@@ -290,6 +337,11 @@ router.get('/overview', requirePlatformAuth, (req, res) => {
           AND stripe_payouts_enabled = 1
           AND stripe_details_submitted = 1
       `).get().c,
+      billing_active_shops: db.prepare(`
+        SELECT COUNT(*) as c
+        FROM shops
+        WHERE billing_status IN ('active', 'trialing')
+      `).get().c,
     });
   } catch (err) {
     console.error('Platform overview error:', err);
@@ -303,6 +355,9 @@ router.get('/shops/:id/overview', requirePlatformAuth, (req, res) => {
     const shop = db.prepare(`
       SELECT id, name, slug, email, plan, stripe_account_id,
              stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted,
+             billing_customer_id, billing_subscription_id, billing_price_id,
+             billing_status, billing_current_period_end, billing_checkout_session_id,
+             billing_checkout_status, billing_updated_at,
              created_at, updated_at
       FROM shops
       WHERE id = ?
@@ -325,6 +380,7 @@ router.get('/shops/:id/overview', requirePlatformAuth, (req, res) => {
       shop: {
         ...shop,
         stripe_ready: !!(shop.stripe_account_id && shop.stripe_charges_enabled && shop.stripe_payouts_enabled && shop.stripe_details_submitted),
+        billing_active: billingStatusIsActive(shop.billing_status),
       },
       metrics: {
         ...overview,
@@ -658,7 +714,11 @@ router.get('/shops', requirePlatformAuth, (req, res) => {
       SELECT
         s.id, s.name, s.slug, s.email, s.plan,
         s.stripe_account_id, s.stripe_charges_enabled, s.stripe_payouts_enabled,
-        s.stripe_details_submitted, s.created_at,
+        s.stripe_details_submitted,
+        s.billing_customer_id, s.billing_subscription_id, s.billing_price_id,
+        s.billing_status, s.billing_current_period_end, s.billing_checkout_session_id,
+        s.billing_checkout_status, s.billing_updated_at,
+        s.created_at,
         (SELECT COUNT(*) FROM orders o WHERE o.shop_id = s.id) as order_count,
         (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.shop_id = s.id AND payment_status='paid') as revenue
       FROM shops s
@@ -733,10 +793,11 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
+    const selectedPlan = plan || 'starter';
     const result = db.prepare(`
-      INSERT INTO shops (name, slug, email, password_hash, plan, is_temp_password)
-      VALUES (?, ?, ?, ?, ?, 1)
-    `).run(name, slug.toLowerCase(), email.toLowerCase(), hash, plan || 'starter');
+      INSERT INTO shops (name, slug, email, password_hash, plan, is_temp_password, billing_status)
+      VALUES (?, ?, ?, ?, ?, 1, 'pending_subscription')
+    `).run(name, slug.toLowerCase(), email.toLowerCase(), hash, selectedPlan);
 
     const shopId = result.lastInsertRowid;
 
@@ -744,9 +805,17 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
     db.prepare('INSERT OR IGNORE INTO pricing_config (shop_id) VALUES (?)').run(shopId);
     db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shopId);
 
-    const shop = db.prepare(
-      'SELECT id, name, slug, email, plan, is_temp_password, created_at FROM shops WHERE id = ?'
-    ).get(shopId);
+    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId);
+    const billing = await createBillingActivationForShop(shop);
+    const publicShop = db.prepare(`
+      SELECT id, name, slug, email, plan, is_temp_password,
+             billing_customer_id, billing_subscription_id, billing_price_id,
+             billing_status, billing_current_period_end, billing_checkout_session_id,
+             billing_checkout_status, billing_updated_at,
+             created_at, updated_at
+      FROM shops
+      WHERE id = ?
+    `).get(shopId);
 
     logPlatformAudit(req, {
       action: 'create_shop',
@@ -756,13 +825,46 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
       metadata: { plan: shop.plan },
     });
 
-    res.status(201).json(shop);
+    res.status(201).json({
+      ...publicShop,
+      ...billing,
+      billing_active: billingStatusIsActive(publicShop.billing_status),
+    });
   } catch (err) {
     if (err.message && err.message.includes('UNIQUE')) {
       return res.status(400).json({ error: 'A shop with that email or slug already exists' });
     }
     console.error('Create shop error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/shops/:id/billing-session', requirePlatformAuth, async (req, res) => {
+  try {
+    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.params.id);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+
+    const billing = await createBillingActivationForShop(shop);
+    if (!billing.billing_checkout_url) {
+      return res.status(400).json({
+        error: billing.billing_setup_error || 'Billing link could not be created.',
+        code: billing.billing_setup_status,
+        ...billing,
+      });
+    }
+
+    logPlatformAudit(req, {
+      action: 'create_shop_billing_session',
+      targetType: 'shop',
+      targetId: shop.id,
+      shopId: shop.id,
+      metadata: { plan: shop.plan },
+    });
+
+    res.json({ ok: true, shop_id: shop.id, ...billing });
+  } catch (err) {
+    console.error('Create shop billing session error:', err);
+    res.status(500).json({ error: 'Failed to create billing link' });
   }
 });
 
@@ -780,7 +882,17 @@ router.patch('/shops/:id', requirePlatformAuth, (req, res) => {
       newPlan = suspended ? 'suspended' : 'starter';
     }
 
-    db.prepare('UPDATE shops SET plan = ? WHERE id = ?').run(newPlan, req.params.id);
+    db.prepare(`
+      UPDATE shops
+      SET plan = ?,
+          billing_status = CASE
+            WHEN ? = 'suspended' THEN 'suspended'
+            WHEN billing_status = 'suspended' THEN 'pending_subscription'
+            ELSE billing_status
+          END,
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).run(newPlan, newPlan, req.params.id);
     logPlatformAudit(req, {
       action: newPlan === 'suspended' ? 'suspend_shop' : 'restore_shop',
       targetType: 'shop',

@@ -105,6 +105,7 @@ router.get('/me', requireShopAuth, (req, res) => {
   const {
     id, name, slug, email, plan, is_temp_password, stripe_account_id,
     stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted,
+    billing_status, billing_current_period_end,
     created_at
   } = req.shop;
   // Pull branding so admin pages can render the shop's tagline/logo
@@ -116,6 +117,8 @@ router.get('/me', requireShopAuth, (req, res) => {
     stripe_charges_enabled: !!stripe_charges_enabled,
     stripe_payouts_enabled: !!stripe_payouts_enabled,
     stripe_details_submitted: !!stripe_details_submitted,
+    billing_status: billing_status || 'pending_subscription',
+    billing_current_period_end: billing_current_period_end || null,
     tagline:  s.tagline  || null,
     logo_url: s.logo_url || null,
     phone:    s.phone    || null,

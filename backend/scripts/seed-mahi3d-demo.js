@@ -702,6 +702,8 @@ export async function seedMahi3dDemo({ dbPath = defaultDbPath } = {}) {
           stripe_charges_enabled = 0,
           stripe_payouts_enabled = 0,
           stripe_details_submitted = 0,
+          billing_status = 'active',
+          billing_updated_at = datetime('now'),
           updated_at = datetime('now')
         WHERE id = ?
       `).run('Mahi3D', DEMO_OWNER_EMAIL, ownerHash, shop.id);

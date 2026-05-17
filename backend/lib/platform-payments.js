@@ -1,5 +1,7 @@
 import { db } from '../middleware/auth.js';
+import Stripe from 'stripe';
 import { PLATFORM_FEE_PERCENT } from '../config.js';
+import { getBillingPriceSetupStatus } from './billing.js';
 import { decryptSecret, encryptSecret, hasSecretEncryptionKey, isEncryptedSecret } from './secret-vault.js';
 
 export const PLATFORM_SETTINGS_ID = 1;
@@ -47,6 +49,11 @@ export function getEffectivePlatformStripeConfig() {
   };
 }
 
+export function getPlatformStripeClient() {
+  const { secretKey } = getEffectivePlatformStripeConfig();
+  return secretKey ? new Stripe(secretKey) : null;
+}
+
 export function maskSecretLikeKey(key, prefixes) {
   if (!key) return null;
   const prefix = prefixes.find(p => key.startsWith(p)) || (key.slice(0, 3) + '_');
@@ -55,6 +62,7 @@ export function maskSecretLikeKey(key, prefixes) {
 
 export function getMaskedPlatformStripeConfig() {
   const effective = getEffectivePlatformStripeConfig();
+  const billingPrices = getBillingPriceSetupStatus();
   return {
     has_publishable_key: !!effective.publishableKey,
     has_secret_key: !!effective.secretKey,
@@ -66,6 +74,8 @@ export function getMaskedPlatformStripeConfig() {
     client_id_masked: maskSecretLikeKey(effective.clientId, ['ca_']),
     platform_fee_percent: effective.feePercent,
     webhook_configured: !!effective.webhookSecret,
+    billing_prices_configured: billingPrices,
+    can_create_billing_sessions: !!(effective.secretKey && billingPrices.starter && billingPrices.pro),
     from_db: effective.fromDb,
   };
 }

@@ -365,10 +365,10 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Store</th><th>Plan</th><th>Owner</th><th>Orders</th><th>Revenue</th><th>Stripe</th><th>Joined</th><th>Actions</th>
+              <th>Store</th><th>Plan</th><th>Billing</th><th>Owner</th><th>Orders</th><th>Revenue</th><th>Stripe</th><th>Joined</th><th>Actions</th>
             </tr>
           </thead>
-          <tbody id="shopsTbody"><tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading...</td></tr></tbody>
+          <tbody id="shopsTbody"><tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -382,6 +382,12 @@
           <span class="password-reveal" id="revealPassword"></span>
           <button class="table-action" type="button" id="copyPasswordBtn">Copy</button>
           <div class="mini-text">The owner will be prompted to change this on first login.</div>
+          <div class="mini-text" id="billingLinkWrap" style="display:none;margin-top:8px">
+            Billing activation:
+            <a href="#" target="_blank" rel="noopener" id="billingLink">Open checkout</a>
+            <button class="table-action" type="button" id="copyBillingLinkBtn">Copy link</button>
+            <span id="billingLinkNote"></span>
+          </div>
         </div>
         <form id="createShopForm" novalidate>
           <div class="field-grid">
@@ -457,6 +463,7 @@
           <div class="detail-item"><div class="detail-label">Secret key</div><div class="detail-value" id="platformMaskedSk">-</div></div>
           <div class="detail-item"><div class="detail-label">Connect client ID</div><div class="detail-value" id="platformMaskedClientId">-</div></div>
           <div class="detail-item"><div class="detail-label">Card payment status</div><div class="detail-value" id="platformCardsStatus">-</div></div>
+          <div class="detail-item"><div class="detail-label">Billing price IDs</div><div class="detail-value" id="platformBillingPriceStatus">-</div></div>
         </div>
       </div>
     </div>
@@ -621,13 +628,14 @@
   function renderShops() {
     const tbody = document.getElementById('shopsTbody');
     if (!state.shops.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">No stores yet</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">No stores yet</td></tr>';
       return;
     }
     tbody.innerHTML = state.shops.map(s => `
       <tr>
         <td><strong>${esc(s.name)}</strong><div class="mini-text">${esc(s.slug)}</div></td>
         <td>${statusBadge(s.plan)}</td>
+        <td>${billingBadge(s)}</td>
         <td>${esc(s.email)}</td>
         <td>${Number(s.order_count || 0)}</td>
         <td>${money(s.revenue)}</td>
@@ -635,6 +643,7 @@
         <td class="mini-text">${shortDate(s.created_at)}</td>
         <td>
           <button class="table-action" type="button" onclick="viewStore(${s.id})">View data</button>
+          <button class="table-action" type="button" onclick="createBillingSession(${s.id})">Billing link</button>
           <button class="table-action" type="button" onclick="impersonate(${s.id})">Impersonate</button>
           <button class="table-action ${s.plan === 'suspended' ? '' : 'danger'}" type="button" onclick="openSuspend(${s.id}, ${jsString(s.name)}, ${s.plan === 'suspended'})">${s.plan === 'suspended' ? 'Restore' : 'Suspend'}</button>
         </td>
@@ -645,6 +654,12 @@
     if (!shop.stripe_account_id) return '<span class="muted">Not connected</span>';
     if (shop.stripe_charges_enabled && shop.stripe_payouts_enabled && shop.stripe_details_submitted) return badge('Ready', 'sage');
     return badge('Action needed', 'warm');
+  }
+  function billingBadge(shop) {
+    const status = shop.billing_status || 'pending_subscription';
+    if (status === 'active' || status === 'trialing') return badge(status.replace('_', ' '), 'sage');
+    if (status === 'pending_subscription') return badge('Pending', 'warm');
+    return statusBadge(status);
   }
 
   function orderFilterQuery() {
@@ -728,6 +743,9 @@
         ${detailItem('Deliveries', data.metrics.delivered_orders)}
         ${detailItem('Active orders', data.metrics.active_orders)}
         ${detailItem('Revenue', money(data.metrics.revenue))}
+        ${detailItem('Billing status', data.shop.billing_status || 'pending_subscription')}
+        ${detailItem('Subscription ID', data.shop.billing_subscription_id || '-')}
+        ${detailItem('Billing period end', data.shop.billing_current_period_end || '-')}
         ${detailItem('Stripe readiness', data.shop.stripe_ready ? 'Ready' : 'Action needed')}
         ${detailItem('Owner email', data.shop.email)}
       </div>
@@ -815,6 +833,9 @@
     document.getElementById('platformMaskedSk').textContent = data.secret_key_masked || '-';
     document.getElementById('platformMaskedClientId').textContent = data.client_id_masked || '-';
     document.getElementById('platformCardsStatus').innerHTML = data.can_accept_cards ? badge('Enabled', 'sage') : badge('Not ready', 'warm');
+    const prices = data.billing_prices_configured || {};
+    document.getElementById('platformBillingPriceStatus').innerHTML =
+      prices.starter && prices.pro ? badge('Starter + Pro ready', 'sage') : badge('Needs env price IDs', 'warm');
   }
   async function loadAudit() {
     const data = await api('/api/platform/audit-events?limit=30');
@@ -885,12 +906,25 @@
     const btn = document.getElementById('createShopBtn');
     btn.disabled = true;
     try {
-      await api('/api/platform/shops', {
+      const data = await api('/api/platform/shops', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       document.getElementById('revealPassword').textContent = payload.password;
+      const billingWrap = document.getElementById('billingLinkWrap');
+      const billingLink = document.getElementById('billingLink');
+      const billingNote = document.getElementById('billingLinkNote');
+      if (data.billing_checkout_url) {
+        billingWrap.style.display = '';
+        billingLink.style.display = '';
+        billingLink.href = data.billing_checkout_url;
+        billingNote.textContent = ' Send this to the owner to activate their monthly subscription.';
+      } else {
+        billingWrap.style.display = '';
+        billingLink.style.display = 'none';
+        billingNote.textContent = ` ${data.billing_setup_error || 'Billing activation link is not ready yet.'}`;
+      }
       document.getElementById('createShopForm').reset();
       showBox('createSuccess');
       await Promise.all([loadShops(), loadOverview(), loadAudit()]);
@@ -898,6 +932,20 @@
       showBox('createError', err.message || 'Failed to create store.');
     } finally {
       btn.disabled = false;
+    }
+  }
+
+  async function createBillingSession(shopId) {
+    try {
+      const data = await api(`/api/platform/shops/${shopId}/billing-session`, { method: 'POST' });
+      if (data.billing_checkout_url) {
+        await navigator.clipboard.writeText(data.billing_checkout_url);
+        alert('Billing activation link copied. Open it or send it to the business owner.');
+        window.open(data.billing_checkout_url, '_blank', 'noopener');
+      }
+      await loadShops();
+    } catch (err) {
+      alert(err.message || 'Could not create billing activation link.');
     }
   }
 
@@ -918,6 +966,9 @@
   });
   document.getElementById('copyPasswordBtn').addEventListener('click', () => {
     navigator.clipboard.writeText(document.getElementById('revealPassword').textContent || '');
+  });
+  document.getElementById('copyBillingLinkBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(document.getElementById('billingLink').href || '');
   });
 
   document.getElementById('saveAccountBtn').addEventListener('click', async () => {

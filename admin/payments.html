@@ -176,6 +176,15 @@
             <p>The Trennen platform has not finished configuring Stripe yet. Card checkout will stay off until the platform operator adds the master Stripe keys.</p>
           </div>
 
+          <div id="subscriptionRequiredState" class="status-center" style="display:none">
+            <h2>Subscription activation required</h2>
+            <p>Your store subscription must be active before customer checkout can accept payments. Use the billing activation link from the platform owner to finish this step.</p>
+            <ul class="status-list">
+              <li id="subscriptionStatusLine">Subscription status: pending</li>
+              <li>Stripe Connect setup can still be completed after billing is active</li>
+            </ul>
+          </div>
+
           <div id="connectState" class="status-center" style="display:none">
             <h2>Connect your Stripe account</h2>
             <p>Customers will pay through Trennen checkout. Stripe will send your store payout to your own bank account after taking the platform fee.</p>
@@ -205,6 +214,10 @@
               <div class="connected-row">
                 <span class="label">Details submitted</span>
                 <span id="detailsSubmitted">—</span>
+              </div>
+              <div class="connected-row">
+                <span class="label">Subscription</span>
+                <span id="subscriptionStatus">—</span>
               </div>
               <div class="connected-row">
                 <span class="label">Status</span>
@@ -274,7 +287,7 @@
   }
 
   function showOnly(id) {
-    ['platformRequiredState', 'connectState', 'connectedState', 'loadingState'].forEach(key => {
+    ['platformRequiredState', 'subscriptionRequiredState', 'connectState', 'connectedState', 'loadingState'].forEach(key => {
       document.getElementById(key).style.display = key === id ? '' : 'none';
     });
   }
@@ -288,9 +301,18 @@
 
   function renderStatus() {
     document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('connectedBadge').style.display = 'none';
 
     if (!stripeStatus.can_accept_cards) {
       showOnly('platformRequiredState');
+      document.getElementById('payoutsCard').style.display = 'none';
+      return;
+    }
+
+    if (!stripeStatus.billing_active) {
+      showOnly('subscriptionRequiredState');
+      document.getElementById('subscriptionStatusLine').textContent =
+        `Subscription status: ${(stripeStatus.billing_status || 'pending_subscription').replace(/_/g, ' ')}`;
       document.getElementById('payoutsCard').style.display = 'none';
       return;
     }
@@ -307,7 +329,11 @@
     document.getElementById('chargesEnabled').innerHTML = boolBadge(stripeStatus.charges_enabled);
     document.getElementById('payoutsEnabled').innerHTML = boolBadge(stripeStatus.payouts_enabled);
     document.getElementById('detailsSubmitted').innerHTML = boolBadge(stripeStatus.details_submitted);
+    document.getElementById('subscriptionStatus').innerHTML = stripeStatus.billing_active
+      ? '<span class="badge badge-sage">Active</span>'
+      : '<span class="badge badge-warm">Action needed</span>';
     document.getElementById('statusSummary').innerHTML = stripeStatus.onboarding_complete
+      && stripeStatus.can_accept_live_orders
       ? '<span class="badge badge-sage">Ready for live payments</span>'
       : '<span class="badge badge-warm">More Stripe setup needed</span>';
     document.getElementById('feeNote').textContent =

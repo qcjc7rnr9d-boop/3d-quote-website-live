@@ -6,8 +6,15 @@ import { db, requireShopAuth } from '../middleware/auth.js';
 import {
   getEffectivePlatformStripeConfig,
   getMaskedPlatformStripeConfig,
+  getPlatformStripeClient,
   updateShopStripeReadiness,
 } from '../lib/platform-payments.js';
+import {
+  liveOrderReadiness,
+  markShopBillingPastDue,
+  updateShopBillingFromCheckoutSession,
+  updateShopBillingFromSubscription,
+} from '../lib/billing.js';
 import {
   PricingError,
 } from '../lib/pricing-engine.js';
@@ -23,9 +30,15 @@ const paymentIntentLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const READINESS_ERROR_CODES = new Set([
+  'PLATFORM_STRIPE_NOT_CONFIGURED',
+  'SUBSCRIPTION_INACTIVE',
+  'NO_CONNECTED_ACCOUNT',
+  'ONBOARDING_INCOMPLETE',
+]);
+
 function getPlatformStripe() {
-  const { secretKey } = getEffectivePlatformStripeConfig();
-  return secretKey ? new Stripe(secretKey) : null;
+  return getPlatformStripeClient();
 }
 
 function ensurePlatformStripe() {
@@ -56,12 +69,23 @@ function shopReadinessPayload(shop, account = null) {
   const requirementsDue = account?.requirements?.currently_due || [];
 
   return {
+    billing_status: shop?.billing_status || 'pending_subscription',
     connected_account_id: shop?.stripe_account_id || null,
     charges_enabled: chargesEnabled,
     payouts_enabled: payoutsEnabled,
     details_submitted: detailsSubmitted,
     onboarding_complete: chargesEnabled && payoutsEnabled && detailsSubmitted,
     requirements_due: requirementsDue,
+  };
+}
+
+function readinessErrorPayload(readiness) {
+  const code = READINESS_ERROR_CODES.has(readiness.code) ? readiness.code : 'ONBOARDING_INCOMPLETE';
+  return {
+    error: readiness.error || 'This store cannot accept live payments yet.',
+    code,
+    billing_status: readiness.billing_status,
+    can_accept_live_orders: false,
   };
 }
 
@@ -85,7 +109,7 @@ function newPublicOrderToken() {
   return randomBytes(24).toString('base64url');
 }
 
-export function stripeWebhookHandler(req, res) {
+export async function stripeWebhookHandler(req, res) {
   const sig = req.headers['stripe-signature'];
   const { secretKey, webhookSecret } = getEffectivePlatformStripeConfig();
   let event;
@@ -114,6 +138,22 @@ export function stripeWebhookHandler(req, res) {
       const shop = db.prepare('SELECT id FROM shops WHERE stripe_account_id = ?').get(account.id);
       if (shop) updateShopStripeReadiness(shop.id, account);
     }
+
+    if (event.type === 'checkout.session.completed') {
+      updateShopBillingFromCheckoutSession(db, event.data.object);
+    }
+
+    if (
+      event.type === 'customer.subscription.created' ||
+      event.type === 'customer.subscription.updated' ||
+      event.type === 'customer.subscription.deleted'
+    ) {
+      updateShopBillingFromSubscription(db, event.data.object);
+    }
+
+    if (event.type === 'invoice.payment_failed') {
+      markShopBillingPastDue(db, event.data.object);
+    }
   } catch (err) {
     console.error('Webhook processing error:', err);
   }
@@ -124,12 +164,19 @@ export function stripeWebhookHandler(req, res) {
 router.get('/keys-status', requireShopAuth, async (req, res) => {
   try {
     const platform = getMaskedPlatformStripeConfig();
+    const effectivePlatform = getEffectivePlatformStripeConfig();
     const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
     const account = await syncShopStripeAccount(shop);
+    const refreshedShop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
+    const baseReadiness = {
+      ...liveOrderReadiness(refreshedShop, effectivePlatform),
+      requirements_due: account?.requirements?.currently_due || [],
+    };
 
     res.json({
       ...platform,
-      ...shopReadinessPayload(shop, account),
+      ...shopReadinessPayload(refreshedShop, account),
+      ...baseReadiness,
     });
   } catch (err) {
     console.error('Stripe status error:', err);
@@ -146,39 +193,24 @@ router.get('/public-key', (req, res) => {
   if (!slug) return res.status(400).json({ error: 'shop required' });
 
   const shop = db.prepare(
-    `SELECT id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted
+    `SELECT *
      FROM shops WHERE slug = ? AND plan != 'suspended'`
   ).get(slug);
 
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
-  const { publishableKey, secretKey } = getEffectivePlatformStripeConfig();
-  if (!publishableKey) {
-    return res.status(503).json({
-      error: 'Stripe is not configured - add a publishable key in the platform portal.',
-      code: 'NO_PUBLIC_KEY',
-    });
-  }
-  if (!secretKey) {
-    return res.status(503).json({
-      error: 'Stripe is not configured - add a secret key in the platform portal.',
-      code: 'NO_SECRET_KEY',
-    });
-  }
-  if (!shop.stripe_account_id) {
-    return res.status(503).json({
-      error: 'This store has not connected Stripe yet.',
-      code: 'NO_CONNECTED_ACCOUNT',
-    });
-  }
-  if (!shop.stripe_charges_enabled || !shop.stripe_payouts_enabled || !shop.stripe_details_submitted) {
-    return res.status(503).json({
-      error: 'This store still needs to finish Stripe onboarding before it can accept live payments.',
-      code: 'ONBOARDING_INCOMPLETE',
-    });
+  const platform = getEffectivePlatformStripeConfig();
+  const readiness = liveOrderReadiness(shop, platform);
+  if (!readiness.can_accept_live_orders) {
+    return res.status(503).json(readinessErrorPayload(readiness));
   }
 
-  res.json({ publishable_key: publishableKey, has_connect: true });
+  res.json({
+    publishable_key: platform.publishableKey,
+    has_connect: true,
+    billing_status: readiness.billing_status,
+    can_accept_live_orders: true,
+  });
 });
 
 router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => {
@@ -194,15 +226,15 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
 
     const shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
-    if (!shop.stripe_account_id) {
-      return res.status(503).json({ error: 'This store has not connected Stripe yet.' });
-    }
-    if (!shop.stripe_charges_enabled || !shop.stripe_payouts_enabled || !shop.stripe_details_submitted) {
-      return res.status(503).json({ error: 'This store is not ready to accept Stripe payments yet.' });
+
+    const platform = getEffectivePlatformStripeConfig();
+    const readiness = liveOrderReadiness(shop, platform);
+    if (!readiness.can_accept_live_orders) {
+      return res.status(503).json(readinessErrorPayload(readiness));
     }
 
     const stripe = ensurePlatformStripe();
-    const { feePercent } = getEffectivePlatformStripeConfig();
+    const { feePercent } = platform;
     const cart = validateCartForShop(db, shop, normaliseCart({
       ...(orderData || {}),
       shopSlug,
