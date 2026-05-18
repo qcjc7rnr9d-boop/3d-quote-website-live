@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS platform_settings (
   stripe_secret_key    TEXT,
   stripe_client_id     TEXT,
   platform_fee_percent REAL    NOT NULL DEFAULT 5,
+  estimated_card_fee_basis_points INTEGER NOT NULL DEFAULT 290,
+  estimated_card_fee_fixed_cents INTEGER NOT NULL DEFAULT 30,
   updated_at           TEXT    NOT NULL DEFAULT (datetime('now')),
   created_at           TEXT    NOT NULL DEFAULT (datetime('now'))
 );
@@ -123,6 +125,9 @@ CREATE TABLE IF NOT EXISTS orders (
   total               REAL    NOT NULL DEFAULT 0,
   stripe_payment_id   TEXT,
   public_token        TEXT UNIQUE,
+  payment_processing_fee_cents INTEGER NOT NULL DEFAULT 0,
+  checkout_platform_fee_cents INTEGER NOT NULL DEFAULT 0,
+  customer_total_cents INTEGER NOT NULL DEFAULT 0,
   fulfilment_status   TEXT    NOT NULL DEFAULT 'pending',
   payment_status      TEXT    NOT NULL DEFAULT 'pending',
   notes               TEXT,
@@ -340,6 +345,7 @@ CREATE TABLE IF NOT EXISTS store_settings (
   shipping_zones  TEXT   NOT NULL DEFAULT '[]',
   material_page_settings TEXT NOT NULL DEFAULT '{}',
   embed_allowed_origins TEXT NOT NULL DEFAULT '[]',
+  payment_fee_mode TEXT NOT NULL DEFAULT 'merchant_absorbs',
   email_sending_domain TEXT,
   email_sending_domain_status TEXT NOT NULL DEFAULT 'not_configured',
   email_sending_domain_records TEXT NOT NULL DEFAULT '[]',
@@ -349,6 +355,109 @@ CREATE TABLE IF NOT EXISTS store_settings (
   updated_at     TEXT    NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS plans (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  monthly_price_cents INTEGER,
+  currency TEXT NOT NULL DEFAULT 'NZD',
+  gst_rate_basis_points INTEGER NOT NULL DEFAULT 1500,
+  quote_allowance INTEGER,
+  quote_overage_price_cents INTEGER,
+  trial_days INTEGER NOT NULL DEFAULT 0,
+  setup_fee_cents INTEGER NOT NULL DEFAULT 0,
+  checkout_enabled INTEGER NOT NULL DEFAULT 0,
+  checkout_fee_basis_points INTEGER NOT NULL DEFAULT 0,
+  checkout_fee_monthly_cap_cents INTEGER NOT NULL DEFAULT 0,
+  allow_overages INTEGER NOT NULL DEFAULT 0,
+  branding_required INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS merchant_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id INTEGER NOT NULL UNIQUE,
+  plan_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending_subscription',
+  trial_start TEXT,
+  trial_end TEXT,
+  current_period_start TEXT NOT NULL,
+  current_period_end TEXT NOT NULL,
+  stripe_subscription_id TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+  FOREIGN KEY (plan_id) REFERENCES plans(id)
+);
+
+CREATE TABLE IF NOT EXISTS quote_usage_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id INTEGER NOT NULL,
+  quote_id TEXT,
+  event_type TEXT NOT NULL,
+  billing_period_start TEXT NOT NULL,
+  billing_period_end TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS checkout_fee_ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id INTEGER NOT NULL,
+  order_id INTEGER,
+  billing_period_start TEXT NOT NULL,
+  billing_period_end TEXT NOT NULL,
+  order_amount_cents INTEGER NOT NULL DEFAULT 0,
+  raw_platform_fee_cents INTEGER NOT NULL DEFAULT 0,
+  final_platform_fee_cents INTEGER NOT NULL DEFAULT 0,
+  cap_remaining_before_cents INTEGER NOT NULL DEFAULT 0,
+  cap_remaining_after_cents INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS payment_fee_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id INTEGER NOT NULL,
+  order_id INTEGER,
+  stripe_payment_intent_id TEXT,
+  stripe_charge_id TEXT,
+  stripe_balance_transaction_id TEXT,
+  stripe_fee_amount_cents INTEGER NOT NULL DEFAULT 0,
+  stripe_net_amount_cents INTEGER NOT NULL DEFAULT 0,
+  stripe_fee_details_json TEXT NOT NULL DEFAULT '[]',
+  payment_fee_mode TEXT NOT NULL DEFAULT 'merchant_absorbs',
+  passed_to_customer_amount_cents INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS billing_adjustments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id INTEGER NOT NULL,
+  adjustment_type TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL DEFAULT 0,
+  reason TEXT,
+  billing_period_start TEXT,
+  billing_period_end TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_quote_usage_shop_period
+  ON quote_usage_events(shop_id, billing_period_start, billing_period_end);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_quote_usage_once
+  ON quote_usage_events(shop_id, quote_id, event_type)
+  WHERE quote_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_checkout_fee_shop_period
+  ON checkout_fee_ledger(shop_id, billing_period_start, billing_period_end);
+CREATE INDEX IF NOT EXISTS idx_payment_fee_order
+  ON payment_fee_records(order_id);
 
 CREATE TABLE IF NOT EXISTS email_delivery_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

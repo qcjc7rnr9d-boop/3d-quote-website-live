@@ -16,6 +16,17 @@ import {
   updateShopBillingFromSubscription,
 } from '../lib/billing.js';
 import {
+  assertCheckoutAllowed,
+  calculateCheckoutPlatformFee,
+  estimatePaymentProcessingFee,
+  getPaymentFeeMode,
+  markCheckoutLedgerStatus,
+  previewQuoteUsage,
+  recordCheckoutFeeLedger,
+  recordQuoteUsageEvent,
+  recordStripePaymentFeeFromIntent,
+} from '../lib/billing-service.js';
+import {
   PricingError,
 } from '../lib/pricing-engine.js';
 import { normaliseCart, validateCartForShop } from '../lib/cart.js';
@@ -159,12 +170,18 @@ export async function stripeWebhookHandler(req, res) {
       db.prepare("UPDATE orders SET payment_status = 'paid' WHERE stripe_payment_id = ?")
         .run(event.data.object.id);
       const order = db.prepare('SELECT id FROM orders WHERE stripe_payment_id = ?').get(event.data.object.id);
-      if (order) await sendPaidOrderConfirmation(order.id);
+      if (order) {
+        markCheckoutLedgerStatus(db, order.id, 'charged');
+        await recordStripePaymentFeeFromIntent(db, getPlatformStripe(), event.data.object.id);
+        await sendPaidOrderConfirmation(order.id);
+      }
     }
 
     if (event.type === 'payment_intent.payment_failed') {
       db.prepare("UPDATE orders SET payment_status = 'failed' WHERE stripe_payment_id = ?")
         .run(event.data.object.id);
+      const order = db.prepare('SELECT id FROM orders WHERE stripe_payment_id = ?').get(event.data.object.id);
+      if (order) markCheckoutLedgerStatus(db, order.id, 'failed');
     }
 
     if (event.type === 'account.updated') {
@@ -233,6 +250,16 @@ router.get('/public-key', (req, res) => {
 
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
+  try {
+    assertCheckoutAllowed(db, shop.id, { method: 'card' });
+  } catch (err) {
+    return res.status(err.status || 409).json({
+      error: err.message,
+      code: err.code || 'CHECKOUT_UNAVAILABLE',
+      can_accept_live_orders: false,
+    });
+  }
+
   const platform = getEffectivePlatformStripeConfig();
   const readiness = liveOrderReadiness(shop, platform);
   if (!readiness.can_accept_live_orders) {
@@ -266,35 +293,53 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
     if (!readiness.can_accept_live_orders) {
       return res.status(503).json(readinessErrorPayload(readiness));
     }
+    assertCheckoutAllowed(db, shop.id, { method: 'card' });
 
     const stripe = ensurePlatformStripe();
-    const { feePercent } = platform;
     const cart = validateCartForShop(db, shop, normaliseCart({
       ...(orderData || {}),
       shopSlug,
       items: Array.isArray(orderData?.items) && orderData.items.length ? orderData.items : null,
     }, shopSlug));
+    const usagePreview = previewQuoteUsage(db, shop.id);
+    if (usagePreview.limit_reached) {
+      return res.status(402).json({
+        error: 'You have used your included quotes for this billing period. Upgrade to keep sending quotes.',
+        code: 'QUOTE_LIMIT_REACHED',
+        usage: usagePreview,
+      });
+    }
+    const paymentFeeMode = getPaymentFeeMode(db, shop.id);
+    const paymentProcessingFeeCents = estimatePaymentProcessingFee(db, {
+      shopId: shop.id,
+      amountCents: cart.totalCents,
+      paymentFeeMode,
+    });
+    const customerPayCents = cart.totalCents + paymentProcessingFeeCents;
     const claimedCents = Math.round(Number(amount) * 100);
-    if (!Number.isFinite(claimedCents) || claimedCents !== cart.totalCents) {
+    if (!Number.isFinite(claimedCents) || claimedCents !== customerPayCents) {
       const err = new PricingError(
         'Checkout total changed. Please review the updated price and try again.',
         409,
         'PRICE_CHANGED',
-        { ok: true, cart }
+        { ok: true, cart, payment_processing_fee_cents: paymentProcessingFeeCents, customer_total_cents: customerPayCents }
       );
       throw err;
     }
     const firstItem = cart.items[0];
     const amountCents = cart.totalCents;
-    const feeCents = Math.round(amountCents * feePercent / 100);
+    const platformFee = calculateCheckoutPlatformFee(db, {
+      shopId: shop.id,
+      orderAmountCents: amountCents,
+    });
+    const feeCents = platformFee.final_platform_fee_cents;
 
-    const intent = await stripe.paymentIntents.create({
-      amount: amountCents,
+    const paymentIntentPayload = {
+      amount: customerPayCents,
       currency: 'nzd',
       payment_method: paymentMethodId,
       confirm: true,
       return_url: `${process.env.BASE_URL || 'http://localhost:3000'}/confirmation.html`,
-      application_fee_amount: feeCents,
       transfer_data: { destination: shop.stripe_account_id },
       on_behalf_of: shop.stripe_account_id,
       metadata: {
@@ -305,7 +350,14 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
         materialId: String(firstItem?.materialId || ''),
         pricingVersion: 'pricing-v1-per-volume-cart',
         cartItems: String(cart.items.length),
+        paymentFeeMode,
       },
+    };
+    // Stripe/card fees for print orders are pass-through costs. Trennen's
+    // separate revenue is only the capped application fee calculated above.
+    if (feeCents > 0) paymentIntentPayload.application_fee_amount = feeCents;
+    const intent = await stripe.paymentIntents.create({
+      ...paymentIntentPayload,
     });
 
     db.prepare(`
@@ -318,8 +370,9 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
     const order = db.prepare(`
       INSERT INTO orders
         (shop_id, customer_email, customer_name, file_name, material_id,
-         colour, finish, quantity, subtotal, tax, shipping, total, stripe_payment_id, public_token)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         colour, finish, quantity, subtotal, tax, shipping, total, stripe_payment_id, public_token,
+         payment_processing_fee_cents, checkout_platform_fee_cents, customer_total_cents)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       shop.id, (customerEmail || '').toLowerCase(), customerName || '',
       cart.items.length > 1 ? `${cart.items.length} material groups` : firstItem?.file?.name || null,
@@ -331,9 +384,20 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
       cart.items.reduce((sum, item) => sum + Number(item.shippingNzd || 0), 0),
       cart.totalNzd, intent.id, publicToken,
+      paymentProcessingFeeCents, feeCents, customerPayCents,
     );
     saveOrderItems(db, order.lastInsertRowid, cart.items);
+    recordQuoteUsageEvent(db, {
+      shopId: shop.id,
+      quoteId: `order:${order.lastInsertRowid}`,
+      eventType: 'checkout_order_created',
+    });
+    recordCheckoutFeeLedger(db, platformFee, {
+      orderId: order.lastInsertRowid,
+      status: intent.status === 'succeeded' ? 'charged' : 'pending',
+    });
     if (intent.status === 'succeeded') {
+      await recordStripePaymentFeeFromIntent(db, stripe, intent.id);
       await sendPaidOrderConfirmation(order.lastInsertRowid);
     }
 
@@ -342,6 +406,12 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       orderId: order.lastInsertRowid,
       orderToken: publicToken,
       status: intent.status,
+      payment_fee_mode: paymentFeeMode,
+      payment_processing_fee_cents: paymentProcessingFeeCents,
+      checkout_platform_fee_cents: feeCents,
+      customer_total_cents: customerPayCents,
+      checkout_fee: platformFee,
+      usage: usagePreview,
     });
   } catch (err) {
     console.error('Create payment intent error:', err);
@@ -353,6 +423,92 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       });
     }
     res.status(err.status || 500).json({ error: err.message || 'Payment failed' });
+  }
+});
+
+router.post('/create-bank-transfer-order', paymentIntentLimiter, async (req, res) => {
+  try {
+    const { shopSlug, customerEmail, customerName, orderData } = req.body;
+    if (!shopSlug || !customerEmail || !orderData) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    if (!validateEmail(customerEmail)) {
+      return res.status(400).json({ error: 'Enter a valid email address.' });
+    }
+
+    const shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    const paymentFeeMode = getPaymentFeeMode(db, shop.id);
+
+    const cart = validateCartForShop(db, shop, normaliseCart({
+      ...(orderData || {}),
+      shopSlug,
+      items: Array.isArray(orderData?.items) && orderData.items.length ? orderData.items : null,
+    }, shopSlug));
+    const usagePreview = previewQuoteUsage(db, shop.id);
+    if (usagePreview.limit_reached) {
+      return res.status(402).json({
+        error: 'You have used your included quotes for this billing period. Upgrade to keep sending quotes.',
+        code: 'QUOTE_LIMIT_REACHED',
+        usage: usagePreview,
+      });
+    }
+
+    db.prepare(`
+      INSERT INTO customers (shop_id, email, name) VALUES (?, ?, ?)
+      ON CONFLICT(shop_id, email) DO UPDATE SET name = excluded.name
+    `).run(shop.id, (customerEmail || '').toLowerCase(), customerName || null);
+
+    ensureOrderPublicTokenColumn();
+    const publicToken = newPublicOrderToken();
+    const firstItem = cart.items[0];
+    const order = db.prepare(`
+      INSERT INTO orders
+        (shop_id, customer_email, customer_name, file_name, material_id,
+         colour, finish, quantity, subtotal, tax, shipping, total, public_token,
+         payment_processing_fee_cents, checkout_platform_fee_cents, customer_total_cents)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
+    `).run(
+      shop.id,
+      (customerEmail || '').toLowerCase(),
+      customerName || '',
+      cart.items.length > 1 ? `${cart.items.length} material groups` : firstItem?.file?.name || null,
+      firstItem?.materialId || null,
+      cart.items.length > 1 ? 'Multiple' : firstItem?.colorName || null,
+      cart.items.length > 1 ? 'Multiple' : firstItem?.finishLabel || null,
+      cart.items.length > 1 ? 1 : firstItem?.quantity || 1,
+      cart.items.reduce((sum, item) => sum + Number(item.itemsNzd || 0), 0),
+      cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
+      cart.items.reduce((sum, item) => sum + Number(item.shippingNzd || 0), 0),
+      cart.totalNzd,
+      publicToken,
+      cart.totalCents,
+    );
+    saveOrderItems(db, order.lastInsertRowid, cart.items);
+    recordQuoteUsageEvent(db, {
+      shopId: shop.id,
+      quoteId: `order:${order.lastInsertRowid}`,
+      eventType: 'bank_transfer_order_created',
+    });
+
+    res.status(201).json({
+      ok: true,
+      orderId: order.lastInsertRowid,
+      orderToken: publicToken,
+      payment_fee_mode: paymentFeeMode,
+      customer_total_cents: cart.totalCents,
+      usage: usagePreview,
+    });
+  } catch (err) {
+    console.error('Create bank transfer order error:', err);
+    if (err instanceof PricingError) {
+      return res.status(err.status).json({
+        error: err.message || 'Order failed',
+        code: err.code,
+        quote: err.quote || null,
+      });
+    }
+    res.status(err.status || 500).json({ error: err.message || 'Order failed' });
   }
 });
 

@@ -108,6 +108,58 @@ try {
   assert(freshState.materialsDisabled === 'true', 'Fresh quote should disable Materials nav until a model is uploaded');
   assert(freshState.materialsHref === '#upload', `Fresh quote Materials nav should target upload prompt, got ${freshState.materialsHref}`);
 
+  await page.evaluate(({ material, colour, finish, infill }) => {
+    localStorage.removeItem('cart');
+    localStorage.setItem('form_file', JSON.stringify({
+      name: 'no-shipping-preview.stl',
+      size: 1024,
+      volumeCm3: 8,
+      dimensions: { xMm: 20, yMm: 20, zMm: 20 },
+      models: [{ id: 'no-shipping-model', name: 'no-shipping-preview.stl', size: 1024, volumeCm3: 8, quantity: 1, dimensions: { xMm: 20, yMm: 20, zMm: 20 } }],
+    }));
+    localStorage.setItem('form_selection', JSON.stringify({
+      shopSlug: 'mahi3d',
+      materialId: material.id,
+      materialName: material.name,
+      colorId: colour.id || null,
+      colorName: colour.name || '',
+      colorHex: colour.hex || null,
+      finishId: finish.id || null,
+      finish: finish.id || null,
+      finishLabel: finish.name || '',
+      finishLayerHeight: finish.layerHeight || '',
+      infillTierId: infill.id || null,
+      infillLabel: infill.label || infill.name || '',
+      requiredSelections: { material: true, colour: true, finish: true, infill: true },
+      qty: 1,
+      currency: 'NZD',
+    }));
+  }, { material, colour, finish, infill });
+  await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => {
+    const price = document.querySelector('#priceInt')?.textContent?.trim() || '';
+    const helper = document.querySelector('#priceHelper')?.textContent || '';
+    return price && price !== '—' && /Shipping not included/.test(helper);
+  }, null, { timeout: 7000 });
+  const noShippingPreview = await page.evaluate(() => ({
+    price: `${document.querySelector('#priceSymbol')?.textContent || ''}${document.querySelector('#priceInt')?.textContent || ''}${document.querySelector('#priceDec')?.textContent || ''}`,
+    helper: document.querySelector('#priceHelper')?.textContent || '',
+    checkoutDisabled: document.querySelector('#checkoutCartBtn')?.getAttribute('aria-disabled') || '',
+    cartCount: JSON.parse(localStorage.getItem('cart') || '{}').items?.length || 0,
+  }));
+  assert(noShippingPreview.price !== '$—', 'Quote review should show a backend price before shipping is selected');
+  assert(/Shipping not included/.test(noShippingPreview.helper), `Quote helper should say shipping is not included, got ${noShippingPreview.helper}`);
+  assert(noShippingPreview.checkoutDisabled === 'true', 'Checkout should remain disabled before explicit shipping selection');
+  assert(noShippingPreview.cartCount === 0, `Preview-only quote should not auto-save a checkout cart item, got ${noShippingPreview.cartCount}`);
+  await page.click('#saveQuoteBtn');
+  await page.waitForTimeout(250);
+  const noShippingBlocked = await page.evaluate(() => ({
+    toast: document.querySelector('#toast')?.textContent || '',
+    shippingInvalid: document.querySelector('#shippingBlock')?.classList.contains('invalid') || false,
+  }));
+  assert(/shipping/i.test(noShippingBlocked.toast), `Checkout without shipping should show a shipping validation toast, got ${noShippingBlocked.toast}`);
+  assert(noShippingBlocked.shippingInvalid, 'Checkout without shipping should highlight the shipping section');
+
   const stlBase64 = makeStlBuffer().toString('base64');
   await page.evaluate(async ({ encoded, material, colour, finish, infill, shipping }) => {
     const bin = atob(encoded);

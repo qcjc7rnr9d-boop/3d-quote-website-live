@@ -20,7 +20,7 @@ While in test mode use these card numbers — any future expiry, any CVC:
 
 ## 3. Stripe Connect Setup (multi-shop platform)
 
-RF DEWI operates as a **platform** — each print shop connects their own Stripe account, and the platform takes a 5% fee automatically.
+Trennen operates as a **platform** — each print shop connects their own Stripe account where possible. Trennen checkout/platform fees are plan-based and capped; Stripe/card/payment processing fees are pass-through costs recorded separately from Trennen platform revenue.
 
 1. In **Stripe Dashboard → Connect → Settings**:
    - Set your platform name: "RF DEWI"

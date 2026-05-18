@@ -145,6 +145,7 @@ async function run() {
     'materials.html',
     'options.html',
     'privacy.html',
+    'pricing.html',
     'quote.html',
     'stripe-callback.html',
     'terms.html',

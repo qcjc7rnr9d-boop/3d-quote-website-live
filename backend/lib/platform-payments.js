@@ -38,6 +38,8 @@ export function getEffectivePlatformStripeConfig() {
   const clientId = row.stripe_client_id || process.env.STRIPE_CLIENT_ID || '';
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
   const feePercent = Number(row.platform_fee_percent);
+  const estimatedCardFeeBasisPoints = Number(row.estimated_card_fee_basis_points ?? process.env.ESTIMATED_CARD_FEE_BASIS_POINTS);
+  const estimatedCardFeeFixedCents = Number(row.estimated_card_fee_fixed_cents ?? process.env.ESTIMATED_CARD_FEE_FIXED_CENTS);
 
   return {
     publishableKey,
@@ -45,6 +47,8 @@ export function getEffectivePlatformStripeConfig() {
     clientId,
     webhookSecret,
     feePercent: Number.isFinite(feePercent) && feePercent >= 0 ? feePercent : PLATFORM_FEE_PERCENT,
+    estimatedCardFeeBasisPoints: Number.isFinite(estimatedCardFeeBasisPoints) && estimatedCardFeeBasisPoints >= 0 ? estimatedCardFeeBasisPoints : 290,
+    estimatedCardFeeFixedCents: Number.isFinite(estimatedCardFeeFixedCents) && estimatedCardFeeFixedCents >= 0 ? estimatedCardFeeFixedCents : 30,
     fromDb: !!(row.stripe_publishable_key || row.stripe_secret_key || row.stripe_client_id || row.platform_fee_percent != null),
   };
 }
@@ -73,14 +77,16 @@ export function getMaskedPlatformStripeConfig() {
     secret_key_masked: maskSecretLikeKey(effective.secretKey, ['sk_live_', 'sk_test_']),
     client_id_masked: maskSecretLikeKey(effective.clientId, ['ca_']),
     platform_fee_percent: effective.feePercent,
+    estimated_card_fee_basis_points: effective.estimatedCardFeeBasisPoints,
+    estimated_card_fee_fixed_cents: effective.estimatedCardFeeFixedCents,
     webhook_configured: !!effective.webhookSecret,
     billing_prices_configured: billingPrices,
-    can_create_billing_sessions: false,
+    can_create_billing_sessions: !!(effective.secretKey && (billingPrices.starter || billingPrices.growth || billingPrices.scale)),
     from_db: effective.fromDb,
   };
 }
 
-export function updatePlatformStripeConfig({ publishableKey, secretKey, clientId, platformFeePercent }) {
+export function updatePlatformStripeConfig({ publishableKey, secretKey, clientId, platformFeePercent, estimatedCardFeeBasisPoints, estimatedCardFeeFixedCents }) {
   ensurePlatformSettingsRow();
   const current = getPlatformSettingsRow();
 
@@ -92,6 +98,12 @@ export function updatePlatformStripeConfig({ publishableKey, secretKey, clientId
   const nextFee = platformFeePercent !== undefined && platformFeePercent !== null && platformFeePercent !== ''
     ? Number(platformFeePercent)
     : (current?.platform_fee_percent ?? PLATFORM_FEE_PERCENT);
+  const nextEstimatedBps = estimatedCardFeeBasisPoints !== undefined && estimatedCardFeeBasisPoints !== null && estimatedCardFeeBasisPoints !== ''
+    ? Number(estimatedCardFeeBasisPoints)
+    : (current?.estimated_card_fee_basis_points ?? 290);
+  const nextEstimatedFixed = estimatedCardFeeFixedCents !== undefined && estimatedCardFeeFixedCents !== null && estimatedCardFeeFixedCents !== ''
+    ? Number(estimatedCardFeeFixedCents)
+    : (current?.estimated_card_fee_fixed_cents ?? 30);
 
   db.prepare(`
     UPDATE platform_settings
@@ -99,9 +111,11 @@ export function updatePlatformStripeConfig({ publishableKey, secretKey, clientId
         stripe_secret_key = ?,
         stripe_client_id = ?,
         platform_fee_percent = ?,
+        estimated_card_fee_basis_points = ?,
+        estimated_card_fee_fixed_cents = ?,
         updated_at = datetime('now')
     WHERE id = ?
-  `).run(nextPublishable, nextSecret, nextClientId, nextFee, PLATFORM_SETTINGS_ID);
+  `).run(nextPublishable, nextSecret, nextClientId, nextFee, nextEstimatedBps, nextEstimatedFixed, PLATFORM_SETTINGS_ID);
 
   return getMaskedPlatformStripeConfig();
 }

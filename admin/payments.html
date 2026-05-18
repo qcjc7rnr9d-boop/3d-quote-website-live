@@ -337,7 +337,7 @@
       ? '<span class="badge badge-sage">Ready for live payments</span>'
       : '<span class="badge badge-warm">More Stripe setup needed</span>';
     document.getElementById('feeNote').textContent =
-      `Trennen takes a ${Number(stripeStatus.platform_fee_percent || 0).toFixed(2)}% platform fee from each paid order.`;
+      'Trennen checkout fees are plan-based and capped. Stripe/payment processing fees are separate pass-through costs.';
 
     const requirementsBox = document.getElementById('requirementsBox');
     if (stripeStatus.requirements_due && stripeStatus.requirements_due.length) {

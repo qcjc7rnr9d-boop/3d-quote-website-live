@@ -2,16 +2,26 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { db, requirePlatformAuth } from '../middleware/auth.js';
-import { BCRYPT_ROUNDS, PLATFORM_FEE_PERCENT, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES, RESET_TOKEN_HOURS } from '../config.js';
+import { BCRYPT_ROUNDS, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES, RESET_TOKEN_HOURS } from '../config.js';
 import { sendMail, mailerStatus } from '../lib/mailer.js';
 import {
   getMaskedPlatformStripeConfig,
-  getEffectivePlatformStripeConfig,
+  getPlatformStripeClient,
   updatePlatformStripeConfig,
 } from '../lib/platform-payments.js';
 import {
   billingStatusIsActive,
+  createBusinessBillingSession,
 } from '../lib/billing.js';
+import {
+  createBillingAdjustment,
+  getBillingUsageSummary,
+  listCheckoutFeeLedger,
+  listPaymentFeeRecords,
+  listPlans,
+  updatePlan,
+} from '../lib/billing-service.js';
+import { normalisePlanId } from '../lib/billing-plans.js';
 import { ensurePlatformAuditTable, logPlatformAudit } from '../lib/platform-audit.js';
 import {
   bootstrapPlatformAdmin,
@@ -91,7 +101,6 @@ function statusCounts(table, column, where = '', params = []) {
 }
 
 function platformOverviewPayload(where = '', params = []) {
-  const feePercent = getEffectivePlatformStripeConfig().feePercent || PLATFORM_FEE_PERCENT;
   const suffix = where ? ` ${where}` : '';
   const scopedOrders = suffix ? `FROM orders o${suffix}` : 'FROM orders o';
   const revenue = db.prepare(`
@@ -104,6 +113,12 @@ function platformOverviewPayload(where = '', params = []) {
       COALESCE(AVG(CASE WHEN o.payment_status = 'paid' THEN o.total END), 0) as average_order_value
     ${scopedOrders}
   `).get(...params) || {};
+  const ledgerWhere = where ? `WHERE ${where.replace(/^WHERE\s+/i, '').replace(/\bo\./g, 'l.')}` : '';
+  const platformFees = db.prepare(`
+    SELECT COALESCE(SUM(l.final_platform_fee_cents), 0) as cents
+    FROM checkout_fee_ledger l
+    ${ledgerWhere}
+  `).get(...params) || {};
 
   return {
     total_orders: revenue.total_orders || 0,
@@ -111,9 +126,9 @@ function platformOverviewPayload(where = '', params = []) {
     delivered_orders: revenue.delivered_orders || 0,
     active_orders: revenue.active_orders || 0,
     revenue: toNumber(revenue.paid_revenue),
-    estimated_platform_fees: toNumber(revenue.paid_revenue) * feePercent / 100,
+    estimated_platform_fees: toNumber(platformFees.cents) / 100,
     average_order_value: toNumber(revenue.average_order_value),
-    fee_percent: feePercent,
+    fee_percent: null,
   };
 }
 
@@ -128,21 +143,38 @@ function parseCustomerTarget(raw) {
 }
 
 async function createBillingActivationForShop(shop) {
-  db.prepare(`
-    UPDATE shops
-    SET billing_status = CASE
-          WHEN plan = 'suspended' THEN 'suspended'
-          ELSE 'active'
-        END,
-        billing_updated_at = datetime('now'),
-        updated_at = datetime('now')
-    WHERE id = ?
-  `).run(shop.id);
-  return {
-    billing_checkout_url: null,
-    billing_setup_status: 'free_plan',
-    billing_setup_error: 'Starter is free; no monthly billing link is required.',
-  };
+  const planId = normalisePlanId(shop.plan);
+  if (planId === 'community') {
+    db.prepare(`
+      UPDATE shops
+      SET billing_status = CASE
+            WHEN plan = 'suspended' THEN 'suspended'
+            ELSE 'active'
+          END,
+          billing_updated_at = datetime('now'),
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).run(shop.id);
+    return {
+      billing_checkout_url: null,
+      billing_setup_status: 'free_plan',
+      billing_setup_error: 'Community is free; no monthly billing link is required.',
+    };
+  }
+  try {
+    return await createBusinessBillingSession({
+      db,
+      stripe: getPlatformStripeClient(),
+      shop: { ...shop, plan: planId },
+      baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+    });
+  } catch (err) {
+    return {
+      billing_checkout_url: null,
+      billing_setup_status: err.code || 'billing_not_ready',
+      billing_setup_error: err.message || 'Billing link could not be created.',
+    };
+  }
 }
 
 // ── POST /api/platform/login ──────────────────────────────────
@@ -294,10 +326,11 @@ router.get('/stats', requirePlatformAuth, (req, res) => {
     const monthRevenue = db.prepare(
       "SELECT COALESCE(SUM(total),0) as s FROM orders WHERE payment_status='paid' AND created_at >= datetime('now','start of month')"
     ).get().s;
-    const feePercent = getEffectivePlatformStripeConfig().feePercent || PLATFORM_FEE_PERCENT;
-    const monthFees = monthRevenue * feePercent / 100;
+    const monthFees = (db.prepare(
+      "SELECT COALESCE(SUM(final_platform_fee_cents),0) as s FROM checkout_fee_ledger WHERE created_at >= datetime('now','start of month') AND status != 'failed'"
+    ).get().s || 0) / 100;
 
-    res.json({ shopCount, orderCount, monthRevenue, monthFees, feePercent });
+    res.json({ shopCount, orderCount, monthRevenue, monthFees, feePercent: null });
   } catch (err) {
     console.error('Platform stats error:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -326,7 +359,7 @@ router.get('/overview', requirePlatformAuth, (req, res) => {
         SELECT COUNT(*) as c
         FROM shops
         WHERE billing_status IN ('active', 'trialing')
-           OR (plan IN ('starter', 'pro') AND billing_status != 'suspended')
+           OR (plan = 'community' AND billing_status != 'suspended')
       `).get().c,
     });
   } catch (err) {
@@ -729,7 +762,7 @@ router.get('/payments', requirePlatformAuth, (req, res) => {
 
 router.put('/payments', requirePlatformAuth, (req, res) => {
   try {
-    const { publishable_key, secret_key, client_id, platform_fee_percent } = req.body;
+    const { publishable_key, secret_key, client_id, platform_fee_percent, estimated_card_fee_basis_points, estimated_card_fee_fixed_cents } = req.body;
 
     if (publishable_key !== undefined && publishable_key && !publishable_key.startsWith('pk_')) {
       return res.status(400).json({ error: 'Publishable key must start with pk_live_ or pk_test_' });
@@ -743,12 +776,20 @@ router.put('/payments', requirePlatformAuth, (req, res) => {
     if (platform_fee_percent !== undefined && platform_fee_percent !== '' && (Number(platform_fee_percent) < 0 || Number(platform_fee_percent) > 100)) {
       return res.status(400).json({ error: 'Platform fee percent must be between 0 and 100' });
     }
+    if (estimated_card_fee_basis_points !== undefined && estimated_card_fee_basis_points !== '' && Number(estimated_card_fee_basis_points) < 0) {
+      return res.status(400).json({ error: 'Estimated card fee basis points must be 0 or more' });
+    }
+    if (estimated_card_fee_fixed_cents !== undefined && estimated_card_fee_fixed_cents !== '' && Number(estimated_card_fee_fixed_cents) < 0) {
+      return res.status(400).json({ error: 'Estimated card fixed fee must be 0 or more' });
+    }
 
     const result = updatePlatformStripeConfig({
       publishableKey: publishable_key,
       secretKey: secret_key,
       clientId: client_id,
       platformFeePercent: platform_fee_percent,
+      estimatedCardFeeBasisPoints: estimated_card_fee_basis_points,
+      estimatedCardFeeFixedCents: estimated_card_fee_fixed_cents,
     });
 
     logPlatformAudit(req, {
@@ -770,6 +811,76 @@ router.put('/payments', requirePlatformAuth, (req, res) => {
   }
 });
 
+router.get('/plans', requirePlatformAuth, (req, res) => {
+  try {
+    res.json({ plans: listPlans(db) });
+  } catch (err) {
+    console.error('Platform plans error:', err);
+    res.status(500).json({ error: 'Failed to load plans' });
+  }
+});
+
+router.put('/plans/:id', requirePlatformAuth, (req, res) => {
+  try {
+    const plan = updatePlan(db, req.params.id, req.body || {});
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+    logPlatformAudit(req, {
+      action: 'update_billing_plan',
+      targetType: 'plan',
+      targetId: plan.id,
+      metadata: { fields: Object.keys(req.body || {}) },
+    });
+    res.json({ ok: true, plan });
+  } catch (err) {
+    console.error('Update platform plan error:', err);
+    res.status(500).json({ error: 'Failed to update plan' });
+  }
+});
+
+router.get('/fee-ledgers', requirePlatformAuth, (req, res) => {
+  try {
+    const shopId = req.query.shop_id ? parseInt(req.query.shop_id, 10) : null;
+    res.json({ records: listCheckoutFeeLedger(db, { shopId: Number.isFinite(shopId) ? shopId : null }) });
+  } catch (err) {
+    console.error('Platform fee ledger error:', err);
+    res.status(500).json({ error: 'Failed to load checkout_fee_ledger' });
+  }
+});
+
+router.get('/payment-fee-records', requirePlatformAuth, (req, res) => {
+  try {
+    const shopId = req.query.shop_id ? parseInt(req.query.shop_id, 10) : null;
+    res.json({ records: listPaymentFeeRecords(db, { shopId: Number.isFinite(shopId) ? shopId : null }) });
+  } catch (err) {
+    console.error('Platform payment fee records error:', err);
+    res.status(500).json({ error: 'Failed to load payment_fee_records' });
+  }
+});
+
+router.post('/shops/:id/billing-adjustments', requirePlatformAuth, (req, res) => {
+  try {
+    const shop = db.prepare('SELECT id FROM shops WHERE id = ?').get(req.params.id);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    const adjustment = createBillingAdjustment(db, {
+      shopId: shop.id,
+      adjustmentType: req.body?.adjustment_type || 'credit',
+      amountCents: req.body?.amount_cents || 0,
+      reason: req.body?.reason || '',
+    });
+    logPlatformAudit(req, {
+      action: 'create_billing_adjustment',
+      targetType: 'shop',
+      targetId: shop.id,
+      shopId: shop.id,
+      metadata: { amount_cents: req.body?.amount_cents || 0, adjustment_type: req.body?.adjustment_type || 'credit' },
+    });
+    res.status(201).json({ ok: true, adjustment });
+  } catch (err) {
+    console.error('Create billing adjustment error:', err);
+    res.status(500).json({ error: 'Failed to create billing adjustment' });
+  }
+});
+
 // ── POST /api/platform/shops ──────────────────────────────────
 router.post('/shops', requirePlatformAuth, async (req, res) => {
   try {
@@ -780,8 +891,8 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    const selectedPlan = 'starter';
-    const initialBillingStatus = 'active';
+    const selectedPlan = normalisePlanId(req.body?.plan || 'starter');
+    const initialBillingStatus = selectedPlan === 'community' ? 'active' : 'pending_subscription';
     const result = db.prepare(`
       INSERT INTO shops (name, slug, email, password_hash, plan, is_temp_password, billing_status)
       VALUES (?, ?, ?, ?, ?, 1, ?)
@@ -792,6 +903,7 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
     // Create default pricing config and store settings
     db.prepare('INSERT OR IGNORE INTO pricing_config (shop_id) VALUES (?)').run(shopId);
     db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shopId);
+    getBillingUsageSummary(db, shopId);
 
     const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId);
     const billing = await createBillingActivationForShop(shop);

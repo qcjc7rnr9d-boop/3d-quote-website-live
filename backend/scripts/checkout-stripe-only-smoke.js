@@ -43,6 +43,14 @@ assert(
   'Checkout script must process payments through Stripe PaymentIntents'
 );
 assert(
+  checkoutHtml.includes('Bank transfer — no processing fee') && checkoutHtml.includes('Payment processing fee'),
+  'Checkout must clearly show bank transfer and payment processing fee rows'
+);
+assert(
+  checkoutJs.includes('/api/billing/public-checkout-settings') && checkoutJs.includes('/api/stripe/create-bank-transfer-order'),
+  'Checkout script must load payment fee mode and support bank-transfer orders'
+);
+assert(
   !checkoutJs.includes('shopify_shop') && !checkoutJs.includes('shopifyShopDomain'),
   'Checkout script should not preserve Shopify checkout state in the lean release'
 );

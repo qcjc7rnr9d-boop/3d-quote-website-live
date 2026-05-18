@@ -34,7 +34,7 @@
 - [ ] Webhooks failing signature check are **rejected with 400** — never processed
 - [ ] Stripe webhook route receives **raw body** (`express.raw`) — not parsed JSON
 - [ ] `STRIPE_WEBHOOK_SECRET` in `.env` — never committed to source control
-- [ ] Platform fee applied server-side only (`config.PLATFORM_FEE_PERCENT`) — never trusted from client
+- [ ] Trennen checkout/platform fee calculated server-side from plan caps — never trusted from client
 
 ## Stripe Connect
 

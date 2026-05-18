@@ -27,6 +27,7 @@ import { resendWebhookHandler } from './routes/email-webhooks.js';
 import platformRouter from './routes/platform.js';
 import customerPortalRouter from './routes/customer-portal.js';
 import shippingRouter from './routes/shipping.js';
+import billingRouter from './routes/billing.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -131,7 +132,7 @@ app.use('/uploads', express.static(join(ROOT_DIR, 'uploads'), {
 const publicRootPages = new Set([
   '/catalog.html', '/checkout.html', '/confirmation.html', '/index.html',
   '/materials.html', '/options.html', '/privacy.html', '/quote.html',
-  '/stripe-callback.html', '/terms.html'
+  '/pricing.html', '/stripe-callback.html', '/terms.html'
 ]);
 
 app.get(['/', '/index.html'], (req, res) => {
@@ -226,6 +227,7 @@ app.use('/api/stripe', stripeRouter);
 app.use('/api/platform', platformRouter);
 app.use('/api/customer', customerPortalRouter);
 app.use('/api/shipping', shippingRouter);
+app.use('/api/billing', billingRouter);
 
 // ── Public: platform identity (Trennen) ────────────────────────
 // Lets unauthenticated pages (admin auth screens, platform login,

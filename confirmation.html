@@ -221,6 +221,31 @@
 
       <hr class="divider">
 
+      <div class="detail-rows" id="paymentSummaryRows">
+        <div class="detail-row">
+          <span class="detail-label">Print order subtotal</span>
+          <span class="detail-value" id="sumSubtotal">—</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">GST</span>
+          <span class="detail-value" id="sumGst">—</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Shipping</span>
+          <span class="detail-value" id="sumShipping">—</span>
+        </div>
+        <div class="detail-row" id="sumPaymentFeeRow" style="display:none;">
+          <span class="detail-label">Payment processing fee</span>
+          <span class="detail-value" id="sumPaymentFee">—</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Total</span>
+          <span class="detail-value" id="sumTotal">—</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
       <div class="dispatch-row">
         <span class="dispatch-label">Order status</span>
         <span class="badge badge-stone" id="sumStatus">Received</span>
@@ -259,6 +284,8 @@
     const orderToken = params.get('token');
     const shopSlug = params.get('shop') || 'mahi3d';
     const orderRefEl = document.getElementById('orderRef');
+    const fmtNzd = value => 'NZ$' + Number(value || 0).toFixed(2);
+    const centsToNzd = value => Number(value || 0) / 100;
     document.querySelectorAll('a[href="materials.html"]').forEach(a => { a.href = `catalog.html?shop=${encodeURIComponent(shopSlug)}`; });
     document.querySelectorAll('a[data-home-link]').forEach(a => { a.href = `index.html?shop=${encodeURIComponent(shopSlug)}`; });
     document.querySelectorAll('a[data-start-link], a[href="quote.html"]').forEach(a => { a.href = `index.html?shop=${encodeURIComponent(shopSlug)}#uploadZone`; });
@@ -280,6 +307,15 @@
           document.getElementById('sumFinish').textContent = o.finish || '—';
           document.getElementById('sumQty').textContent = String(o.quantity || 1);
           document.getElementById('sumStatus').textContent = o.fulfilment_status || 'Received';
+          document.getElementById('sumSubtotal').textContent = fmtNzd(o.subtotal || 0);
+          document.getElementById('sumGst').textContent = fmtNzd(o.tax || 0);
+          document.getElementById('sumShipping').textContent = fmtNzd(o.shipping || 0);
+          const processingFee = Number(o.payment_processing_fee_cents || 0);
+          if (processingFee > 0) {
+            document.getElementById('sumPaymentFee').textContent = fmtNzd(centsToNzd(processingFee));
+            document.getElementById('sumPaymentFeeRow').style.display = '';
+          }
+          document.getElementById('sumTotal').textContent = fmtNzd(o.customer_total_cents ? centsToNzd(o.customer_total_cents) : o.total || 0);
         })
         .catch(() => {
           orderRefEl.textContent = 'Order not found';

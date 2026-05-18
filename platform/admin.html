@@ -328,6 +328,7 @@
     <button class="platform-tab" data-tab="orders" type="button">Orders</button>
     <button class="platform-tab" data-tab="customers" type="button">Customers</button>
     <button class="platform-tab" data-tab="payments" type="button">Payments</button>
+    <button class="platform-tab" data-tab="plans" type="button">Plans</button>
     <button class="platform-tab" data-tab="security" type="button">Security</button>
   </div>
 
@@ -395,7 +396,7 @@
             <div class="form-group"><label class="form-label" for="newSlug">Slug</label><input class="form-input" type="text" id="newSlug" required></div>
             <div class="form-group"><label class="form-label" for="newEmail">Owner email</label><input class="form-input" type="email" id="newEmail" required></div>
             <div class="form-group"><label class="form-label" for="newPassword">Initial password</label><input class="form-input" type="text" id="newPassword" required></div>
-            <div class="form-group"><label class="form-label" for="newPlan">Plan</label><select class="form-input" id="newPlan"><option value="starter">Starter</option></select></div>
+            <div class="form-group"><label class="form-label" for="newPlan">Plan</label><select class="form-input" id="newPlan"><option value="community">Community</option><option value="starter" selected>Starter</option><option value="growth">Growth</option><option value="scale">Scale</option><option value="enterprise">Enterprise</option></select></div>
           </div>
           <button class="btn btn-primary" type="button" id="createShopBtn" onclick="submitCreateShop()">Create store</button>
         </form>
@@ -455,7 +456,7 @@
           <div class="form-group"><label class="form-label" for="platformPublishableKey">Publishable key</label><input class="form-input" type="text" id="platformPublishableKey" placeholder="pk_live_..."></div>
           <div class="form-group"><label class="form-label" for="platformClientId">Connect client ID</label><input class="form-input" type="text" id="platformClientId" placeholder="ca_..."></div>
           <div class="form-group"><label class="form-label" for="platformSecretKey">Secret key</label><input class="form-input" type="password" id="platformSecretKey" placeholder="sk_live_..."></div>
-          <div class="form-group"><label class="form-label" for="platformFeePercent">Platform fee percent</label><input class="form-input" type="number" min="0" max="100" step="0.01" id="platformFeePercent"></div>
+          <div class="form-group"><label class="form-label" for="platformFeePercent">Legacy fee percent (unused)</label><input class="form-input" type="number" min="0" max="100" step="0.01" id="platformFeePercent"></div>
         </div>
         <button class="btn btn-primary" type="button" id="savePaymentsBtn">Save payments config</button>
         <div class="detail-grid" style="margin-top:18px">
@@ -464,6 +465,39 @@
           <div class="detail-item"><div class="detail-label">Connect client ID</div><div class="detail-value" id="platformMaskedClientId">-</div></div>
           <div class="detail-item"><div class="detail-label">Card payment status</div><div class="detail-value" id="platformCardsStatus">-</div></div>
           <div class="detail-item"><div class="detail-label">Membership billing</div><div class="detail-value" id="platformBillingPriceStatus">-</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-plans" class="tab-panel">
+    <div class="soft-panel" style="margin-bottom:20px">
+      <div class="soft-panel-header"><h2 class="soft-panel-title">Plans</h2></div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Plan</th><th>Monthly cents</th><th>Quotes</th><th>Overage cents</th><th>Checkout bps</th><th>Cap cents</th><th>Actions</th></tr></thead>
+          <tbody id="plansTbody"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel-grid">
+      <div class="soft-panel">
+        <div class="soft-panel-header"><h2 class="soft-panel-title">Grant credit or waive overage</h2></div>
+        <div class="soft-panel-body">
+          <div class="field-grid">
+            <div class="form-group"><label class="form-label" for="adjustShop">Store</label><select class="form-input" id="adjustShop"></select></div>
+            <div class="form-group"><label class="form-label" for="adjustType">Type</label><select class="form-input" id="adjustType"><option value="credit">Credit</option><option value="waive_overage">Waive overage</option></select></div>
+            <div class="form-group"><label class="form-label" for="adjustAmount">Amount cents</label><input class="form-input" id="adjustAmount" type="number" min="0" step="1" value="0"></div>
+            <div class="form-group"><label class="form-label" for="adjustReason">Reason</label><input class="form-input" id="adjustReason" type="text"></div>
+          </div>
+          <button class="btn btn-primary" type="button" id="saveAdjustmentBtn">Save adjustment</button>
+        </div>
+      </div>
+      <div class="soft-panel">
+        <div class="soft-panel-header"><h2 class="soft-panel-title">Fee ledgers</h2></div>
+        <div class="soft-panel-body">
+          <div class="mini-text">checkout_fee_ledger and payment_fee_records keep Trennen platform revenue separate from Stripe/payment processing costs.</div>
+          <div id="feeLedgerList" class="breakdown-list" style="margin-top:12px"></div>
         </div>
       </div>
     </div>
@@ -624,6 +658,8 @@
     const options = '<option value="">All stores</option>' + state.shops.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
     document.getElementById('orderShop').innerHTML = options;
     document.getElementById('customerShop').innerHTML = options;
+    const adjust = document.getElementById('adjustShop');
+    if (adjust) adjust.innerHTML = state.shops.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
   }
   function renderShops() {
     const tbody = document.getElementById('shopsTbody');
@@ -656,7 +692,7 @@
     return badge('Action needed', 'warm');
   }
   function billingBadge(shop) {
-    if (shop.plan === 'starter' || shop.plan === 'pro') return badge('Free', 'sage');
+    if (shop.plan === 'community') return badge('Free', 'sage');
     const status = shop.billing_status || 'pending_subscription';
     if (status === 'active' || status === 'trialing') return badge(status.replace('_', ' '), 'sage');
     if (status === 'pending_subscription') return badge('Pending', 'warm');
@@ -835,7 +871,53 @@
     document.getElementById('platformMaskedSk').textContent = data.secret_key_masked || '-';
     document.getElementById('platformMaskedClientId').textContent = data.client_id_masked || '-';
     document.getElementById('platformCardsStatus').innerHTML = data.can_accept_cards ? badge('Enabled', 'sage') : badge('Not ready', 'warm');
-    document.getElementById('platformBillingPriceStatus').innerHTML = badge('Starter is free', 'sage');
+    const prices = data.billing_prices_configured || {};
+    const configured = ['starter', 'growth', 'scale'].filter(id => prices[id]).length;
+    document.getElementById('platformBillingPriceStatus').innerHTML = configured ? badge(`${configured} paid price IDs`, 'sage') : badge('Needs paid plan price IDs', 'warm');
+  }
+
+  async function loadPlans() {
+    const data = await api('/api/platform/plans');
+    const tbody = document.getElementById('plansTbody');
+    tbody.innerHTML = data.plans.map(plan => `
+      <tr>
+        <td><strong>${esc(plan.name)}</strong><div class="mini-text">${esc(plan.id)}</div></td>
+        <td><input class="form-input" id="plan-${esc(plan.id)}-monthly" type="number" min="0" step="1" value="${plan.monthly_price_cents ?? ''}"></td>
+        <td><input class="form-input" id="plan-${esc(plan.id)}-allowance" type="number" min="0" step="1" value="${plan.quote_allowance ?? ''}"></td>
+        <td><input class="form-input" id="plan-${esc(plan.id)}-overage" type="number" min="0" step="1" value="${plan.quote_overage_price_cents ?? ''}"></td>
+        <td><input class="form-input" id="plan-${esc(plan.id)}-fee-bps" type="number" min="0" step="1" value="${plan.checkout_fee_basis_points ?? 0}"></td>
+        <td><input class="form-input" id="plan-${esc(plan.id)}-cap" type="number" min="0" step="1" value="${plan.checkout_fee_monthly_cap_cents ?? 0}"></td>
+        <td><button class="table-action" type="button" onclick="savePlan(${jsString(plan.id)})">Save</button></td>
+      </tr>
+    `).join('');
+    await loadFeeLedgers();
+  }
+
+  async function loadFeeLedgers() {
+    const [ledger, records] = await Promise.all([
+      api('/api/platform/fee-ledgers'),
+      api('/api/platform/payment-fee-records'),
+    ]);
+    const list = document.getElementById('feeLedgerList');
+    list.innerHTML = `
+      <div class="detail-item"><div class="detail-label">checkout_fee_ledger</div><div class="detail-value">${Number(ledger.records?.length || 0)} recent rows</div></div>
+      <div class="detail-item"><div class="detail-label">payment_fee_records</div><div class="detail-value">${Number(records.records?.length || 0)} recent rows</div></div>
+    `;
+  }
+
+  async function savePlan(id) {
+    await api(`/api/platform/plans/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        monthly_price_cents: document.getElementById(`plan-${id}-monthly`).value || null,
+        quote_allowance: document.getElementById(`plan-${id}-allowance`).value || null,
+        quote_overage_price_cents: document.getElementById(`plan-${id}-overage`).value || null,
+        checkout_fee_basis_points: document.getElementById(`plan-${id}-fee-bps`).value || 0,
+        checkout_fee_monthly_cap_cents: document.getElementById(`plan-${id}-cap`).value || 0,
+      })
+    });
+    await loadPlans();
   }
   async function loadAudit() {
     const data = await api('/api/platform/audit-events?limit=30');
@@ -921,12 +1003,12 @@
         billingLink.style.display = '';
         copyBillingBtn.style.display = '';
         billingLink.href = data.billing_checkout_url;
-        billingNote.textContent = ' Send this to the owner if a paid membership is reintroduced later.';
+        billingNote.textContent = ' Send this to the owner to activate the paid Trennen subscription.';
       } else {
         billingWrap.style.display = '';
         billingLink.style.display = 'none';
         copyBillingBtn.style.display = 'none';
-        billingNote.textContent = ` ${data.billing_setup_error || 'Starter is free; no monthly billing link is required.'}`;
+        billingNote.textContent = ` ${data.billing_setup_error || 'Billing activation is not required for this plan.'}`;
       }
       document.getElementById('createShopForm').reset();
       showBox('createSuccess');
@@ -948,7 +1030,7 @@
       }
       await loadShops();
     } catch (err) {
-      alert(err.message || 'Could not create billing activation link. Starter stores do not need one.');
+      alert(err.message || 'Could not create billing activation link.');
     }
   }
 
@@ -972,6 +1054,20 @@
   });
   document.getElementById('copyBillingLinkBtn').addEventListener('click', () => {
     navigator.clipboard.writeText(document.getElementById('billingLink').href || '');
+  });
+  document.getElementById('saveAdjustmentBtn').addEventListener('click', async () => {
+    const shopId = document.getElementById('adjustShop').value;
+    if (!shopId) return alert('Choose a store first.');
+    await api(`/api/platform/shops/${shopId}/billing-adjustments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adjustment_type: document.getElementById('adjustType').value,
+        amount_cents: document.getElementById('adjustAmount').value,
+        reason: document.getElementById('adjustReason').value,
+      })
+    });
+    await Promise.all([loadPlans(), loadAudit()]);
   });
 
   document.getElementById('saveAccountBtn').addEventListener('click', async () => {
@@ -1033,7 +1129,7 @@
   (async () => {
     try {
       await api('/api/platform/me');
-      await Promise.all([loadOverview(), loadShops(), loadOrders(), loadCustomers(), loadPayments(), loadAccount(), loadAudit()]);
+      await Promise.all([loadOverview(), loadShops(), loadOrders(), loadCustomers(), loadPayments(), loadPlans(), loadAccount(), loadAudit()]);
       setTab(location.hash.slice(1) || 'overview');
     } catch {
       window.location.href = '/platform/login.html';

@@ -7,6 +7,8 @@ import { parseInfillTiers } from '../lib/infill-tiers.js';
 
 delete process.env.STRIPE_BILLING_STARTER_PRICE_ID;
 delete process.env.STRIPE_BILLING_PRO_PRICE_ID;
+delete process.env.STRIPE_BILLING_GROWTH_PRICE_ID;
+delete process.env.STRIPE_BILLING_SCALE_PRICE_ID;
 
 const {
   BILLING_ACTIVE_STATUSES,
@@ -43,12 +45,15 @@ try {
     assert.ok(shopColumns.includes(column), `shops table should include ${column}`);
   }
 
-  assert.equal(isFreeBillingPlan('starter'), true);
-  assert.equal(isFreeBillingPlan('pro'), true, 'legacy Pro rows should be treated as free while Pro is hidden');
-  assert.equal(isPaidBillingPlan('pro'), false);
+  assert.equal(isFreeBillingPlan('community'), true);
+  assert.equal(isFreeBillingPlan('starter'), false);
+  assert.equal(isPaidBillingPlan('starter'), true);
+  assert.equal(isPaidBillingPlan('growth'), true);
+  assert.equal(isPaidBillingPlan('scale'), true);
   assert.equal(getBillingPriceIdForPlan('starter'), '');
-  assert.equal(getBillingPriceIdForPlan('pro'), '');
-  assert.deepEqual(getBillingPriceSetupStatus(), { starter: true });
+  assert.equal(getBillingPriceIdForPlan('growth'), '');
+  assert.equal(getBillingPriceIdForPlan('scale'), '');
+  assert.deepEqual(getBillingPriceSetupStatus(), { community: true, starter: false, growth: false, scale: false });
   assert.equal(normaliseBillingStatus('does-not-exist'), 'pending_subscription');
   assert.equal(BILLING_ACTIVE_STATUSES.has('active'), true);
   assert.equal(BILLING_ACTIVE_STATUSES.has('trialing'), true);
@@ -71,9 +76,9 @@ try {
     stripe_payouts_enabled: 1,
     stripe_details_submitted: 1,
   }, { publishableKey: 'pk_test_smoke', secretKey: 'sk_test_smoke' });
-  assert.equal(starterReady.billing_active, true);
-  assert.equal(starterReady.can_accept_live_orders, true);
-  assert.equal(starterReady.code, null);
+  assert.equal(starterReady.billing_active, false);
+  assert.equal(starterReady.can_accept_live_orders, false);
+  assert.equal(starterReady.code, 'SUBSCRIPTION_INACTIVE');
 
   await assert.rejects(
     () => createBusinessBillingSession({
@@ -82,32 +87,32 @@ try {
       shop: db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId),
       baseUrl: 'https://app.example.test',
     }),
-    err => err.code === 'FREE_PLAN_NO_BILLING_REQUIRED',
-    'starter plan must not create a Stripe Billing checkout session',
+    err => err.code === 'BILLING_PRICE_NOT_CONFIGURED',
+    'starter plan must require a configured Stripe Billing price',
   );
 
-  const legacyProReady = liveOrderReadiness({
+  const communityReady = liveOrderReadiness({
     id: shopId,
-    plan: 'pro',
+    plan: 'community',
     billing_status: 'pending_subscription',
     stripe_account_id: 'acct_smoke',
     stripe_charges_enabled: 1,
     stripe_payouts_enabled: 1,
     stripe_details_submitted: 1,
   }, { publishableKey: 'pk_test_smoke', secretKey: 'sk_test_smoke' });
-  assert.equal(legacyProReady.billing_active, true);
-  assert.equal(legacyProReady.can_accept_live_orders, true);
-  assert.equal(legacyProReady.code, null);
+  assert.equal(communityReady.billing_active, true);
+  assert.equal(communityReady.can_accept_live_orders, true);
+  assert.equal(communityReady.code, null);
 
   await assert.rejects(
     () => createBusinessBillingSession({
       db,
       stripe: {},
-      shop: { ...db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId), plan: 'pro' },
+      shop: { ...db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId), plan: 'community' },
       baseUrl: 'https://app.example.test',
     }),
     err => err.code === 'FREE_PLAN_NO_BILLING_REQUIRED',
-    'legacy Pro rows must not create a Stripe Billing checkout session while Pro is removed',
+    'community plan must not create a Stripe Billing checkout session',
   );
 
   previousPlatformFee = db.prepare('SELECT platform_fee_percent FROM platform_settings WHERE id = 1').get()?.platform_fee_percent ?? null;
@@ -138,18 +143,8 @@ try {
     quantity: 1,
     shippingId: shipping?.id,
   });
-  assert.ok(quote.lineItems.sellerNetTotal > 0, 'quote should expose the shop net total before platform fee');
-  assert.ok(quote.lineItems.platformFeeIncluded > 0, 'quote should include a hidden platform fee amount');
-  assert.equal(
-    quote.totalCents,
-    Math.ceil(toCents(quote.lineItems.sellerNetTotal) / 0.95),
-    'customer total should gross up the seller total by the 5% platform fee',
-  );
-  assert.equal(
-    toCents(quote.lineItems.platformFeeIncluded),
-    quote.totalCents - toCents(quote.lineItems.sellerNetTotal),
-    'platform fee included should be the customer total minus seller net total',
-  );
+  assert.equal(quote.totalCents, toCents(quote.lineItems.total), 'customer quote total should not include a hidden uncapped platform fee');
+  assert.equal(quote.lineItems.platformFeeIncluded, undefined, 'quote should not expose a hidden platform fee amount');
 
   const stripeRoutes = readFileSync('routes/stripe.js', 'utf8');
   for (const code of [
@@ -162,23 +157,26 @@ try {
   }
 
   const platformRoutes = readFileSync('routes/platform.js', 'utf8');
-  assert.ok(platformRoutes.includes('FREE_PLAN_NO_BILLING_REQUIRED'), 'platform route should expose a free-plan billing-session code');
-  assert.ok(platformRoutes.includes("billing_setup_status: 'free_plan'"), 'platform shop creation should return free_plan for the only membership');
+  assert.ok(platformRoutes.includes('BILLING_PRICE_NOT_CONFIGURED') || platformRoutes.includes('billing_not_ready'), 'platform route should report missing paid plan price IDs');
+  assert.ok(platformRoutes.includes("billing_setup_status: 'free_plan'"), 'platform shop creation should return free_plan for Community');
   assert.ok(platformRoutes.includes("router.post('/shops/:id/billing-session'"), 'platform route should expose billing session resend endpoint');
   assert.ok(platformRoutes.includes('billing_checkout_url'), 'platform shop creation should return a billing checkout URL/status');
   assert.ok(!platformRoutes.includes('billing_link_created'), 'platform shop creation should not create paid billing links while Pro is removed');
-  assert.ok(!platformRoutes.includes('BILLING_PRICE_NOT_CONFIGURED'), 'platform shop creation should not depend on paid billing price IDs while Pro is removed');
   assert.ok(!platformRoutes.includes('res.status(201).json(shop)'), 'platform shop creation must not return raw shop rows');
 
   const envExample = readFileSync('.env.example', 'utf8');
   assert.ok(!envExample.includes('STRIPE_BILLING_PRO_PRICE_ID'), '.env.example should not ask for a Pro Billing price ID while Pro is removed');
-  assert.ok(!envExample.includes('$30') && !envExample.includes('Pro price'), '.env.example should not document paid Pro billing while Pro is removed');
+  assert.ok(envExample.includes('STRIPE_BILLING_STARTER_PRICE_ID'), '.env.example should document Starter Billing price ID');
+  assert.ok(envExample.includes('STRIPE_BILLING_GROWTH_PRICE_ID'), '.env.example should document Growth Billing price ID');
+  assert.ok(envExample.includes('STRIPE_BILLING_SCALE_PRICE_ID'), '.env.example should document Scale Billing price ID');
 
   const platformAdmin = readFileSync('../platform/admin.html', 'utf8');
   assert.ok(!platformAdmin.includes('<option value="pro"'), 'platform admin should not expose a Pro plan option');
   assert.ok(!platformAdmin.includes('Pro ready'), 'platform admin should not show Pro billing status');
   assert.ok(!platformAdmin.includes('Needs Pro price ID'), 'platform admin should not require a Pro price ID');
   assert.ok(!platformAdmin.includes('$30/month Pro'), 'platform admin should not mention a Pro subscription');
+  assert.ok(platformAdmin.includes('<option value="growth"'), 'platform admin should expose Growth plan');
+  assert.ok(platformAdmin.includes('data-tab="plans"'), 'platform admin should expose plan editor tab');
 
   console.log('Business billing smoke checks passed.');
 } finally {

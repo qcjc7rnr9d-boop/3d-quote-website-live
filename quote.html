@@ -1469,6 +1469,10 @@
     return issues;
   }
 
+  function quotePreviewBlockers(issues = reviewSelectionIssues()) {
+    return issues.filter(issue => issue.key !== 'shipping');
+  }
+
   function issuesSentence(issues) {
     const labels = issues.map(issue => issue.label);
     if (!labels.length) return '';
@@ -1858,8 +1862,8 @@
     return sizeValidation.ok;
   }
 
-  function quotePayload() {
-    return {
+  function quotePayload({ previewWithoutShipping = false } = {}) {
+    const payload = {
       shopSlug: SHOP_SLUG,
       materialId: selectionData.materialId,
       materialName: selectionData.materialName || null,
@@ -1872,6 +1876,8 @@
       quantity: effectiveQty(),
       shippingId: selectedShipping?.id || null,
     };
+    if (previewWithoutShipping) payload.previewWithoutShipping = true;
+    return payload;
   }
 
   function normaliseCartItem(input = {}, index = 0) {
@@ -2136,7 +2142,10 @@
       renderPrice();
       return null;
     }
-    if (reviewSelectionIssues().length) {
+    const selectionIssues = reviewSelectionIssues();
+    const blockers = quotePreviewBlockers(selectionIssues);
+    const previewWithoutShipping = selectionIssues.some(issue => issue.key === 'shipping');
+    if (blockers.length) {
       serverQuote = null;
       removeCurrentQuoteFromCart();
       renderPrice();
@@ -2153,7 +2162,7 @@
       const res = await fetch('/api/customer/quote-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(quotePayload()),
+        body: JSON.stringify(quotePayload({ previewWithoutShipping })),
       });
       const data = await res.json().catch(() => ({}));
       if (seq !== quoteRequestSeq) return serverQuote;
@@ -2174,7 +2183,11 @@
         return null;
       }
       serverQuote = data;
-      syncCurrentQuoteToCart(data);
+      if (previewWithoutShipping) {
+        removeCurrentQuoteFromCart();
+      } else {
+        syncCurrentQuoteToCart(data);
+      }
       renderPrice();
       updateAddToCartState();
       return data;
@@ -2274,7 +2287,8 @@
       $('sumUnit').textContent     = '—';
       $('sumSubtotal').textContent = '—';
     } else {
-      // Big price = full total INCLUDING the currently-selected shipping option
+      // Big price = the server quote total. Before shipping selection this is
+      // a preview-only item total with shipping priced at zero.
       const [intPart, decPart] = totalDisp.toFixed(2).split('.');
       $('priceInt').textContent = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       $('priceDec').textContent = '.' + decPart;
@@ -2283,17 +2297,15 @@
     }
     $('sumQty').textContent = modelFiles.length > 1 ? 'Per model' : '× ' + qty;
 
-    // Helper line under the big price tracks shipping inclusion + qty:
-    //   no shipping options yet -> "excluding shipping"
-    //   shipping included       -> "incl. shipping" (and qty hint)
     const helper = $('priceHelper');
     if (helper) {
       const qtyHint = modelFiles.length > 1
         ? `total for ${modelFiles.length} models with selected quantities`
         : (qty > 1 ? `total for ${qty} units` : 'total');
-      helper.textContent = serverQuote && selectedShipping
-        ? `${qtyHint} · incl. shipping`
-        : (serverQuote ? `${qtyHint} · excluding shipping` : 'Waiting for quote details');
+      const includesShipping = Boolean(serverQuote?.selected?.shipping?.id);
+      helper.textContent = serverQuote
+        ? `${qtyHint} · ${includesShipping ? 'Includes selected shipping' : 'Shipping not included'}`
+        : 'Waiting for quote details';
     }
     renderModelPrices();
     renderCurrencyEstimateNote();

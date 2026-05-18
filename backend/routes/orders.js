@@ -21,6 +21,15 @@ function ensureOrderPublicTokenColumn() {
   if (!cols.includes('public_token')) {
     db.exec('ALTER TABLE orders ADD COLUMN public_token TEXT');
   }
+  if (!cols.includes('payment_processing_fee_cents')) {
+    db.exec('ALTER TABLE orders ADD COLUMN payment_processing_fee_cents INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!cols.includes('checkout_platform_fee_cents')) {
+    db.exec('ALTER TABLE orders ADD COLUMN checkout_platform_fee_cents INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!cols.includes('customer_total_cents')) {
+    db.exec('ALTER TABLE orders ADD COLUMN customer_total_cents INTEGER NOT NULL DEFAULT 0');
+  }
   db.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_public_token
       ON orders(public_token)
@@ -92,6 +101,7 @@ router.get('/public/:id', (req, res) => {
   const row = db.prepare(`
     SELECT o.id, o.file_name,
            o.colour, o.finish, o.quantity, o.subtotal, o.shipping, o.tax, o.total,
+           o.payment_processing_fee_cents, o.checkout_platform_fee_cents, o.customer_total_cents,
            o.payment_status, o.fulfilment_status, o.created_at,
            m.name AS material_name, m.name AS material,
            s.name AS shop_name, s.slug AS shop_slug

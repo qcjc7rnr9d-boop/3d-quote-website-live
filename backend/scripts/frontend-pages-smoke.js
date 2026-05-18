@@ -17,6 +17,7 @@ const pages = [
   '/confirmation.html?shop=mahi3d',
   '/terms.html?shop=mahi3d',
   '/privacy.html?shop=mahi3d',
+  '/pricing.html',
   '/customer/login.html?shop=mahi3d',
   '/customer/forgot-password.html?shop=mahi3d',
   '/customer/reset-password.html?shop=mahi3d&token=invalid',

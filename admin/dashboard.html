@@ -191,6 +191,29 @@
         </div>
       </div>
 
+      <div class="section-card" id="billingUsageCard">
+        <div class="section-card-header">
+          <span class="section-card-title">Plan usage</span>
+          <select class="form-input" id="paymentFeeModeSelect" style="max-width:260px">
+            <option value="merchant_absorbs">Absorb card fees</option>
+            <option value="pass_to_customer_at_cost">Pass card fees at cost</option>
+            <option value="bank_transfer_only">Bank transfer only</option>
+          </select>
+        </div>
+        <div class="stats-row" style="padding:0 24px 24px">
+          <div class="stat-card"><div class="stat-label">Plan</div><div class="stat-value" id="billingPlanName">—</div></div>
+          <div class="stat-card"><div class="stat-label">Quotes used this month</div><div class="stat-value" id="billingQuotesUsed">—</div></div>
+          <div class="stat-card"><div class="stat-label">Included remaining</div><div class="stat-value" id="billingQuotesRemaining">—</div></div>
+          <div class="stat-card"><div class="stat-label">Estimated overage</div><div class="stat-value" id="billingOverage">—</div></div>
+        </div>
+        <div class="stats-row" style="padding:0 24px 24px">
+          <div class="stat-card"><div class="stat-label">Checkout volume this month</div><div class="stat-value" id="billingCheckoutVolume">—</div></div>
+          <div class="stat-card"><div class="stat-label">Platform fee used</div><div class="stat-value" id="billingPlatformFeeUsed">—</div></div>
+          <div class="stat-card"><div class="stat-label">Platform fee cap</div><div class="stat-value" id="billingPlatformFeeCap">—</div></div>
+          <div class="stat-card"><div class="stat-label">Payment fee mode</div><div class="stat-value" id="billingPaymentMode">—</div></div>
+        </div>
+      </div>
+
       <!-- Two-column grid -->
       <div class="two-col-grid">
 
@@ -294,6 +317,10 @@
     return '$' + Number(v).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' NZD';
   }
 
+  function fmtCents(cents) {
+    return 'NZ$' + (Number(cents || 0) / 100).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   function timeAgo(dateStr) {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
@@ -352,6 +379,34 @@
       // Leave as — on failure
     }
   }
+
+  async function loadBillingUsage() {
+    try {
+      const r = await fetch('/api/billing/usage');
+      if (!r.ok) throw new Error('Failed');
+      const usage = await r.json();
+      document.getElementById('billingPlanName').textContent = usage.plan_name || '—';
+      document.getElementById('billingQuotesUsed').textContent = `${usage.quotes_used_this_month ?? 0} / ${usage.quote_allowance ?? 'Custom'}`;
+      document.getElementById('billingQuotesRemaining').textContent = usage.remaining_included_quotes == null ? 'Custom' : usage.remaining_included_quotes;
+      document.getElementById('billingOverage').textContent = fmtCents(usage.estimated_overage_charges_cents);
+      document.getElementById('billingCheckoutVolume').textContent = fmtCents(usage.checkout_volume_this_month_cents);
+      document.getElementById('billingPlatformFeeUsed').textContent = fmtCents(usage.checkout_platform_fee_used_cents);
+      document.getElementById('billingPlatformFeeCap').textContent = fmtCents(usage.checkout_platform_fee_cap_cents);
+      document.getElementById('billingPaymentMode').textContent = String(usage.payment_fee_mode || '').replace(/_/g, ' ');
+      document.getElementById('paymentFeeModeSelect').value = usage.payment_fee_mode || 'merchant_absorbs';
+    } catch {
+      document.getElementById('billingPlanName').textContent = 'Unavailable';
+    }
+  }
+
+  document.getElementById('paymentFeeModeSelect').addEventListener('change', async e => {
+    await fetch('/api/billing/payment-fee-mode', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payment_fee_mode: e.target.value })
+    });
+    loadBillingUsage();
+  });
 
   // ── Load orders ───────────────────────────────────────────────
   async function loadOrders() {
@@ -443,6 +498,7 @@
 
   // ── Init ──────────────────────────────────────────────────────
   loadStats();
+  loadBillingUsage();
   loadOrders();
 </script>
 </body>

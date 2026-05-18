@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { chromium } from '../../research/node_modules/playwright/index.mjs';
 import { calculateQuoteForShopSlug, PricingError } from '../lib/pricing-engine.js';
 import { parseInfillTiers } from '../lib/infill-tiers.js';
+import { validateCartForShop } from '../lib/cart.js';
 
 const base = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const db = new DatabaseSync('data/rfdewi.db');
@@ -70,6 +71,56 @@ try {
   expectPricingError('FINISH_REQUIRED', () => calculateQuoteForShopSlug(db, shop.slug, { ...baseQuote, finishId: undefined }));
   expectPricingError('INFILL_REQUIRED', () => calculateQuoteForShopSlug(db, shop.slug, { ...baseQuote, infillTierId: undefined }));
   expectPricingError('SHIPPING_REQUIRED', () => calculateQuoteForShopSlug(db, shop.slug, { ...baseQuote, shippingId: undefined }));
+
+  const previewWithoutShipping = calculateQuoteForShopSlug(db, shop.slug, {
+    ...baseQuote,
+    shippingId: undefined,
+    previewWithoutShipping: true,
+  });
+  assert(previewWithoutShipping?.ok, 'preview quote without shipping should calculate');
+  assert(previewWithoutShipping.selected?.shipping === null, 'preview quote without shipping should not select shipping');
+  assert(previewWithoutShipping.lineItems?.shipping === 0, 'preview quote without shipping should price shipping at zero');
+  assert(previewWithoutShipping.lineItems?.total > 0, 'preview quote without shipping should still return a visible total');
+  expectPricingError('SHIPPING_REQUIRED', () => validateCartForShop(db, shop, {
+    shopSlug: shop.slug,
+    items: [{
+      shopSlug: shop.slug,
+      materialId: material.id,
+      materialName: material.name,
+      colorId: colour.id,
+      colorName: colour.name,
+      finishId: finish.id,
+      finishLabel: finish.name,
+      infillTierId: infill.id,
+      file: {
+        name: 'missing-shipping-cart.stl',
+        size: 2048,
+        volumeCm3: 10,
+        dimensions: { xMm: 20, yMm: 20, zMm: 20 },
+        models: [{ id: 'cart-model', name: 'missing-shipping-cart.stl', size: 2048, volumeCm3: 10, quantity: 1, dimensions: { xMm: 20, yMm: 20, zMm: 20 } }],
+      },
+      models: [{ id: 'cart-model', name: 'missing-shipping-cart.stl', size: 2048, volumeCm3: 10, quantity: 1, dimensions: { xMm: 20, yMm: 20, zMm: 20 } }],
+    }],
+  }));
+
+  const missingShippingRes = await fetch(`${base}/api/customer/quote-preview`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...baseQuote, shopSlug: shop.slug, shippingId: undefined }),
+  });
+  const missingShippingData = await missingShippingRes.json();
+  assert(missingShippingRes.status === 400, `missing shipping quote-preview should return 400, got ${missingShippingRes.status}`);
+  assert(missingShippingData.code === 'SHIPPING_REQUIRED', `missing shipping quote-preview should return SHIPPING_REQUIRED, got ${missingShippingData.code}`);
+
+  const previewRes = await fetch(`${base}/api/customer/quote-preview`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...baseQuote, shopSlug: shop.slug, shippingId: undefined, previewWithoutShipping: true }),
+  });
+  const previewData = await previewRes.json();
+  assert(previewRes.ok, `preview quote-preview without shipping should return 200, got ${previewRes.status}/${previewData.code || 'no-code'}`);
+  assert(previewData.selected?.shipping === null, 'preview quote-preview without shipping should return no selected shipping');
+  assert(previewData.lineItems?.shipping === 0, 'preview quote-preview without shipping should return zero shipping');
 
   const browser = await chromium.launch({ headless: true });
   try {

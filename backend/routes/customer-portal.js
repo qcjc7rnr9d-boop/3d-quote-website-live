@@ -12,6 +12,7 @@ import { parseMaterialRow, safeJson } from '../lib/material-config.js';
 import { calculateQuoteForShopSlug, PricingError } from '../lib/pricing-engine.js';
 import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
 import { getExchangeRates, normaliseQuoteCurrencies } from '../lib/exchange-rates.js';
+import { previewQuoteUsage, recordQuoteUsageEvent } from '../lib/billing-service.js';
 
 const router = Router();
 const smokeRateLimitSkip = req => process.env.NODE_ENV !== 'production' && req.get('x-smoke-test') === '1';
@@ -849,6 +850,15 @@ router.post('/quotes', customerQuoteLimiter, requireCustomerAuth, (req, res) => 
     const requestedSlug = body.shopSlug || body.shop || rawQuoteRequest.shopSlug || rawQuoteRequest.shop;
     const shop = getCustomerShop(req, requestedSlug);
     const quoteRequest = normaliseSavedQuoteRequest(rawQuoteRequest, shop.slug);
+    const usagePreview = previewQuoteUsage(db, shop.id);
+    if (usagePreview.limit_reached) {
+      return res.status(402).json({
+        ok: false,
+        code: 'QUOTE_LIMIT_REACHED',
+        error: 'You have used your included quotes for this billing period. Upgrade to keep sending quotes.',
+        usage: usagePreview,
+      });
+    }
     const quote = calculateQuoteForShopSlug(db, shop.slug, quoteRequest);
     const fileMeta = normaliseFileMeta(body, quote);
     const selection = buildSavedQuoteSelection(quote);
@@ -876,7 +886,17 @@ router.post('/quotes', customerQuoteLimiter, requireCustomerAuth, (req, res) => 
     );
 
     const row = db.prepare('SELECT * FROM customer_saved_quotes WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json({ ok: true, quote: normaliseSavedQuote(row) });
+    const usage = recordQuoteUsageEvent(db, {
+      shopId: shop.id,
+      quoteId: `saved:${result.lastInsertRowid}`,
+      eventType: 'saved_quote_submitted',
+    });
+    res.status(201).json({
+      ok: true,
+      quote: normaliseSavedQuote(row),
+      usage,
+      overage_warning: usagePreview.overage_warning,
+    });
   } catch (err) {
     if (err instanceof PricingError) {
       return res.status(err.status).json({
