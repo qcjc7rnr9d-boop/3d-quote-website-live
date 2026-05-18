@@ -6,7 +6,7 @@
  * recipient's mail client) can tell apart an order confirmation from
  * an invoice from a password-reset.
  *
- * Example outputs (with APP_EMAIL_DOMAIN=mahi3d-app.com, shop slug=mahi3d):
+ * Example outputs (with APP_EMAIL_DOMAIN=mail.trennen.co.nz, shop slug=mahi3d):
  *
  *   category      | local part                | display name
  *   --------------+---------------------------+--------------------------
@@ -19,7 +19,7 @@
  *   support       | mahi3d                    | mahi3d
  *
  * Configuration via .env:
- *   APP_EMAIL_DOMAIN     verified sending domain (e.g. mahi3d-app.com)
+ *   APP_EMAIL_DOMAIN     verified sending domain (e.g. mail.trennen.co.nz)
  *   APP_EMAIL_FALLBACK   used if APP_EMAIL_DOMAIN is not set yet
  *                        (default: onboarding@resend.dev — Resend sandbox)
  */
