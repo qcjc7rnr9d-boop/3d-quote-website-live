@@ -22,6 +22,7 @@
     "env:audit:pilot": "node scripts/env-audit.js --pilot",
     "production-health:smoke": "node scripts/production-health-smoke.js",
     "production-pilot:smoke": "node scripts/production-pilot-readiness-smoke.js",
+    "stripe-connect:smoke": "node scripts/stripe-connect-platform-smoke.js",
     "ops:smoke": "node scripts/ops-readiness-smoke.js",
     "platform:smoke": "node scripts/platform-reporting-smoke.js",
     "materials:smoke": "node scripts/material-library-smoke.js",

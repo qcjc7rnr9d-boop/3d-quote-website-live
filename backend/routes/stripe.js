@@ -60,6 +60,22 @@ function ensurePlatformStripe() {
   return stripe;
 }
 
+function stripeErrorSummary(err) {
+  return {
+    type: err?.type || null,
+    code: err?.code || null,
+    message: err?.message || 'Stripe request failed.',
+    requestLogUrl: err?.raw?.request_log_url || null,
+    requestId: err?.requestId || err?.raw?.requestId || null,
+    statusCode: err?.statusCode || null,
+  };
+}
+
+function isConnectPlatformRegistrationError(err) {
+  const message = String(err?.message || err?.raw?.message || '');
+  return message.includes("signed up for Connect");
+}
+
 async function syncShopStripeAccount(shop) {
   if (!shop?.stripe_account_id) return null;
 
@@ -557,7 +573,17 @@ router.get('/connect-url', requireShopAuth, async (req, res) => {
 
     res.json({ url: accountLink.url });
   } catch (err) {
-    console.error('Stripe connect-url error:', err);
+    const summary = stripeErrorSummary(err);
+    console.error('Stripe connect-url error:', summary);
+
+    if (isConnectPlatformRegistrationError(err)) {
+      return res.status(409).json({
+        error: 'Stripe Connect is not activated for this platform account yet. Finish Connect setup in the same Stripe dashboard/sandbox as the server API key, then run npm run stripe-connect:smoke on Lightsail.',
+        code: 'CONNECT_PLATFORM_NOT_REGISTERED',
+        request_log_url: summary.requestLogUrl,
+      });
+    }
+
     res.status(500).json({ error: err.message || 'Failed to start Stripe onboarding' });
   }
 });
