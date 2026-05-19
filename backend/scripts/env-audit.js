@@ -6,6 +6,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '..', '.env') });
 
 const env = process.env;
+const pilotMode = process.argv.includes('--pilot') || process.env.PILOT_READINESS === '1';
+const pilotBaseUrl = 'https://app.trennen.co.nz';
 
 function present(name) {
   return !!String(env[name] || '').trim();
@@ -17,6 +19,7 @@ function value(name, fallback = null) {
 }
 
 const checks = {
+  profile: pilotMode ? 'production-pilot' : 'basic',
   app: {
     NODE_ENV: value('NODE_ENV', 'development'),
     PORT: value('PORT', '3000'),
@@ -59,6 +62,21 @@ const required = [
   ['secrets.JWT_SECRET', checks.secrets.JWT_SECRET_present],
   ['secrets.PLATFORM_CONFIG_ENCRYPTION_KEY', checks.secrets.PLATFORM_CONFIG_ENCRYPTION_KEY_present],
 ];
+
+if (pilotMode) {
+  required.push(
+    ['pilot.NODE_ENV_production', checks.app.NODE_ENV === 'production'],
+    ['pilot.BASE_URL_app_trennen', checks.app.BASE_URL === pilotBaseUrl],
+    ['pilot.email_domain_trennen', checks.email.APP_EMAIL_DOMAIN === 'mail.trennen.co.nz'],
+    ['pilot.email_fallback', checks.email.APP_EMAIL_FALLBACK_present],
+    ['pilot.resend_webhook_secret', checks.email.RESEND_WEBHOOK_SECRET_present],
+    ['pilot.stripe_secret_key', checks.payments.STRIPE_SECRET_KEY_present],
+    ['pilot.stripe_publishable_key', checks.payments.STRIPE_PUBLISHABLE_KEY_present],
+    ['pilot.stripe_connect_client_id', checks.payments.STRIPE_CLIENT_ID_present],
+    ['pilot.stripe_webhook_secret', checks.payments.STRIPE_WEBHOOK_SECRET_present],
+    ['pilot.storage_driver_local', checks.futureManagedAws.STORAGE_DRIVER === 'local'],
+  );
+}
 
 const failures = required.filter(([, ok]) => !ok).map(([name]) => name);
 const report = {

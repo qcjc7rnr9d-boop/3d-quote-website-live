@@ -17,11 +17,13 @@ npm install
 npm run migrate
 npm run check
 npm run env:audit
+npm run env:audit:pilot
 pm2 restart 3d-quote-website --update-env
 pm2 save
 curl http://127.0.0.1:3001/api/health
 curl http://127.0.0.1/api/health
 npm run production-health:smoke
+npm run production-pilot:smoke
 ```
 
 First `pm2` start:
@@ -56,7 +58,62 @@ Verify `mail.trennen.co.nz` in Resend before sending live email. Add the DNS rec
 
 ## Nginx
 
-Copy `deploy/lightsail-nginx.conf.example` to an enabled Nginx site, replace `app.yourdomain.com` with `app.trennen.co.nz`, then issue a certificate with Certbot or your chosen TLS tool. After HTTPS works, redirect HTTP to HTTPS.
+Before changing DNS or TLS, create a **Lightsail snapshot** and run the backup command below. In the `trennen.co.nz` DNS zone, create an **A record** for `app.trennen.co.nz` pointing to the Lightsail static IPv4 `13.239.77.56`.
+
+Copy `deploy/lightsail-nginx.conf.example` to an enabled Nginx site, then issue a certificate with Certbot:
+
+```bash
+cd ~/3d-quote-website-live
+sudo cp deploy/lightsail-nginx.conf.example /etc/nginx/sites-available/3d-quote-website
+sudo ln -sf /etc/nginx/sites-available/3d-quote-website /etc/nginx/sites-enabled/3d-quote-website
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx
+
+sudo snap install core
+sudo snap refresh core
+sudo snap install --classic certbot
+sudo ln -sf /snap/bin/certbot /usr/bin/certbot
+sudo certbot --nginx -d app.trennen.co.nz
+```
+
+After HTTPS works, keep `BASE_URL=https://app.trennen.co.nz` in `backend/.env`, run `pm2 restart 3d-quote-website --update-env`, and verify `https://app.trennen.co.nz/api/health`.
+
+## Stripe Test Pilot
+
+Configure Stripe test-mode secrets only in `backend/.env`:
+
+```env
+STRIPE_SECRET_KEY=replace-with-stripe-test-secret-key
+STRIPE_PUBLISHABLE_KEY=replace-with-stripe-test-publishable-key
+STRIPE_CLIENT_ID=replace-with-stripe-connect-client-id
+STRIPE_WEBHOOK_SECRET=replace-with-stripe-webhook-secret
+```
+
+Use Stripe Connect Express for each pilot business. The app blocks checkout until the platform Stripe keys are present, the shop subscription/readiness is valid, and the connected account has submitted details with charges and payouts enabled. Customer payments use a platform PaymentIntent with `transfer_data`, `on_behalf_of`, and `application_fee_amount` so Trennen can collect the configured checkout/platform fee while the remainder transfers to the connected business.
+
+Use the Stripe CLI or dashboard webhook endpoint pointed at:
+
+```text
+https://app.trennen.co.nz/api/stripe/webhook
+```
+
+Before taking live money, test these states in Stripe test mode:
+
+- Checkout blocked before Stripe Connect onboarding.
+- Checkout allowed after the connected account is ready.
+- `application_fee_amount` is present on the PaymentIntent when a checkout fee applies.
+- Orders, payment status, customer records, and confirmation email are visible in the admin.
+
+## First Pilot Shop
+
+Keep `mahi3d` as the internal demo shop. Create one real **pilot shop** with its own slug, support email, materials, pricing, shipping methods, and allowed embed domain. The pilot storefront URL should be:
+
+```text
+https://app.trennen.co.nz/?shop=PILOT_SHOP_SLUG
+```
+
+Test the full pilot flow before sharing it: homepage upload, materials, options, quote review, Stripe test checkout, email confirmation, admin order view, and customer portal view.
 
 ## Troubleshooting
 
@@ -89,7 +146,7 @@ To restore on a fresh server, clone from GitHub, install Node 24 and Nginx, copy
 Customers install:
 
 ```html
-<script src="https://cdn.yourdomain.com/embed/v1/widget.js" data-shop="SHOP_SLUG"></script>
+<script src="https://app.trennen.co.nz/embed/v1/widget.js" data-shop="SHOP_SLUG"></script>
 ```
 
 Each shop must list approved website origins in Admin Settings before the iframe can be embedded externally.
