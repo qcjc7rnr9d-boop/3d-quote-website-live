@@ -1024,7 +1024,7 @@
 <!-- ─── Top nav ────────────────────────────────────────────── -->
 <nav class="nav">
   <div class="nav-inner">
-    <a class="logo" href="quote.html?shop=mahi3d">mahi<span class="logo-dot">3d</span></a>
+    <a class="logo" href="index.html?shop=mahi3d" data-home-link>mahi<span class="logo-dot">3d</span></a>
     <div class="quote-progress" aria-label="Quote progress">
       <div class="quote-progress-step active" data-progress-step="1" aria-current="step"><span>1</span>Upload</div>
       <div class="quote-progress-line" aria-hidden="true"></div>
@@ -1323,6 +1323,9 @@
 
   // ── Config ──────────────────────────────────────────────────
   const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'mahi3d';
+  document.querySelectorAll('[data-home-link]').forEach(link => {
+    link.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+  });
   document.querySelectorAll('[data-quote-nav]').forEach(link => {
     if (link.dataset.quoteNav === 'materials') link.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
     if (link.dataset.quoteNav === 'quote') link.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;

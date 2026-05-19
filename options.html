@@ -56,7 +56,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="quote.html?shop=mahi3d">mahi3d</a>
+    <a class="brand" href="index.html?shop=mahi3d" data-home-link>mahi3d</a>
     <div class="progress" aria-label="Quote progress">
       <div class="progress-step"><span>1</span>Upload</div><div class="progress-line" aria-hidden="true"></div>
       <div class="progress-step"><span>2</span>Material</div><div class="progress-line" aria-hidden="true"></div>
@@ -134,6 +134,7 @@
       validationToastTimer = setTimeout(() => toast.classList.remove('show'), 3400);
     }
 
+    document.querySelectorAll('[data-home-link]').forEach(link => link.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}`);
     document.querySelectorAll('[data-catalog-link]').forEach(link => link.href = `catalog.html?shop=${encodeURIComponent(SHOP_SLUG)}`);
     document.querySelectorAll('[data-quote-link]').forEach(link => link.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`);
     document.querySelectorAll('[data-portal-button]').forEach(button => {

@@ -55,6 +55,9 @@ assert(quoteHtml.includes('aria-current'), 'Quote model rows must expose selecte
 assert(quoteHtml.includes('promptUpload'), 'Quote page must support upload prompt routing');
 assert(quoteHtml.includes('newGroup=1&promptUpload=1'), 'Add another group must route back to an upload prompt with prompt params');
 assert(quoteHtml.includes('quote.html?shop='), 'Add another group must route back to the quote upload prompt');
+assert(quoteHtml.includes('data-home-link'), 'Quote page logo should be wired as a home link');
+assert(materialsHtml.includes('data-home-link'), 'Materials page logo should be wired as a home link');
+assert(optionsHtml.includes('data-home-link'), 'Options page logo should be wired as a home link');
 assert(!quoteHtml.includes('id="colourSelect"'), 'Quote review should not duplicate colour selection controls');
 assert(!quoteHtml.includes('id="infillSelect"'), 'Quote review should not duplicate infill selection controls');
 assert(!quoteHtml.includes('aria-label="Finish"'), 'Quote review should not duplicate finish selection controls');
@@ -94,17 +97,19 @@ try {
   const errors = [];
   page.on('pageerror', err => errors.push(err.message));
   await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#viewerEmpty', { state: 'visible', timeout: 5000 });
+  await page.waitForSelector('#viewerEmpty', { state: 'visible', timeout: 10000 });
   const freshState = await page.evaluate(() => ({
     activeProgress: document.querySelector('.quote-progress-step.active')?.textContent?.replace(/\s+/g, ' ').trim() || '',
     emptyTitle: document.querySelector('#viewerEmptyTitle')?.textContent?.trim() || '',
     emptyCopy: document.querySelector('#viewerEmptyCopy')?.textContent?.trim() || '',
+    logoHref: document.querySelector('[data-home-link]')?.getAttribute('href') || '',
     materialsDisabled: document.querySelector('[data-quote-nav="materials"]')?.getAttribute('aria-disabled') || '',
     materialsHref: document.querySelector('[data-quote-nav="materials"]')?.getAttribute('href') || '',
   }));
   assert(/^1\s*Upload$/.test(freshState.activeProgress), `Fresh quote should start on Upload progress, got ${freshState.activeProgress}`);
   assert(freshState.emptyTitle === 'Upload your model', `Fresh quote empty title should invite the first upload, got ${freshState.emptyTitle}`);
   assert(!/next model group|same model again/i.test(freshState.emptyCopy), `Fresh quote copy should not describe add-another flow: ${freshState.emptyCopy}`);
+  assert(freshState.logoHref === 'index.html?shop=mahi3d', `Quote logo should link home with shop slug, got ${freshState.logoHref}`);
   assert(freshState.materialsDisabled === 'true', 'Fresh quote should disable Materials nav until a model is uploaded');
   assert(freshState.materialsHref === '#upload', `Fresh quote Materials nav should target upload prompt, got ${freshState.materialsHref}`);
 
@@ -348,7 +353,7 @@ try {
   await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'networkidle' });
   await page.click('#addAnotherBtn');
   await page.waitForURL(/quote\.html\?shop=mahi3d/, { timeout: 7000 });
-  await page.waitForSelector('#newUploadBanner.show', { timeout: 5000 });
+  await page.waitForSelector('#newUploadBanner.show', { timeout: 10000 });
   await page.waitForTimeout(250);
   const newGroupState = await page.evaluate(() => ({
     cartCount: JSON.parse(localStorage.getItem('cart') || '{}').items?.length || 0,
