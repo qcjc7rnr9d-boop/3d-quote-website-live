@@ -181,8 +181,8 @@ export function ensureBillingSchema(db) {
   addColumnIfMissing(db, 'billing_adjustments', 'created_at', "TEXT NOT NULL DEFAULT (datetime('now'))");
 }
 
-export function seedBillingPlans(db) {
-  const stmt = db.prepare(`
+export function seedBillingPlans(db, { overwriteExisting = false } = {}) {
+  const insertStmt = db.prepare(`
     INSERT OR IGNORE INTO plans (
       id, name, monthly_price_cents, currency, gst_rate_basis_points,
       quote_allowance, quote_overage_price_cents, trial_days, setup_fee_cents,
@@ -191,9 +191,28 @@ export function seedBillingPlans(db) {
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
+  const updateStmt = db.prepare(`
+    UPDATE plans
+    SET name = ?,
+        monthly_price_cents = ?,
+        currency = ?,
+        gst_rate_basis_points = ?,
+        quote_allowance = ?,
+        quote_overage_price_cents = ?,
+        trial_days = ?,
+        setup_fee_cents = ?,
+        checkout_enabled = ?,
+        checkout_fee_basis_points = ?,
+        checkout_fee_monthly_cap_cents = ?,
+        allow_overages = ?,
+        branding_required = ?,
+        active = ?,
+        updated_at = datetime('now')
+    WHERE id = ?
+  `);
   for (const plan of TRENNEN_BILLING_PLANS) {
     const row = planRowFromDefault(plan);
-    stmt.run(
+    insertStmt.run(
       row.id,
       row.name,
       row.monthly_price_cents,
@@ -210,6 +229,25 @@ export function seedBillingPlans(db) {
       row.branding_required,
       row.active,
     );
+    if (overwriteExisting) {
+      updateStmt.run(
+        row.name,
+        row.monthly_price_cents,
+        row.currency,
+        row.gst_rate_basis_points,
+        row.quote_allowance,
+        row.quote_overage_price_cents,
+        row.trial_days,
+        row.setup_fee_cents,
+        row.checkout_enabled,
+        row.checkout_fee_basis_points,
+        row.checkout_fee_monthly_cap_cents,
+        row.allow_overages,
+        row.branding_required,
+        row.active,
+        row.id,
+      );
+    }
   }
 }
 
@@ -449,11 +487,12 @@ export function getBillingUsageSummary(db, shopId) {
   };
 }
 
-export function calculateCheckoutPlatformFee(db, { shopId, orderAmountCents }) {
+export function calculateCheckoutPlatformFee(db, { shopId, orderAmountCents, paymentMethod = 'card' }) {
   const merchant = getMerchantPlan(db, shopId);
   if (!merchant) throw new Error('Shop billing plan not found');
   const { plan, period } = merchant;
   const orderCents = cents(orderAmountCents);
+  const isCardCheckout = paymentMethod === 'card';
   const used = int(db.prepare(`
     SELECT COALESCE(SUM(final_platform_fee_cents), 0) as cents
     FROM checkout_fee_ledger
@@ -464,9 +503,10 @@ export function calculateCheckoutPlatformFee(db, { shopId, orderAmountCents }) {
   `).get(shopId, period.start, period.end)?.cents);
   const cap = cents(plan.checkout_fee_monthly_cap_cents);
   const basisPoints = cents(plan.checkout_fee_basis_points);
-  const raw = plan.checkout_enabled ? Math.round(orderCents * basisPoints / 10000) : 0;
+  const shouldChargeFee = isCardCheckout && plan.checkout_enabled;
+  const raw = shouldChargeFee ? Math.round(orderCents * basisPoints / 10000) : 0;
   const capBefore = Math.max(0, cap - used);
-  const finalFee = plan.checkout_enabled ? Math.min(raw, capBefore) : 0;
+  const finalFee = shouldChargeFee ? Math.min(raw, capBefore) : 0;
   return {
     shop_id: shopId,
     billing_period_start: period.start,
@@ -477,6 +517,7 @@ export function calculateCheckoutPlatformFee(db, { shopId, orderAmountCents }) {
     cap_remaining_before_cents: capBefore,
     cap_remaining_after_cents: Math.max(0, capBefore - finalFee),
     checkout_enabled: !!plan.checkout_enabled,
+    payment_method: paymentMethod,
     plan_id: plan.id,
   };
 }

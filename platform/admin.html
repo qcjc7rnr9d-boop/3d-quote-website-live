@@ -339,7 +339,7 @@
       <div class="kpi-card"><div class="kpi-label">Completed checkouts</div><div class="kpi-value" id="kpiPaid">-</div><div class="kpi-sub">Paid orders</div></div>
       <div class="kpi-card"><div class="kpi-label">Deliveries</div><div class="kpi-value" id="kpiDelivered">-</div><div class="kpi-sub">Fulfilment complete</div></div>
       <div class="kpi-card"><div class="kpi-label">Revenue</div><div class="kpi-value" id="kpiRevenue">-</div><div class="kpi-sub">Paid order total</div></div>
-      <div class="kpi-card"><div class="kpi-label">Platform fees</div><div class="kpi-value" id="kpiFees">-</div><div class="kpi-sub" id="kpiFeeRate">Estimated</div></div>
+      <div class="kpi-card"><div class="kpi-label">Card checkout fees</div><div class="kpi-value" id="kpiFees">-</div><div class="kpi-sub" id="kpiFeeRate">Plan-capped</div></div>
       <div class="kpi-card"><div class="kpi-label">Average order</div><div class="kpi-value" id="kpiAov">-</div><div class="kpi-sub">Paid orders</div></div>
       <div class="kpi-card"><div class="kpi-label">Stripe-ready stores</div><div class="kpi-value" id="kpiStripeReady">-</div><div class="kpi-sub">Connected and enabled</div></div>
     </div>
@@ -475,7 +475,7 @@
       <div class="soft-panel-header"><h2 class="soft-panel-title">Plans</h2></div>
       <div style="overflow-x:auto">
         <table class="data-table">
-          <thead><tr><th>Plan</th><th>Monthly cents</th><th>Quotes</th><th>Overage cents</th><th>Checkout bps</th><th>Cap cents</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Plan</th><th>Monthly cents</th><th>Quotes</th><th>Overage cents</th><th>Card fee bps</th><th>Card cap cents</th><th>Actions</th></tr></thead>
           <tbody id="plansTbody"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">Loading...</td></tr></tbody>
         </table>
       </div>
@@ -496,7 +496,7 @@
       <div class="soft-panel">
         <div class="soft-panel-header"><h2 class="soft-panel-title">Fee ledgers</h2></div>
         <div class="soft-panel-body">
-          <div class="mini-text">checkout_fee_ledger and payment_fee_records keep Trennen platform revenue separate from Stripe/payment processing costs.</div>
+          <div class="mini-text">checkout_fee_ledger records capped Trennen card checkout revenue. payment_fee_records keeps Stripe/payment processing costs separate. Bank-transfer orders do not create platform-fee revenue.</div>
           <div id="feeLedgerList" class="breakdown-list" style="margin-top:12px"></div>
         </div>
       </div>
@@ -625,7 +625,7 @@
     document.getElementById('kpiDelivered').textContent = data.delivered_orders || 0;
     document.getElementById('kpiRevenue').textContent = money(data.revenue);
     document.getElementById('kpiFees').textContent = money(data.estimated_platform_fees);
-    document.getElementById('kpiFeeRate').textContent = `${Number(data.fee_percent || 0).toFixed(2)}% platform fee`;
+    document.getElementById('kpiFeeRate').textContent = 'Plan-capped card fees';
     document.getElementById('kpiAov').textContent = money(data.average_order_value);
     document.getElementById('kpiStripeReady').textContent = data.stripe_ready_shops || 0;
     renderBreakdown('fulfilmentBreakdown', data.fulfilment_status_counts || {});

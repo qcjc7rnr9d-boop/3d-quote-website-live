@@ -13,7 +13,7 @@
     .hero p { max-width:680px; font-size:18px; line-height:1.62; color:#5f594f; }
     .hero-visual { min-height:340px; border-radius:8px; background:linear-gradient(135deg,#f8f0dc,#dcebdc 52%,#f3c36f); border:1px solid rgba(33,29,22,.12); position:relative; overflow:hidden; }
     .hero-visual::before { content:""; position:absolute; width:210px; height:210px; left:68px; top:58px; background:#fffdf7; transform:skewY(-18deg) rotate(12deg); box-shadow:50px 44px 0 #24372a, 92px 86px 0 #6f945f; }
-    .hero-visual::after { content:"Capped checkout fees"; position:absolute; right:28px; bottom:28px; padding:14px 16px; border-radius:8px; background:#211d16; color:#fffaf0; font-weight:700; }
+    .hero-visual::after { content:"Capped card checkout fees"; position:absolute; right:28px; bottom:28px; padding:14px 16px; border-radius:8px; background:#211d16; color:#fffaf0; font-weight:700; }
     .note { margin:26px 0 34px; font-weight:800; color:#211d16; }
     .plans { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px; align-items:stretch; }
     .plan-card { background:#fff; border:1px solid rgba(33,29,22,.14); border-radius:8px; padding:20px; display:flex; flex-direction:column; gap:13px; min-width:0; }
@@ -36,7 +36,7 @@
       <div>
         <p class="overline">Trennen pricing</p>
         <h1>Start small without paying enterprise prices.</h1>
-        <p>Generous plans for makers and 3D printing businesses, with quote limits that make sense and capped checkout fees so you are not punished for growing.</p>
+        <p>Generous plans for makers and 3D printing businesses, with quote limits that make sense and capped card checkout fees so you are not punished for growing.</p>
         <p class="note">All prices exclude GST.</p>
       </div>
       <div class="hero-visual" aria-hidden="true"></div>
@@ -63,7 +63,8 @@
           <li>14-day free trial</li>
           <li>25 quotes per month</li>
           <li>NZ$1 per extra quote</li>
-          <li>0.5% checkout fee capped at NZ$29/month</li>
+          <li>Optional card checkout fee: 0.5%, capped at NZ$29/month</li>
+          <li>Bank transfer has no processing fee</li>
         </ul>
       </article>
       <article class="plan-card">
@@ -74,7 +75,8 @@
           <li>14-day free trial if eligible</li>
           <li>250 quotes per month</li>
           <li>NZ$0.50 per extra quote</li>
-          <li>0.5% checkout fee capped at NZ$79/month</li>
+          <li>Optional card checkout fee: 0.5%, capped at NZ$79/month</li>
+          <li>Bank transfer has no processing fee</li>
         </ul>
       </article>
       <article class="plan-card">
@@ -84,7 +86,7 @@
         <ul>
           <li>1,000 quotes per month</li>
           <li>NZ$0.25 per extra quote</li>
-          <li>Checkout fee included or custom capped</li>
+          <li>No default card checkout fee unless configured</li>
           <li>Stripe/payment fees are pass-through</li>
         </ul>
       </article>
@@ -103,7 +105,7 @@
 
     <section class="principles" aria-label="Pricing principles">
       <div class="principle"><strong>Payment processing fees are separate and passed through at cost.</strong><span class="meta">Stripe/card/payment costs are not part of the monthly Trennen subscription.</span></div>
-      <div class="principle"><strong>Checkout fees are capped so you are not punished for growing.</strong><span class="meta">Trennen platform fees are separate from Stripe fees and respect the monthly cap.</span></div>
+      <div class="principle"><strong>Card checkout fees are capped so you are not punished for growing.</strong><span class="meta">Trennen platform fees apply only to processed card checkout and respect the monthly cap.</span></div>
       <div class="principle"><strong>No uncapped revenue-share by default.</strong><span class="meta">Meter customer-understandable events like sent quotes, not vague technical API calls.</span></div>
     </section>
   </main>

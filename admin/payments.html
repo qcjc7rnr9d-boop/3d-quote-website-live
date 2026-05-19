@@ -187,10 +187,11 @@
 
           <div id="connectState" class="status-center" style="display:none">
             <h2>Connect your Stripe account</h2>
-            <p>Customers will pay through Trennen checkout. Stripe will send your store payout to your own bank account after taking the platform fee.</p>
+            <p>Customers can pay by card through Trennen checkout. Stripe sends your payout to your own bank account after card processing costs and any capped Trennen card checkout fee.</p>
             <ul class="status-list">
               <li>Customers pay once at checkout</li>
               <li>Your payout goes to your connected Stripe account</li>
+              <li>Bank transfer orders have no card processing fee</li>
               <li>No card numbers are stored in this portal</li>
             </ul>
             <button class="btn btn-primary" id="connectStripeBtn">Connect with Stripe</button>
@@ -225,7 +226,7 @@
               </div>
             </div>
 
-            <div class="fee-note" id="feeNote">Trennen takes a platform fee from each transaction, applied automatically at checkout.</div>
+            <div class="fee-note" id="feeNote">Trennen card checkout fees are plan-based and capped. Stripe/payment processing fees are separate pass-through costs.</div>
             <div class="warn-note" id="requirementsBox" style="display:none"></div>
 
             <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
