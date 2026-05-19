@@ -92,6 +92,26 @@ STRIPE_WEBHOOK_SECRET=replace-with-stripe-webhook-secret
 
 Use Stripe Connect Express for each pilot business. The app blocks checkout until the platform Stripe keys are present, the shop subscription/readiness is valid, and the connected account has submitted details with charges and payouts enabled. Customer payments use a platform PaymentIntent with `transfer_data`, `on_behalf_of`, and `application_fee_amount` so Trennen can collect the configured checkout/platform fee while the remainder transfers to the connected business.
 
+After adding the Stripe test keys, prove the exact Stripe account/sandbox can create connected accounts:
+
+```bash
+cd /home/ubuntu/3d-quote-website-live/backend
+npm run stripe-connect:smoke
+```
+
+Expected result:
+
+```json
+{
+  "ok": true,
+  "created": true,
+  "accountLinkCreated": true,
+  "deleted": true
+}
+```
+
+If the smoke returns `CONNECT_PLATFORM_NOT_REGISTERED` or Stripe says `You can only create new accounts if you've signed up for Connect`, finish Stripe Connect setup in the same dashboard/sandbox that owns the server `sk_test_...` key, then rerun the smoke before retrying the admin Payments page.
+
 Use the Stripe CLI or dashboard webhook endpoint pointed at:
 
 ```text

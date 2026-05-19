@@ -27,6 +27,11 @@ assert.equal(
   'node scripts/production-pilot-readiness-smoke.js',
   'backend/package.json should expose a production pilot readiness smoke script',
 );
+assert.equal(
+  packageJson.scripts['stripe-connect:smoke'],
+  'node scripts/stripe-connect-platform-smoke.js',
+  'backend/package.json should expose a Stripe Connect platform smoke script',
+);
 assert.ok(
   packageJson.scripts['qa:full'].includes('npm run production-pilot:smoke'),
   'qa:full should include production-pilot:smoke',
@@ -85,6 +90,7 @@ assertNoSecretLikeValue('docs/deployment/staged-saas-launch.md', runbook);
 
 const stripeRoute = read('backend/routes/stripe.js');
 for (const expected of [
+  'CONNECT_PLATFORM_NOT_REGISTERED',
   'PLATFORM_STRIPE_NOT_CONFIGURED',
   'NO_CONNECTED_ACCOUNT',
   'ONBOARDING_INCOMPLETE',
@@ -95,6 +101,12 @@ for (const expected of [
 ]) {
   assert.match(stripeRoute, new RegExp(expected), `Stripe route should include ${expected}`);
 }
+
+const stripeConnectSmoke = read('backend/scripts/stripe-connect-platform-smoke.js');
+assert.match(stripeConnectSmoke, /stripe\.accounts\.create/, 'Stripe Connect smoke should test account creation');
+assert.match(stripeConnectSmoke, /stripe\.accountLinks\.create/, 'Stripe Connect smoke should test onboarding link creation');
+assert.match(stripeConnectSmoke, /stripe\.accounts\.del/, 'Stripe Connect smoke should clean up the test account');
+assert.match(stripeConnectSmoke, /ALLOW_LIVE_STRIPE_CONNECT_SMOKE/, 'Stripe Connect smoke should refuse live keys unless explicitly allowed');
 
 assert.ok(existsSync(resolve(root, 'docs/pricing/trennen-pricing-and-fees.md')), 'pricing source-of-truth doc should exist');
 

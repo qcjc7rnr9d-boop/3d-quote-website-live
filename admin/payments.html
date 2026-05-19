@@ -359,6 +359,9 @@
     try {
       const r = await fetch('/api/stripe/connect-url');
       const data = await r.json();
+      if (!r.ok && data.code === 'CONNECT_PLATFORM_NOT_REGISTERED') {
+        throw new Error(`${data.error || 'Stripe Connect is not activated for this platform account yet.'}\n\nOpen Stripe Connect setup, finish platform registration, then run npm run stripe-connect:smoke on Lightsail.`);
+      }
       if (!r.ok) throw new Error(data.error || 'Failed to start Stripe connection');
       window.location.href = data.url;
     } catch (err) {
