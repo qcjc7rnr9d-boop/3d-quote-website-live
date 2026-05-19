@@ -15,6 +15,7 @@ import { SQLiteSessionStore } from './lib/sqlite-session-store.js';
 import { csrfProtection, csrfTokenHandler } from './lib/csrf.js';
 import { hasSecretEncryptionKey } from './lib/secret-vault.js';
 import { frameAncestorsForOrigins, parseEmbedAllowedOrigins } from './lib/embed.js';
+import { mailerStatus } from './lib/mailer.js';
 
 import authRouter from './routes/auth.js';
 import materialsRouter from './routes/materials.js';
@@ -149,6 +150,7 @@ app.get('/onboarding.html', (req, res) => {
 app.get('/api/health', (req, res) => {
   try {
     db.prepare('SELECT 1 as ok').get();
+    const mail = mailerStatus();
     res.json({
       ok: true,
       version: appVersion,
@@ -164,6 +166,30 @@ app.get('/api/health', (req, res) => {
           publicPath: '/uploads',
         },
       },
+      readiness: {
+        proxy: {
+          trustProxy: !!app.get('trust proxy'),
+        },
+        email: {
+          provider: mail.provider,
+          configured: mail.provider === 'resend'
+            ? !!(process.env.RESEND_API_KEY && (process.env.APP_EMAIL_DOMAIN || process.env.APP_EMAIL_FALLBACK) && process.env.RESEND_WEBHOOK_SECRET)
+            : mail.provider === 'smtp'
+              ? !!(process.env.SMTP_HOST && (process.env.EMAIL_FROM || process.env.SMTP_FROM || process.env.SMTP_USER))
+              : false,
+          domain: process.env.APP_EMAIL_DOMAIN || null,
+          fallbackConfigured: !!process.env.APP_EMAIL_FALLBACK,
+          webhookConfigured: !!process.env.RESEND_WEBHOOK_SECRET,
+        },
+        payments: {
+          stripeConfigured: !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PUBLISHABLE_KEY),
+          connectConfigured: !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CLIENT_ID),
+          webhookConfigured: !!process.env.STRIPE_WEBHOOK_SECRET,
+        },
+        secrets: {
+          platformEncryptionConfigured: hasSecretEncryptionKey(),
+        },
+      },
     });
   } catch (err) {
     res.status(503).json({
@@ -173,6 +199,9 @@ app.get('/api/health', (req, res) => {
         engine: 'sqlite',
         status: 'error',
         error: err.message,
+      },
+      readiness: {
+        database: false,
       },
     });
   }
