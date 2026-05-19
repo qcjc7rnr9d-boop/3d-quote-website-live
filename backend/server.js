@@ -54,6 +54,9 @@ function assertProductionConfig() {
 
 assertProductionConfig();
 app.disable('x-powered-by');
+if (isProduction || process.env.TRUST_PROXY === '1') {
+  app.set('trust proxy', 1);
+}
 
 // ── Security headers ──────────────────────────────────────────
 app.use((req, res, next) => {
