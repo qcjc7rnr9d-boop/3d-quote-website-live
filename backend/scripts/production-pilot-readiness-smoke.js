@@ -68,12 +68,17 @@ for (const expected of [
   'NODE_ENV=production',
   'BASE_URL=https://app.trennen.co.nz',
   'npm run env:audit:pilot',
+  'npm run stripe-connect:smoke',
   'npm run production-pilot:smoke',
+  'npm run qa:full',
+  'pm2 restart 3d-quote-website --update-env',
   'STRIPE_SECRET_KEY',
   'STRIPE_PUBLISHABLE_KEY',
   'STRIPE_CLIENT_ID',
   'STRIPE_WEBHOOK_SECRET',
   'Stripe Connect Express',
+  'Customer checkout is Stripe-only for launch',
+  'BANK_TRANSFER_DISABLED',
   'application_fee_amount',
   'transfer_data',
   'pilot shop',
@@ -101,6 +106,11 @@ for (const expected of [
 ]) {
   assert.match(stripeRoute, new RegExp(expected), `Stripe route should include ${expected}`);
 }
+assert.match(
+  stripeRoute,
+  /create-bank-transfer-order[\s\S]*BANK_TRANSFER_DISABLED/,
+  'legacy bank-transfer API route should reject instead of creating customer orders',
+);
 
 const stripeConnectSmoke = read('backend/scripts/stripe-connect-platform-smoke.js');
 assert.match(stripeConnectSmoke, /stripe\.accounts\.create/, 'Stripe Connect smoke should test account creation');

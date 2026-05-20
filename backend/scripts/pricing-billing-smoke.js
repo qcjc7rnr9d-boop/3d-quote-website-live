@@ -120,12 +120,12 @@ assert.ok(pricingDoc.includes('| Starter | NZ$29 + GST | 25 | NZ$1 per extra quo
 assert.ok(pricingDoc.includes('| Growth | NZ$129 + GST | 250 | NZ$0.50 per extra quote | 0.5%, capped at NZ$79/month |'));
 assert.ok(pricingDoc.includes('| Scale | NZ$899 + GST | 1,000 | NZ$0.25 per extra quote | Included or custom capped |'));
 assert.ok(pricingDoc.includes('| Enterprise | Talk to us | Custom | Custom capped terms | Custom capped terms |'));
-assert.ok(pricingDoc.includes('Bank-transfer orders do not set an `application_fee_amount`'));
+assert.ok(pricingDoc.includes('Customer checkout is Stripe-only for launch'));
 assert.ok(pricingPage.includes('All prices exclude GST.'));
 assert.ok(pricingPage.includes('Optional card checkout fee: 0.5%, capped at NZ$29/month'));
 assert.ok(pricingPage.includes('Optional card checkout fee: 0.5%, capped at NZ$79/month'));
 assert.ok(pricingPage.includes('No default card checkout fee unless configured'));
-assert.ok(pricingPage.includes('Bank transfer has no processing fee'));
+assert.ok(pricingPage.includes('Stripe Connect checkout'));
 
 db.prepare("UPDATE plans SET monthly_price_cents = 7900, checkout_fee_basis_points = 100 WHERE id = 'growth'").run();
 seedBillingPlans(db, { overwriteExisting: true });
@@ -188,8 +188,7 @@ assert.equal(
 assert.equal(getPaymentFeeMode(db, starter), 'merchant_absorbs');
 updatePaymentFeeMode(db, starter, 'pass_to_customer_at_cost');
 assert.equal(estimatePaymentProcessingFee(db, { shopId: starter, amountCents: 10000 }), 320);
-updatePaymentFeeMode(db, starter, 'bank_transfer_only');
-assert.equal(getPaymentFeeMode(db, starter), 'bank_transfer_only');
+assert.throws(() => updatePaymentFeeMode(db, starter, 'bank_transfer_only'), /Invalid payment fee mode/);
 
 const platformLedgerId = recordCheckoutFeeLedger(db, calculateCheckoutPlatformFee(db, { shopId: growth, orderAmountCents: 10000 }), { status: 'charged' });
 const paymentFeeId = recordPaymentFeeRecord(db, {

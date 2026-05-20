@@ -197,10 +197,9 @@
           <select class="form-input" id="paymentFeeModeSelect" style="max-width:260px">
             <option value="merchant_absorbs">Absorb card fees</option>
             <option value="pass_to_customer_at_cost">Pass card fees at cost</option>
-            <option value="bank_transfer_only">Bank transfer only</option>
           </select>
         </div>
-        <p class="muted" style="padding:0 24px 14px;margin:0">Subscription access, capped card checkout fees, and Stripe processing costs are tracked separately. Bank transfer has no processing fee.</p>
+        <p class="muted" style="padding:0 24px 14px;margin:0">Subscription access, capped Stripe checkout fees, and card processing costs are tracked separately. Customer checkout is Stripe-only.</p>
         <div class="stats-row" style="padding:0 24px 24px">
           <div class="stat-card"><div class="stat-label">Plan</div><div class="stat-value" id="billingPlanName">—</div></div>
           <div class="stat-card"><div class="stat-label">Quotes used this month</div><div class="stat-value" id="billingQuotesUsed">—</div></div>

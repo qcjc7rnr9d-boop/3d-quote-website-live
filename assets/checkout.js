@@ -278,7 +278,6 @@
   let processingFeeCents = 0;
   let paymentFeeMode = 'merchant_absorbs';
   let checkoutSettings = null;
-  let selectedPaymentMethod = 'card';
   let quoteValidated = false;
   let stripeReady = false;
   let paymentUnavailable = false;
@@ -289,7 +288,7 @@
     if (totalNzd > 0) {
       const defaultLabel = 'Pay ' + fmtNzd(totalNzd + processingFeeCents / 100);
       payBtn.textContent = paymentUnavailable ? 'Payment unavailable' : (message || defaultLabel);
-      payBtn.disabled = selectedPaymentMethod !== 'card' || !(quoteValidated && stripeReady) || paymentUnavailable;
+      payBtn.disabled = !(quoteValidated && stripeReady) || paymentUnavailable;
       payBtn.style.opacity = payBtn.disabled ? '0.7' : '';
       payBtn.style.cursor = payBtn.disabled ? 'not-allowed' : '';
     } else {
@@ -339,27 +338,16 @@
 
   function renderPaymentOptions() {
     if (!checkoutSettings) return;
-    const bankOption = document.getElementById('bankTransferOption');
-    const cardOption = document.getElementById('cardPaymentOption');
-    const cardPanel = document.getElementById('cardPanel');
-    const bankPanel = document.getElementById('bankTransferPanel');
     const cardSummary = document.getElementById('cardFeeSummary');
-    const bankRadio = bankOption?.querySelector('input');
-    const cardRadio = cardOption?.querySelector('input');
 
-    if (bankOption) bankOption.style.display = checkoutSettings.bank_transfer_enabled ? '' : 'none';
-    if (cardOption) cardOption.style.display = checkoutSettings.card_enabled ? '' : 'none';
     if (cardSummary) {
       cardSummary.textContent = paymentFeeMode === 'pass_to_customer_at_cost'
-        ? 'Card — processing fee applies at cost and is shown before payment.'
-        : 'Card — no added card processing fee.';
+        ? 'Stripe card checkout is the only live payment method. Processing fees are shown before payment.'
+        : 'Stripe card checkout is the only live payment method.';
     }
-    if (!checkoutSettings.card_enabled) selectedPaymentMethod = 'bank_transfer';
-    if (!checkoutSettings.bank_transfer_enabled) selectedPaymentMethod = 'card';
-    if (bankRadio) bankRadio.checked = selectedPaymentMethod === 'bank_transfer';
-    if (cardRadio) cardRadio.checked = selectedPaymentMethod === 'card';
-    if (cardPanel) cardPanel.style.display = selectedPaymentMethod === 'card' ? '' : 'none';
-    if (bankPanel) bankPanel.classList.toggle('show', selectedPaymentMethod === 'bank_transfer');
+    if (!checkoutSettings.card_enabled) {
+      showPaymentSetupError('Stripe checkout is not enabled for this store plan yet.');
+    }
   }
 
   function showReviewValidationError(message) {
@@ -567,7 +555,7 @@
 
     const feeRow = document.getElementById('priceProcessingFeeRow');
     if (feeRow) {
-      if (selectedPaymentMethod === 'card' && processingFeeCents > 0) {
+      if (processingFeeCents > 0) {
         document.getElementById('priceProcessingFee').textContent = fmtNzd(processingFeeCents / 100);
         feeRow.style.display = '';
       } else {
@@ -575,18 +563,10 @@
       }
     }
 
-    document.getElementById('priceTotal').textContent = fmtNzd(totalNzd + (selectedPaymentMethod === 'card' ? processingFeeCents / 100 : 0));
+    document.getElementById('priceTotal').textContent = fmtNzd(totalNzd + processingFeeCents / 100);
 
     updatePayButton();
   }
-
-  document.querySelectorAll('input[name="paymentMethodChoice"]').forEach(input => {
-    input.addEventListener('change', e => {
-      selectedPaymentMethod = e.target.value;
-      renderPaymentOptions();
-      renderCart();
-    });
-  });
 
   document.getElementById('cartItemsReview')?.addEventListener('click', e => {
     const btn = e.target.closest('[data-remove-cart-item]');
@@ -622,9 +602,8 @@
     if (!hasData) return;
     try {
       await loadCheckoutSettings();
-      if (selectedPaymentMethod === 'bank_transfer') {
-        stripeReady = false;
-        updatePayButton();
+      if (!checkoutSettings?.card_enabled) {
+        updatePayButton('Payment unavailable');
         return;
       }
       const r = await fetch('/api/stripe/public-key?shop=' + encodeURIComponent(shopSlug));
@@ -734,55 +713,6 @@
       errEl.textContent = err.message || 'Payment failed. Please try again.';
       btn.disabled = false;
       btn.textContent = origLabel;
-    }
-  });
-
-  document.getElementById('bankTransferBtn')?.addEventListener('click', async () => {
-    if (!hasData) return;
-    const errEl = document.getElementById('card-errors');
-    if (errEl) errEl.textContent = '';
-    const email = document.getElementById('bankCustomerEmail').value.trim();
-    const name = document.getElementById('bankCustomerName').value.trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      if (errEl) errEl.textContent = 'Please enter a valid email address.';
-      return;
-    }
-    if (!name) {
-      if (errEl) errEl.textContent = 'Please enter your name.';
-      return;
-    }
-    if (!quoteValidated) {
-      if (errEl) errEl.textContent = 'Checkout total is still being validated. Please try again in a moment.';
-      return;
-    }
-
-    const btn = document.getElementById('bankTransferBtn');
-    const original = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'Placing order...';
-    try {
-      const res = await fetch('/api/stripe/create-bank-transfer-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shopSlug,
-          customerEmail: email,
-          customerName: name,
-          orderData: cart,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.error) throw new Error(data.error || 'Could not place bank transfer order.');
-      try { localStorage.removeItem('cart'); } catch {}
-      const confirmation = new URL('confirmation.html', window.location.href);
-      confirmation.searchParams.set('order', data.orderId);
-      if (data.orderToken) confirmation.searchParams.set('token', data.orderToken);
-      confirmation.searchParams.set('shop', shopSlug);
-      window.location.href = confirmation.pathname + confirmation.search;
-    } catch (err) {
-      if (errEl) errEl.textContent = err.message || 'Could not place bank transfer order.';
-      btn.disabled = false;
-      btn.textContent = original;
     }
   });
 

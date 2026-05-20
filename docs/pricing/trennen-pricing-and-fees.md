@@ -6,13 +6,13 @@ All prices exclude GST. Store plan prices internally in NZD cents. GST is config
 
 ## Standard Pricing Guardrail
 
-Future pricing work must update this document and `backend/lib/billing-plans.js` together. Capped Trennen checkout/platform fees are card-only by default: apply them only when Trennen processes card checkout through Stripe Connect. Quote-only and bank-transfer order flows do not create Trennen checkout/platform fee revenue.
+Future pricing work must update this document and `backend/lib/billing-plans.js` together. Capped Trennen checkout/platform fees apply only when Trennen processes card checkout through Stripe Connect. Quote-only flows do not create Trennen checkout/platform fee revenue.
 
 ## Principles
 
 - The monthly Trennen subscription pays for access to the quoting software.
 - Stripe/card/payment processing fees are pass-through costs, not Trennen revenue.
-- Merchants can absorb card fees, pass them to customers at cost, or use bank transfer only.
+- Merchants can absorb Stripe card fees or pass them to customers at cost.
 - Trennen card checkout/platform fees are separate from Stripe fees and must be capped.
 - Trennen must not use Stripe fees as a profit centre.
 - No uncapped percentage-of-revenue model by default.
@@ -22,7 +22,7 @@ Future pricing work must update this document and `backend/lib/billing-plans.js`
 
 | Plan | Monthly price | Included quotes | Overage | Card checkout/platform fee |
 | --- | ---: | ---: | ---: | --- |
-| Community | NZ$0 | 3 | Disabled | Disabled or bank-transfer-only |
+| Community | NZ$0 | 3 | Disabled | Disabled |
 | Starter | NZ$29 + GST | 25 | NZ$1 per extra quote | 0.5%, capped at NZ$29/month |
 | Growth | NZ$129 + GST | 250 | NZ$0.50 per extra quote | 0.5%, capped at NZ$79/month |
 | Scale | NZ$899 + GST | 1,000 | NZ$0.25 per extra quote | Included or custom capped |
@@ -42,7 +42,7 @@ Customer print orders can contain these separate monetary concepts:
 - Stripe/payment processing fee recorded as cost
 - Trennen checkout/platform fee recorded as platform revenue
 
-Stripe/payment processing fees must never reduce Trennen subscription revenue. If Stripe Connect is used, each print shop should have its own connected account where possible. Trennen may collect the capped card checkout/platform fee with `application_fee_amount`; that amount must not exceed the monthly cap. Bank-transfer orders do not set an `application_fee_amount` and do not create checkout-fee ledger revenue.
+Stripe/payment processing fees must never reduce Trennen subscription revenue. Each print shop should connect its own Stripe account through Stripe Connect where possible. Trennen may collect the capped card checkout/platform fee with `application_fee_amount`; that amount must not exceed the monthly cap.
 
 ## Quote Usage
 
@@ -70,6 +70,5 @@ Allowed values:
 
 - `merchant_absorbs`
 - `pass_to_customer_at_cost`
-- `bank_transfer_only`
 
-Bank transfer has no processing fee. Card/Stripe shows a processing fee before confirmation only when the merchant passes it to the customer at cost.
+Stripe card checkout shows a processing fee before confirmation only when the merchant passes it to the customer at cost. Customer checkout is Stripe-only for launch.

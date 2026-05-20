@@ -443,90 +443,11 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
   }
 });
 
-router.post('/create-bank-transfer-order', paymentIntentLimiter, async (req, res) => {
-  try {
-    const { shopSlug, customerEmail, customerName, orderData } = req.body;
-    if (!shopSlug || !customerEmail || !orderData) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-    if (!validateEmail(customerEmail)) {
-      return res.status(400).json({ error: 'Enter a valid email address.' });
-    }
-
-    const shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
-    const paymentFeeMode = getPaymentFeeMode(db, shop.id);
-
-    const cart = validateCartForShop(db, shop, normaliseCart({
-      ...(orderData || {}),
-      shopSlug,
-      items: Array.isArray(orderData?.items) && orderData.items.length ? orderData.items : null,
-    }, shopSlug));
-    const usagePreview = previewQuoteUsage(db, shop.id);
-    if (usagePreview.limit_reached) {
-      return res.status(402).json({
-        error: 'You have used your included quotes for this billing period. Upgrade to keep sending quotes.',
-        code: 'QUOTE_LIMIT_REACHED',
-        usage: usagePreview,
-      });
-    }
-
-    db.prepare(`
-      INSERT INTO customers (shop_id, email, name) VALUES (?, ?, ?)
-      ON CONFLICT(shop_id, email) DO UPDATE SET name = excluded.name
-    `).run(shop.id, (customerEmail || '').toLowerCase(), customerName || null);
-
-    ensureOrderPublicTokenColumn();
-    const publicToken = newPublicOrderToken();
-    const firstItem = cart.items[0];
-    const order = db.prepare(`
-      INSERT INTO orders
-        (shop_id, customer_email, customer_name, file_name, material_id,
-         colour, finish, quantity, subtotal, tax, shipping, total, public_token,
-         payment_processing_fee_cents, checkout_platform_fee_cents, customer_total_cents)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
-    `).run(
-      shop.id,
-      (customerEmail || '').toLowerCase(),
-      customerName || '',
-      cart.items.length > 1 ? `${cart.items.length} material groups` : firstItem?.file?.name || null,
-      firstItem?.materialId || null,
-      cart.items.length > 1 ? 'Multiple' : firstItem?.colorName || null,
-      cart.items.length > 1 ? 'Multiple' : firstItem?.finishLabel || null,
-      cart.items.length > 1 ? 1 : firstItem?.quantity || 1,
-      cart.items.reduce((sum, item) => sum + Number(item.itemsNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.shippingNzd || 0), 0),
-      cart.totalNzd,
-      publicToken,
-      cart.totalCents,
-    );
-    saveOrderItems(db, order.lastInsertRowid, cart.items);
-    recordQuoteUsageEvent(db, {
-      shopId: shop.id,
-      quoteId: `order:${order.lastInsertRowid}`,
-      eventType: 'bank_transfer_order_created',
-    });
-
-    res.status(201).json({
-      ok: true,
-      orderId: order.lastInsertRowid,
-      orderToken: publicToken,
-      payment_fee_mode: paymentFeeMode,
-      customer_total_cents: cart.totalCents,
-      usage: usagePreview,
-    });
-  } catch (err) {
-    console.error('Create bank transfer order error:', err);
-    if (err instanceof PricingError) {
-      return res.status(err.status).json({
-        error: err.message || 'Order failed',
-        code: err.code,
-        quote: err.quote || null,
-      });
-    }
-    res.status(err.status || 500).json({ error: err.message || 'Order failed' });
-  }
+router.post('/create-bank-transfer-order', paymentIntentLimiter, (req, res) => {
+  res.status(410).json({
+    error: 'Offline checkout is no longer available. Please use Stripe card checkout.',
+    code: 'BANK_TRANSFER_DISABLED',
+  });
 });
 
 router.get('/connect-url', requireShopAuth, async (req, res) => {

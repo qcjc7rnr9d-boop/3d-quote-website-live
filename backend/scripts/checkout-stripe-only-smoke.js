@@ -20,6 +20,10 @@ const forbidden = [
   "checkoutProvider === 'shopify'",
   'Shopify checkout',
   'buy-button-storefront',
+  'Bank transfer',
+  'bankTransferBtn',
+  'bankTransferPanel',
+  'paymentMethodChoice',
 ];
 
 for (const term of forbidden) {
@@ -43,12 +47,12 @@ assert(
   'Checkout script must process payments through Stripe PaymentIntents'
 );
 assert(
-  checkoutHtml.includes('Bank transfer — no processing fee') && checkoutHtml.includes('Payment processing fee'),
-  'Checkout must clearly show bank transfer and payment processing fee rows'
+  checkoutHtml.includes('Payment processing fee'),
+  'Checkout must clearly show the payment processing fee row'
 );
 assert(
-  checkoutJs.includes('/api/billing/public-checkout-settings') && checkoutJs.includes('/api/stripe/create-bank-transfer-order'),
-  'Checkout script must load payment fee mode and support bank-transfer orders'
+  checkoutJs.includes('/api/billing/public-checkout-settings') && !checkoutJs.includes('/api/stripe/create-bank-transfer-order'),
+  'Checkout script must load payment fee mode without creating offline checkout orders'
 );
 assert(
   !checkoutJs.includes('shopify_shop') && !checkoutJs.includes('shopifyShopDomain'),
@@ -69,6 +73,12 @@ assert(
 assert(
   checkoutJs.includes('showReviewValidationError'),
   'Checkout script must surface quote validation failures in the order review'
+);
+
+const stripeRoute = readFileSync(resolve(root, 'backend/routes/stripe.js'), 'utf8');
+assert(
+  stripeRoute.includes('/create-bank-transfer-order') && stripeRoute.includes('BANK_TRANSFER_DISABLED'),
+  'Legacy bank-transfer route must remain as a rejecting compatibility endpoint'
 );
 
 console.log('Stripe checkout fallback smoke checks passed.');
