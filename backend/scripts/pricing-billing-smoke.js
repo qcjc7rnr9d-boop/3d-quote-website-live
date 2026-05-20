@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import {
   calculateCheckoutPlatformFee,
@@ -13,7 +15,7 @@ import {
   seedBillingPlans,
   updatePaymentFeeMode,
 } from '../lib/billing-service.js';
-import { defaultPlanById } from '../lib/billing-plans.js';
+import { DEFAULT_GST_BASIS_POINTS, TRENNEN_BILLING_PLANS, defaultPlanById } from '../lib/billing-plans.js';
 
 const db = new DatabaseSync(':memory:');
 db.exec(`
@@ -73,8 +75,63 @@ function makeShop(plan) {
   return result.lastInsertRowid;
 }
 
-assert.equal(defaultPlanById('starter').monthly_price_cents, 2900);
-assert.equal(defaultPlanById('growth').checkout_fee_monthly_cap_cents, 7900);
+const pricingDoc = readFileSync(resolve(import.meta.dirname, '../../docs/pricing/trennen-pricing-and-fees.md'), 'utf8');
+const pricingPage = readFileSync(resolve(import.meta.dirname, '../../pricing.html'), 'utf8');
+assert.equal(TRENNEN_BILLING_PLANS.length, 5);
+assert.equal(DEFAULT_GST_BASIS_POINTS, 1500);
+
+const communityPlan = defaultPlanById('community');
+assert.equal(communityPlan.monthly_price_cents, 0);
+assert.equal(communityPlan.quote_allowance, 3);
+assert.equal(communityPlan.allow_overages, false);
+assert.equal(communityPlan.checkout_enabled, false);
+
+const starterPlan = defaultPlanById('starter');
+assert.equal(starterPlan.monthly_price_cents, 2900);
+assert.equal(starterPlan.quote_allowance, 25);
+assert.equal(starterPlan.quote_overage_price_cents, 100);
+assert.equal(starterPlan.trial_days, 14);
+assert.equal(starterPlan.checkout_fee_basis_points, 50);
+assert.equal(starterPlan.checkout_fee_monthly_cap_cents, 2900);
+
+const growthPlan = defaultPlanById('growth');
+assert.equal(growthPlan.monthly_price_cents, 12900);
+assert.equal(growthPlan.quote_allowance, 250);
+assert.equal(growthPlan.quote_overage_price_cents, 50);
+assert.equal(growthPlan.trial_days, 14);
+assert.equal(growthPlan.checkout_fee_basis_points, 50);
+assert.equal(growthPlan.checkout_fee_monthly_cap_cents, 7900);
+
+const scalePlan = defaultPlanById('scale');
+assert.equal(scalePlan.monthly_price_cents, 89900);
+assert.equal(scalePlan.quote_allowance, 1000);
+assert.equal(scalePlan.quote_overage_price_cents, 25);
+assert.equal(scalePlan.checkout_fee_basis_points, 0);
+assert.equal(scalePlan.checkout_fee_monthly_cap_cents, 0);
+
+const enterprisePlan = defaultPlanById('enterprise');
+assert.equal(enterprisePlan.monthly_price_cents, null);
+assert.equal(enterprisePlan.quote_allowance, null);
+assert.equal(enterprisePlan.checkout_fee_basis_points, 0);
+assert.equal(enterprisePlan.active, true);
+
+assert.ok(pricingDoc.includes('Future pricing work must update this document and `backend/lib/billing-plans.js` together'));
+assert.ok(pricingDoc.includes('| Starter | NZ$29 + GST | 25 | NZ$1 per extra quote | 0.5%, capped at NZ$29/month |'));
+assert.ok(pricingDoc.includes('| Growth | NZ$129 + GST | 250 | NZ$0.50 per extra quote | 0.5%, capped at NZ$79/month |'));
+assert.ok(pricingDoc.includes('| Scale | NZ$899 + GST | 1,000 | NZ$0.25 per extra quote | Included or custom capped |'));
+assert.ok(pricingDoc.includes('| Enterprise | Talk to us | Custom | Custom capped terms | Custom capped terms |'));
+assert.ok(pricingDoc.includes('Bank-transfer orders do not set an `application_fee_amount`'));
+assert.ok(pricingPage.includes('All prices exclude GST.'));
+assert.ok(pricingPage.includes('Optional card checkout fee: 0.5%, capped at NZ$29/month'));
+assert.ok(pricingPage.includes('Optional card checkout fee: 0.5%, capped at NZ$79/month'));
+assert.ok(pricingPage.includes('No default card checkout fee unless configured'));
+assert.ok(pricingPage.includes('Bank transfer has no processing fee'));
+
+db.prepare("UPDATE plans SET monthly_price_cents = 7900, checkout_fee_basis_points = 100 WHERE id = 'growth'").run();
+seedBillingPlans(db, { overwriteExisting: true });
+const growthRow = db.prepare("SELECT monthly_price_cents, checkout_fee_basis_points FROM plans WHERE id = 'growth'").get();
+assert.equal(growthRow.monthly_price_cents, 12900);
+assert.equal(growthRow.checkout_fee_basis_points, 50);
 
 const community = makeShop('community');
 recordQuoteUsageEvent(db, { shopId: community, quoteId: 'c1' });
@@ -108,6 +165,25 @@ assert.equal(calc.final_platform_fee_cents, 7900);
 const scale = makeShop('scale');
 calc = calculateCheckoutPlatformFee(db, { shopId: scale, orderAmountCents: 5000000 });
 assert.equal(calc.final_platform_fee_cents, 0);
+
+const bankTransferShop = makeShop('starter');
+recordQuoteUsageEvent(db, {
+  shopId: bankTransferShop,
+  quoteId: 'bank-transfer-order:1',
+  eventType: 'bank_transfer_order_created',
+});
+calc = calculateCheckoutPlatformFee(db, {
+  shopId: bankTransferShop,
+  orderAmountCents: 250000,
+  paymentMethod: 'bank_transfer',
+});
+assert.equal(calc.raw_platform_fee_cents, 0);
+assert.equal(calc.final_platform_fee_cents, 0);
+assert.equal(
+  db.prepare('SELECT COUNT(*) AS c FROM checkout_fee_ledger WHERE shop_id = ?').get(bankTransferShop).c,
+  0,
+  'bank transfer order usage must not create Trennen platform-fee revenue',
+);
 
 assert.equal(getPaymentFeeMode(db, starter), 'merchant_absorbs');
 updatePaymentFeeMode(db, starter, 'pass_to_customer_at_cost');

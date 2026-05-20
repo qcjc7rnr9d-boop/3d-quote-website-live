@@ -331,6 +331,7 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
     const platformFee = calculateCheckoutPlatformFee(db, {
       shopId: shop.id,
       orderAmountCents: amountCents,
+      paymentMethod: 'card',
     });
     const feeCents = platformFee.final_platform_fee_cents;
 

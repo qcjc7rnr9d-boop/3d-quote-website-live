@@ -11,7 +11,7 @@ const db = new DatabaseSync(join(__dirname, '../data/rfdewi.db'));
 db.exec('PRAGMA foreign_keys = ON');
 
 ensureBillingSchema(db);
-seedBillingPlans(db);
+seedBillingPlans(db, { overwriteExisting: true });
 
 const shops = db.prepare('SELECT id FROM shops').all();
 for (const shop of shops) {
