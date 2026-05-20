@@ -9,84 +9,8 @@ export const PAYMENT_FEE_MODES = [
 export const TRENNEN_BILLING_PLANS = [
   {
     id: 'community',
-    name: 'Community',
+    name: 'Free Pilot',
     monthly_price_cents: 0,
-    currency: DEFAULT_CURRENCY,
-    gst_rate_basis_points: DEFAULT_GST_BASIS_POINTS,
-    quote_allowance: 3,
-    quote_overage_price_cents: null,
-    trial_days: 0,
-    setup_fee_cents: 0,
-    checkout_enabled: false,
-    checkout_fee_basis_points: 0,
-    checkout_fee_monthly_cap_cents: 0,
-    allow_overages: false,
-    branding_required: true,
-    active: true,
-    purpose: 'For hobbyists, students, and tiny makers trying Trennen.',
-    contract_type: 'free',
-  },
-  {
-    id: 'starter',
-    name: 'Starter',
-    monthly_price_cents: 2900,
-    currency: DEFAULT_CURRENCY,
-    gst_rate_basis_points: DEFAULT_GST_BASIS_POINTS,
-    quote_allowance: 25,
-    quote_overage_price_cents: 100,
-    trial_days: 14,
-    setup_fee_cents: 0,
-    checkout_enabled: true,
-    checkout_fee_basis_points: 50,
-    checkout_fee_monthly_cap_cents: 2900,
-    allow_overages: true,
-    branding_required: false,
-    active: true,
-    purpose: 'Recommended for most small 3D printing businesses.',
-    contract_type: 'monthly',
-  },
-  {
-    id: 'growth',
-    name: 'Growth',
-    monthly_price_cents: 12900,
-    currency: DEFAULT_CURRENCY,
-    gst_rate_basis_points: DEFAULT_GST_BASIS_POINTS,
-    quote_allowance: 250,
-    quote_overage_price_cents: 50,
-    trial_days: 14,
-    setup_fee_cents: 0,
-    checkout_enabled: true,
-    checkout_fee_basis_points: 50,
-    checkout_fee_monthly_cap_cents: 7900,
-    allow_overages: true,
-    branding_required: false,
-    active: true,
-    purpose: 'For active businesses quoting every week.',
-    contract_type: 'monthly',
-  },
-  {
-    id: 'scale',
-    name: 'Scale',
-    monthly_price_cents: 89900,
-    currency: DEFAULT_CURRENCY,
-    gst_rate_basis_points: DEFAULT_GST_BASIS_POINTS,
-    quote_allowance: 1000,
-    quote_overage_price_cents: 25,
-    trial_days: 0,
-    setup_fee_cents: 0,
-    checkout_enabled: true,
-    checkout_fee_basis_points: 0,
-    checkout_fee_monthly_cap_cents: 0,
-    allow_overages: true,
-    branding_required: false,
-    active: true,
-    purpose: 'For large shops with configurable monthly or annual terms.',
-    contract_type: 'monthly_or_annual',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    monthly_price_cents: null,
     currency: DEFAULT_CURRENCY,
     gst_rate_basis_points: DEFAULT_GST_BASIS_POINTS,
     quote_allowance: null,
@@ -94,33 +18,32 @@ export const TRENNEN_BILLING_PLANS = [
     trial_days: 0,
     setup_fee_cents: 0,
     checkout_enabled: true,
-    checkout_fee_basis_points: 0,
+    checkout_fee_basis_points: 500,
     checkout_fee_monthly_cap_cents: 0,
     allow_overages: true,
     branding_required: false,
     active: true,
-    purpose: 'Custom allowance and custom capped usage terms.',
-    contract_type: 'annual_or_custom',
+    purpose: 'Free production pilot with Stripe Connect checkout and a 5% Trennen platform fee included in customer totals.',
+    contract_type: 'free',
   },
 ];
 
 export function normalisePlanId(planId) {
   const value = String(planId || '').trim().toLowerCase();
-  if (value === 'pro') return 'starter';
-  if (TRENNEN_BILLING_PLANS.some(plan => plan.id === value)) return value;
-  return 'starter';
+  if (value === 'suspended') return 'suspended';
+  return 'community';
 }
 
 export function defaultPlanById(planId) {
   const id = normalisePlanId(planId);
-  return TRENNEN_BILLING_PLANS.find(plan => plan.id === id) || TRENNEN_BILLING_PLANS[1];
+  return TRENNEN_BILLING_PLANS.find(plan => plan.id === id) || TRENNEN_BILLING_PLANS[0];
 }
 
 function boolInt(value) {
   return value ? 1 : 0;
 }
 
-export function planRowFromDefault(plan = defaultPlanById('starter')) {
+export function planRowFromDefault(plan = defaultPlanById('community')) {
   return {
     id: plan.id,
     name: plan.name,

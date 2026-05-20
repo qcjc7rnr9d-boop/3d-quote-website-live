@@ -230,7 +230,7 @@
             <div class="warn-note" id="requirementsBox" style="display:none"></div>
 
             <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
-              <button class="btn btn-primary" id="resumeOnboardingBtn">Resume Stripe setup</button>
+              <button class="btn btn-primary" id="stripeAccountActionBtn">Resume Stripe setup</button>
               <button class="btn btn-outline" id="disconnectBtn" style="color:#C0392B;border-color:rgba(192,57,43,0.4)">Disconnect Stripe</button>
             </div>
           </div>
@@ -333,12 +333,16 @@
     document.getElementById('subscriptionStatus').innerHTML = stripeStatus.billing_active
       ? '<span class="badge badge-sage">Active</span>'
       : '<span class="badge badge-warm">Action needed</span>';
-    document.getElementById('statusSummary').innerHTML = stripeStatus.onboarding_complete
-      && stripeStatus.can_accept_live_orders
-      ? '<span class="badge badge-sage">Ready for live payments</span>'
+    const paymentsReady = !!(stripeStatus.onboarding_complete && stripeStatus.can_accept_live_orders);
+    document.getElementById('statusSummary').innerHTML = paymentsReady
+      ? '<span class="badge badge-sage">Ready for payments</span>'
       : '<span class="badge badge-warm">More Stripe setup needed</span>';
+    const accountActionBtn = document.getElementById('stripeAccountActionBtn');
+    accountActionBtn.textContent = paymentsReady ? 'Open Stripe dashboard' : 'Resume Stripe setup';
+    accountActionBtn.dataset.action = paymentsReady ? 'dashboard' : 'onboarding';
+    accountActionBtn.disabled = false;
     document.getElementById('feeNote').textContent =
-      'Trennen checkout fees are plan-based and capped. Stripe/payment processing fees are separate pass-through costs.';
+      'The free pilot includes a 5% Trennen platform fee inside the customer quote total. Stripe/payment processing fees are separate pass-through costs.';
 
     const requirementsBox = document.getElementById('requirementsBox');
     if (stripeStatus.requirements_due && stripeStatus.requirements_due.length) {
@@ -353,7 +357,7 @@
     loadPayouts();
   }
 
-  async function startConnect(btn) {
+  async function startConnect(btn, restoreLabel = 'Connect with Stripe') {
     btn.disabled = true;
     btn.textContent = 'Redirecting…';
     try {
@@ -367,7 +371,22 @@
     } catch (err) {
       alert(err.message || 'Failed to start Stripe connection');
       btn.disabled = false;
-      btn.textContent = 'Connect with Stripe';
+      btn.textContent = restoreLabel;
+    }
+  }
+
+  async function openStripeDashboard(btn) {
+    btn.disabled = true;
+    btn.textContent = 'Opening…';
+    try {
+      const r = await fetch('/api/stripe/dashboard-link');
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Stripe dashboard access is temporarily unavailable.');
+      window.location.href = data.url;
+    } catch (err) {
+      alert(err.message || 'Stripe is connected. Dashboard access is temporarily unavailable.');
+      btn.disabled = false;
+      btn.textContent = 'Open Stripe dashboard';
     }
   }
 
@@ -417,7 +436,13 @@
   });
 
   document.getElementById('connectStripeBtn').addEventListener('click', e => startConnect(e.currentTarget));
-  document.getElementById('resumeOnboardingBtn').addEventListener('click', e => startConnect(e.currentTarget));
+  document.getElementById('stripeAccountActionBtn').addEventListener('click', e => {
+    if (e.currentTarget.dataset.action === 'dashboard') {
+      openStripeDashboard(e.currentTarget);
+      return;
+    }
+    startConnect(e.currentTarget, 'Resume Stripe setup');
+  });
 
   document.getElementById('disconnectBtn').addEventListener('click', () => {
     document.getElementById('disconnectModal').classList.remove('hidden');

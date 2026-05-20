@@ -12,6 +12,7 @@ export class PricingError extends Error {
 }
 
 const DEFAULT_CURRENCY = 'NZD';
+const DEFAULT_PLATFORM_FEE_PERCENT = 5;
 export const MAX_MODELS_PER_QUOTE = 20;
 export const MAX_MODEL_QUANTITY_SAFETY = 9999;
 
@@ -223,7 +224,19 @@ function loadPricingInputs(db, shop, input = {}) {
 
   const cfg = db.prepare('SELECT * FROM pricing_config WHERE shop_id = ?').get(shop.id) || {};
   const settings = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
-  return { material, cfg, shippingZones: normaliseShippingZones(safeJson(settings.shipping_zones, [])) };
+  let platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT;
+  try {
+    const platformSettings = db.prepare('SELECT platform_fee_percent FROM platform_settings WHERE id = 1').get() || {};
+    platformFeePercent = toNumber(platformSettings.platform_fee_percent, DEFAULT_PLATFORM_FEE_PERCENT);
+  } catch {
+    platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT;
+  }
+  return {
+    material,
+    cfg,
+    shippingZones: normaliseShippingZones(safeJson(settings.shipping_zones, [])),
+    platformFeePercent,
+  };
 }
 
 export function buildQuoteRequestFromCart(cart = {}) {
@@ -359,7 +372,32 @@ function checkMaterialSize(material, input = {}, models = null) {
   return dimensions;
 }
 
-export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], input = {} }) {
+function includedPlatformFeeCents(customerTotalCents, platformFeePercent) {
+  const percent = Math.max(0, Math.min(50, toNumber(platformFeePercent, 0)));
+  if (percent <= 0 || customerTotalCents <= 0) return 0;
+  return Math.max(0, customerTotalCents - Math.floor(customerTotalCents * (1 - percent / 100)));
+}
+
+function grossUpForIncludedPlatformFee(sellerNetTotalCents, platformFeePercent) {
+  const percent = Math.max(0, Math.min(50, toNumber(platformFeePercent, 0)));
+  if (percent <= 0 || sellerNetTotalCents <= 0) {
+    return {
+      sellerNetTotalCents,
+      platformFeeIncludedCents: 0,
+      customerTotalCents: sellerNetTotalCents,
+      platformFeePercent: percent,
+    };
+  }
+  const customerTotalCents = Math.ceil(sellerNetTotalCents / (1 - percent / 100));
+  return {
+    sellerNetTotalCents,
+    platformFeeIncludedCents: includedPlatformFeeCents(customerTotalCents, percent),
+    customerTotalCents,
+    platformFeePercent: percent,
+  };
+}
+
+export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], input = {}, platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT }) {
   const warnings = [];
   const currency = String(cfg.currency || DEFAULT_CURRENCY).toUpperCase();
   if (currency !== DEFAULT_CURRENCY) {
@@ -491,7 +529,8 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
   const totalBeforeRounding = money(taxInclusive ? taxableSubtotal : taxableSubtotal + tax);
   const roundedTotal = money(ceilToStep(totalBeforeRounding, toNumber(cfg.quote_rounding, 0)));
   const roundingAdjustment = money(roundedTotal - totalBeforeRounding);
-  const totalCents = toCents(roundedTotal);
+  const sellerNet = grossUpForIncludedPlatformFee(toCents(roundedTotal), platformFeePercent);
+  const totalCents = sellerNet.customerTotalCents;
 
   return {
     ok: true,
@@ -522,6 +561,11 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
       shipping: shippingAmount,
       tax,
       roundingAdjustment,
+      sellerNetTotal: fromCents(sellerNet.sellerNetTotalCents),
+      sellerNetTotalCents: sellerNet.sellerNetTotalCents,
+      platformFeeIncluded: fromCents(sellerNet.platformFeeIncludedCents),
+      platformFeeIncludedCents: sellerNet.platformFeeIncludedCents,
+      platformFeePercent: sellerNet.platformFeePercent,
       total: fromCents(totalCents),
     },
     discounts: {

@@ -1,67 +1,62 @@
 # Trennen Pricing And Fees
 
-This is the human source of truth for Trennen's customer-friendly pricing model. Executable defaults live in `backend/lib/billing-plans.js` and are seeded into SQLite by migration v26.
+This is the human source of truth for Trennen's pilot pricing model. Executable defaults live in `backend/lib/billing-plans.js` and are seeded into SQLite by migration v26.
 
-All prices exclude GST. Store plan prices internally in NZD cents. GST is configurable and defaults to 15%.
+## Free pilot only
 
-## Standard Pricing Guardrail
+The production pilot has one active membership plan:
 
-Future pricing work must update this document and `backend/lib/billing-plans.js` together. Capped Trennen checkout/platform fees apply only when Trennen processes card checkout through Stripe Connect. Quote-only flows do not create Trennen checkout/platform fee revenue.
+| Plan | Monthly price | Quote allowance | Checkout requirement | Trennen platform fee |
+| --- | ---: | ---: | --- | ---: |
+| Free pilot | NZ$0 | Unlimited for pilot | Stripe Connect Express ready | 5% included in customer quote total |
 
-## Principles
+No Stripe Billing subscription is required during the pilot. `/api/platform/shops` must return `billing_setup_status: "free_plan"` and `billing_checkout_url: null` for every new business. `/api/platform/shops/:id/billing-session` must return `FREE_PLAN_NO_BILLING_REQUIRED`.
 
-- The monthly Trennen subscription pays for access to the quoting software.
-- Stripe/card/payment processing fees are pass-through costs, not Trennen revenue.
-- Merchants can absorb Stripe card fees or pass them to customers at cost.
-- Trennen card checkout/platform fees are separate from Stripe fees and must be capped.
-- Trennen must not use Stripe fees as a profit centre.
-- No uncapped percentage-of-revenue model by default.
-- Meter customer-understandable events, especially quotes sent or submitted to customers.
+Paid plans, plan trials, Stripe Billing checkout links, and monthly subscription price IDs are intentionally dormant until the pilot proves the full quote-to-payment flow.
 
-## Plans
+## Included 5% Platform Fee
 
-| Plan | Monthly price | Included quotes | Overage | Card checkout/platform fee |
-| --- | ---: | ---: | ---: | --- |
-| Community | NZ$0 | 3 | Disabled | Disabled |
-| Starter | NZ$29 + GST | 25 | NZ$1 per extra quote | 0.5%, capped at NZ$29/month |
-| Growth | NZ$129 + GST | 250 | NZ$0.50 per extra quote | 0.5%, capped at NZ$79/month |
-| Scale | NZ$899 + GST | 1,000 | NZ$0.25 per extra quote | Included or custom capped |
-| Enterprise | Talk to us | Custom | Custom capped terms | Custom capped terms |
+The 5% Trennen platform fee is included in the customer-facing quote total. It is not shown as a separate surcharge line.
 
-Starter and Growth have a 14-day trial. Growth trials apply only if the merchant has not used a trial before. Scale can be monthly or annual. Enterprise is annual or custom.
+Calculate the shop's seller net total first, then gross up the final customer total:
+
+```text
+customerTotal = sellerNetTotal / (1 - 0.05)
+platformFeeIncluded = customerTotal - sellerNetTotal
+```
+
+When Stripe Connect checkout succeeds, `application_fee_amount` must equal the included Trennen fee. The PaymentIntent must still use `transfer_data.destination` and `on_behalf_of` so the remaining funds transfer to the connected business.
 
 ## Fee Separation
 
 Customer print orders can contain these separate monetary concepts:
 
-- Print order subtotal
-- GST if applicable
-- Shipping if applicable
-- Payment processing fee if passed through
-- Total paid by the end customer
-- Stripe/payment processing fee recorded as cost
-- Trennen checkout/platform fee recorded as platform revenue
+- Seller net print total
+- Included Trennen platform fee
+- GST if configured
+- Shipping if configured
+- Optional payment processing fee if passed through at cost
+- Final customer total
+- Actual Stripe/payment processing fee recorded as cost after payment
 
-Stripe/payment processing fees must never reduce Trennen subscription revenue. Each print shop should connect its own Stripe account through Stripe Connect where possible. Trennen may collect the capped card checkout/platform fee with `application_fee_amount`; that amount must not exceed the monthly cap.
+Stripe/payment processing fees are separate from Trennen platform revenue. Trennen must not use Stripe fees as a profit centre.
 
 ## Quote Usage
 
 Count a quote only when it becomes customer-visible or submitted, such as a saved quote or checkout-created order. Do not count `/api/customer/quote-preview` drafts.
 
-Community cannot overrun its included 3 quotes. Starter, Growth, and Scale can exceed allowance and are billed in arrears. Show an overage warning before the user sends a quote beyond allowance.
+The free pilot does not enforce a monthly quote limit. Keep quote usage metrics so future paid plans can be designed from real data.
 
 ## Merchant Dashboard
 
 Show:
 
-- Plan name
+- Plan name: Free pilot
 - Quotes used this month
-- Quote allowance
-- Remaining included quotes
-- Estimated overage charges
+- Quote allowance: unlimited for pilot
+- Stripe Connect readiness
 - Card checkout volume this month
-- Checkout platform fee used so far
-- Checkout platform fee cap
+- Trennen platform fee collected this month
 - Payment fee mode
 
 ## Payment Fee Modes

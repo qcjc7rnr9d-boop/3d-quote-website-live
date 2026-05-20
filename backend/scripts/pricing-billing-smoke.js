@@ -9,13 +9,14 @@ import {
   estimatePaymentProcessingFee,
   getBillingUsageSummary,
   getPaymentFeeMode,
+  listPlans,
   recordCheckoutFeeLedger,
   recordPaymentFeeRecord,
   recordQuoteUsageEvent,
   seedBillingPlans,
   updatePaymentFeeMode,
 } from '../lib/billing-service.js';
-import { DEFAULT_GST_BASIS_POINTS, TRENNEN_BILLING_PLANS, defaultPlanById } from '../lib/billing-plans.js';
+import { DEFAULT_GST_BASIS_POINTS, TRENNEN_BILLING_PLANS, defaultPlanById, normalisePlanId } from '../lib/billing-plans.js';
 
 const db = new DatabaseSync(':memory:');
 db.exec(`
@@ -26,7 +27,7 @@ db.exec(`
     slug TEXT UNIQUE NOT NULL,
     email TEXT NOT NULL,
     password_hash TEXT NOT NULL,
-    plan TEXT NOT NULL DEFAULT 'starter',
+    plan TEXT NOT NULL DEFAULT 'community',
     billing_status TEXT NOT NULL DEFAULT 'active',
     billing_subscription_id TEXT,
     updated_at TEXT,
@@ -65,7 +66,7 @@ db.exec(`
 ensureBillingSchema(db);
 seedBillingPlans(db);
 
-function makeShop(plan) {
+function makeShop(plan = 'community') {
   const result = db.prepare(`
     INSERT INTO shops (name, slug, email, password_hash, plan, billing_status)
     VALUES (?, ?, ?, 'hash', ?, 'active')
@@ -77,122 +78,84 @@ function makeShop(plan) {
 
 const pricingDoc = readFileSync(resolve(import.meta.dirname, '../../docs/pricing/trennen-pricing-and-fees.md'), 'utf8');
 const pricingPage = readFileSync(resolve(import.meta.dirname, '../../pricing.html'), 'utf8');
-assert.equal(TRENNEN_BILLING_PLANS.length, 5);
+assert.equal(TRENNEN_BILLING_PLANS.length, 1);
 assert.equal(DEFAULT_GST_BASIS_POINTS, 1500);
+assert.equal(normalisePlanId('starter'), 'community');
+assert.equal(normalisePlanId('growth'), 'community');
+assert.equal(normalisePlanId('scale'), 'community');
 
-const communityPlan = defaultPlanById('community');
-assert.equal(communityPlan.monthly_price_cents, 0);
-assert.equal(communityPlan.quote_allowance, 3);
-assert.equal(communityPlan.allow_overages, false);
-assert.equal(communityPlan.checkout_enabled, false);
+const pilotPlan = defaultPlanById('community');
+assert.equal(pilotPlan.id, 'community');
+assert.equal(pilotPlan.name, 'Free Pilot');
+assert.equal(pilotPlan.monthly_price_cents, 0);
+assert.equal(pilotPlan.quote_allowance, null);
+assert.equal(pilotPlan.allow_overages, true);
+assert.equal(pilotPlan.checkout_enabled, true);
+assert.equal(pilotPlan.checkout_fee_basis_points, 500);
+assert.equal(pilotPlan.checkout_fee_monthly_cap_cents, 0);
+assert.equal(pilotPlan.branding_required, false);
 
-const starterPlan = defaultPlanById('starter');
-assert.equal(starterPlan.monthly_price_cents, 2900);
-assert.equal(starterPlan.quote_allowance, 25);
-assert.equal(starterPlan.quote_overage_price_cents, 100);
-assert.equal(starterPlan.trial_days, 14);
-assert.equal(starterPlan.checkout_fee_basis_points, 50);
-assert.equal(starterPlan.checkout_fee_monthly_cap_cents, 2900);
-
-const growthPlan = defaultPlanById('growth');
-assert.equal(growthPlan.monthly_price_cents, 12900);
-assert.equal(growthPlan.quote_allowance, 250);
-assert.equal(growthPlan.quote_overage_price_cents, 50);
-assert.equal(growthPlan.trial_days, 14);
-assert.equal(growthPlan.checkout_fee_basis_points, 50);
-assert.equal(growthPlan.checkout_fee_monthly_cap_cents, 7900);
-
-const scalePlan = defaultPlanById('scale');
-assert.equal(scalePlan.monthly_price_cents, 89900);
-assert.equal(scalePlan.quote_allowance, 1000);
-assert.equal(scalePlan.quote_overage_price_cents, 25);
-assert.equal(scalePlan.checkout_fee_basis_points, 0);
-assert.equal(scalePlan.checkout_fee_monthly_cap_cents, 0);
-
-const enterprisePlan = defaultPlanById('enterprise');
-assert.equal(enterprisePlan.monthly_price_cents, null);
-assert.equal(enterprisePlan.quote_allowance, null);
-assert.equal(enterprisePlan.checkout_fee_basis_points, 0);
-assert.equal(enterprisePlan.active, true);
-
-assert.ok(pricingDoc.includes('Future pricing work must update this document and `backend/lib/billing-plans.js` together'));
-assert.ok(pricingDoc.includes('| Starter | NZ$29 + GST | 25 | NZ$1 per extra quote | 0.5%, capped at NZ$29/month |'));
-assert.ok(pricingDoc.includes('| Growth | NZ$129 + GST | 250 | NZ$0.50 per extra quote | 0.5%, capped at NZ$79/month |'));
-assert.ok(pricingDoc.includes('| Scale | NZ$899 + GST | 1,000 | NZ$0.25 per extra quote | Included or custom capped |'));
-assert.ok(pricingDoc.includes('| Enterprise | Talk to us | Custom | Custom capped terms | Custom capped terms |'));
+assert.ok(pricingDoc.includes('Free pilot only'));
+assert.ok(pricingDoc.includes('5% Trennen platform fee is included in the customer-facing quote total'));
+assert.ok(pricingDoc.includes('No Stripe Billing subscription is required during the pilot'));
 assert.ok(pricingDoc.includes('Customer checkout is Stripe-only for launch'));
-assert.ok(pricingPage.includes('All prices exclude GST.'));
-assert.ok(pricingPage.includes('Optional card checkout fee: 0.5%, capped at NZ$29/month'));
-assert.ok(pricingPage.includes('Optional card checkout fee: 0.5%, capped at NZ$79/month'));
-assert.ok(pricingPage.includes('No default card checkout fee unless configured'));
+assert.ok(pricingPage.includes('Free pilot'));
+assert.ok(pricingPage.includes('5% Trennen platform fee included in each customer quote'));
 assert.ok(pricingPage.includes('Stripe Connect checkout'));
+assert.ok(!pricingPage.includes('NZ$29/mo'), 'pricing page should not advertise paid plans during pilot');
+assert.ok(!pricingPage.includes('NZ$129/mo'), 'pricing page should not advertise paid plans during pilot');
 
-db.prepare("UPDATE plans SET monthly_price_cents = 7900, checkout_fee_basis_points = 100 WHERE id = 'growth'").run();
+db.exec(`
+  INSERT INTO plans (id, name, monthly_price_cents, currency, active)
+  VALUES ('starter', 'Starter', 2900, 'NZD', 1),
+         ('growth', 'Growth', 12900, 'NZD', 1)
+`);
 seedBillingPlans(db, { overwriteExisting: true });
-const growthRow = db.prepare("SELECT monthly_price_cents, checkout_fee_basis_points FROM plans WHERE id = 'growth'").get();
-assert.equal(growthRow.monthly_price_cents, 12900);
-assert.equal(growthRow.checkout_fee_basis_points, 50);
+const visiblePlans = listPlans(db);
+assert.deepEqual(visiblePlans.map(plan => plan.id), ['community']);
+assert.equal(db.prepare("SELECT active FROM plans WHERE id = 'starter'").get().active, 0);
+assert.equal(db.prepare("SELECT active FROM plans WHERE id = 'growth'").get().active, 0);
 
-const community = makeShop('community');
-recordQuoteUsageEvent(db, { shopId: community, quoteId: 'c1' });
-recordQuoteUsageEvent(db, { shopId: community, quoteId: 'c2' });
-recordQuoteUsageEvent(db, { shopId: community, quoteId: 'c3' });
-let summary = getBillingUsageSummary(db, community);
-assert.equal(summary.quotes_used_this_month, 3);
-assert.equal(summary.remaining_included_quotes, 0);
-assert.equal(summary.allow_overages, false);
+const pilotShop = makeShop('community');
+for (let i = 1; i <= 30; i += 1) recordQuoteUsageEvent(db, { shopId: pilotShop, quoteId: `p${i}` });
+let summary = getBillingUsageSummary(db, pilotShop);
+assert.equal(summary.plan_id, 'community');
+assert.equal(summary.quote_allowance, null);
+assert.equal(summary.remaining_included_quotes, null);
+assert.equal(summary.allow_overages, true);
+assert.equal(summary.estimated_overage_charges_cents, 0);
+assert.equal(summary.checkout_fee_basis_points, 500);
+assert.equal(summary.checkout_platform_fee_cap_cents, 0);
+assert.equal(summary.checkout_enabled, true);
 
-const starter = makeShop('starter');
-for (let i = 1; i <= 26; i += 1) recordQuoteUsageEvent(db, { shopId: starter, quoteId: `s${i}` });
-summary = getBillingUsageSummary(db, starter);
-assert.equal(summary.quote_allowance, 25);
-assert.equal(summary.estimated_overage_charges_cents, 100);
+const legacyStarterShop = makeShop('starter');
+summary = getBillingUsageSummary(db, legacyStarterShop);
+assert.equal(summary.plan_id, 'community', 'legacy paid shops should use the pilot plan internally');
 
-const growth = makeShop('growth');
-for (let i = 1; i <= 251; i += 1) recordQuoteUsageEvent(db, { shopId: growth, quoteId: `g${i}` });
-summary = getBillingUsageSummary(db, growth);
-assert.equal(summary.estimated_overage_charges_cents, 50);
-
-let calc = calculateCheckoutPlatformFee(db, { shopId: starter, orderAmountCents: 1000000 });
-assert.equal(calc.final_platform_fee_cents, 2900);
+let calc = calculateCheckoutPlatformFee(db, { shopId: pilotShop, orderAmountCents: 10527 });
+assert.equal(calc.raw_platform_fee_cents, 527);
+assert.equal(calc.final_platform_fee_cents, 527);
+assert.equal(calc.cap_remaining_before_cents, 0, 'zero cap means uncapped during pilot');
 recordCheckoutFeeLedger(db, calc, { orderId: null, status: 'charged' });
-calc = calculateCheckoutPlatformFee(db, { shopId: starter, orderAmountCents: 1000000 });
-assert.equal(calc.final_platform_fee_cents, 0);
+calc = calculateCheckoutPlatformFee(db, { shopId: pilotShop, orderAmountCents: 50000 });
+assert.equal(calc.final_platform_fee_cents, 2500, 'pilot fee should not stop after the first checkout');
 
-calc = calculateCheckoutPlatformFee(db, { shopId: growth, orderAmountCents: 5000000 });
-assert.equal(calc.final_platform_fee_cents, 7900);
-
-const scale = makeShop('scale');
-calc = calculateCheckoutPlatformFee(db, { shopId: scale, orderAmountCents: 5000000 });
-assert.equal(calc.final_platform_fee_cents, 0);
-
-const bankTransferShop = makeShop('starter');
-recordQuoteUsageEvent(db, {
-  shopId: bankTransferShop,
-  quoteId: 'bank-transfer-order:1',
-  eventType: 'bank_transfer_order_created',
-});
 calc = calculateCheckoutPlatformFee(db, {
-  shopId: bankTransferShop,
+  shopId: pilotShop,
   orderAmountCents: 250000,
   paymentMethod: 'bank_transfer',
 });
 assert.equal(calc.raw_platform_fee_cents, 0);
 assert.equal(calc.final_platform_fee_cents, 0);
-assert.equal(
-  db.prepare('SELECT COUNT(*) AS c FROM checkout_fee_ledger WHERE shop_id = ?').get(bankTransferShop).c,
-  0,
-  'bank transfer order usage must not create Trennen platform-fee revenue',
-);
 
-assert.equal(getPaymentFeeMode(db, starter), 'merchant_absorbs');
-updatePaymentFeeMode(db, starter, 'pass_to_customer_at_cost');
-assert.equal(estimatePaymentProcessingFee(db, { shopId: starter, amountCents: 10000 }), 320);
-assert.throws(() => updatePaymentFeeMode(db, starter, 'bank_transfer_only'), /Invalid payment fee mode/);
+assert.equal(getPaymentFeeMode(db, pilotShop), 'merchant_absorbs');
+updatePaymentFeeMode(db, pilotShop, 'pass_to_customer_at_cost');
+assert.equal(estimatePaymentProcessingFee(db, { shopId: pilotShop, amountCents: 10000 }), 320);
+assert.throws(() => updatePaymentFeeMode(db, pilotShop, 'bank_transfer_only'), /Invalid payment fee mode/);
 
-const platformLedgerId = recordCheckoutFeeLedger(db, calculateCheckoutPlatformFee(db, { shopId: growth, orderAmountCents: 10000 }), { status: 'charged' });
+const platformLedgerId = recordCheckoutFeeLedger(db, calculateCheckoutPlatformFee(db, { shopId: pilotShop, orderAmountCents: 10000 }), { status: 'charged' });
 const paymentFeeId = recordPaymentFeeRecord(db, {
-  shop_id: growth,
+  shop_id: pilotShop,
   stripe_payment_intent_id: 'pi_test',
   stripe_charge_id: 'ch_test',
   stripe_balance_transaction_id: 'txn_test',

@@ -210,6 +210,7 @@ export function seedBillingPlans(db, { overwriteExisting = false } = {}) {
         updated_at = datetime('now')
     WHERE id = ?
   `);
+  const activePlanIds = TRENNEN_BILLING_PLANS.map(plan => plan.id);
   for (const plan of TRENNEN_BILLING_PLANS) {
     const row = planRowFromDefault(plan);
     insertStmt.run(
@@ -229,25 +230,28 @@ export function seedBillingPlans(db, { overwriteExisting = false } = {}) {
       row.branding_required,
       row.active,
     );
-    if (overwriteExisting) {
-      updateStmt.run(
-        row.name,
-        row.monthly_price_cents,
-        row.currency,
-        row.gst_rate_basis_points,
-        row.quote_allowance,
-        row.quote_overage_price_cents,
-        row.trial_days,
-        row.setup_fee_cents,
-        row.checkout_enabled,
-        row.checkout_fee_basis_points,
-        row.checkout_fee_monthly_cap_cents,
-        row.allow_overages,
-        row.branding_required,
-        row.active,
-        row.id,
-      );
-    }
+    updateStmt.run(
+      row.name,
+      row.monthly_price_cents,
+      row.currency,
+      row.gst_rate_basis_points,
+      row.quote_allowance,
+      row.quote_overage_price_cents,
+      row.trial_days,
+      row.setup_fee_cents,
+      row.checkout_enabled,
+      row.checkout_fee_basis_points,
+      row.checkout_fee_monthly_cap_cents,
+      row.allow_overages,
+      row.branding_required,
+      row.active,
+      row.id,
+    );
+  }
+  if (activePlanIds.length) {
+    const placeholders = activePlanIds.map(() => '?').join(',');
+    db.prepare(`UPDATE plans SET active = 0, updated_at = datetime('now') WHERE id NOT IN (${placeholders})`)
+      .run(...activePlanIds);
   }
 }
 
@@ -258,7 +262,7 @@ export function ensureBillingReady(db) {
 
 export function listPlans(db) {
   ensureBillingReady(db);
-  return db.prepare("SELECT * FROM plans ORDER BY CASE id WHEN 'community' THEN 1 WHEN 'starter' THEN 2 WHEN 'growth' THEN 3 WHEN 'scale' THEN 4 WHEN 'enterprise' THEN 5 ELSE 99 END").all().map(rowToPlan);
+  return db.prepare("SELECT * FROM plans WHERE active = 1 ORDER BY CASE id WHEN 'community' THEN 1 ELSE 99 END").all().map(rowToPlan);
 }
 
 export function getPlanById(db, planId) {
@@ -335,7 +339,9 @@ export function ensureMerchantSubscription(db, shopId) {
   const shop = db.prepare('SELECT id, plan, billing_status, billing_subscription_id FROM shops WHERE id = ?').get(shopId);
   if (!shop) return null;
   const period = currentMonthPeriod();
-  const planId = normalisePlanId(shop.plan);
+  const suspended = shop.plan === 'suspended' || shop.billing_status === 'suspended';
+  const planId = suspended ? 'community' : normalisePlanId(shop.plan);
+  const status = suspended ? 'suspended' : 'active';
   const existing = db.prepare('SELECT * FROM merchant_subscriptions WHERE shop_id = ?').get(shop.id);
   if (!existing) {
     db.prepare(`
@@ -346,12 +352,12 @@ export function ensureMerchantSubscription(db, shopId) {
     `).run(
       shop.id,
       planId,
-      shop.billing_status || (planId === 'community' ? 'active' : 'pending_subscription'),
+      status,
       period.start,
       period.end,
       shop.billing_subscription_id || null,
     );
-  } else if (existing.plan_id !== planId || existing.status !== shop.billing_status || existing.stripe_subscription_id !== shop.billing_subscription_id) {
+  } else if (existing.plan_id !== planId || existing.status !== status || existing.stripe_subscription_id !== shop.billing_subscription_id) {
     db.prepare(`
       UPDATE merchant_subscriptions
       SET plan_id = ?,
@@ -359,7 +365,7 @@ export function ensureMerchantSubscription(db, shopId) {
           stripe_subscription_id = ?,
           updated_at = datetime('now')
       WHERE shop_id = ?
-    `).run(planId, shop.billing_status || existing.status, shop.billing_subscription_id || existing.stripe_subscription_id, shop.id);
+    `).run(planId, status, shop.billing_subscription_id || existing.stripe_subscription_id, shop.id);
   }
   const current = db.prepare('SELECT * FROM merchant_subscriptions WHERE shop_id = ?').get(shop.id);
   if (current?.current_period_end && new Date(current.current_period_end).getTime() <= Date.now()) {
@@ -504,9 +510,11 @@ export function calculateCheckoutPlatformFee(db, { shopId, orderAmountCents, pay
   const cap = cents(plan.checkout_fee_monthly_cap_cents);
   const basisPoints = cents(plan.checkout_fee_basis_points);
   const shouldChargeFee = isCardCheckout && plan.checkout_enabled;
-  const raw = shouldChargeFee ? Math.round(orderCents * basisPoints / 10000) : 0;
-  const capBefore = Math.max(0, cap - used);
-  const finalFee = shouldChargeFee ? Math.min(raw, capBefore) : 0;
+  const raw = shouldChargeFee
+    ? Math.max(0, orderCents - Math.floor(orderCents * Math.max(0, 10000 - basisPoints) / 10000))
+    : 0;
+  const capBefore = cap > 0 ? Math.max(0, cap - used) : 0;
+  const finalFee = shouldChargeFee ? (cap > 0 ? Math.min(raw, capBefore) : raw) : 0;
   return {
     shop_id: shopId,
     billing_period_start: period.start,

@@ -91,7 +91,7 @@ STRIPE_CLIENT_ID=replace-with-stripe-connect-client-id
 STRIPE_WEBHOOK_SECRET=replace-with-stripe-webhook-secret
 ```
 
-Use Stripe Connect Express for each pilot business. The app blocks checkout until the platform Stripe keys are present, the shop subscription/readiness is valid, and the connected account has submitted details with charges and payouts enabled. Customer payments use a platform PaymentIntent with `transfer_data`, `on_behalf_of`, and `application_fee_amount` so Trennen can collect the configured checkout/platform fee while the remainder transfers to the connected business.
+Free pilot membership is the only active plan for launch. No Stripe Billing subscription is required during the pilot. Use Stripe Connect Express for each pilot business. The app blocks checkout until the platform Stripe keys are present and the connected account has submitted details with charges and payouts enabled. Customer payments use a platform PaymentIntent with `transfer_data`, `on_behalf_of`, and `application_fee_amount` so Trennen can collect the 5% Trennen platform fee included in the customer quote while the remainder transfers to the connected business.
 
 Customer checkout is Stripe-only for launch. Do not enable bank transfer, Shopify checkout, Shop Pay, or shop-entered Stripe API keys as live customer payment paths. Legacy bank-transfer API compatibility should return `BANK_TRANSFER_DISABLED` and must not create unpaid orders.
 

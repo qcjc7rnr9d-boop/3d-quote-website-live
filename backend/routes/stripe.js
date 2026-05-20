@@ -118,6 +118,19 @@ function readinessErrorPayload(readiness) {
   };
 }
 
+function logRouteError(label, err) {
+  if (err instanceof PricingError) {
+    console.error(label, {
+      name: err.name,
+      code: err.code,
+      status: err.status,
+      message: err.message,
+    });
+    return;
+  }
+  console.error(label, stripeErrorSummary(err));
+}
+
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
 }
@@ -222,7 +235,7 @@ export async function stripeWebhookHandler(req, res) {
       markShopBillingPastDue(db, event.data.object);
     }
   } catch (err) {
-    console.error('Webhook processing error:', err);
+    logRouteError('Webhook processing error:', err);
   }
 
   res.json({ received: true });
@@ -246,7 +259,7 @@ router.get('/keys-status', requireShopAuth, async (req, res) => {
       ...baseReadiness,
     });
   } catch (err) {
-    console.error('Stripe status error:', err);
+    logRouteError('Stripe status error:', err);
     res.status(500).json({ error: 'Failed to load Stripe status' });
   }
 });
@@ -431,7 +444,7 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       usage: usagePreview,
     });
   } catch (err) {
-    console.error('Create payment intent error:', err);
+    logRouteError('Create payment intent error:', err);
     if (err instanceof PricingError) {
       return res.status(err.status).json({
         error: err.message || 'Payment failed',
@@ -448,6 +461,25 @@ router.post('/create-bank-transfer-order', paymentIntentLimiter, (req, res) => {
     error: 'Offline checkout is no longer available. Please use Stripe card checkout.',
     code: 'BANK_TRANSFER_DISABLED',
   });
+});
+
+router.get('/dashboard-link', requireShopAuth, async (req, res) => {
+  try {
+    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
+    if (!shop?.stripe_account_id) {
+      return res.status(400).json({ error: 'No Stripe account connected' });
+    }
+
+    const stripe = ensurePlatformStripe();
+    const loginLink = await stripe.accounts.createLoginLink(shop.stripe_account_id);
+    res.json({ url: loginLink.url });
+  } catch (err) {
+    console.error('Stripe dashboard-link error:', stripeErrorSummary(err));
+    res.status(500).json({
+      error: 'Stripe is connected. Dashboard access is temporarily unavailable.',
+      code: 'DASHBOARD_LINK_UNAVAILABLE',
+    });
+  }
 });
 
 router.get('/connect-url', requireShopAuth, async (req, res) => {
@@ -521,7 +553,7 @@ router.post('/connect', requireShopAuth, async (req, res) => {
 
     res.json({ success: true, ...payload });
   } catch (err) {
-    console.error('Stripe connect completion error:', err);
+    logRouteError('Stripe connect completion error:', err);
     res.status(500).json({ error: err.message || 'Failed to complete Stripe connection' });
   }
 });
@@ -544,7 +576,7 @@ router.post('/disconnect', requireShopAuth, (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
-    console.error('Stripe disconnect error:', err);
+    logRouteError('Stripe disconnect error:', err);
     res.status(500).json({ error: err.message || 'Failed to disconnect Stripe' });
   }
 });
@@ -567,7 +599,7 @@ router.get('/payouts', requireShopAuth, async (req, res) => {
 
     res.json({ payouts });
   } catch (err) {
-    console.error('Payouts error:', err);
+    logRouteError('Payouts error:', err);
     res.status(500).json({ error: 'Failed to fetch payouts' });
   }
 });

@@ -78,6 +78,8 @@ for (const expected of [
   'STRIPE_WEBHOOK_SECRET',
   'Stripe Connect Express',
   'Customer checkout is Stripe-only for launch',
+  'Free pilot',
+  '5% Trennen platform fee',
   'BANK_TRANSFER_DISABLED',
   'application_fee_amount',
   'transfer_data',
@@ -99,10 +101,11 @@ for (const expected of [
   'PLATFORM_STRIPE_NOT_CONFIGURED',
   'NO_CONNECTED_ACCOUNT',
   'ONBOARDING_INCOMPLETE',
-  'SUBSCRIPTION_INACTIVE',
   'application_fee_amount',
   'transfer_data',
   'on_behalf_of',
+  '/dashboard-link',
+  'createLoginLink',
 ]) {
   assert.match(stripeRoute, new RegExp(expected), `Stripe route should include ${expected}`);
 }
@@ -110,6 +113,31 @@ assert.match(
   stripeRoute,
   /create-bank-transfer-order[\s\S]*BANK_TRANSFER_DISABLED/,
   'legacy bank-transfer API route should reject instead of creating customer orders',
+);
+assert.match(
+  stripeRoute,
+  /dashboard-link[\s\S]*requireShopAuth[\s\S]*stripe_account_id[\s\S]*createLoginLink[\s\S]*res\.json\(\{ url/,
+  'Stripe dashboard-link route should create a safe Express dashboard login link for connected shops',
+);
+assert.match(
+  stripeRoute,
+  /dashboard-link[\s\S]*No Stripe account connected/,
+  'Stripe dashboard-link route should reject shops without connected accounts',
+);
+
+const adminPayments = read('admin/payments.html');
+for (const expected of [
+  'Open Stripe dashboard',
+  'Resume Stripe setup',
+  'Ready for payments',
+  '/api/stripe/dashboard-link',
+]) {
+  assert.match(adminPayments, new RegExp(expected), `Admin payments page should include ${expected}`);
+}
+assert.match(
+  adminPayments,
+  /onboarding_complete[\s\S]*can_accept_live_orders[\s\S]*Open Stripe dashboard/,
+  'Admin payments page should only show dashboard access when Stripe is ready for live payments',
 );
 
 const stripeConnectSmoke = read('backend/scripts/stripe-connect-platform-smoke.js');
