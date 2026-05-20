@@ -1,7 +1,10 @@
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-dotenv.config();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, '..', '.env') });
 
 const secretKey = String(process.env.STRIPE_SECRET_KEY || '').trim();
 const baseUrl = String(process.env.BASE_URL || 'https://app.trennen.co.nz').trim();
