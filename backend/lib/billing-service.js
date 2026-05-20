@@ -672,8 +672,8 @@ export function checkoutSettingsForShop(db, shopSlugOrId, amountCents = 0) {
     plan_id: merchant.plan.id,
     checkout_enabled: !!merchant.plan.checkout_enabled,
     payment_fee_mode: mode,
-    bank_transfer_enabled: mode === 'bank_transfer_only' || mode === 'merchant_absorbs' || mode === 'pass_to_customer_at_cost',
-    card_enabled: mode !== 'bank_transfer_only' && !!merchant.plan.checkout_enabled,
+    bank_transfer_enabled: false,
+    card_enabled: !!merchant.plan.checkout_enabled,
     estimated_payment_processing_fee_cents: processingFee,
     processing_fee_label: mode === 'pass_to_customer_at_cost'
       ? 'Card - processing fee applies at cost'
@@ -689,12 +689,6 @@ export function assertCheckoutAllowed(db, shopId, { method = 'card' } = {}) {
     throw err;
   }
   const mode = getPaymentFeeMode(db, shopId);
-  if (method === 'card' && mode === 'bank_transfer_only') {
-    const err = new Error('This shop accepts bank transfer only.');
-    err.status = 409;
-    err.code = 'BANK_TRANSFER_ONLY';
-    throw err;
-  }
   if (method === 'card' && !merchant.plan.checkout_enabled) {
     const err = new Error('Card checkout is not enabled on this plan.');
     err.status = 402;

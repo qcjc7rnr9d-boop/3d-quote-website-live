@@ -4,7 +4,6 @@ export const DEFAULT_GST_BASIS_POINTS = 1500;
 export const PAYMENT_FEE_MODES = [
   'merchant_absorbs',
   'pass_to_customer_at_cost',
-  'bank_transfer_only',
 ];
 
 export const TRENNEN_BILLING_PLANS = [
