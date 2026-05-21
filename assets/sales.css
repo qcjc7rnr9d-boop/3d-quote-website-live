@@ -224,7 +224,7 @@ main,
   width: min(1580px, calc(100% - (var(--hero-gutter) * 2)));
   min-height: clamp(640px, 72svh, 760px);
   margin: 0 auto;
-  padding: clamp(84px, 7vh, 108px) var(--hero-inner-gutter) clamp(36px, 4vh, 56px);
+  padding: clamp(58px, 4.7vh, 82px) var(--hero-inner-gutter) clamp(22px, 2.5vh, 38px);
 }
 
 .hero::before {
@@ -236,6 +236,11 @@ main,
     linear-gradient(110deg, rgba(215, 162, 87, 0.18), transparent 30%),
     linear-gradient(290deg, rgba(84, 185, 141, 0.16), transparent 36%),
     linear-gradient(180deg, rgba(255, 250, 240, 0.05), transparent 58%);
+}
+
+.hero-copy,
+.operator-desk {
+  min-width: 0;
 }
 
 .eyebrow {
@@ -292,7 +297,7 @@ h3 {
 
 .hero-subtitle {
   max-width: 580px;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
   color: rgba(247, 241, 231, 0.75);
 }
 
@@ -300,6 +305,14 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.hero-microcopy {
+  margin: 14px 0 0;
+  color: rgba(247, 241, 231, 0.72);
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 1.45;
 }
 
 .button {
@@ -361,7 +374,7 @@ h3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
   max-width: 620px;
-  margin-top: 34px;
+  margin-top: 24px;
   overflow: hidden;
   border: 1px solid rgba(255, 250, 240, 0.14);
   border-radius: var(--radius);
@@ -379,6 +392,44 @@ h3 {
   font-size: 13px;
   font-weight: 760;
   line-height: 1.3;
+}
+
+.launch-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 700px;
+  margin-top: 14px;
+}
+
+.launch-steps div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 250, 240, 0.12);
+  border-radius: var(--radius);
+  background: rgba(255, 250, 240, 0.055);
+}
+
+.launch-steps span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--warm-light);
+  font-size: 11px;
+  font-weight: 840;
+}
+
+.launch-steps strong {
+  display: block;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.launch-steps p {
+  margin: 6px 0 0;
+  color: rgba(247, 241, 231, 0.62);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .operator-desk {
@@ -443,9 +494,15 @@ h3 {
   transform-style: preserve-3d;
 }
 
-.product-slab img {
+.product-slab picture {
+  display: block;
   width: 100%;
   height: calc(100% - 44px);
+}
+
+.product-slab img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   object-position: top left;
   filter: saturate(0.9) contrast(1.02);
@@ -765,9 +822,14 @@ h3 {
   transform-style: preserve-3d;
 }
 
+.stage-layer picture,
 .stage-layer img {
+  display: block;
   width: 100%;
   height: 100%;
+}
+
+.stage-layer img {
   object-fit: cover;
   object-position: top left;
   filter: saturate(0.9) contrast(1.02);
@@ -1376,9 +1438,9 @@ h3 {
 @media (min-width: 1181px) and (max-height: 840px) {
   .hero {
     gap: 42px;
-    min-height: clamp(620px, 82svh, 760px);
-    padding-top: 78px;
-    padding-bottom: 30px;
+    min-height: clamp(600px, 80svh, 736px);
+    padding-top: 64px;
+    padding-bottom: 24px;
   }
 
   h1 {
@@ -1462,9 +1524,9 @@ h3 {
     gap: clamp(34px, 3vw, 50px);
     align-items: start;
     width: min(1280px, calc(100% - (var(--hero-gutter) * 2)));
-    min-height: clamp(640px, 82svh, 760px);
-    padding-top: 84px;
-    padding-bottom: 32px;
+    min-height: clamp(600px, 78svh, 736px);
+    padding-top: 64px;
+    padding-bottom: 24px;
   }
 
   .hero-copy {
@@ -1494,7 +1556,7 @@ h3 {
 
   .studio-strip {
     max-width: 620px;
-    margin-top: 28px;
+    margin-top: 22px;
   }
 
   .studio-strip span {
@@ -1550,9 +1612,9 @@ h3 {
     align-items: start;
     width: min(980px, calc(100% - (var(--hero-gutter) * 2)));
     min-height: auto;
-    gap: 28px;
-    padding-top: 84px;
-    padding-bottom: 34px;
+    gap: 22px;
+    padding-top: 62px;
+    padding-bottom: 24px;
   }
 
   .hero-copy {
@@ -1561,28 +1623,45 @@ h3 {
 
   h1 {
     max-width: 680px;
-    margin-bottom: 18px;
-    font-size: clamp(42px, 4.8vw, 50px);
+    margin-bottom: 16px;
+    font-size: clamp(38px, 4.2vw, 44px);
     line-height: 1.03;
   }
 
   .hero-subtitle {
     max-width: 650px;
-    margin-bottom: 24px;
-    font-size: 18px;
+    margin-bottom: 18px;
+    font-size: 17px;
+  }
+
+  .hero-microcopy {
+    margin-top: 10px;
   }
 
   .studio-strip {
     max-width: 700px;
-    margin-top: 26px;
+    margin-top: 18px;
   }
 
   .studio-strip span {
-    min-height: 58px;
+    min-height: 46px;
+  }
+
+  .launch-steps {
+    max-width: 700px;
+    margin-top: 10px;
+  }
+
+  .launch-steps div {
+    padding: 10px 12px;
+  }
+
+  .launch-steps p {
+    display: none;
   }
 
   .operator-desk {
-    min-height: clamp(360px, 42svh, 460px);
+    min-height: clamp(280px, 36vw, 330px);
   }
 
   .slab-quote {
@@ -1647,10 +1726,10 @@ h3 {
 
   .hero {
     width: min(720px, calc(100% - (var(--hero-gutter) * 2)));
-    gap: 28px;
+    gap: 22px;
     padding-inline: var(--hero-inner-gutter);
-    padding-top: 84px;
-    padding-bottom: 36px;
+    padding-top: 68px;
+    padding-bottom: 28px;
   }
 
   h1 {
@@ -1698,6 +1777,20 @@ h3 {
     margin-top: 24px;
   }
 
+  .launch-steps {
+    grid-template-columns: 1fr;
+    max-width: min(100%, 520px);
+    margin-top: 12px;
+  }
+
+  .launch-steps div {
+    padding: 11px 13px;
+  }
+
+  .launch-steps p {
+    display: none;
+  }
+
   .studio-strip span {
     min-height: 48px;
     padding: 14px 16px;
@@ -1705,7 +1798,7 @@ h3 {
   }
 
   .operator-desk {
-    min-height: clamp(380px, 52vw, 480px);
+    min-height: clamp(280px, 54vw, 300px);
   }
 
   .slab-quote {
@@ -1910,6 +2003,10 @@ h3 {
 }
 
 @media (max-width: 520px) {
+  .hero {
+    padding-inline: 32px;
+  }
+
   h1 {
     font-size: clamp(31px, 8.2vw, 34px);
   }
@@ -1922,8 +2019,32 @@ h3 {
     font-size: 22px;
   }
 
+  .hero-actions .button {
+    min-height: 46px;
+    min-width: min(140px, 100%);
+  }
+
+  .studio-strip span {
+    min-height: 42px;
+    padding: 11px 13px;
+  }
+
+  .launch-steps {
+    display: flex;
+    gap: 10px;
+    padding-bottom: 6px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+  }
+
+  .launch-steps div {
+    flex: 0 0 min(220px, 78vw);
+    scroll-snap-align: start;
+  }
+
   .operator-desk {
-    min-height: 450px;
+    min-height: 340px;
   }
 
   .studio-intro h2 {
@@ -1955,7 +2076,7 @@ h3 {
   }
 
   .slab-quote {
-    bottom: 220px;
+    bottom: 168px;
   }
 
   .slab-admin {
@@ -1967,7 +2088,7 @@ h3 {
   }
 
   .desk-card-estimate {
-    bottom: 118px;
+    bottom: 86px;
   }
 
   .desk-card-fees {

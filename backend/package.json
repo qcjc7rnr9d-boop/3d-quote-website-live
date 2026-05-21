@@ -14,6 +14,8 @@
     "platform-secrets:smoke": "node scripts/platform-secret-encryption-smoke.js",
     "business-billing:smoke": "node scripts/business-billing-smoke.js",
     "pricing-billing:smoke": "node scripts/pricing-billing-smoke.js",
+    "subscription-billing:smoke": "node scripts/subscription-billing-smoke.js",
+    "onboarding:self-serve-smoke": "node scripts/onboarding-self-serve-smoke.js",
     "size-limit:smoke": "node scripts/size-limit-smoke.js",
     "visual:smoke": "node scripts/visual-smoke.js",
     "sales:smoke": "node scripts/sales-homepage-smoke.js",

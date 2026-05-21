@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Launch Checklist - Trennen Admin</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <link rel="stylesheet" href="../assets/admin.css">
+  <style>
+    .setup-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
+    .setup-list { display: grid; gap: 12px; padding: 24px; }
+    .setup-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); }
+    .setup-check { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--sage-light); background: var(--sage-bg); color: var(--sage-dark); font-weight: 700; }
+    .setup-check.todo { background: var(--soft); border-color: var(--border); color: var(--muted); }
+    .setup-item h3 { margin: 0; color: var(--ink); font-family: var(--font-ui); font-size: 14px; font-weight: 700; }
+    .setup-item p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .setup-summary { padding: 24px; display: grid; gap: 14px; }
+    .setup-meter { height: 10px; overflow: hidden; border-radius: 999px; background: var(--stone); }
+    .setup-meter span { display: block; height: 100%; width: 0; background: var(--sage); transition: width 180ms ease; }
+    .setup-copy-link { word-break: break-all; color: var(--sage-dark); font-weight: 700; }
+    .install-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 24px; }
+    .install-option { border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); padding: 18px; display: grid; gap: 12px; align-content: start; }
+    .install-option h3 { margin: 0; color: var(--ink); font-family: var(--font-ui); font-size: 15px; font-weight: 700; }
+    .install-option p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .install-code { display: block; max-height: 150px; overflow: auto; white-space: pre-wrap; word-break: break-word; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--soft); color: var(--ink); font: 12px/1.45 var(--font-mono); }
+    .install-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .install-copy-status { min-height: 16px; color: var(--sage-dark); font-size: 12px; }
+    .subscription-panel { display: grid; gap: 10px; padding: 22px 24px 24px; border-top: 1px solid var(--border); }
+    .subscription-panel[hidden] { display: none; }
+    .subscription-panel h3 { margin: 0; color: var(--ink); font-family: var(--font-ui); font-size: 16px; font-weight: 700; }
+    .subscription-panel p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; max-width: 780px; }
+    .subscription-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 4px; }
+    .subscription-status { color: var(--sage-dark); font-size: 12px; min-height: 16px; }
+    @media (max-width: 980px) {
+      .setup-grid { grid-template-columns: 1fr; }
+      .install-grid { grid-template-columns: 1fr; }
+      .setup-item { grid-template-columns: 34px minmax(0, 1fr); }
+      .setup-item .table-action { grid-column: 2; width: fit-content; }
+    }
+  </style>
+  <script src="../assets/brand.js" defer></script>
+  <script src="/assets/csrf.js"></script>
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">T</div>
+      <div class="sidebar-store-name" id="sidebarStoreName">Loading...</div>
+      <span class="sidebar-plan" id="sidebarPlan">-</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Overview</div>
+      <a href="setup.html" class="sidebar-link active" id="nav-setup">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Launch checklist
+      </a>
+      <a href="dashboard.html" class="sidebar-link" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-section">Catalogue</div>
+      <a href="materials.html" class="sidebar-link" id="nav-materials">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Materials
+      </a>
+      <a href="pricing.html" class="sidebar-link" id="nav-pricing">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg>
+        Pricing
+      </a>
+      <div class="sidebar-section">Store</div>
+      <a href="shipping.html" class="sidebar-link" id="nav-shipping">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m0 0h3l3 3v4h-1M15 17H9m-4 0a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Shipping
+      </a>
+      <a href="payments.html" class="sidebar-link" id="nav-payments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Payments
+      </a>
+      <a href="notifications.html" class="sidebar-link" id="nav-notifications">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </a>
+      <a href="settings.html" class="sidebar-link" id="nav-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a href="account.html" class="sidebar-link" id="nav-account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="sidebar-signout" id="signoutBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-header">
+      <div class="admin-title-block">
+        <h1 class="admin-title">Launch checklist</h1>
+        <p class="admin-subtitle">Review the defaults created by self-serve signup before you share your quote link.</p>
+      </div>
+      <div class="admin-actions">
+        <a class="btn btn-secondary" id="publicQuoteLink" href="../quote.html">Open quote page</a>
+        <a class="btn btn-primary" href="materials.html">Review materials</a>
+      </div>
+    </div>
+
+    <div class="admin-content fade-in">
+      <section class="section-card" aria-labelledby="installTitle">
+        <div class="section-card-header">
+          <span class="section-card-title" id="installTitle">Install Trennen</span>
+          <span class="badge badge-sage">Ready after signup</span>
+        </div>
+        <div class="subscription-panel" id="subscriptionPanel" hidden>
+          <span class="badge badge-warm" id="subscriptionBadge">Trial</span>
+          <h3>Activate Trennen subscription</h3>
+          <p id="subscriptionDetail">Stripe hosts subscription checkout and billing management. Trennen never stores card numbers.</p>
+          <div class="subscription-actions">
+            <button class="btn btn-primary" type="button" id="activateSubscriptionBtn">Activate with Stripe</button>
+            <a class="btn btn-secondary" href="payments.html">Manage billing</a>
+          </div>
+          <div class="subscription-status" id="subscriptionStatus" aria-live="polite"></div>
+        </div>
+        <div class="install-grid">
+          <article class="install-option">
+            <h3>Use hosted page</h3>
+            <p>Share a full Trennen-hosted quote page with your customers.</p>
+            <a class="install-code" id="hostedInstallUrl" data-install-hosted-url href="../quote.html">Loading...</a>
+            <div class="install-actions">
+              <a class="btn btn-secondary" id="openHostedInstall" href="../quote.html" target="_blank" rel="noopener">Open hosted page</a>
+              <button class="btn btn-outline" type="button" data-copy-target="hostedInstallUrl">Copy URL</button>
+            </div>
+          </article>
+
+          <article class="install-option">
+            <h3>Embed on my website</h3>
+            <p>Paste this iframe where you would place an embedded photo, map, or video.</p>
+            <code class="install-code" id="iframeInstallCode" data-install-iframe-code>Loading...</code>
+            <div class="install-actions">
+              <button class="btn btn-outline" type="button" data-copy-target="iframeInstallCode">Copy iframe</button>
+            </div>
+          </article>
+
+          <article class="install-option">
+            <h3>Script widget</h3>
+            <p>Advanced option if your site can load a JavaScript widget.</p>
+            <code class="install-code" id="scriptInstallCode" data-install-script-code>Loading...</code>
+            <div class="install-actions">
+              <button class="btn btn-outline" type="button" data-copy-target="scriptInstallCode">Copy script</button>
+            </div>
+          </article>
+
+          <article class="install-option">
+            <h3>Approve your website</h3>
+            <p>Add your website origins so the embed is allowed to appear there.</p>
+            <code class="install-code">https://yourwebsite.co.nz
+https://www.yourwebsite.co.nz</code>
+            <div class="install-actions">
+              <a class="btn btn-secondary" href="settings.html">Open website install settings</a>
+            </div>
+          </article>
+        </div>
+        <p class="install-copy-status" id="installCopyStatus" style="padding:0 24px 20px;margin:0" aria-live="polite"></p>
+      </section>
+
+      <div class="setup-grid">
+        <section class="section-card">
+          <div class="section-card-header">
+            <span class="section-card-title">Before launch</span>
+            <span class="badge badge-stone" id="checklistBadge">Loading</span>
+          </div>
+          <div class="setup-list" id="setupList">
+            <div class="empty-state"><p>Loading checklist...</p></div>
+          </div>
+        </section>
+
+        <aside class="section-card">
+          <div class="section-card-header">
+            <span class="section-card-title">Workspace</span>
+          </div>
+          <div class="setup-summary">
+            <div>
+              <div class="stat-label">Shop URL</div>
+              <a class="setup-copy-link" id="shopUrl" href="../quote.html">-</a>
+            </div>
+            <div>
+              <div class="stat-label">Plan</div>
+              <div class="stat-value" id="planName" style="font-size:26px">-</div>
+            </div>
+            <div>
+              <div class="stat-label">Progress</div>
+              <div class="setup-meter"><span id="progressMeter"></span></div>
+              <p class="muted" id="progressText" style="margin:8px 0 0">-</p>
+            </div>
+            <p class="muted" style="margin:0">Bank transfer is enabled first. Stripe/card checkout can stay off until you want customers paying by card.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  const setupList = document.getElementById('setupList');
+  const checklistBadge = document.getElementById('checklistBadge');
+  const progressMeter = document.getElementById('progressMeter');
+  const progressText = document.getElementById('progressText');
+  const publicQuoteLink = document.getElementById('publicQuoteLink');
+  const shopUrl = document.getElementById('shopUrl');
+  const planName = document.getElementById('planName');
+  const hostedInstallUrl = document.getElementById('hostedInstallUrl');
+  const openHostedInstall = document.getElementById('openHostedInstall');
+  const iframeInstallCode = document.getElementById('iframeInstallCode');
+  const scriptInstallCode = document.getElementById('scriptInstallCode');
+  const installCopyStatus = document.getElementById('installCopyStatus');
+  const subscriptionPanel = document.getElementById('subscriptionPanel');
+  const subscriptionBadge = document.getElementById('subscriptionBadge');
+  const subscriptionDetail = document.getElementById('subscriptionDetail');
+  const subscriptionStatus = document.getElementById('subscriptionStatus');
+  const activateSubscriptionBtn = document.getElementById('activateSubscriptionBtn');
+
+  async function fetchJson(path) {
+    const res = await fetch(path, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(path + ' returned ' + res.status);
+    return await res.json();
+  }
+
+  function planLabel(plan) {
+    return String(plan || 'starter').charAt(0).toUpperCase() + String(plan || 'starter').slice(1);
+  }
+
+  function formatDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function escHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[char]));
+  }
+
+  function item({ done, title, detail, href, action }) {
+    const checkClass = done ? 'setup-check' : 'setup-check todo';
+    const symbol = done ? 'OK' : '..';
+    const link = href ? `<a class="table-action" href="${escHtml(href)}">${escHtml(action || 'Open')} &rarr;</a>` : '';
+    return `
+      <div class="setup-item">
+        <span class="${checkClass}" aria-hidden="true">${symbol}</span>
+        <div>
+          <h3>${escHtml(title)}</h3>
+          <p>${escHtml(detail)}</p>
+        </div>
+        ${link}
+      </div>`;
+  }
+
+  function subscriptionStatusLabel(subscription) {
+    const status = String(subscription?.billing_status || 'pending_subscription').replace(/_/g, ' ');
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+
+  function renderSubscription(subscription) {
+    if (!subscription || !subscription.is_paid_plan) {
+      subscriptionPanel.hidden = true;
+      return;
+    }
+    subscriptionPanel.hidden = false;
+    const label = subscriptionStatusLabel(subscription);
+    subscriptionBadge.textContent = label;
+    subscriptionBadge.className = subscription.billing_active ? 'badge badge-sage' : 'badge badge-warm';
+    activateSubscriptionBtn.style.display = subscription.can_start_checkout ? '' : 'none';
+    if (subscription.billing_cancel_at_period_end) {
+      subscriptionDetail.textContent = `Your ${subscription.plan_name} subscription is set to cancel at the end of the current period${subscription.billing_cancel_at ? ` on ${formatDate(subscription.billing_cancel_at)}` : ''}. Stripe hosts cancellation and payment method changes.`;
+    } else if (subscription.billing_status === 'trialing') {
+      subscriptionDetail.textContent = `Your ${subscription.plan_name} no-card trial is active${subscription.trial_end ? ` until ${formatDate(subscription.trial_end)}` : ''}. Activate billing in Stripe before it ends to keep paid features running.`;
+    } else if (subscription.billing_activation_required) {
+      subscriptionDetail.textContent = `Your ${subscription.plan_name} subscription needs Stripe activation. Checkout is hosted by Stripe; Trennen never stores card numbers.`;
+    } else {
+      subscriptionDetail.textContent = `Your ${subscription.plan_name} subscription is active. Stripe hosts payment methods, invoices, and cancellation.`;
+    }
+  }
+
+  async function loadSetup() {
+    let me;
+    try {
+      me = await fetchJson('/api/auth/me');
+      if (me.is_temp_password) {
+        window.location.href = 'change-password.html';
+        return;
+      }
+    } catch {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    document.getElementById('sidebarStoreName').textContent = me.name;
+    document.getElementById('sidebarPlan').textContent = planLabel(me.plan);
+    planName.textContent = planLabel(me.plan);
+    const hostedPath = `/q/${encodeURIComponent(me.slug)}`;
+    const hostedUrl = `${location.origin}${hostedPath}`;
+    const embedUrl = `${location.origin}/embed/quote?shop=${encodeURIComponent(me.slug)}`;
+    const widgetUrl = `${location.origin}/embed/v1/widget.js`;
+    const iframeCode = `<iframe
+  src="${embedUrl}"
+  style="width:100%;min-height:760px;border:0;"
+  title="Instant 3D quote"
+  loading="lazy"
+  allow="payment">
+</iframe>`;
+    const scriptCode = `<script src="${widgetUrl}" data-shop="${me.slug}"><\/script>`;
+    publicQuoteLink.href = hostedPath;
+    shopUrl.href = hostedPath;
+    shopUrl.textContent = hostedUrl;
+    hostedInstallUrl.href = hostedPath;
+    hostedInstallUrl.textContent = hostedUrl;
+    openHostedInstall.href = hostedPath;
+    iframeInstallCode.textContent = iframeCode;
+    scriptInstallCode.textContent = scriptCode;
+
+    const [settings, materials, pricing, usage, checkout, subscription] = await Promise.all([
+      fetchJson('/api/settings/'),
+      fetchJson('/api/materials/'),
+      fetchJson('/api/pricing/'),
+      fetchJson('/api/billing/usage'),
+      fetchJson(`/api/billing/public-checkout-settings?shop=${encodeURIComponent(me.slug)}`),
+      fetchJson('/api/billing/subscription'),
+    ]);
+    renderSubscription(subscription);
+
+    const activeMaterials = (materials || []).filter(material => material.active !== false);
+    const shippingZones = Array.isArray(settings.shipping_zones) ? settings.shipping_zones : [];
+    const supportEmailMode = ['hidden', 'signup', 'custom'].includes(settings.support_email_mode)
+      ? settings.support_email_mode
+      : 'hidden';
+    const supportContactPublished = supportEmailMode === 'signup' || (supportEmailMode === 'custom' && !!settings.support_email);
+    const checks = [
+      {
+        done: true,
+        title: 'Owner account created',
+        detail: `${me.email} can sign in to this admin workspace.`,
+        href: 'account.html',
+        action: 'Account',
+      },
+      {
+        done: checkout.bank_transfer_enabled && checkout.payment_fee_mode === 'bank_transfer_only',
+        title: 'Bank transfer first',
+        detail: 'Customers can place orders without card processing fees. Card checkout is optional later.',
+        href: 'payments.html',
+        action: 'Payments',
+      },
+      {
+        done: activeMaterials.length >= 5,
+        title: 'Starter materials seeded',
+        detail: `${activeMaterials.length} active materials are ready for review.`,
+        href: 'materials.html',
+        action: 'Materials',
+      },
+      {
+        done: pricing.currency === 'NZD' && Number(pricing.tax_rate) === 0.15,
+        title: 'NZD pricing and GST defaults',
+        detail: 'Pricing starts in NZD with 15% GST. Review material rates before launch.',
+        href: 'pricing.html',
+        action: 'Pricing',
+      },
+      {
+        done: shippingZones.some(zone => zone && zone.active !== false),
+        title: 'Shipping options',
+        detail: 'Local pickup and standard tracked courier are starter defaults.',
+        href: 'shipping.html',
+        action: 'Shipping',
+      },
+      {
+        done: !!settings.tagline,
+        title: 'Store profile',
+        detail: 'Add logo, address, GST number, and basic customer-facing shop details.',
+        href: 'settings.html',
+        action: 'Settings',
+      },
+      {
+        done: supportContactPublished,
+        title: 'Support contact privacy',
+        detail: supportContactPublished
+          ? 'A customer-facing support email is published.'
+          : 'Your signup email is private. Publish a support email when you are ready for customer questions.',
+        href: 'settings.html',
+        action: 'Settings',
+      },
+      {
+        done: !subscription.is_paid_plan || subscription.billing_active,
+        title: 'Trennen subscription',
+        detail: !subscription.is_paid_plan
+          ? 'Community does not need a paid monthly subscription.'
+          : subscription.billing_active
+            ? `${subscription.plan_name} billing is ${subscriptionStatusLabel(subscription).toLowerCase()}.`
+            : 'Activate your paid plan through Stripe-hosted checkout.',
+        href: 'payments.html',
+        action: 'Billing',
+      },
+      {
+        done: true,
+        title: 'Billing plan initialized',
+        detail: `${usage.plan_name} is active for usage tracking. Included quote allowance: ${usage.quote_allowance ?? 'custom'}.`,
+        href: 'dashboard.html',
+        action: 'Usage',
+      },
+      {
+        done: checkout.card_enabled === true,
+        title: 'Optional card checkout',
+        detail: checkout.card_enabled ? 'Stripe card checkout is enabled.' : 'Connect Stripe later when card checkout helps your workflow.',
+        href: 'payments.html',
+        action: 'Stripe',
+      },
+    ];
+
+    const completed = checks.filter(check => check.done).length;
+    setupList.innerHTML = checks.map(item).join('');
+    checklistBadge.textContent = `${completed}/${checks.length} ready`;
+    checklistBadge.className = completed === checks.length ? 'badge badge-sage' : 'badge badge-warm';
+    progressMeter.style.width = `${Math.round((completed / checks.length) * 100)}%`;
+    progressText.textContent = `${completed} of ${checks.length} checklist items are ready.`;
+  }
+
+  document.getElementById('signoutBtn').addEventListener('click', async event => {
+    event.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = 'login.html';
+  });
+
+  activateSubscriptionBtn.addEventListener('click', async () => {
+    activateSubscriptionBtn.disabled = true;
+    subscriptionStatus.textContent = 'Opening Stripe checkout...';
+    try {
+      const res = await fetch('/api/billing/subscription-checkout', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.billing_checkout_url) throw new Error(data.error || 'Could not start subscription checkout.');
+      window.location.href = data.billing_checkout_url;
+    } catch (err) {
+      activateSubscriptionBtn.disabled = false;
+      subscriptionStatus.textContent = err.message || 'Could not start subscription checkout.';
+    }
+  });
+
+  document.querySelectorAll('[data-copy-target]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const target = document.getElementById(button.dataset.copyTarget || '');
+      const text = target?.textContent?.trim() || target?.getAttribute('href') || '';
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        installCopyStatus.textContent = 'Copied.';
+      } catch {
+        installCopyStatus.textContent = text;
+      }
+    });
+  });
+
+  loadSetup().catch(err => {
+    setupList.innerHTML = `<div class="inline-error" style="display:block">Could not load setup checklist: ${escHtml(err.message)}</div>`;
+  });
+</script>
+</body>
+</html>

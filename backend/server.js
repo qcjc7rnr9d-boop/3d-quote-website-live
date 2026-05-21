@@ -30,6 +30,7 @@ import customerPortalRouter from './routes/customer-portal.js';
 import shippingRouter from './routes/shipping.js';
 import billingRouter from './routes/billing.js';
 import salesRouter from './routes/sales.js';
+import onboardingRouter from './routes/onboarding.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -137,7 +138,7 @@ app.use('/uploads', express.static(join(ROOT_DIR, 'uploads'), {
 const publicRootPages = new Set([
   '/catalog.html', '/checkout.html', '/confirmation.html', '/index.html',
   '/materials.html', '/onboarding.html', '/options.html', '/privacy.html', '/quote.html',
-  '/pricing.html', '/stripe-callback.html', '/terms.html'
+  '/pricing.html', '/robots.txt', '/sitemap.xml', '/stripe-callback.html', '/terms.html'
 ]);
 
 app.get(['/', '/index.html'], (req, res) => {
@@ -240,6 +241,41 @@ app.get('/embed/quote', (req, res) => {
   res.sendFile(join(ROOT_DIR, 'quote.html'));
 });
 
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[char]));
+}
+
+app.get('/q/:slug', (req, res) => {
+  const slug = String(req.params.slug || '').trim().toLowerCase();
+  const shop = db.prepare("SELECT name, slug FROM shops WHERE slug = ? AND plan != 'suspended'").get(slug);
+  if (!shop) return res.status(404).send('Shop not found.');
+  const encodedSlug = encodeURIComponent(shop.slug);
+  const title = `${escapeHtml(shop.name || shop.slug)} instant quote`;
+  res.type('html').send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${title}</title>
+  <meta name="description" content="Upload a 3D model and get an instant quote from ${escapeHtml(shop.name || shop.slug)}.">
+  <style>
+    html, body { margin: 0; min-height: 100%; background: #f7f3ea; }
+    body { overflow: hidden; }
+    iframe { width: 100vw; height: 100vh; min-height: 760px; border: 0; display: block; }
+  </style>
+</head>
+<body>
+  <iframe src="/quote.html?shop=${encodedSlug}" title="${title}" allow="payment"></iframe>
+</body>
+</html>`);
+});
+
 app.get([...publicRootPages], (req, res) => {
   const page = req.path.slice(1);
   res.sendFile(join(ROOT_DIR, page));
@@ -258,6 +294,7 @@ app.use('/api/customer', customerPortalRouter);
 app.use('/api/shipping', shippingRouter);
 app.use('/api/billing', billingRouter);
 app.use('/api/sales', salesRouter);
+app.use('/api/onboarding', onboardingRouter);
 
 // ── Public: platform identity (Trennen) ────────────────────────
 // Lets unauthenticated pages (admin auth screens, platform login,

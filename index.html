@@ -6,13 +6,16 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; connect-src 'self'; form-action 'self';">
   <title>Trennen &mdash; 3D Printing Quoting Software</title>
   <meta name="description" content="Quote 3D printing jobs faster with fair, transparent pricing. Built for makers, print shops, and growing 3D printing businesses.">
+  <link rel="canonical" href="https://trennen.co.nz/">
   <meta property="og:title" content="Trennen - 3D Printing Quoting Software">
   <meta property="og:description" content="Professional quoting software for 3D printing businesses - simple, fast, fair, and built for real makers.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="assets/trennen-command-poster.png">
+  <meta property="og:url" content="https://trennen.co.nz/">
+  <meta property="og:image" content="https://trennen.co.nz/assets/trennen-command-poster.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Trennen - 3D Printing Quoting Software">
   <meta name="twitter:description" content="Quote 3D printing jobs faster with fair, transparent pricing. Built for makers, print shops, and growing 3D printing businesses.">
+  <meta name="twitter:image" content="https://trennen.co.nz/assets/trennen-command-poster.png">
   <link rel="preload" href="assets/trennen-quote-capture.png" as="image">
   <link rel="preload" href="assets/trennen-command-poster.png" as="image">
   <link rel="stylesheet" href="assets/sales.css">
@@ -50,10 +53,28 @@
           <a class="button button-primary" href="onboarding.html" data-event="hero_start_free_click">Start free</a>
           <a class="button button-secondary" href="quote.html?shop=mahi3d&amp;demoStart=1" data-sales-quote-demo data-event="hero_demo_click">View demo</a>
         </div>
+        <p class="hero-microcopy">No card required. Start with bank transfer. Upgrade when ready.</p>
         <div class="studio-strip" aria-label="Trennen promise">
           <span>Faster quote replies</span>
           <span>Controlled shop pricing</span>
           <span>Capped checkout fees</span>
+        </div>
+        <div class="launch-steps" data-self-serve-steps aria-label="What happens after Start free">
+          <div data-self-serve-step>
+            <span>01</span>
+            <strong>Create your shop</strong>
+            <p>Choose your plan and claim a quote URL.</p>
+          </div>
+          <div data-self-serve-step>
+            <span>02</span>
+            <strong>Add pricing</strong>
+            <p>Start with sensible materials, then tune your shop rules.</p>
+          </div>
+          <div data-self-serve-step>
+            <span>03</span>
+            <strong>Share your quote link</strong>
+            <p>Send buyers to a clean upload-first quote flow.</p>
+          </div>
         </div>
       </div>
 
@@ -69,14 +90,20 @@
             <span>Customer quote flow</span>
             <strong>Live shop view</strong>
           </div>
-          <img src="assets/trennen-quote-capture.png" width="1440" height="1000" alt="Trennen customer quote page showing upload, material selection, pricing, and quote summary.">
+          <picture>
+            <source srcset="assets/trennen-quote-capture.webp" type="image/webp">
+            <img src="assets/trennen-quote-capture.png" width="1440" height="1000" alt="Trennen customer quote page showing upload, material selection, pricing, and quote summary." decoding="async" fetchpriority="high">
+          </picture>
         </div>
         <div class="product-slab slab-admin" aria-hidden="true">
           <div class="slab-chrome">
             <span>Operator control</span>
             <strong>Dashboard</strong>
           </div>
-          <img src="assets/trennen-admin-capture.png" width="1440" height="1000" alt="">
+          <picture>
+            <source srcset="assets/trennen-admin-capture.webp" type="image/webp">
+            <img src="assets/trennen-admin-capture.png" width="1440" height="1000" alt="" decoding="async">
+          </picture>
         </div>
         <div class="desk-card desk-card-estimate">
           <span>Quote ready</span>
@@ -166,15 +193,24 @@
 
         <div class="depth-stage" aria-label="Scroll-controlled Trennen product story">
           <div class="stage-light" aria-hidden="true"></div>
-          <img class="story-film" src="assets/trennen-command-poster.png" width="1440" height="1000" alt="Trennen product workflow showing quote intake, pricing control, customer approval, and operator tracking.">
+          <img class="story-film" src="assets/trennen-command-poster.png" width="1440" height="1000" alt="Trennen product workflow showing quote intake, pricing control, customer approval, and operator tracking." loading="lazy" decoding="async">
           <div class="stage-layer layer-quote">
-            <img src="assets/trennen-quote-capture.png" width="1440" height="1000" alt="Trennen customer quote flow with file upload and quote summary.">
+            <picture>
+              <source srcset="assets/trennen-quote-capture.webp" type="image/webp">
+              <img src="assets/trennen-quote-capture.png" width="1440" height="1000" alt="Trennen customer quote flow with file upload and quote summary." loading="lazy" decoding="async">
+            </picture>
           </div>
           <div class="stage-layer layer-pricing">
-            <img src="assets/trennen-pricing-capture.png" width="1440" height="1000" alt="Trennen pricing configuration surface.">
+            <picture>
+              <source srcset="assets/trennen-pricing-capture.webp" type="image/webp">
+              <img src="assets/trennen-pricing-capture.png" width="1440" height="1000" alt="Trennen pricing configuration surface." loading="lazy" decoding="async">
+            </picture>
           </div>
           <div class="stage-layer layer-admin">
-            <img src="assets/trennen-admin-capture.png" width="1440" height="1000" alt="Trennen operator dashboard with recent orders, customers, and shop actions.">
+            <picture>
+              <source srcset="assets/trennen-admin-capture.webp" type="image/webp">
+              <img src="assets/trennen-admin-capture.png" width="1440" height="1000" alt="Trennen operator dashboard with recent orders, customers, and shop actions." loading="lazy" decoding="async">
+            </picture>
           </div>
           <div class="focus-card focus-request" aria-hidden="true">
             <span>Request</span>
@@ -240,7 +276,7 @@
       </div>
       <div class="fee-ledger reveal" aria-label="Fee transparency">
         <strong>Stripe/payment processing fees are separate from your Trennen subscription.</strong>
-        <span>Trennen does not mark up card processing fees. Bank transfer can remain a no-processing-fee option when your workflow supports it.</span>
+        <span>Built for 3D print shops: quote limits, materials, checkout caps, and bank transfer stay readable. Trennen does not mark up card processing fees, and there is no uncapped revenue share.</span>
       </div>
       <div class="pricing-grid" aria-label="Pricing plans">
         <article class="pricing-card reveal" data-plan="community">
@@ -260,7 +296,7 @@
             <li>Transparent usage limits</li>
             <li>No hidden fees</li>
           </ul>
-          <a class="button button-on-light" href="onboarding.html" data-pricing-plan="community">Start free</a>
+          <a class="button button-on-light" href="onboarding.html?plan=community" data-pricing-plan="community">Start free</a>
         </article>
 
         <article class="pricing-card is-featured reveal" data-plan="starter">
@@ -280,7 +316,7 @@
             <li>Best for early repeat jobs</li>
             <li>Bank transfer friendly</li>
           </ul>
-          <a class="button button-primary" href="onboarding.html" data-pricing-plan="starter">Start Starter trial</a>
+          <a class="button button-primary" href="onboarding.html?plan=starter" data-pricing-plan="starter">Start Starter trial</a>
         </article>
 
         <article class="pricing-card reveal" data-plan="growth">
@@ -300,7 +336,7 @@
             <li>Lower overage cost</li>
             <li>Built for busier shops</li>
           </ul>
-          <a class="button button-on-light" href="onboarding.html" data-pricing-plan="growth">Start Growth trial</a>
+          <a class="button button-on-light" href="onboarding.html?plan=growth" data-pricing-plan="growth">Start Growth trial</a>
         </article>
 
         <article class="pricing-card reveal" data-plan="scale">
@@ -320,7 +356,7 @@
             <li>Custom support and usage</li>
             <li>Higher-volume operations</li>
           </ul>
-          <a class="button button-on-light" href="#demo" data-pricing-plan="scale">Talk to us</a>
+          <a class="button button-on-light" href="onboarding.html?plan=scale" data-pricing-plan="scale">Start Scale setup</a>
         </article>
       </div>
     </section>
@@ -353,8 +389,8 @@
       <div class="demo-layout reveal">
         <div class="demo-copy">
           <p class="eyebrow">Talk through the workflow</p>
-          <h2 id="demo-title">Want help mapping Trennen to your shop?</h2>
-          <p>Start free when you are ready. If you want a focused walkthrough first, send the quoting shape of your business and we will follow up with the useful parts: intake, pricing controls, checkout, and operator visibility.</p>
+          <h2 id="demo-title">Talk to us about Scale or setup help.</h2>
+          <p>Start free when you are ready. If you want a focused walkthrough first, send the quoting shape of your business and we will follow up on Scale, setup, intake, pricing controls, checkout, and operator visibility.</p>
           <ul class="demo-points">
             <li>Review how quote requests arrive today.</li>
             <li>Map materials, finishes, shipping, and minimums.</li>
@@ -460,7 +496,7 @@
       <div class="final-panel reveal">
         <p class="eyebrow">Ready when the shop is</p>
         <h2 id="final-title">Make quoting feel effortless.</h2>
-        <p>Start small, quote faster, and grow without confusing fees.</p>
+        <p>Start small, quote faster, and grow without confusing fees. No card required to create your shop.</p>
         <div class="hero-actions">
           <a class="button button-primary" href="onboarding.html" data-event="final_cta_click">Start free</a>
           <a class="button button-secondary" href="#pricing" data-event="final_cta_click">View pricing</a>

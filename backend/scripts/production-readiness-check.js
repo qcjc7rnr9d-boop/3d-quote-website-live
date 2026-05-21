@@ -86,6 +86,11 @@ function checkStripe(env, errors, warnings, checks) {
       errors.push(`${name} is required for production payments.`);
     }
   }
+  for (const name of ['STRIPE_BILLING_STARTER_PRICE_ID', 'STRIPE_BILLING_GROWTH_PRICE_ID', 'STRIPE_BILLING_SCALE_PRICE_ID']) {
+    if (!hasValue(env, name) || isUnsafePlaceholder(value(env, name))) {
+      errors.push(`${name} is required for Stripe-hosted Trennen subscriptions.`);
+    }
+  }
 
   if (value(env, 'STRIPE_SECRET_KEY').startsWith('sk_test_')) {
     warnings.push('STRIPE_SECRET_KEY is a test-mode key. Keep this only for staging.');
@@ -95,6 +100,9 @@ function checkStripe(env, errors, warnings, checks) {
   }
   if (hasValue(env, 'STRIPE_SECRET_KEY') && hasValue(env, 'STRIPE_PUBLISHABLE_KEY') && hasValue(env, 'STRIPE_WEBHOOK_SECRET')) {
     checks.push('Stripe platform keys and webhook secret are present');
+  }
+  if (['STRIPE_BILLING_STARTER_PRICE_ID', 'STRIPE_BILLING_GROWTH_PRICE_ID', 'STRIPE_BILLING_SCALE_PRICE_ID'].every(name => hasValue(env, name) && !isUnsafePlaceholder(value(env, name)))) {
+    checks.push('Stripe Billing price IDs are present for Starter, Growth, and Scale');
   }
 }
 

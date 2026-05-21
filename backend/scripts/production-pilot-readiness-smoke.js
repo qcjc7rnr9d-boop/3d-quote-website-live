@@ -37,6 +37,9 @@ assert.match(envAudit, /--pilot/, 'env-audit should support a stricter pilot pro
 assert.match(envAudit, /https:\/\/app\.trennen\.co\.nz/, 'pilot env audit should know the production app URL');
 assert.match(envAudit, /STRIPE_CLIENT_ID/, 'pilot env audit should check Stripe Connect client id');
 assert.match(envAudit, /STRIPE_WEBHOOK_SECRET/, 'pilot env audit should check Stripe webhook secret');
+assert.match(envAudit, /STRIPE_BILLING_STARTER_PRICE_ID/, 'pilot env audit should check Starter Billing price id');
+assert.match(envAudit, /STRIPE_BILLING_GROWTH_PRICE_ID/, 'pilot env audit should check Growth Billing price id');
+assert.match(envAudit, /STRIPE_BILLING_SCALE_PRICE_ID/, 'pilot env audit should check Scale Billing price id');
 
 const envExample = read('backend/.env.example');
 assert.match(envExample, /BASE_URL=https:\/\/app\.trennen\.co\.nz/, '.env.example should default to the Trennen app domain');
@@ -53,6 +56,24 @@ assert.match(nginxExample, /client_max_body_size 260m;/, 'Nginx example should s
 assert.match(nginxExample, /X-Forwarded-Proto \$scheme;/, 'Nginx example should preserve forwarded protocol');
 assert.doesNotMatch(nginxExample, /yourdomain/i, 'Nginx example should not contain generic domain placeholders');
 
+const lightsailEnv = read('deploy/lightsail/backend.env.production.example');
+for (const expected of [
+  'BASE_URL=https://app.trennen.co.nz',
+  'TRUST_PROXY=1',
+  'APP_EMAIL_DOMAIN=mail.trennen.co.nz',
+  'RESEND_WEBHOOK_SECRET',
+  'STRIPE_BILLING_STARTER_PRICE_ID',
+  'STRIPE_BILLING_GROWTH_PRICE_ID',
+  'STRIPE_BILLING_SCALE_PRICE_ID',
+]) {
+  assert.match(
+    lightsailEnv,
+    new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+    `Lightsail production env example should mention ${expected}`,
+  );
+}
+assertNoSecretLikeValue('deploy/lightsail/backend.env.production.example', lightsailEnv);
+
 const runbook = read('docs/deployment/staged-saas-launch.md');
 for (const expected of [
   'app.trennen.co.nz',
@@ -68,10 +89,17 @@ for (const expected of [
   'STRIPE_PUBLISHABLE_KEY',
   'STRIPE_CLIENT_ID',
   'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_BILLING_STARTER_PRICE_ID',
+  'STRIPE_BILLING_GROWTH_PRICE_ID',
+  'STRIPE_BILLING_SCALE_PRICE_ID',
+  'Stripe Billing Portal',
+  'payment method updates',
+  'cancellation',
   'Stripe Connect Express',
   'application_fee_amount',
   'transfer_data',
   'pilot shop',
+  'first-customer-setup.md',
   'https://app.trennen.co.nz/embed/v1/widget.js',
 ]) {
   assert.match(
@@ -82,6 +110,25 @@ for (const expected of [
 }
 assert.doesNotMatch(runbook, /cdn\.yourdomain\.com/i, 'runbook should not use generic CDN embed domain');
 assertNoSecretLikeValue('docs/deployment/staged-saas-launch.md', runbook);
+
+const firstCustomerRunbook = read('docs/deployment/first-customer-setup.md');
+for (const expected of [
+  'Self-serve signup',
+  'Stripe-hosted subscription checkout',
+  'Stripe Billing Portal',
+  '/q/{shop-slug}',
+  'iframe',
+  'support email',
+  'bank transfer',
+  'Platform Admin',
+]) {
+  assert.match(
+    firstCustomerRunbook,
+    new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'),
+    `first customer runbook should mention ${expected}`,
+  );
+}
+assertNoSecretLikeValue('docs/deployment/first-customer-setup.md', firstCustomerRunbook);
 
 const stripeRoute = read('backend/routes/stripe.js');
 for (const expected of [

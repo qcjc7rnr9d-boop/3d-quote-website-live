@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Payments — mahi3d Admin</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -89,6 +89,36 @@
     .payout-status-paid { color: #1a7a3a; font-weight: 500; }
     .payout-status-pending { color: var(--muted); }
     .payout-status-failed { color: #C0392B; }
+    .billing-summary {
+      display: grid;
+      gap: 14px;
+    }
+    .billing-summary h3 {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--font-ui);
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .billing-summary p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 720px;
+    }
+    .billing-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 4px;
+    }
+    .billing-message {
+      min-height: 18px;
+      color: var(--sage-dark);
+      font-size: 12px;
+    }
   </style>
   <script src="../assets/brand.js" defer></script>
   <script src="/assets/csrf.js"></script>
@@ -165,6 +195,24 @@
     </div>
 
     <div class="admin-content">
+      <div class="section-card" id="subscriptionCard">
+        <div class="section-card-header">
+          <h2 class="section-card-title">Trennen subscription</h2>
+          <span id="subscriptionBadge" class="badge badge-stone">Loading</span>
+        </div>
+        <div class="section-card-body">
+          <div class="billing-summary">
+            <h3 id="subscriptionTitle">Loading subscription...</h3>
+            <p id="subscriptionText">Stripe hosts subscription checkout, payment method updates, invoices, and cancellation. Trennen never stores card numbers.</p>
+            <div class="billing-actions">
+              <button class="btn btn-primary" id="activatePlanBtn" type="button">Activate with Stripe</button>
+              <button class="btn btn-outline" id="manageSubscriptionBtn" type="button">Manage in Stripe</button>
+            </div>
+            <div class="billing-message" id="subscriptionMessage" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="section-card" id="stripeCard">
         <div class="section-card-header">
           <h2 class="section-card-title">Stripe Connect</h2>
@@ -266,6 +314,7 @@
 <script>
   let shopData = null;
   let stripeStatus = null;
+  let subscriptionStatus = null;
 
   function boolBadge(on) {
     return on
@@ -279,11 +328,61 @@
     });
   }
 
+  function formatDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function titleCaseStatus(value) {
+    const text = String(value || 'pending_subscription').replace(/_/g, ' ');
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
   async function loadStatus() {
     const r = await fetch('/api/stripe/keys-status');
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Failed to load payment status');
     stripeStatus = data;
+  }
+
+  async function loadSubscription() {
+    const r = await fetch('/api/billing/subscription');
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed to load subscription status');
+    subscriptionStatus = data;
+  }
+
+  function renderSubscription() {
+    const badge = document.getElementById('subscriptionBadge');
+    const title = document.getElementById('subscriptionTitle');
+    const text = document.getElementById('subscriptionText');
+    const activateBtn = document.getElementById('activatePlanBtn');
+    const manageBtn = document.getElementById('manageSubscriptionBtn');
+    const sub = subscriptionStatus || {};
+    const label = titleCaseStatus(sub.billing_status);
+    badge.textContent = sub.is_free_plan ? 'Free' : label;
+    badge.className = sub.billing_active || sub.is_free_plan ? 'badge badge-sage' : 'badge badge-warm';
+    activateBtn.style.display = sub.can_start_checkout ? '' : 'none';
+    manageBtn.style.display = sub.can_manage_subscription ? '' : 'none';
+
+    if (sub.is_free_plan) {
+      title.textContent = 'Community plan';
+      text.textContent = 'Community does not require a monthly paid subscription. Stripe billing is only needed when you move to a paid plan.';
+      return;
+    }
+
+    title.textContent = `${sub.plan_name || 'Paid'} plan - ${label}`;
+    if (sub.billing_cancel_at_period_end) {
+      text.textContent = `Your subscription is set to cancel at the end of the current period${sub.billing_cancel_at ? ` on ${formatDate(sub.billing_cancel_at)}` : ''}. Stripe hosts cancellation and payment method changes.`;
+    } else if (sub.billing_status === 'trialing') {
+      text.textContent = `Your no-card trial is active${sub.trial_end ? ` until ${formatDate(sub.trial_end)}` : ''}. Activate billing through Stripe before the trial ends to keep paid features running.`;
+    } else if (sub.billing_activation_required) {
+      text.textContent = 'Activate your paid Trennen subscription through Stripe-hosted checkout. Trennen never stores card numbers or bank details.';
+    } else {
+      text.textContent = 'Your paid Trennen subscription is active. Use Stripe Billing Portal to update payment methods, view invoices, or cancel.';
+    }
   }
 
   function renderStatus() {
@@ -341,6 +440,38 @@
     }
   }
 
+  async function startSubscriptionCheckout(btn) {
+    btn.disabled = true;
+    btn.textContent = 'Opening Stripe...';
+    document.getElementById('subscriptionMessage').textContent = 'Opening Stripe-hosted checkout...';
+    try {
+      const r = await fetch('/api/billing/subscription-checkout', { method: 'POST' });
+      const data = await r.json();
+      if (!r.ok || !data.billing_checkout_url) throw new Error(data.error || 'Failed to start subscription checkout');
+      window.location.href = data.billing_checkout_url;
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Activate with Stripe';
+      document.getElementById('subscriptionMessage').textContent = err.message || 'Failed to start subscription checkout';
+    }
+  }
+
+  async function openBillingPortal(btn) {
+    btn.disabled = true;
+    btn.textContent = 'Opening Stripe...';
+    document.getElementById('subscriptionMessage').textContent = 'Opening Stripe Billing Portal...';
+    try {
+      const r = await fetch('/api/billing/customer-portal', { method: 'POST' });
+      const data = await r.json();
+      if (!r.ok || !data.billing_portal_url) throw new Error(data.error || 'Failed to open Stripe Billing Portal');
+      window.location.href = data.billing_portal_url;
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Manage in Stripe';
+      document.getElementById('subscriptionMessage').textContent = err.message || 'Failed to open Stripe Billing Portal';
+    }
+  }
+
   async function loadPayouts() {
     try {
       const r = await fetch('/api/stripe/payouts');
@@ -373,6 +504,8 @@
       document.getElementById('sidebarStoreName').textContent = shopData.name;
       document.getElementById('sidebarPlan').textContent = shopData.plan.charAt(0).toUpperCase() + shopData.plan.slice(1);
       if (shopData.is_temp_password) { window.location.href = 'change-password.html'; return; }
+      await loadSubscription();
+      renderSubscription();
       await loadStatus();
       renderStatus();
     } catch {
@@ -388,6 +521,8 @@
 
   document.getElementById('connectStripeBtn').addEventListener('click', e => startConnect(e.currentTarget));
   document.getElementById('resumeOnboardingBtn').addEventListener('click', e => startConnect(e.currentTarget));
+  document.getElementById('activatePlanBtn').addEventListener('click', e => startSubscriptionCheckout(e.currentTarget));
+  document.getElementById('manageSubscriptionBtn').addEventListener('click', e => openBillingPortal(e.currentTarget));
 
   document.getElementById('disconnectBtn').addEventListener('click', () => {
     document.getElementById('disconnectModal').classList.remove('hidden');

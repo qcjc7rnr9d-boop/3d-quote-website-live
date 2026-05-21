@@ -38,6 +38,9 @@ const checks = {
     STRIPE_PUBLISHABLE_KEY_present: present('STRIPE_PUBLISHABLE_KEY'),
     STRIPE_CLIENT_ID_present: present('STRIPE_CLIENT_ID'),
     STRIPE_WEBHOOK_SECRET_present: present('STRIPE_WEBHOOK_SECRET'),
+    STRIPE_BILLING_STARTER_PRICE_ID_present: present('STRIPE_BILLING_STARTER_PRICE_ID'),
+    STRIPE_BILLING_GROWTH_PRICE_ID_present: present('STRIPE_BILLING_GROWTH_PRICE_ID'),
+    STRIPE_BILLING_SCALE_PRICE_ID_present: present('STRIPE_BILLING_SCALE_PRICE_ID'),
   },
   secrets: {
     SESSION_SECRET_present: present('SESSION_SECRET'),
@@ -74,6 +77,9 @@ if (pilotMode) {
     ['pilot.stripe_publishable_key', checks.payments.STRIPE_PUBLISHABLE_KEY_present],
     ['pilot.stripe_connect_client_id', checks.payments.STRIPE_CLIENT_ID_present],
     ['pilot.stripe_webhook_secret', checks.payments.STRIPE_WEBHOOK_SECRET_present],
+    ['pilot.stripe_billing_starter_price', checks.payments.STRIPE_BILLING_STARTER_PRICE_ID_present],
+    ['pilot.stripe_billing_growth_price', checks.payments.STRIPE_BILLING_GROWTH_PRICE_ID_present],
+    ['pilot.stripe_billing_scale_price', checks.payments.STRIPE_BILLING_SCALE_PRICE_ID_present],
     ['pilot.storage_driver_local', checks.futureManagedAws.STORAGE_DRIVER === 'local'],
   );
 }

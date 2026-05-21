@@ -304,6 +304,9 @@ async function assertOnboardingLaunchPage(page) {
     'capped at NZ$79/month',
     'Bank transfer',
     'Stripe/payment fees are separate',
+    'Create your shop workspace',
+    'Shop URL',
+    'Create shop',
   ]) {
     assert(bodyText.includes(expected), `Onboarding page should include ${expected}`);
   }
@@ -311,6 +314,13 @@ async function assertOnboardingLaunchPage(page) {
   const homeHref = await page.locator('a[href="index.html"]').first().getAttribute('href');
   assert(homeHref === 'index.html', 'Onboarding page should include a clear link back to Trennen home');
   assert(await page.locator('input[name="website"]').count() === 1, 'Onboarding form should include a honeypot field');
+
+  await page.goto(`${onboardingUrl}?plan=growth`, { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('load');
+  const planIntent = await page.locator('#onboarding-plan').inputValue();
+  assert(planIntent === 'growth', 'Onboarding should honor plan intent from pricing CTA query params');
+  const growthSelected = await page.locator('[data-plan-card="growth"]').evaluate(card => card.classList.contains('is-selected'));
+  assert(growthSelected, 'Onboarding should visually select the plan from the pricing CTA');
 
   const desktopCta = await page.locator('a, button').filter({ hasText: /start free/i }).first().boundingBox();
   const viewport = page.viewportSize();
@@ -333,36 +343,52 @@ async function assertOnboardingLaunchPage(page) {
   await page.goto(onboardingUrl, { waitUntil: 'domcontentloaded' });
   await page.locator('#shop-setup').scrollIntoViewIfNeeded();
   await page.locator('#onboarding-form button[type="submit"]').click();
-  await expectVisible(page, '#onboarding-form [data-field-error="name"]', 'onboarding name validation error');
+  await expectVisible(page, '#onboarding-form [data-field-error="ownerName"]', 'onboarding name validation error');
   await expectVisible(page, '#onboarding-form [data-field-error="email"]', 'onboarding email validation error');
 
   let onboardingPayload = null;
-  await page.route('**/api/sales/demo-request', async route => {
+  await page.route('**/api/onboarding/slug-availability**', async route => {
+    const url = new URL(route.request().url());
+    const slug = (url.searchParams.get('slug') || 'printworks-studio').toLowerCase();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, slug, available: true, error: null, suggestion: null }),
+    });
+  });
+  await page.route('**/api/onboarding/signup', async route => {
     onboardingPayload = route.request().postDataJSON();
     await route.fulfill({
       status: 201,
       contentType: 'application/json',
-      body: JSON.stringify({ ok: true, id: 456, delivery: { status: 'queued' } }),
+      body: JSON.stringify({
+        ok: true,
+        shop: { id: 456, name: 'PrintWorks Studio', slug: 'printworks-studio', plan: 'community' },
+        redirectUrl: '#created',
+      }),
     });
   });
 
-  await page.fill('#onboarding-name', 'Morgan Lee');
+  await page.fill('#onboarding-owner-name', 'Morgan Lee');
   await page.fill('#onboarding-email', 'morgan@printworks.example');
-  await page.fill('#onboarding-company', 'PrintWorks Studio');
+  await page.fill('#onboarding-shop-name', 'PrintWorks Studio');
+  await page.fill('#onboarding-password', 'TestPass!234');
   await page.selectOption('#onboarding-volume', '1-25');
-  await page.selectOption('#onboarding-plan', 'Community');
-  await page.selectOption('#onboarding-payment', 'Bank transfer first');
-  await page.fill('#onboarding-message', 'We want to start with customer quote intake.');
+  await page.selectOption('#onboarding-plan', 'community');
+  await page.selectOption('#onboarding-payment', 'bank_transfer_first');
   await page.locator('#onboarding-form button[type="submit"]').click();
   const onboardingSuccess = await expectVisible(page, '#onboarding-success', 'onboarding success state');
-  assert(/setup request is in/i.test(await onboardingSuccess.textContent()), 'Onboarding form should show a setup success state');
-  assert(onboardingPayload?.name === 'Morgan Lee', 'Onboarding form should submit the contact name');
+  assert(/shop is ready/i.test(await onboardingSuccess.textContent()), 'Onboarding form should show a setup success state');
+  assert(onboardingPayload?.ownerName === 'Morgan Lee', 'Onboarding form should submit the owner name');
   assert(onboardingPayload?.email === 'morgan@printworks.example', 'Onboarding form should submit the work email');
-  assert(onboardingPayload?.company === 'PrintWorks Studio', 'Onboarding form should submit the company');
+  assert(onboardingPayload?.shopName === 'PrintWorks Studio', 'Onboarding form should submit the shop name');
+  assert(onboardingPayload?.slug === 'printworks-studio', 'Onboarding form should submit the shop slug');
   assert(onboardingPayload?.monthlyQuoteVolume === '1-25', 'Onboarding form should submit monthly quote volume');
-  assert(/Plan: Community/i.test(onboardingPayload?.message || ''), 'Onboarding form should include selected plan in the submitted message');
-  assert(/Payment path: Bank transfer first/i.test(onboardingPayload?.message || ''), 'Onboarding form should include selected payment path in the submitted message');
-  await page.unroute('**/api/sales/demo-request');
+  assert(onboardingPayload?.plan === 'community', 'Onboarding form should submit the selected plan');
+  assert(onboardingPayload?.paymentPath === 'bank_transfer_first', 'Onboarding form should submit the selected payment path');
+  assert(onboardingPayload?.password === 'TestPass!234', 'Onboarding form should submit the owner password');
+  await page.unroute('**/api/onboarding/slug-availability**');
+  await page.unroute('**/api/onboarding/signup');
 }
 
 async function assertAdminLoginLaunchPage(page) {
@@ -410,6 +436,24 @@ try {
 
   const title = await page.title();
   assert(/Trennen/i.test(title) && /3D Printing Quoting Software/i.test(title), 'Homepage title should use launch SEO branding');
+  const canonicalHref = await page.locator('link[rel="canonical"]').first().getAttribute('href');
+  assert(canonicalHref === 'https://trennen.co.nz/', 'Homepage should expose the production canonical URL');
+  const ogImage = await page.locator('meta[property="og:image"]').first().getAttribute('content');
+  assert(ogImage === 'https://trennen.co.nz/assets/trennen-command-poster.png', 'Homepage Open Graph image should use an absolute production URL');
+  const twitterImage = await page.locator('meta[name="twitter:image"]').first().getAttribute('content');
+  assert(twitterImage === 'https://trennen.co.nz/assets/trennen-command-poster.png', 'Homepage Twitter image should use an absolute production URL');
+
+  const robotsResponse = await context.request.get(new URL('/robots.txt', base).toString());
+  assert(robotsResponse.status() === 200, 'robots.txt should be served');
+  const robotsText = await robotsResponse.text();
+  assert(/Sitemap:\s*https:\/\/trennen\.co\.nz\/sitemap\.xml/i.test(robotsText), 'robots.txt should point search engines at the production sitemap');
+
+  const sitemapResponse = await context.request.get(new URL('/sitemap.xml', base).toString());
+  assert(sitemapResponse.status() === 200, 'sitemap.xml should be served');
+  const sitemapText = await sitemapResponse.text();
+  for (const url of ['https://trennen.co.nz/', 'https://trennen.co.nz/onboarding.html', 'https://trennen.co.nz/terms.html', 'https://trennen.co.nz/privacy.html']) {
+    assert(sitemapText.includes(url), `sitemap.xml should include ${url}`);
+  }
 
   const brandScriptCount = await page.locator('script[src*="brand.js"]').count();
   assert(brandScriptCount === 0, 'Sales homepage must not load brand.js');
@@ -422,6 +466,12 @@ try {
 
   const h1 = await expectVisible(page, 'h1', 'hero headline');
   assert(/messy print requests/i.test(await h1.textContent()), 'Hero headline should describe the messy-request-to-professional-quote outcome');
+  const launchCopy = await page.locator('body').innerText();
+  assert(/No card required\. Start with bank transfer\. Upgrade when ready\./i.test(launchCopy), 'Hero should reassure self-serve buyers that no card is required');
+  assert(await page.locator('[data-self-serve-step]').count() === 3, 'Homepage should explain what happens after Start free in three short steps');
+  for (const expected of ['Create your shop', 'Add pricing', 'Share your quote link']) {
+    assert(launchCopy.includes(expected), `Self-serve steps should include ${expected}`);
+  }
 
   const primaryCta = await expectVisible(page, '.hero-actions a[href="onboarding.html"]', 'Start free CTA');
   assert(/start free/i.test(await primaryCta.textContent()), 'Primary CTA should be Start free');
@@ -485,8 +535,24 @@ try {
   for (const expected of ['NZ$0', 'NZ$29', 'NZ$129', 'NZ$899', '+ GST', 'Platform fee capped at NZ$29/month', 'Platform fee capped at NZ$79/month']) {
     assert(pricingText.includes(expected), `Pricing should include ${expected}`);
   }
+  assert(/Built for 3D print shops/i.test(pricingText), 'Pricing should explain why Trennen is specific to 3D print shops');
+  assert(/no uncapped revenue share/i.test(pricingText), 'Pricing should explicitly avoid uncapped revenue-share positioning');
   assert(/does not mark up card processing fees/i.test(pricingText), 'Pricing should explain processing fee pass-through');
   assert(await page.locator('[data-pricing-plan]').count() >= 4, 'Pricing CTAs should be instrumented');
+  const pricingHrefs = await page.locator('[data-pricing-plan]').evaluateAll(links => links.map(link => ({
+    plan: link.dataset.pricingPlan,
+    href: link.getAttribute('href') || '',
+  })));
+  for (const plan of ['community', 'starter', 'growth', 'scale']) {
+    const match = pricingHrefs.find(link => link.plan === plan);
+    assert(match, `Pricing should include a CTA for ${plan}`);
+    assert(match.href === `onboarding.html?plan=${plan}`, `${plan} pricing CTA should carry plan intent into onboarding`);
+  }
+
+  const webpSourceCount = await page.locator('source[type="image/webp"]').count();
+  assert(webpSourceCount >= 3, 'Homepage product art should offer WebP sources with PNG fallbacks');
+  const lazyBelowFoldImages = await page.locator('.story img[loading="lazy"], .showcase img[loading="lazy"], .pricing img[loading="lazy"]').count();
+  assert(lazyBelowFoldImages >= 2, 'Below-fold product art should lazy-load');
 
   await page.evaluate(() => { window.dataLayer = []; });
   await page.locator('[data-demo-tab="pay"]').click();
@@ -496,6 +562,8 @@ try {
   assert(trackedEvents.includes('faq_open'), 'FAQ opens should emit an analytics event');
 
   assert(await page.locator('#demo-form').count() === 1, 'Secondary demo form should exist');
+  const demoHeading = await page.locator('#demo-title').textContent();
+  assert(/Scale or setup help/i.test(demoHeading || ''), 'Demo/contact form should be framed as Scale or setup help');
   assert(await page.locator('#demo-form input[name="website"]').count() === 1, 'Demo form should include a honeypot field');
   assert(await page.locator('#uploadZone').count() === 0, 'Legacy homepage upload zone should be removed');
 

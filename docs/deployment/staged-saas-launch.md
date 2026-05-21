@@ -88,7 +88,19 @@ STRIPE_SECRET_KEY=replace-with-stripe-test-secret-key
 STRIPE_PUBLISHABLE_KEY=replace-with-stripe-test-publishable-key
 STRIPE_CLIENT_ID=replace-with-stripe-connect-client-id
 STRIPE_WEBHOOK_SECRET=replace-with-stripe-webhook-secret
+STRIPE_BILLING_STARTER_PRICE_ID=replace-with-starter-monthly-price-id
+STRIPE_BILLING_GROWTH_PRICE_ID=replace-with-growth-monthly-price-id
+STRIPE_BILLING_SCALE_PRICE_ID=replace-with-scale-monthly-price-id
 ```
+
+Create Stripe Products and monthly recurring Prices for Starter, Growth, and Scale before running the pilot. Keep price amounts aligned with `docs/pricing/trennen-pricing-and-fees.md` and `backend/lib/billing-plans.js`; the app only stores Stripe price IDs and Stripe customer/subscription references.
+
+Enable Stripe Billing Portal before inviting pilot shops:
+
+- Allow payment method updates.
+- Allow cancellation at period end.
+- Keep invoices and receipts hosted by Stripe.
+- Confirm the portal return URL can send owners back to `https://app.trennen.co.nz/admin/payments.html`.
 
 Use Stripe Connect Express for each pilot business. The app blocks checkout until the platform Stripe keys are present, the shop subscription/readiness is valid, and the connected account has submitted details with charges and payouts enabled. Customer payments use a platform PaymentIntent with `transfer_data`, `on_behalf_of`, and `application_fee_amount` so Trennen can collect the configured checkout/platform fee while the remainder transfers to the connected business.
 
@@ -100,6 +112,10 @@ https://app.trennen.co.nz/api/stripe/webhook
 
 Before taking live money, test these states in Stripe test mode:
 
+- Self-serve signup creates a no-card trial without asking for card details.
+- Stripe-hosted subscription checkout creates a customer and subscription for the owner.
+- Stripe Billing Portal supports payment method updates and cancellation.
+- A canceled-at-period-end subscription stays active until Stripe ends the current period.
 - Checkout blocked before Stripe Connect onboarding.
 - Checkout allowed after the connected account is ready.
 - `application_fee_amount` is present on the PaymentIntent when a checkout fee applies.
@@ -113,7 +129,7 @@ Keep `mahi3d` as the internal demo shop. Create one real **pilot shop** with its
 https://app.trennen.co.nz/?shop=PILOT_SHOP_SLUG
 ```
 
-Test the full pilot flow before sharing it: homepage upload, materials, options, quote review, Stripe test checkout, email confirmation, admin order view, and customer portal view.
+Use `docs/deployment/first-customer-setup.md` as the repeatable first-customer-setup.md operator checklist. Test the full pilot flow before sharing it: self-serve signup, hosted `/q/{shop-slug}` page, iframe embed approval, bank-transfer order, optional Stripe Connect test checkout, email confirmation, admin order view, and customer portal view.
 
 ## Troubleshooting
 

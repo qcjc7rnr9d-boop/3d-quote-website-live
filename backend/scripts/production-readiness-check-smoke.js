@@ -45,6 +45,9 @@ const readyEnv = {
   STRIPE_PUBLISHABLE_KEY: 'pk_live_secret_value_must_never_be_printed',
   STRIPE_CLIENT_ID: 'ca_live_client_id_must_never_be_printed',
   STRIPE_WEBHOOK_SECRET: 'whsec_secret_value_must_never_be_printed',
+  STRIPE_BILLING_STARTER_PRICE_ID: 'price_live_starter_value_must_never_be_printed',
+  STRIPE_BILLING_GROWTH_PRICE_ID: 'price_live_growth_value_must_never_be_printed',
+  STRIPE_BILLING_SCALE_PRICE_ID: 'price_live_scale_value_must_never_be_printed',
   SHOPIFY_API_KEY: 'shopify_key',
   SHOPIFY_API_SECRET: 'shopify_secret',
   SHOPIFY_FILE_STORAGE: 's3',
@@ -61,6 +64,7 @@ const readyEnv = {
   assert.equal(result.ok, false, 'unsafe production config should fail');
   assert(result.errors.some(error => /BASE_URL must use https/i.test(error)));
   assert(result.errors.some(error => /SESSION_SECRET/i.test(error)));
+  assert(result.errors.some(error => /STRIPE_BILLING_STARTER_PRICE_ID/i.test(error)));
 }
 
 {
@@ -73,6 +77,7 @@ const readyEnv = {
     const report = formatProductionReadinessReport(result);
     assert(!report.includes(readyEnv.RESEND_API_KEY), 'report must not print RESEND_API_KEY');
     assert(!report.includes(readyEnv.STRIPE_SECRET_KEY), 'report must not print Stripe secret');
+    assert(!report.includes(readyEnv.STRIPE_BILLING_STARTER_PRICE_ID), 'report must not print Stripe Billing price IDs');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

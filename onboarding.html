@@ -9,10 +9,7 @@
   <meta property="og:description" content="Choose a Trennen plan, add your shop basics, and start quoting faster.">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data:;">
   <link rel="stylesheet" href="assets/shared.css">
   <link rel="stylesheet" href="assets/onboarding.css">
   <script src="assets/csrf.js" defer></script>
@@ -31,6 +28,7 @@
       <a href="index.html">Trennen home</a>
       <a href="#plans">Pricing</a>
       <a href="quote.html?shop=mahi3d&amp;demoStart=1">View demo</a>
+      <a href="admin/setup.html">Setup checklist</a>
       <a href="admin/login.html">Admin login</a>
     </nav>
 
@@ -114,7 +112,7 @@
             <li>Checkout: disabled</li>
             <li>Payments: bank transfer only</li>
           </ul>
-          <button class="plan-select" type="button" data-plan-select="Community">Start free</button>
+          <button class="plan-select" type="button" data-plan-select="community">Start free</button>
         </article>
 
         <article class="plan-card featured" role="listitem" data-plan-card="starter">
@@ -130,7 +128,7 @@
             <li>14-day trial</li>
             <li>Card checkout: 0.5%, capped at NZ$29/month</li>
           </ul>
-          <button class="plan-select" type="button" data-plan-select="Starter">Start Starter trial</button>
+          <button class="plan-select" type="button" data-plan-select="starter">Start Starter trial</button>
         </article>
 
         <article class="plan-card" role="listitem" data-plan-card="growth">
@@ -145,7 +143,7 @@
             <li>Eligible 14-day trial</li>
             <li>Card checkout: 0.5%, capped at NZ$79/month</li>
           </ul>
-          <button class="plan-select" type="button" data-plan-select="Growth">Start Growth trial</button>
+          <button class="plan-select" type="button" data-plan-select="growth">Start Growth trial</button>
         </article>
 
         <article class="plan-card" role="listitem" data-plan-card="scale">
@@ -160,7 +158,7 @@
             <li>Custom support and usage</li>
             <li>Checkout fee: none by default</li>
           </ul>
-          <button class="plan-select" type="button" data-plan-select="Scale">Talk to us</button>
+          <button class="plan-select" type="button" data-plan-select="scale">Talk to us</button>
         </article>
       </div>
 
@@ -173,20 +171,20 @@
     <section class="onboarding-section setup-section" id="shop-setup" aria-labelledby="setupTitle">
       <div class="setup-copy">
         <p class="signup-eyebrow">Shop basics</p>
-        <h2 id="setupTitle">Tell us where to start.</h2>
-        <p>Send the basics and we will help you start in the right place.</p>
+        <h2 id="setupTitle">Create your shop workspace.</h2>
+        <p>Set your owner login, choose your shop URL, and start with bank transfer. You can add card checkout later from admin.</p>
         <div class="handoff-list" aria-label="What happens next">
           <div>
-            <strong>1. Send your setup request</strong>
-            <span>No card details needed here.</span>
+            <strong>1. Create your owner account</strong>
+            <span>You will be signed in as soon as the workspace is created.</span>
           </div>
           <div>
-            <strong>2. Pick how payments start</strong>
-            <span>Use bank transfer first, or add Stripe later.</span>
+            <strong>2. Start with sensible defaults</strong>
+            <span>Starter materials, NZD pricing, GST, shipping, and bank transfer are prefilled.</span>
           </div>
           <div>
-            <strong>3. Build your quote flow</strong>
-            <span>Add materials, pricing, quotes, and checkout as you grow.</span>
+            <strong>3. Finish the launch checklist</strong>
+            <span>Review materials, pricing, branding, shipping, notifications, and optional Stripe setup.</span>
           </div>
         </div>
       </div>
@@ -194,9 +192,9 @@
       <form class="signup-form" id="onboarding-form" novalidate>
         <div class="form-row two">
           <div class="field">
-            <label for="onboarding-name">Name</label>
-            <input id="onboarding-name" name="name" type="text" autocomplete="name" required>
-            <span class="field-error" data-field-error="name" role="alert"></span>
+            <label for="onboarding-owner-name">Your name</label>
+            <input id="onboarding-owner-name" name="ownerName" type="text" autocomplete="name" required>
+            <span class="field-error" data-field-error="ownerName" role="alert"></span>
           </div>
           <div class="field">
             <label for="onboarding-email">Work email</label>
@@ -207,10 +205,42 @@
 
         <div class="form-row two">
           <div class="field">
-            <label for="onboarding-company">Shop or company</label>
-            <input id="onboarding-company" name="company" type="text" autocomplete="organization" required>
-            <span class="field-error" data-field-error="company" role="alert"></span>
+            <label for="onboarding-shop-name">Shop name</label>
+            <input id="onboarding-shop-name" name="shopName" type="text" autocomplete="organization" required>
+            <span class="field-error" data-field-error="shopName" role="alert"></span>
           </div>
+          <div class="field">
+            <label for="onboarding-slug">Shop URL</label>
+            <div class="slug-input-wrap">
+              <span>trennen.co.nz/</span>
+              <input id="onboarding-slug" name="slug" type="text" inputmode="url" autocomplete="off" required>
+            </div>
+            <span class="field-hint" id="slugAvailability" aria-live="polite">Use letters, numbers, and hyphens.</span>
+            <span class="field-error" data-field-error="slug" role="alert"></span>
+          </div>
+        </div>
+
+        <div class="form-row two">
+          <div class="field">
+            <label for="onboarding-plan">Plan</label>
+            <select id="onboarding-plan" name="plan" required>
+              <option value="community">Community - NZ$0/month</option>
+              <option value="starter" selected>Starter - NZ$29 + GST</option>
+              <option value="growth">Growth - NZ$129 + GST</option>
+              <option value="scale">Scale - NZ$899 + GST</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="onboarding-payment">Payments</label>
+            <select id="onboarding-payment" name="paymentPath" required>
+              <option value="bank_transfer_first">Bank transfer first</option>
+              <option value="stripe_later">Add Stripe checkout later</option>
+              <option value="talk_through_checkout">Talk through checkout</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row two">
           <div class="field">
             <label for="onboarding-volume">Monthly quote volume</label>
             <select id="onboarding-volume" name="monthlyQuoteVolume" required>
@@ -220,34 +250,14 @@
               <option value="101-300">101-300</option>
               <option value="300+">300+</option>
             </select>
-            <span class="field-error" data-field-error="volume" role="alert"></span>
-          </div>
-        </div>
-
-        <div class="form-row two">
-          <div class="field">
-            <label for="onboarding-plan">Plan</label>
-            <select id="onboarding-plan" name="plan" required>
-              <option value="Community">Community - NZ$0/month</option>
-              <option value="Starter">Starter - NZ$29 + GST</option>
-              <option value="Growth">Growth - NZ$129 + GST</option>
-              <option value="Scale">Scale - NZ$899 + GST</option>
-            </select>
+            <span class="field-error" data-field-error="monthlyQuoteVolume" role="alert"></span>
           </div>
           <div class="field">
-            <label for="onboarding-payment">Payments</label>
-            <select id="onboarding-payment" name="paymentPath" required>
-              <option value="Bank transfer first">Bank transfer first</option>
-              <option value="Add Stripe checkout later">Add Stripe checkout later</option>
-              <option value="Talk through checkout">Talk through checkout</option>
-            </select>
+            <label for="onboarding-password">Password</label>
+            <input id="onboarding-password" name="password" type="password" autocomplete="new-password" required>
+            <span class="field-hint">At least 8 characters with uppercase, number, and symbol.</span>
+            <span class="field-error" data-field-error="password" role="alert"></span>
           </div>
-        </div>
-
-        <div class="field">
-          <label for="onboarding-message">What should Trennen help with first?</label>
-          <textarea id="onboarding-message" name="message" rows="5" required placeholder="Example: faster replies, file uploads, material pricing, checkout, or order tracking."></textarea>
-          <span class="field-error" data-field-error="message" role="alert"></span>
         </div>
 
         <div class="field hp-field" aria-hidden="true">
@@ -256,13 +266,13 @@
         </div>
 
         <div class="form-status success" id="onboarding-success" hidden>
-          Your setup request is in. We will use it to prepare the right starting path.
+          Your shop is ready. Opening your setup checklist...
         </div>
         <div class="form-status failure" id="onboarding-failure" hidden>
-          Something went wrong. Please try again, or use the form on the homepage.
+          Something went wrong. Please check the fields and try again.
         </div>
 
-        <button class="submit-action" type="submit">Start setup</button>
+        <button class="submit-action" type="submit">Create shop</button>
         <p class="form-fine-print">No hidden fees. No uncapped revenue share. Start with bank transfer and add checkout when it helps.</p>
       </form>
     </section>

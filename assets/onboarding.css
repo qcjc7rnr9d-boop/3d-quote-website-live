@@ -625,6 +625,32 @@ main {
   outline: none;
 }
 
+.slug-input-wrap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 48px;
+  color: var(--text-muted);
+  border: 1px solid rgba(22, 25, 21, 0.18);
+  border-radius: var(--radius-tight);
+  background: rgba(255, 255, 255, 0.76);
+  overflow: hidden;
+}
+
+.slug-input-wrap span {
+  padding: 0 0 0 13px;
+  font-size: 13px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.slug-input-wrap input {
+  min-height: 46px;
+  padding-left: 4px;
+  border: 0;
+  background: transparent;
+}
+
 .field textarea {
   min-height: 126px;
   resize: vertical;
@@ -633,9 +659,25 @@ main {
 
 .field input:focus,
 .field select:focus,
-.field textarea:focus {
+.field textarea:focus,
+.slug-input-wrap:focus-within {
   border-color: rgba(30, 118, 88, 0.62);
   box-shadow: 0 0 0 4px rgba(89, 192, 149, 0.16);
+}
+
+.field-hint {
+  min-height: 17px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.field-hint.is-success {
+  color: var(--accent-strong);
+}
+
+.field-hint.is-error {
+  color: var(--danger);
 }
 
 .field-error {
