@@ -65,7 +65,6 @@ function stripeErrorSummary(err) {
     type: err?.type || null,
     code: err?.code || null,
     message: err?.message || 'Stripe request failed.',
-    requestLogUrl: err?.raw?.request_log_url || null,
     requestId: err?.requestId || err?.raw?.requestId || null,
     statusCode: err?.statusCode || null,
   };
@@ -533,7 +532,6 @@ router.get('/connect-url', requireShopAuth, async (req, res) => {
       return res.status(409).json({
         error: 'Stripe Connect is not activated for this platform account yet. Finish Connect setup in the same Stripe dashboard/sandbox as the server API key, then run npm run stripe-connect:smoke on Lightsail.',
         code: 'CONNECT_PLATFORM_NOT_REGISTERED',
-        request_log_url: summary.requestLogUrl,
       });
     }
 

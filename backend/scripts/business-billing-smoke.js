@@ -184,6 +184,12 @@ try {
     assert.ok(stripeRoutes.includes(code), `routes/stripe.js should expose ${code}`);
   }
   assert.ok(stripeRoutes.includes('stripeErrorSummary(err)'), 'Stripe routes should log sanitized Stripe errors');
+  assert.ok(!stripeRoutes.includes('requestLogUrl'), 'Stripe logs must not include request log URLs');
+  assert.ok(!stripeRoutes.includes('request_log_url'), 'Stripe API responses must not expose request log URLs');
+
+  const stripeConnectSmoke = readFileSync('scripts/stripe-connect-platform-smoke.js', 'utf8');
+  assert.ok(!stripeConnectSmoke.includes('requestLogUrl'), 'Stripe Connect smoke output must not include request log URLs');
+  assert.ok(!stripeConnectSmoke.includes('request_log_url'), 'Stripe Connect smoke output must not expose request log URLs');
 
   const platformPayments = readFileSync('lib/platform-payments.js', 'utf8');
   assert.ok(platformPayments.includes("billing_mode: 'free_pilot'"), 'platform payment config should declare free pilot billing mode');
@@ -211,6 +217,14 @@ try {
   assert.ok(!platformAdmin.includes('<option value="growth"'), 'platform admin should not expose Growth during free pilot');
   assert.ok(!platformAdmin.includes('<option value="scale"'), 'platform admin should not expose Scale during free pilot');
   assert.ok(platformAdmin.includes('data-tab="plans"'), 'platform admin should expose plan editor tab');
+
+  const adminOrders = readFileSync('../admin/orders.html', 'utf8');
+  assert.ok(!adminOrders.includes("return '£'"), 'admin orders must not hard-code GBP currency symbols');
+  assert.ok(adminOrders.includes("currency: 'NZD'"), 'admin orders must format pilot totals as NZD');
+
+  const adminCustomers = readFileSync('../admin/customers.html', 'utf8');
+  assert.ok(!adminCustomers.includes("return '£'"), 'admin customers must not hard-code GBP currency symbols');
+  assert.ok(adminCustomers.includes("currency: 'NZD'"), 'admin customers must format pilot totals as NZD');
 
   console.log('Business billing smoke checks passed.');
 } finally {

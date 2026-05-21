@@ -76,7 +76,6 @@ try {
     type: err.type || null,
     code: err.code || null,
     message: err.message || 'Stripe Connect smoke failed.',
-    requestLogUrl: err.raw?.request_log_url || null,
     requestId: err.requestId || err.raw?.requestId || null,
     statusCode: err.statusCode || null,
   });
