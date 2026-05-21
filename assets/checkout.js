@@ -238,6 +238,9 @@
       quantity: Number(input.quantity ?? selected.quantity) || 1,
       shipping: input.shipping ?? (selected.shipping ? {
         id: selected.shipping.id,
+        methodId: selected.shipping.methodId || selected.shipping.id,
+        bandId: selected.shipping.bandId || null,
+        bandLabel: selected.shipping.bandLabel || null,
         label: selected.shipping.label || 'Shipping',
         price: Number(selected.shipping.finalPrice ?? selected.shipping.price) || 0,
       } : null),
@@ -252,25 +255,48 @@
     };
   }
 
+  function normaliseCartShipping(input = null) {
+    if (!input) return null;
+    const id = input.id ?? input.methodId ?? input.shippingId;
+    if (!id) return null;
+    return {
+      id: String(id),
+      methodId: String(input.methodId || id),
+      bandId: input.bandId || null,
+      bandLabel: input.bandLabel || null,
+      label: input.label || input.service || input.carrier || 'Shipping',
+      price: Number(input.finalPrice ?? input.price) || 0,
+      package: input.package || null,
+    };
+  }
+
   function normaliseCart(input, fallbackShopSlug) {
     if (!input) return { shopSlug: fallbackShopSlug, items: [], totalNzd: 0, totalCents: 0, currency: 'NZD' };
     const rawItems = Array.isArray(input.items) && input.items.length
       ? input.items
       : ((input.materialId || input.file || input.quoteSnapshot) ? [input] : []);
     const items = rawItems.map((item, index) => normaliseCartItem({ ...item, shopSlug: item.shopSlug || input.shopSlug || fallbackShopSlug }, index));
+    const rootShipping = normaliseCartShipping(input.shipping || (input.shippingId ? { id: input.shippingId } : null))
+      || rawItems.map(item => normaliseCartShipping(item.shipping || item.quoteSnapshot?.selected?.shipping || (item.shippingId ? { id: item.shippingId, price: item.shippingNzd } : null))).find(Boolean)
+      || null;
     return {
       shopSlug: input.shopSlug || fallbackShopSlug,
       items,
+      shipping: rootShipping,
+      shippingId: rootShipping?.id || null,
+      shippingOptions: Array.isArray(input.shippingOptions) ? input.shippingOptions : [],
+      package: input.package || rootShipping?.package || null,
       currency: input.currency || items[0]?.currency || 'NZD',
-      totalNzd: Number(input.totalNzd) || sum(items, 'totalNzd'),
+      itemsNzd: Number(input.itemsNzd) || sum(items, 'itemsNzd'),
+      shippingNzd: Number(input.shippingNzd ?? rootShipping?.price) || 0,
+      taxNzd: Number(input.taxNzd) || sum(items, 'taxNzd'),
+      totalNzd: Number(input.totalNzd) || (sum(items, 'totalNzd') + (Number(input.shippingNzd ?? rootShipping?.price) || 0)),
       totalCents: Number(input.totalCents) || items.reduce((total, item) => total + (Number(item.totalCents) || Math.round((Number(item.totalNzd) || 0) * 100)), 0),
       savedAt: input.savedAt || new Date().toISOString(),
     };
   }
 
   function persistCart() {
-    cart.totalNzd = sum(cart.items, 'totalNzd');
-    cart.totalCents = cart.items.reduce((total, item) => total + (Number(item.totalCents) || Math.round((Number(item.totalNzd) || 0) * 100)), 0);
     try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
   }
 
@@ -407,54 +433,106 @@
     }
   }
 
-  function quotePayload(item) {
-    const file = item.file || {};
+  function cartPreviewPayload() {
     return {
       shopSlug,
-      materialId: item.materialId,
-      materialName: item.materialName || (typeof item.material === 'string' ? item.material : item.material?.name) || item.quoteSnapshot?.selected?.material?.name || null,
-      models: item.models?.length ? item.models : file.models,
-      volumeCm3: file.volumeCm3 ?? item.volumeCm3 ?? item.quoteSnapshot?.selected?.volumeCm3,
-      dimensions: file.dimensions ?? item.dimensions ?? item.quoteSnapshot?.selected?.dimensions ?? null,
-      colourId: item.colorId || null,
-      colour: item.colorName || null,
-      finishId: item.finishId || null,
-      finish: item.finishLabel || item.finish || null,
-      infillTierId: item.infillTierId || null,
-      quantity: item.quantity,
-      shippingId: item.shipping?.id || null,
+      items: cart.items,
+      shippingId: cart.shipping?.methodId || cart.shipping?.id || null,
     };
+  }
+
+  function applyCartPreview(data) {
+    const next = data?.cart || data;
+    if (!next?.items) return;
+    cart = normaliseCart(next, shopSlug);
+  }
+
+  function selectedShippingOption(id) {
+    return (cart.shippingOptions || []).find(option => {
+      const optionId = option.methodId || option.id;
+      return String(optionId) === String(id);
+    }) || null;
   }
 
   async function refreshCheckoutQuote() {
     quoteValidated = false;
     clearReviewValidationError();
     updatePayButton('Validating price...');
-    for (const item of cart.items) {
-      const res = await fetch('/api/customer/quote-preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(quotePayload(item)),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) {
-        if (data.code === 'MODEL_TOO_LARGE' || data.code === 'MODEL_DIMENSIONS_REQUIRED') {
-          redirectToMaterialSelection(data.error || 'This model is too large for the selected material.');
-          const err = new Error(data.error || 'This model is too large for the selected material.');
-          err.redirected = true;
-          throw err;
-        }
-        const err = new Error(data.error || 'Could not refresh checkout total.');
-        err.checkoutValidation = true;
+    const res = await fetch('/api/customer/cart-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cartPreviewPayload()),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      if (data.code === 'MODEL_TOO_LARGE' || data.code === 'MODEL_DIMENSIONS_REQUIRED') {
+        redirectToMaterialSelection(data.error || 'This model is too large for the selected material.');
+        const err = new Error(data.error || 'This model is too large for the selected material.');
+        err.redirected = true;
         throw err;
       }
-      applyQuoteSnapshotToItem(item, data);
+      if (data.quote?.cart) applyCartPreview(data.quote.cart);
+      const err = new Error(data.error || 'Could not refresh checkout total.');
+      err.checkoutValidation = true;
+      throw err;
     }
+    applyCartPreview(data);
     persistCart();
     await loadCheckoutSettings();
-    quoteValidated = true;
+    quoteValidated = Boolean(cart.shipping?.id);
     renderCart();
     return cart;
+  }
+
+  function etaText(option) {
+    const min = Number(option?.est_days_min);
+    const max = Number(option?.est_days_max);
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return '';
+    if (min === max) return min === 1 ? 'Next business day' : `${min} business days`;
+    return `${min}-${max} business days`;
+  }
+
+  function packageSummaryText(pkg = cart.package || {}) {
+    const weight = Number(pkg.estimatedWeightKg);
+    const longest = Number(pkg.maxLongestSideMm);
+    const parts = [];
+    if (Number.isFinite(weight) && weight > 0) parts.push(`${weight.toFixed(weight < 1 ? 2 : 1)} kg est.`);
+    if (Number.isFinite(longest) && longest > 0) parts.push(`${Math.round(longest * 10) / 10} mm max side`);
+    return parts.length ? parts.join(' · ') : 'Package estimate';
+  }
+
+  function renderCheckoutShipping() {
+    const block = document.getElementById('checkoutShippingBlock');
+    const optionsEl = document.getElementById('checkoutShippingOptions');
+    const emptyEl = document.getElementById('checkoutShippingEmpty');
+    const errorEl = document.getElementById('checkoutShippingError');
+    const summaryEl = document.getElementById('packageSummary');
+    if (!block || !optionsEl) return;
+
+    const options = Array.isArray(cart.shippingOptions) ? cart.shippingOptions : [];
+    const selectedId = cart.shipping?.methodId || cart.shipping?.id || null;
+    if (summaryEl) summaryEl.textContent = packageSummaryText();
+    block.classList.toggle('invalid', !selectedId);
+    if (errorEl) {
+      errorEl.textContent = options.length
+        ? 'Choose one shipping option for the whole order before payment.'
+        : 'No shipping option supports this order size or weight.';
+      errorEl.classList.toggle('show', !selectedId);
+    }
+    if (emptyEl) emptyEl.classList.toggle('show', !options.length);
+
+    optionsEl.innerHTML = options.map(option => {
+      const id = option.methodId || option.id;
+      const selected = selectedId && String(selectedId) === String(id);
+      const name = option.label || [option.carrier, option.service].filter(Boolean).join(' · ') || 'Shipping';
+      const detail = [option.bandLabel, etaText(option), option.recommended ? 'Recommended' : ''].filter(Boolean).join(' · ');
+      const price = Number(option.price) > 0 ? fmtNzd(option.price) : 'Free';
+      return `<label class="checkout-ship-option${selected ? ' selected' : ''}">
+        <input type="radio" name="checkoutShipping" value="${escapeHtml(id)}" ${selected ? 'checked' : ''}>
+        <span><strong>${escapeHtml(name)}</strong>${detail ? `<span>${escapeHtml(detail)}</span>` : ''}</span>
+        <span class="checkout-ship-price">${escapeHtml(price)}</span>
+      </label>`;
+    }).join('');
   }
 
   function renderCart() {
@@ -468,7 +546,6 @@
         const finishText = [item.finishLabel || item.finish || 'Standard', finishDetails].filter(Boolean).join(' · ');
         const infillText = item.infillLabel || 'Standard';
         const quantityText = models.length > 1 ? 'Per model' : `x ${Math.max(1, parseInt(item.quantity, 10) || 1)}`;
-        const shippingLabel = item.shipping?.label || (Number(item.shippingNzd) > 0 ? 'Shipping' : 'No shipping selected');
         return `<section class="cart-item-review" data-cart-item-id="${escapeHtml(item.id)}">
           <div class="cart-item-head">
             <div>
@@ -523,19 +600,20 @@
           </div>
           <div class="cart-item-section cart-item-money">
             <div class="cart-item-money-row"><span>Subtotal</span><strong>${fmtNzd(item.itemsNzd)}</strong></div>
-            <div class="cart-item-money-row"><span>${escapeHtml(shippingLabel)}</span><strong>${Number(item.shippingNzd) > 0 ? fmtNzd(item.shippingNzd) : 'Free'}</strong></div>
             ${Number(item.taxNzd) > 0 ? `<div class="cart-item-money-row"><span>Tax</span><strong>${fmtNzd(item.taxNzd)}</strong></div>` : ''}
-            <div class="cart-item-money-row"><span>Group total</span><strong>${fmtNzd(item.totalNzd)}</strong></div>
+            <div class="cart-item-money-row"><span>Group total before shipping</span><strong>${fmtNzd(item.totalNzd)}</strong></div>
           </div>
           <div class="cart-item-actions"><button class="remove-cart-item" type="button" data-remove-cart-item="${escapeHtml(item.id)}">Remove group</button></div>
         </section>`;
       }).join('');
     }
 
-    const subtotalNzd  = sum(cart.items, 'itemsNzd');
-    const shippingNzd  = sum(cart.items, 'shippingNzd');
-    const taxNzd       = sum(cart.items, 'taxNzd');
-    totalNzd           = sum(cart.items, 'totalNzd') || (subtotalNzd + shippingNzd + taxNzd);
+    renderCheckoutShipping();
+
+    const subtotalNzd  = Number(cart.itemsNzd) || sum(cart.items, 'itemsNzd');
+    const shippingNzd  = Number(cart.shippingNzd) || Number(cart.shipping?.price) || 0;
+    const taxNzd       = Number(cart.taxNzd) || sum(cart.items, 'taxNzd');
+    totalNzd           = Number(cart.totalNzd) || (sum(cart.items, 'totalNzd') + shippingNzd);
 
     const unitRow = document.getElementById('priceUnitRow');
     if (unitRow) unitRow.style.display = 'none';
@@ -543,7 +621,9 @@
     document.getElementById('priceSubtotal').textContent = fmtNzd(subtotalNzd);
 
     document.getElementById('priceShippingLabel').textContent = 'Shipping';
-    document.getElementById('priceShipping').textContent = shippingNzd > 0 ? fmtNzd(shippingNzd) : 'Free';
+    document.getElementById('priceShipping').textContent = cart.shipping?.id
+      ? (shippingNzd > 0 ? fmtNzd(shippingNzd) : 'Free')
+      : 'Choose shipping';
 
     const taxRow = document.getElementById('priceTaxRow');
     if (taxNzd > 0) {
@@ -578,6 +658,28 @@
       window.location.href = shopHref('quote.html');
       return;
     }
+    renderCart();
+    refreshCheckoutQuote().catch(err => {
+      if (err.redirected) return;
+      if (err.checkoutValidation) showReviewValidationError(err.message);
+      document.getElementById('card-errors').textContent = err.message || 'Could not refresh checkout total.';
+    });
+  });
+
+  document.getElementById('checkoutShippingOptions')?.addEventListener('change', e => {
+    const radio = e.target.closest('input[name="checkoutShipping"]');
+    if (!radio) return;
+    const option = selectedShippingOption(radio.value);
+    if (!option) return;
+    cart.shipping = normaliseCartShipping({
+      ...option,
+      id: option.methodId || option.id,
+      label: option.label || [option.carrier, option.service].filter(Boolean).join(' · ') || 'Shipping',
+      package: cart.package || null,
+    });
+    cart.shippingId = cart.shipping.id;
+    quoteValidated = false;
+    persistCart();
     renderCart();
     refreshCheckoutQuote().catch(err => {
       if (err.redirected) return;

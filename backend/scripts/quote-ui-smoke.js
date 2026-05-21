@@ -144,7 +144,7 @@ try {
   await page.waitForFunction(() => {
     const price = document.querySelector('#priceInt')?.textContent?.trim() || '';
     const helper = document.querySelector('#priceHelper')?.textContent || '';
-    return price && price !== '—' && /Shipping not included/.test(helper);
+    return price && price !== '—' && /Shipping calculated at checkout/.test(helper);
   }, null, { timeout: 7000 });
   const noShippingPreview = await page.evaluate(() => ({
     price: `${document.querySelector('#priceSymbol')?.textContent || ''}${document.querySelector('#priceInt')?.textContent || ''}${document.querySelector('#priceDec')?.textContent || ''}`,
@@ -152,18 +152,15 @@ try {
     checkoutDisabled: document.querySelector('#checkoutCartBtn')?.getAttribute('aria-disabled') || '',
     cartCount: JSON.parse(localStorage.getItem('cart') || '{}').items?.length || 0,
   }));
-  assert(noShippingPreview.price !== '$—', 'Quote review should show a backend price before shipping is selected');
-  assert(/Shipping not included/.test(noShippingPreview.helper), `Quote helper should say shipping is not included, got ${noShippingPreview.helper}`);
-  assert(noShippingPreview.checkoutDisabled === 'true', 'Checkout should remain disabled before explicit shipping selection');
-  assert(noShippingPreview.cartCount === 0, `Preview-only quote should not auto-save a checkout cart item, got ${noShippingPreview.cartCount}`);
+  assert(noShippingPreview.price !== '$—', 'Quote review should show a backend item price before checkout shipping is selected');
+  assert(/Shipping calculated at checkout/.test(noShippingPreview.helper), `Quote helper should say shipping is calculated at checkout, got ${noShippingPreview.helper}`);
+  assert(noShippingPreview.checkoutDisabled === 'false', 'Checkout should be enabled once item/material options are valid');
+  assert(noShippingPreview.cartCount === 1, `Valid quote group should auto-save to cart before checkout shipping, got ${noShippingPreview.cartCount}`);
   await page.click('#saveQuoteBtn');
-  await page.waitForTimeout(250);
-  const noShippingBlocked = await page.evaluate(() => ({
-    toast: document.querySelector('#toast')?.textContent || '',
-    shippingInvalid: document.querySelector('#shippingBlock')?.classList.contains('invalid') || false,
-  }));
-  assert(/shipping/i.test(noShippingBlocked.toast), `Checkout without shipping should show a shipping validation toast, got ${noShippingBlocked.toast}`);
-  assert(noShippingBlocked.shippingInvalid, 'Checkout without shipping should highlight the shipping section');
+  await page.waitForSelector('#saveQuoteAuthModal:not(.hidden)', { timeout: 5000 });
+  const saveModalText = await page.locator('#saveQuoteAuthModal').innerText();
+  assert(/Sign in or create account/.test(saveModalText), 'Save quote should prompt for account without requiring shipping first');
+  await page.click('#saveQuoteAuthCancel');
 
   const stlBase64 = makeStlBuffer().toString('base64');
   await page.evaluate(async ({ encoded, material, colour, finish, infill, shipping }) => {

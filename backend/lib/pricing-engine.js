@@ -39,7 +39,7 @@ function money(value) {
   return fromCents(toCents(value));
 }
 
-function normaliseTaxRate(value) {
+export function normaliseTaxRate(value) {
   const n = toNumber(value, 0);
   if (n <= 0) return 0;
   return n > 1 ? n / 100 : n;
@@ -99,6 +99,9 @@ function publicShipping(shipping) {
   if (!shipping) return null;
   return {
     id: shipping.id,
+    methodId: shipping.methodId || shipping.id,
+    bandId: shipping.bandId || null,
+    bandLabel: shipping.bandLabel || null,
     label: shipping.label,
     price: shipping.originalPrice,
     finalPrice: shipping.price,
@@ -124,7 +127,33 @@ function publicModel(model) {
   };
 }
 
-export function normaliseShippingZones(rawZones = []) {
+function optionalPositiveNumber(value) {
+  const n = toNumber(value, NaN);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function normaliseShippingBand(raw = {}, index = 0, fallbackPrice = 0) {
+  const label = String(raw.label || raw.name || (index === 0 ? 'Standard parcel' : `Band ${index + 1}`)).trim();
+  const price = Math.max(0, money(raw.price ?? raw.rate ?? fallbackPrice));
+  return {
+    id: String(raw.id || `band_${index + 1}`),
+    label,
+    price,
+    maxWeightKg: optionalPositiveNumber(raw.maxWeightKg ?? raw.max_weight_kg ?? raw.weight_kg),
+    maxLongestMm: optionalPositiveNumber(raw.maxLongestMm ?? raw.max_longest_mm ?? raw.longest_mm),
+    maxVolumeCm3: optionalPositiveNumber(raw.maxVolumeCm3 ?? raw.max_volume_cm3 ?? raw.volume_cm3),
+  };
+}
+
+function shippingBandMatches(band, pkg = null) {
+  if (!pkg) return true;
+  if (band.maxWeightKg && toNumber(pkg.estimatedWeightKg, 0) > band.maxWeightKg) return false;
+  if (band.maxLongestMm && toNumber(pkg.maxLongestSideMm, 0) > band.maxLongestMm) return false;
+  if (band.maxVolumeCm3 && toNumber(pkg.packageVolumeCm3, 0) > band.maxVolumeCm3) return false;
+  return true;
+}
+
+export function normaliseShippingZones(rawZones = [], packageMetrics = null) {
   return (Array.isArray(rawZones) ? rawZones : [])
     .filter(o => o && o.active !== false)
     .map((o, index) => {
@@ -136,18 +165,38 @@ export function normaliseShippingZones(rawZones = []) {
         : (carrier || service || 'Shipping');
       const minDays = toNumber(o.days_min ?? o.est_days_min, null);
       const maxDays = toNumber(o.days_max ?? o.est_days_max, minDays);
+      const basePrice = Math.max(0, money(o.price ?? o.rate ?? 0));
+      const bands = (Array.isArray(o.bands) ? o.bands : [])
+        .filter(b => b && b.active !== false)
+        .map((b, bandIndex) => normaliseShippingBand(b, bandIndex, basePrice))
+        .sort((a, b) => {
+          if (a.maxWeightKg !== b.maxWeightKg) return toNumber(a.maxWeightKg, 999999) - toNumber(b.maxWeightKg, 999999);
+          if (a.maxLongestMm !== b.maxLongestMm) return toNumber(a.maxLongestMm, 999999) - toNumber(b.maxLongestMm, 999999);
+          if (a.maxVolumeCm3 !== b.maxVolumeCm3) return toNumber(a.maxVolumeCm3, 999999) - toNumber(b.maxVolumeCm3, 999999);
+          return a.price - b.price;
+        });
+      const selectedBand = bands.length
+        ? (packageMetrics ? bands.find(b => shippingBandMatches(b, packageMetrics)) : bands[0])
+        : null;
+      if (bands.length && packageMetrics && !selectedBand) return null;
+      const price = selectedBand ? selectedBand.price : basePrice;
       return {
         id,
+        methodId: id,
+        bandId: selectedBand?.id || null,
+        bandLabel: selectedBand?.label || null,
         label,
         carrier,
         service,
-        price: Math.max(0, money(o.price ?? o.rate ?? 0)),
-        originalPrice: Math.max(0, money(o.price ?? o.rate ?? 0)),
+        price,
+        originalPrice: price,
         est_days_min: minDays,
         est_days_max: maxDays,
         recommended: !!o.recommended,
+        bands,
       };
     })
+    .filter(Boolean)
     .sort((a, b) => {
       if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
       if (a.price !== b.price) return a.price - b.price;
@@ -378,7 +427,7 @@ function includedPlatformFeeCents(customerTotalCents, platformFeePercent) {
   return Math.max(0, customerTotalCents - Math.floor(customerTotalCents * (1 - percent / 100)));
 }
 
-function grossUpForIncludedPlatformFee(sellerNetTotalCents, platformFeePercent) {
+export function grossUpForIncludedPlatformFee(sellerNetTotalCents, platformFeePercent) {
   const percent = Math.max(0, Math.min(50, toNumber(platformFeePercent, 0)));
   if (percent <= 0 || sellerNetTotalCents <= 0) {
     return {

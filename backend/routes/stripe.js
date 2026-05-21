@@ -409,9 +409,9 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       cart.items.length > 1 ? 'Multiple' : firstItem?.colorName || null,
       cart.items.length > 1 ? 'Multiple' : firstItem?.finishLabel || null,
       cart.items.length > 1 ? 1 : firstItem?.quantity || 1,
-      cart.items.reduce((sum, item) => sum + Number(item.itemsNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.shippingNzd || 0), 0),
+      cart.itemsNzd ?? cart.items.reduce((sum, item) => sum + Number(item.itemsNzd || 0), 0),
+      cart.taxNzd ?? cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
+      cart.shippingNzd ?? 0,
       cart.totalNzd, intent.id, publicToken,
       paymentProcessingFeeCents, feeCents, customerPayCents,
     );

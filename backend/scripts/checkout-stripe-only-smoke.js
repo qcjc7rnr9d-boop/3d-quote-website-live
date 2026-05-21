@@ -63,12 +63,20 @@ assert(
   'Checkout is missing the richer grouped order-review styles'
 );
 assert(
+  checkoutHtml.includes('id="checkoutShippingBlock"') && checkoutHtml.includes('id="checkoutShippingOptions"'),
+  'Checkout is missing the cart-level shipping selector'
+);
+assert(
   checkoutHtml.includes('id="reviewValidationError"'),
   'Checkout is missing the order-review validation error container'
 );
 assert(
   checkoutJs.includes('Material group') && checkoutJs.includes('Group total') && checkoutJs.includes('modelVolumeText'),
   'Checkout script must render full material groups with file and total detail'
+);
+assert(
+  checkoutJs.includes('/api/customer/cart-preview') && checkoutJs.includes('cart.shippingOptions'),
+  'Checkout script must price the full cart and render one order-level shipping selector'
 );
 assert(
   checkoutJs.includes('showReviewValidationError'),
