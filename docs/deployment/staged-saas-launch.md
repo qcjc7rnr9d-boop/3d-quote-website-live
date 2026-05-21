@@ -150,7 +150,34 @@ Keep `mahi3d` as the internal demo shop. Create one real **pilot shop** with its
 https://app.trennen.co.nz/?shop=PILOT_SHOP_SLUG
 ```
 
-Test the full pilot flow before sharing it: homepage upload, materials, options, quote review, Stripe test checkout, email confirmation, admin order view, and customer portal view.
+Use the repeatable Trennen rehearsal seed for the first controlled pilot:
+
+```bash
+cd /home/ubuntu/3d-quote-website-live/backend
+npm run migrate
+PILOT_OWNER_PASSWORD='set-a-strong-temporary-password' \
+PILOT_CUSTOMER_PASSWORD='set-a-strong-temporary-password' \
+PILOT_STRIPE_ACCOUNT_ID='acct_test_connected_account_id' \
+PILOT_STRIPE_READY=1 \
+npm run pilot:seed:trennen
+pm2 restart 3d-quote-website --update-env
+pm2 save
+npm run pilot:rehearsal:smoke
+```
+
+If `PILOT_STRIPE_ACCOUNT_ID` is omitted, the seed still creates the shop, materials, pricing, shipping, customer, and baseline order, but checkout should stay blocked with `NO_CONNECTED_ACCOUNT` until the admin Payments page completes Stripe Connect onboarding.
+
+The controlled pilot URL and embed snippet are:
+
+```text
+https://app.trennen.co.nz/?shop=trennen-pilot
+```
+
+```html
+<script src="https://app.trennen.co.nz/embed/v1/widget.js" data-shop="trennen-pilot"></script>
+```
+
+Test the full pilot flow before sharing it: homepage upload, materials, options, quote review, Stripe test checkout, email confirmation, admin order view, and customer portal view. After the rehearsal passes, tag the tested commit and take a Lightsail snapshot plus the backup below before inviting the pilot customer.
 
 ## Troubleshooting
 
