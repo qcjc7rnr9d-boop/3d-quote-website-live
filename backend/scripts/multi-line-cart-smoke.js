@@ -22,7 +22,7 @@ try {
   const addAnotherHandler = quoteHtml.match(/\$\('addAnotherBtn'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*{([\s\S]*?)\n\s*}\);/)?.[1] || '';
   assert(addAnotherHandler, 'quote page must define add-another click handler');
   assert(!addAnotherHandler.includes("localStorage.removeItem('cart')"), 'add-another flow must not clear cart');
-  assert(quoteHtml.includes('quote.html?shop='), 'add-another flow must return to the quote upload prompt');
+  assert(quoteHtml.includes('index.html?shop='), 'add-another flow must return to the home upload prompt');
   assert(quoteHtml.includes('&newGroup=1&promptUpload=1'), 'add-another flow must preserve prompt params');
 
   const shop = db.prepare("SELECT * FROM shops WHERE slug = 'mahi3d'").get();

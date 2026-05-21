@@ -2987,7 +2987,7 @@
   // cart, so checkout can proceed without a separate manual cart step.
   $('addAnotherBtn')?.addEventListener('click', () => {
     clearCurrentQuoteGroup();
-    window.location.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`;
+    window.location.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`;
   });
 
   $('checkoutCartBtn')?.addEventListener('click', e => {

@@ -54,7 +54,7 @@ assert(quoteHtml.includes('previewModelById'), 'Quote page must expose clickable
 assert(quoteHtml.includes('aria-current'), 'Quote model rows must expose selected state');
 assert(quoteHtml.includes('promptUpload'), 'Quote page must support upload prompt routing');
 assert(quoteHtml.includes('newGroup=1&promptUpload=1'), 'Add another group must route back to an upload prompt with prompt params');
-assert(quoteHtml.includes('quote.html?shop='), 'Add another group must route back to the quote upload prompt');
+assert(quoteHtml.includes('index.html?shop='), 'Add another group must route back to the home upload prompt');
 assert(quoteHtml.includes('data-home-link'), 'Quote page logo should be wired as a home link');
 assert(materialsHtml.includes('data-home-link'), 'Materials page logo should be wired as a home link');
 assert(optionsHtml.includes('data-home-link'), 'Options page logo should be wired as a home link');
@@ -352,16 +352,16 @@ try {
   }, { material, colour, finish, infill, shipping });
   await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'networkidle' });
   await page.click('#addAnotherBtn');
-  await page.waitForURL(/quote\.html\?shop=mahi3d/, { timeout: 7000 });
+  await page.waitForURL(/index\.html\?shop=mahi3d/, { timeout: 7000 });
   await page.waitForSelector('#newUploadBanner.show', { timeout: 10000 });
   await page.waitForTimeout(250);
   const newGroupState = await page.evaluate(() => ({
     cartCount: JSON.parse(localStorage.getItem('cart') || '{}').items?.length || 0,
     formFile: localStorage.getItem('form_file'),
     formSelection: localStorage.getItem('form_selection'),
-    uploadDisplay: getComputedStyle(document.querySelector('#viewerEmpty')).display,
-    emptyTitle: document.querySelector('#viewerEmptyTitle')?.textContent || '',
-    emptyCopy: document.querySelector('#viewerEmptyCopy')?.textContent || '',
+    uploadDisplay: getComputedStyle(document.querySelector('#uploadZone')).display,
+    fileCardVisible: document.querySelector('#fileCard')?.classList.contains('visible') || false,
+    headline: document.querySelector('.hero h1')?.textContent?.replace(/\s+/g, ' ').trim() || '',
     activeElementId: document.activeElement?.id || '',
     bannerText: document.querySelector('#newUploadBanner')?.innerText || '',
     url: location.href,
@@ -369,9 +369,9 @@ try {
   assert(newGroupState.cartCount === 2, `Add-another flow should preserve the existing cart and auto-saved current group, got ${newGroupState.cartCount} items`);
   assert(newGroupState.formFile === null, 'Add-another flow should clear active form_file');
   assert(newGroupState.formSelection === null, 'Add-another flow should clear active form_selection');
-  assert(newGroupState.uploadDisplay !== 'none', `Quote upload prompt should be visible, got ${newGroupState.uploadDisplay}`);
-  assert(newGroupState.emptyTitle === 'Upload the next model group', `Add-another flow should keep next-group title, got ${newGroupState.emptyTitle}`);
-  assert(/same model again/i.test(newGroupState.emptyCopy), 'Add-another flow should keep next-group helper copy');
+  assert(newGroupState.uploadDisplay !== 'none', `Home upload prompt should be visible, got ${newGroupState.uploadDisplay}`);
+  assert(newGroupState.fileCardVisible === false, 'Home upload prompt should not show the previous file card');
+  assert(/Your 3D file,\s*priced instantly/i.test(newGroupState.headline), `Add-another flow should land on the public upload home, got ${newGroupState.headline}`);
   assert(/New uploads/.test(newGroupState.bannerText), 'New uploads banner did not render');
 
   await page.setInputFiles('#fileInput', {
@@ -379,6 +379,17 @@ try {
     mimeType: 'model/stl',
     buffer: makeStlBuffer(),
   });
+  await page.waitForSelector('#fileCard.visible', { timeout: 7000 });
+  await page.waitForFunction(() => /Next material group\.stl/.test(document.querySelector('#uploadedModelList')?.innerText || ''), null, { timeout: 7000 });
+  const homeUploadState = await page.evaluate(() => ({
+    cartCount: JSON.parse(localStorage.getItem('cart') || '{}').items?.length || 0,
+    file: JSON.parse(localStorage.getItem('form_file') || 'null'),
+    continueHref: document.querySelector('#continueBtn')?.getAttribute('href') || '',
+  }));
+  assert(homeUploadState.cartCount === 2, `Home upload should preserve existing material groups, got ${homeUploadState.cartCount} items`);
+  assert(homeUploadState.file?.models?.[0]?.name === 'Next material group.stl', 'Home upload did not save the new model group');
+  assert(homeUploadState.continueHref === 'materials.html?shop=mahi3d&newGroup=1', `Home upload should preserve new-group material link, got ${homeUploadState.continueHref}`);
+  await page.click('#continueBtn');
   await page.waitForURL(/materials\.html\?shop=mahi3d&newGroup=1/, { timeout: 7000 });
   await page.waitForFunction(() => /Next material group\.stl/.test(document.querySelector('#modelGroupPanel')?.innerText || ''), null, { timeout: 7000 });
   const materialArrival = await page.evaluate(() => ({
