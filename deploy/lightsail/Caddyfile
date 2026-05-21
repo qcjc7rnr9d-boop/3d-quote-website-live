@@ -1,0 +1,23 @@
+www.trennen.co.nz {
+  redir https://trennen.co.nz{uri} permanent
+}
+
+trennen.co.nz {
+  encode zstd gzip
+
+  reverse_proxy 127.0.0.1:3001 {
+    header_up X-Forwarded-Proto {scheme}
+    header_up X-Forwarded-Host {host}
+  }
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  }
+
+  log {
+    output file /var/log/caddy/trennen-access.log
+    format console
+  }
+}

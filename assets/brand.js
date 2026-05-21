@@ -44,6 +44,19 @@
     return PLACEHOLDER;
   }
 
+  function explicitShopSlug() {
+    try {
+      return new URLSearchParams(location.search).get('shop') || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function wantsPlatformDefault() {
+    return document.documentElement?.hasAttribute('data-platform-default')
+      || document.body?.hasAttribute('data-platform-default');
+  }
+
   async function fetchPlatformInfo() {
     try {
       const r = await fetch('/api/platform-info');
@@ -74,7 +87,9 @@
 
     // Customer-facing pages — use the per-shop brand.
     try {
-      const slug = detectSlug();
+      const explicit = explicitShopSlug();
+      if (wantsPlatformDefault() && !explicit) return await fetchPlatformInfo();
+      const slug = explicit || detectSlug();
       const r = await fetch(`/api/customer/shop-info?shop=${encodeURIComponent(slug)}`);
       if (r.ok) return await r.json();
     } catch {}

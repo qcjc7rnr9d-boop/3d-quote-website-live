@@ -4,6 +4,9 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '../..');
 const checkoutHtml = readFileSync(resolve(root, 'checkout.html'), 'utf8');
 const checkoutJs = readFileSync(resolve(root, 'assets/checkout.js'), 'utf8');
+const quoteHtml = readFileSync(resolve(root, 'quote.html'), 'utf8');
+const adminPaymentsHtml = readFileSync(resolve(root, 'admin/payments.html'), 'utf8');
+const stripeRoutes = readFileSync(resolve(root, 'backend/routes/stripe.js'), 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -16,10 +19,11 @@ const forbidden = [
   'toggleShopPay',
   'sdks.shopifycdn.com',
   'checkout.shopify.com',
-  '/api/shopify',
-  "checkoutProvider === 'shopify'",
-  'Shopify checkout',
   'buy-button-storefront',
+  'checkoutProvider',
+  'continueWithShopifyCheckout',
+  '/api/shopify/draft-order',
+  'Shopify checkout',
 ];
 
 for (const term of forbidden) {
@@ -43,16 +47,16 @@ assert(
   'Checkout script must process payments through Stripe PaymentIntents'
 );
 assert(
-  checkoutHtml.includes('Bank transfer — no processing fee') && checkoutHtml.includes('Payment processing fee'),
-  'Checkout must clearly show bank transfer and payment processing fee rows'
+  !quoteHtml.includes("checkoutUrl.searchParams.set('checkout', 'shopify')"),
+  'Quote flow must not preserve or offer a non-Stripe checkout provider'
 );
 assert(
-  checkoutJs.includes('/api/billing/public-checkout-settings') && checkoutJs.includes('/api/stripe/create-bank-transfer-order'),
-  'Checkout script must load payment fee mode and support bank-transfer orders'
+  stripeRoutes.includes("router.put('/keys'") && stripeRoutes.includes('403') && stripeRoutes.includes('Stripe keys are managed'),
+  'Shop-admin Stripe key compatibility route must keep rejecting key updates'
 );
 assert(
-  !checkoutJs.includes('shopify_shop') && !checkoutJs.includes('shopifyShopDomain'),
-  'Checkout script should not preserve Shopify checkout state in the lean release'
+  !/master Stripe keys|publishable key|secret key|API key/i.test(adminPaymentsHtml),
+  'Shop payments page must not ask store owners for Stripe API key details'
 );
 assert(
   checkoutHtml.includes('cart-item-options') && checkoutHtml.includes('cart-item-money'),

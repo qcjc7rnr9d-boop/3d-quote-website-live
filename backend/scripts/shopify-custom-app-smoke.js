@@ -133,10 +133,10 @@ const secret = 'shpss_test_secret';
 
 {
   const checkoutJs = readFileSync(resolve('..', 'assets', 'checkout.js'), 'utf8');
-  assert.ok(checkoutJs.includes('/api/shopify/draft-order'), 'checkout should create Shopify draft orders in Shopify mode');
-  assert.ok(checkoutJs.includes('checkoutProvider'), 'checkout should detect the selected checkout provider');
+  assert.ok(!checkoutJs.includes('/api/shopify/draft-order'), 'customer checkout should not create Shopify draft orders');
+  assert.ok(!checkoutJs.includes('checkoutProvider'), 'customer checkout should not expose provider switching');
   const quoteHtml = readFileSync(resolve('..', 'quote.html'), 'utf8');
-  assert.ok(quoteHtml.includes('CHECKOUT_PROVIDER') && quoteHtml.includes("checkoutUrl.searchParams.set('checkout', 'shopify')"), 'quote flow should preserve Shopify checkout mode');
+  assert.ok(!quoteHtml.includes('CHECKOUT_PROVIDER') && !quoteHtml.includes("checkoutUrl.searchParams.set('checkout', 'shopify')"), 'quote flow should not preserve Shopify checkout mode');
 }
 
 {

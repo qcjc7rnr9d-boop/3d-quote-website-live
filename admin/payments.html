@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Payments — mahi3d Admin</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -173,25 +173,15 @@
         <div class="section-card-body">
           <div id="platformRequiredState" class="status-center" style="display:none">
             <h2>Platform setup required</h2>
-            <p>The Trennen platform has not finished configuring Stripe yet. Card checkout will stay off until the platform operator adds the master Stripe keys.</p>
-          </div>
-
-          <div id="subscriptionRequiredState" class="status-center" style="display:none">
-            <h2>Subscription activation required</h2>
-            <p>Your store subscription must be active before customer checkout can accept payments. Use the billing activation link from the platform owner to finish this step.</p>
-            <ul class="status-list">
-              <li id="subscriptionStatusLine">Subscription status: pending</li>
-              <li>Stripe Connect setup can still be completed after billing is active</li>
-            </ul>
+            <p>Trennen checkout is not ready yet. Card checkout will stay off until platform payment setup is finished.</p>
           </div>
 
           <div id="connectState" class="status-center" style="display:none">
             <h2>Connect your Stripe account</h2>
-            <p>Customers can pay by card through Trennen checkout. Stripe sends your payout to your own bank account after card processing costs and any capped Trennen card checkout fee.</p>
+            <p>Customers can pay through Trennen checkout. Stripe sends your payout to your own bank account after card processing and any capped Trennen checkout fee.</p>
             <ul class="status-list">
               <li>Customers pay once at checkout</li>
               <li>Your payout goes to your connected Stripe account</li>
-              <li>Bank transfer orders have no card processing fee</li>
               <li>No card numbers are stored in this portal</li>
             </ul>
             <button class="btn btn-primary" id="connectStripeBtn">Connect with Stripe</button>
@@ -217,16 +207,12 @@
                 <span id="detailsSubmitted">—</span>
               </div>
               <div class="connected-row">
-                <span class="label">Subscription</span>
-                <span id="subscriptionStatus">—</span>
-              </div>
-              <div class="connected-row">
                 <span class="label">Status</span>
                 <span id="statusSummary">—</span>
               </div>
             </div>
 
-            <div class="fee-note" id="feeNote">Trennen card checkout fees are plan-based and capped. Stripe/payment processing fees are separate pass-through costs.</div>
+            <div class="fee-note" id="feeNote">Trennen takes a platform fee from each transaction, applied automatically at checkout.</div>
             <div class="warn-note" id="requirementsBox" style="display:none"></div>
 
             <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
@@ -288,7 +274,7 @@
   }
 
   function showOnly(id) {
-    ['platformRequiredState', 'subscriptionRequiredState', 'connectState', 'connectedState', 'loadingState'].forEach(key => {
+    ['platformRequiredState', 'connectState', 'connectedState', 'loadingState'].forEach(key => {
       document.getElementById(key).style.display = key === id ? '' : 'none';
     });
   }
@@ -302,18 +288,9 @@
 
   function renderStatus() {
     document.getElementById('loadingState').style.display = 'none';
-    document.getElementById('connectedBadge').style.display = 'none';
 
     if (!stripeStatus.can_accept_cards) {
       showOnly('platformRequiredState');
-      document.getElementById('payoutsCard').style.display = 'none';
-      return;
-    }
-
-    if (!stripeStatus.billing_active) {
-      showOnly('subscriptionRequiredState');
-      document.getElementById('subscriptionStatusLine').textContent =
-        `Subscription status: ${(stripeStatus.billing_status || 'pending_subscription').replace(/_/g, ' ')}`;
       document.getElementById('payoutsCard').style.display = 'none';
       return;
     }
@@ -330,15 +307,11 @@
     document.getElementById('chargesEnabled').innerHTML = boolBadge(stripeStatus.charges_enabled);
     document.getElementById('payoutsEnabled').innerHTML = boolBadge(stripeStatus.payouts_enabled);
     document.getElementById('detailsSubmitted').innerHTML = boolBadge(stripeStatus.details_submitted);
-    document.getElementById('subscriptionStatus').innerHTML = stripeStatus.billing_active
-      ? '<span class="badge badge-sage">Active</span>'
-      : '<span class="badge badge-warm">Action needed</span>';
     document.getElementById('statusSummary').innerHTML = stripeStatus.onboarding_complete
-      && stripeStatus.can_accept_live_orders
       ? '<span class="badge badge-sage">Ready for live payments</span>'
       : '<span class="badge badge-warm">More Stripe setup needed</span>';
     document.getElementById('feeNote').textContent =
-      'Trennen checkout fees are plan-based and capped. Stripe/payment processing fees are separate pass-through costs.';
+      `Trennen takes a ${Number(stripeStatus.platform_fee_percent || 0).toFixed(2)}% platform fee from each paid order.`;
 
     const requirementsBox = document.getElementById('requirementsBox');
     if (stripeStatus.requirements_due && stripeStatus.requirements_due.length) {

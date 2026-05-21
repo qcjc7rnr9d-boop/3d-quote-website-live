@@ -4,13 +4,134 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Sign In — Trennen Admin</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdks.shopifycdn.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com https://checkout.shopify.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/shared.css">
   <link rel="stylesheet" href="../assets/admin.css">
   <style>
+    .operator-login-body {
+      background:
+        radial-gradient(circle at 15% 10%, rgba(91, 135, 94, 0.16), transparent 28rem),
+        linear-gradient(135deg, #090b0a 0%, #141812 42%, #f4ebdd 42%, #f8f1e7 100%);
+    }
+
+    .operator-auth-page {
+      min-height: 100vh;
+      padding: clamp(24px, 5vw, 72px);
+      display: grid;
+      align-items: center;
+      background: transparent;
+    }
+
+    .operator-auth-shell {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) minmax(360px, 0.62fr);
+      gap: clamp(28px, 5vw, 72px);
+      align-items: center;
+    }
+
+    .operator-intro {
+      color: #F8F1E7;
+    }
+
+    .operator-home-link,
+    .operator-eyebrow {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .operator-home-link {
+      display: inline-flex;
+      min-height: 34px;
+      align-items: center;
+      margin-bottom: clamp(24px, 4vw, 48px);
+      color: #B9DFCF;
+      text-decoration: none;
+    }
+
+    .operator-eyebrow {
+      margin: 0 0 16px;
+      color: #AEE8D0;
+    }
+
+    .operator-title {
+      max-width: 620px;
+      margin: 0;
+      font-family: var(--font-brand);
+      font-size: clamp(46px, 6vw, 82px);
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0;
+      color: #F8F1E7;
+    }
+
+    .operator-copy {
+      max-width: 620px;
+      margin: 24px 0 0;
+      color: rgba(248, 241, 231, 0.72);
+      font-size: clamp(16px, 1.35vw, 20px);
+      line-height: 1.62;
+    }
+
+    .operator-proof {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      max-width: 650px;
+      margin-top: 34px;
+      border: 1px solid rgba(255, 250, 240, 0.16);
+      background: rgba(255, 250, 240, 0.05);
+    }
+
+    .operator-proof span {
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      color: rgba(248, 241, 231, 0.78);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .operator-proof span + span {
+      border-left: 1px solid rgba(255, 250, 240, 0.12);
+    }
+
+    .operator-auth-card {
+      width: 100%;
+      padding: clamp(28px, 3vw, 40px);
+      border-color: rgba(25, 27, 25, 0.14);
+      border-radius: 8px;
+      box-shadow: 0 34px 90px rgba(0, 0, 0, 0.24);
+    }
+
+    .operator-card-kicker {
+      margin: 0 0 10px;
+      color: var(--sage-dark);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .operator-help-note {
+      margin: 18px 0 0;
+      padding: 14px 16px;
+      border: 1px solid var(--sage-light);
+      border-radius: var(--radius);
+      background: var(--sage-bg);
+      color: var(--sage-dark);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
     /* ── Success banner (shown when ?message=password-updated) ── */
     .success-banner {
       display: none;
@@ -28,67 +149,112 @@
     .success-banner.visible {
       display: block;
     }
+
+    @media (max-width: 860px) {
+      .operator-login-body {
+        background:
+          radial-gradient(circle at 20% 4%, rgba(91, 135, 94, 0.16), transparent 24rem),
+          #090b0a;
+      }
+
+      .operator-auth-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .operator-auth-card {
+        order: -1;
+      }
+
+      .operator-title {
+        font-size: clamp(38px, 12vw, 58px);
+      }
+
+      .operator-proof {
+        grid-template-columns: 1fr;
+      }
+
+      .operator-proof span + span {
+        border-left: 0;
+        border-top: 1px solid rgba(255, 250, 240, 0.12);
+      }
+    }
   </style>
   <script src="../assets/brand.js" defer></script>
   <script src="/assets/csrf.js"></script>
 </head>
-<body class="admin-body">
+<body class="admin-body operator-login-body">
 
-  <div class="auth-page">
-    <a href="../quote.html?shop=mahi3d" class="auth-wordmark">Trennen</a>
+  <div class="auth-page operator-auth-page">
+    <div class="operator-auth-shell">
+      <section class="operator-intro" aria-labelledby="operatorLoginTitle">
+        <a href="../index.html" class="operator-home-link">Back to Trennen home</a>
+        <p class="operator-eyebrow">Operator portal</p>
+        <h1 class="operator-title" id="operatorLoginTitle">Shop admin access for serious quote flow.</h1>
+        <p class="operator-copy">Sign in to manage quote intake, pricing, orders, and customer context. Quotes, orders, pricing, and customer context stay together.</p>
+        <div class="operator-proof" role="list" aria-label="Operator portal focus">
+          <span role="listitem">Quote intake</span>
+          <span role="listitem">Pricing control</span>
+          <span role="listitem">Order visibility</span>
+        </div>
+      </section>
 
-    <div class="auth-card fade-up" role="main">
+      <div class="auth-card operator-auth-card fade-up" role="main">
+        <a href="../index.html" class="auth-wordmark">Trennen</a>
+        <p class="operator-card-kicker">Shop admin access</p>
 
-      <!-- Success banner (password reset) -->
-      <div class="success-banner" id="successBanner" role="status" aria-live="polite">
-        Password updated. Please sign in.
-      </div>
-
-      <h1 class="auth-title">Welcome back</h1>
-      <p class="auth-subtitle">Sign in to your print shop dashboard</p>
-
-      <div class="auth-error" id="authError" role="alert" aria-live="assertive">
-        Incorrect email or password
-      </div>
-
-      <form id="loginForm" novalidate aria-label="Sign in form">
-
-        <div class="form-group">
-          <label class="form-label" for="email">Email</label>
-          <input
-            class="form-input"
-            type="email"
-            id="email"
-            name="email"
-            placeholder="your@email.com"
-            autocomplete="email"
-            required
-            aria-required="true"
-          >
+        <!-- Success banner (password reset) -->
+        <div class="success-banner" id="successBanner" role="status" aria-live="polite">
+          Password updated. Please sign in.
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="password">Password</label>
-          <input
-            class="form-input"
-            type="password"
-            id="password"
-            name="password"
-            placeholder="Password"
-            autocomplete="current-password"
-            required
-            aria-required="true"
-          >
+        <h2 class="auth-title">Welcome back</h2>
+        <p class="auth-subtitle">Sign in to manage quote intake and shop operations.</p>
+
+        <div class="auth-error" id="authError" role="alert" aria-live="assertive">
+          Incorrect email or password
         </div>
 
-        <button type="button" class="btn btn-primary full" style="margin-top:8px;" onclick="doLogin()">
-          Sign in
-        </button>
+        <form id="loginForm" novalidate aria-label="Sign in form">
 
-      </form>
+          <div class="form-group">
+            <label class="form-label" for="email">Email</label>
+            <input
+              class="form-input"
+              type="email"
+              id="email"
+              name="email"
+              placeholder="your@email.com"
+              autocomplete="email"
+              required
+              aria-required="true"
+            >
+          </div>
 
-      <div class="auth-footer">
-        <a href="forgot-password.html">Forgot your password?</a>
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input
+              class="form-input"
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Password"
+              autocomplete="current-password"
+              required
+              aria-required="true"
+            >
+          </div>
+
+          <button type="button" class="btn btn-primary full" style="margin-top:8px;" onclick="doLogin()">
+            Sign in
+          </button>
+
+        </form>
+
+        <p class="operator-help-note">This area is for print shop operators. New to Trennen? Start from the homepage and choose a setup path first.</p>
+
+        <div class="auth-footer">
+          <a href="forgot-password.html">Forgot your password?</a>
+        </div>
       </div>
 
     </div>

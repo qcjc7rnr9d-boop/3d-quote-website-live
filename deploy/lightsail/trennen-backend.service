@@ -1,0 +1,26 @@
+[Unit]
+Description=Trennen 3D quote backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=trennen
+Group=trennen
+WorkingDirectory=/opt/trennen/3d-quote-website/backend
+EnvironmentFile=/opt/trennen/3d-quote-website/backend/.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+KillSignal=SIGTERM
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/opt/trennen/3d-quote-website/backend/data /opt/trennen/3d-quote-website/uploads /opt/trennen/backups
+
+[Install]
+WantedBy=multi-user.target

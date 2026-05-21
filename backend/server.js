@@ -29,6 +29,7 @@ import platformRouter from './routes/platform.js';
 import customerPortalRouter from './routes/customer-portal.js';
 import shippingRouter from './routes/shipping.js';
 import billingRouter from './routes/billing.js';
+import salesRouter from './routes/sales.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -135,16 +136,12 @@ app.use('/uploads', express.static(join(ROOT_DIR, 'uploads'), {
 }));
 const publicRootPages = new Set([
   '/catalog.html', '/checkout.html', '/confirmation.html', '/index.html',
-  '/materials.html', '/options.html', '/privacy.html', '/quote.html',
+  '/materials.html', '/onboarding.html', '/options.html', '/privacy.html', '/quote.html',
   '/pricing.html', '/stripe-callback.html', '/terms.html'
 ]);
 
 app.get(['/', '/index.html'], (req, res) => {
   res.sendFile(join(ROOT_DIR, 'index.html'));
-});
-
-app.get('/onboarding.html', (req, res) => {
-  res.redirect(302, '/admin/payments.html');
 });
 
 app.get('/api/health', (req, res) => {
@@ -260,6 +257,7 @@ app.use('/api/platform', platformRouter);
 app.use('/api/customer', customerPortalRouter);
 app.use('/api/shipping', shippingRouter);
 app.use('/api/billing', billingRouter);
+app.use('/api/sales', salesRouter);
 
 // ── Public: platform identity (Trennen) ────────────────────────
 // Lets unauthenticated pages (admin auth screens, platform login,
