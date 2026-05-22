@@ -1,0 +1,50 @@
+services:
+  - type: web
+    runtime: node
+    name: trennen-staging
+    region: singapore
+    plan: starter
+    buildCommand: cd backend && npm ci --omit=dev
+    startCommand: cd backend && npm run render:start
+    healthCheckPath: /api/platform-info
+    disk:
+      name: trennen-sqlite-data
+      mountPath: /opt/render/project/src/backend/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 26.0.0
+      - key: NODE_ENV
+        value: production
+      - key: PLATFORM_NAME
+        value: Trennen
+      - key: PLATFORM_DOMAIN
+        value: trennen.co.nz
+      - key: SHOPIFY_ALLOW_UNSIGNED_PROXY
+        value: "0"
+      - key: SHOPIFY_DRAFT_ORDER_DRY_RUN
+        value: "0"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PLATFORM_CONFIG_ENCRYPTION_KEY
+        generateValue: true
+      - key: BASE_URL
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: SALES_DEMO_TO
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_CLIENT_ID
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: PLATFORM_ADMIN_PASSWORD
+        sync: false

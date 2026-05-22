@@ -350,14 +350,22 @@
             <div class="support-panel-intro">
               <div>
                 <strong>Choose where customer help requests should go.</strong>
-                <span>This email appears in the customer portal Help &amp; Contact tab. It can match your signup email or point customers to a dedicated support inbox.</span>
+                <span>This email appears in the customer portal Help &amp; Contact tab only when you publish one.</span>
               </div>
-              <div class="support-email-pill" id="supportEmailModePill">Signup email</div>
+              <div class="support-email-pill" id="supportEmailModePill">Private</div>
             </div>
 
             <div class="support-email-choice">
+              <label class="support-email-option" id="supportHiddenCard">
+                <input type="radio" name="supportEmailMode" id="supportEmailHidden" value="hidden" checked>
+                <span>
+                  <strong>Keep private</strong>
+                  <span>Best while you are setting up. Customers will not see an email address.</span>
+                  <span class="support-email-current">No public support email</span>
+                </span>
+              </label>
               <label class="support-email-option" id="supportSignupCard">
-                <input type="radio" name="supportEmailMode" id="supportEmailSignup" value="signup" checked>
+                <input type="radio" name="supportEmailMode" id="supportEmailSignup" value="signup">
                 <span>
                   <strong>Use signup email</strong>
                   <span>Best if one inbox handles admin access and customer questions.</span>
@@ -377,7 +385,7 @@
             <div class="support-email-custom" id="supportEmailCustomPanel">
               <label class="form-label" for="supportEmail">Help-specific email</label>
               <input type="email" class="form-input" id="supportEmail" placeholder="help@example.com" autocomplete="email">
-              <span class="support-email-summary" id="supportEmailSummary">Customers will currently see your signup email.</span>
+              <span class="support-email-summary" id="supportEmailSummary">Customers will not see a support email until you publish one.</span>
             </div>
           </div>
         </div>
@@ -478,9 +486,28 @@
             <span class="form-hint">One origin per line. Include only scheme and host.</span>
           </div>
           <div class="info-box">
-            Embed script:
-            <code>&lt;script src="https://cdn.yourdomain.com/embed/v1/widget.js" data-shop="your-shop-slug"&gt;&lt;/script&gt;</code>
+            Hosted page:
+            <code id="settingsHostedUrl" data-install-hosted-url>Loading...</code>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+              <a class="btn btn-secondary" id="settingsOpenHostedUrl" href="../quote.html" target="_blank" rel="noopener">Open hosted page</a>
+              <button class="btn btn-outline" type="button" data-settings-copy="settingsHostedUrl">Copy URL</button>
+            </div>
           </div>
+          <div class="info-box" style="margin-top:12px;">
+            Iframe embed:
+            <code id="settingsIframeCode" data-install-iframe-code>Loading...</code>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-outline" type="button" data-settings-copy="settingsIframeCode">Copy iframe</button>
+            </div>
+          </div>
+          <div class="info-box" style="margin-top:12px;">
+            Script widget:
+            <code id="settingsScriptCode" data-install-script-code>Loading...</code>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-outline" type="button" data-settings-copy="settingsScriptCode">Copy script</button>
+            </div>
+          </div>
+          <span class="form-hint" id="settingsInstallCopyStatus" aria-live="polite"></span>
         </div>
       </div>
 
@@ -521,6 +548,7 @@
 <script>
   // ── Auth guard ─────────────────────────────────────────────
   let shopNameValue = '';
+  let shopSlugValue = '';
 
   (async () => {
     try {
@@ -528,10 +556,12 @@
       if (!r.ok) { window.location.href = 'login.html'; return; }
       const shop = await r.json();
       shopNameValue = shop.name || '';
+      shopSlugValue = shop.slug || '';
       document.getElementById('sidebarStoreName').textContent = shop.name;
       document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
       document.getElementById('shopEmail').value = shop.email || '';
       document.getElementById('deleteConfirmInput').placeholder = shop.name || '';
+      renderSettingsInstallSnippets();
       if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
     } catch { window.location.href = 'login.html'; }
   })();
@@ -543,23 +573,30 @@
   });
 
   function getSupportEmailMode() {
-    return document.querySelector('input[name="supportEmailMode"]:checked')?.value === 'custom' ? 'custom' : 'signup';
+    const mode = document.querySelector('input[name="supportEmailMode"]:checked')?.value || 'hidden';
+    return ['hidden', 'signup', 'custom'].includes(mode) ? mode : 'hidden';
   }
 
   function syncSupportEmailInput() {
-    const custom = getSupportEmailMode() === 'custom';
+    const mode = getSupportEmailMode();
+    const custom = mode === 'custom';
     const input = document.getElementById('supportEmail');
     const signupEmail = document.getElementById('shopEmail').value || 'your signup email';
     const customEmail = input.value.trim() || 'help@example.com';
-    document.getElementById('supportSignupCard').classList.toggle('selected', !custom);
+    document.getElementById('supportHiddenCard').classList.toggle('selected', mode === 'hidden');
+    document.getElementById('supportSignupCard').classList.toggle('selected', mode === 'signup');
     document.getElementById('supportCustomCard').classList.toggle('selected', custom);
     document.getElementById('supportEmailCustomPanel').classList.toggle('active', custom);
-    document.getElementById('supportEmailModePill').textContent = custom ? 'Help inbox' : 'Signup email';
+    document.getElementById('supportEmailModePill').textContent = mode === 'hidden'
+      ? 'Private'
+      : (custom ? 'Help inbox' : 'Signup email');
     document.getElementById('supportSignupPreview').textContent = signupEmail;
     document.getElementById('supportCustomPreview').textContent = customEmail;
-    document.getElementById('supportEmailSummary').textContent = custom
-      ? `Customers will see ${customEmail} in their Help & Contact tab.`
-      : `Customers will see ${signupEmail} in their Help & Contact tab.`;
+    document.getElementById('supportEmailSummary').textContent = mode === 'hidden'
+      ? 'Customers will not see a support email until you publish one.'
+      : (custom
+        ? `Customers will see ${customEmail} in their Help & Contact tab.`
+        : `Customers will see ${signupEmail} in their Help & Contact tab.`);
     input.disabled = !custom;
     input.style.background = custom ? '' : 'var(--off-white)';
     input.style.color = custom ? '' : 'var(--muted)';
@@ -570,6 +607,39 @@
   });
   document.getElementById('supportEmail').addEventListener('input', syncSupportEmailInput);
   syncSupportEmailInput();
+
+  function renderSettingsInstallSnippets() {
+    if (!shopSlugValue) return;
+    const hostedPath = `/q/${encodeURIComponent(shopSlugValue)}`;
+    const hostedUrl = `${location.origin}${hostedPath}`;
+    const embedUrl = `${location.origin}/embed/quote?shop=${encodeURIComponent(shopSlugValue)}`;
+    const widgetUrl = `${location.origin}/embed/v1/widget.js`;
+    document.getElementById('settingsHostedUrl').textContent = hostedUrl;
+    document.getElementById('settingsOpenHostedUrl').href = hostedPath;
+    document.getElementById('settingsIframeCode').textContent = `<iframe
+  src="${embedUrl}"
+  style="width:100%;min-height:760px;border:0;"
+  title="Instant 3D quote"
+  loading="lazy"
+  allow="payment">
+</iframe>`;
+    document.getElementById('settingsScriptCode').textContent = `<script src="${widgetUrl}" data-shop="${shopSlugValue}"><\/script>`;
+  }
+
+  document.querySelectorAll('[data-settings-copy]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const target = document.getElementById(button.dataset.settingsCopy || '');
+      const text = target?.textContent?.trim() || '';
+      if (!text) return;
+      const status = document.getElementById('settingsInstallCopyStatus');
+      try {
+        await navigator.clipboard.writeText(text);
+        status.textContent = 'Copied.';
+      } catch {
+        status.textContent = text;
+      }
+    });
+  });
 
   let currentLogoUrl = '';
   let removeLogoRequested = false;
@@ -585,7 +655,8 @@
       if (s.tagline)         document.getElementById('shopTagline').value  = s.tagline;
       if (s.phone)           document.getElementById('shopPhone').value    = s.phone;
       if (s.address)         document.getElementById('shopAddress').value  = s.address;
-      document.getElementById(s.support_email_mode === 'custom' ? 'supportEmailCustomMode' : 'supportEmailSignup').checked = true;
+      const supportMode = ['hidden', 'signup', 'custom'].includes(s.support_email_mode) ? s.support_email_mode : 'hidden';
+      document.getElementById(supportMode === 'custom' ? 'supportEmailCustomMode' : (supportMode === 'signup' ? 'supportEmailSignup' : 'supportEmailHidden')).checked = true;
       document.getElementById('supportEmail').value = s.support_email || '';
       syncSupportEmailInput();
       if (s.gst_number)      document.getElementById('shopGST').value      = s.gst_number;

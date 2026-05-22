@@ -113,11 +113,11 @@ function assertNoShopifyCspDomains(relativePath) {
   assert.doesNotMatch(html, /sdks\.shopifycdn\.com|checkout\.shopify\.com/, `${relativePath} CSP should not include Shopify domains in the lean release`);
 }
 
-function assertUploadHomepage(html, label) {
-  assert.match(html, /Your 3D file/i, `${label} should serve the upload-first storefront`);
-  assert.match(html, /Drop your STL or OBJ files here/i, `${label} should include the upload zone`);
-  assert.match(html, /Browse Files/i, `${label} should include the browse button`);
-  assert.doesNotMatch(html, /assets\/sales\.css|assets\/sales\.js|demo-form|Quote Every Job/i, `${label} should not expose sales-only content`);
+function assertSelfServeHomepage(html, label) {
+  assert.match(html, /Turn messy print requests into clear, professional quotes/i, `${label} should serve the self-serve sales homepage`);
+  assert.match(html, /Start free/i, `${label} should include the self-serve signup CTA`);
+  assert.match(html, /quote\.html\?shop=mahi3d&amp;demoStart=1/i, `${label} should keep the Mahi3D demo CTA`);
+  assert.match(html, /No card required\. Start with bank transfer\. Upgrade when ready\./i, `${label} should explain the no-card trial path`);
   assert.doesNotMatch(html, /sdks\.shopifycdn\.com|checkout\.shopify\.com|\/api\/shopify/i, `${label} should not expose Shopify code`);
 }
 
@@ -198,15 +198,20 @@ async function run() {
 
   const rootLanding = await api('/');
   assertStatus(rootLanding, 200, '/');
-  assertUploadHomepage(await rootLanding.text(), '/');
+  assertSelfServeHomepage(await rootLanding.text(), '/');
 
   const indexLanding = await api('/index.html?shop=mahi3d');
   assertStatus(indexLanding, 200, '/index.html');
-  assertUploadHomepage(await indexLanding.text(), '/index.html');
+  assertSelfServeHomepage(await indexLanding.text(), '/index.html');
 
   const onboarding = await api('/onboarding.html');
-  assertStatus(onboarding, 302, '/onboarding.html');
-  assert.match(onboarding.headers.get('location') || '', /\/admin\/payments\.html/, 'onboarding should redirect to Stripe payment setup');
+  assertStatus(onboarding, 200, '/onboarding.html');
+  const onboardingHtml = await onboarding.text();
+  const onboardingJs = readFileSync(resolve(root, 'assets/onboarding.js'), 'utf8');
+  assert.match(onboardingHtml, /Create your shop/i, 'onboarding should serve the self-serve signup flow');
+  assert.match(onboardingHtml, /assets\/onboarding\.js/i, 'onboarding should load the self-serve signup script');
+  assert.match(onboardingJs, /\/api\/onboarding\/signup/i, 'onboarding script should submit to the self-serve signup API');
+  assert.doesNotMatch(onboardingHtml, /card number|payment method/i, 'onboarding should not collect card details directly');
 
   for (const shopifyPath of ['/api/shopify', '/api/shopify/draft-order', '/apps/3d-quote', '/app']) {
     const res = await api(shopifyPath);

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Start Free - Trennen</title>
+  <meta name="description" content="Start free with Trennen, simple 3D printing quote software for makers, print shops, and growing farms.">
+  <meta property="og:title" content="Start Free - Trennen">
+  <meta property="og:description" content="Choose a Trennen plan, add your shop basics, and start quoting faster.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data:;">
+  <link rel="stylesheet" href="assets/shared.css">
+  <link rel="stylesheet" href="assets/onboarding.css">
+  <script src="assets/csrf.js" defer></script>
+  <script src="assets/onboarding.js" defer></script>
+</head>
+<body>
+  <div class="onboarding-grain" aria-hidden="true"></div>
+
+  <header class="signup-header" role="banner">
+    <a class="signup-brand" href="index.html" aria-label="Back to Trennen home">
+      <span class="signup-brand-mark" aria-hidden="true"></span>
+      <span>Trennen</span>
+    </a>
+
+    <nav class="signup-nav" id="signupNav" aria-label="Onboarding navigation">
+      <a href="index.html">Trennen home</a>
+      <a href="#plans">Pricing</a>
+      <a href="quote.html?shop=mahi3d&amp;demoStart=1">View demo</a>
+      <a href="admin/setup.html">Setup checklist</a>
+      <a href="admin/login.html">Admin login</a>
+    </nav>
+
+    <button class="signup-nav-toggle" id="signupNavToggle" type="button" aria-controls="signupNav" aria-expanded="false" aria-label="Open navigation">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </header>
+
+  <main>
+    <section class="signup-hero" aria-labelledby="signupTitle">
+      <div class="signup-copy">
+        <a class="back-link" href="index.html">Back to Trennen home</a>
+        <p class="signup-eyebrow">Start free with Trennen</p>
+        <h1 id="signupTitle">Start quoting faster.</h1>
+        <p class="signup-lede">Choose a plan, add your shop details, and tell us how you want to take payment. Trennen keeps software costs separate from card fees, so you can start small.</p>
+        <div class="signup-actions" aria-label="Primary actions">
+          <a class="primary-action" href="#shop-setup" data-scroll-target>Start free</a>
+          <a class="secondary-action" href="quote.html?shop=mahi3d&amp;demoStart=1">View demo</a>
+        </div>
+        <div class="trust-row" role="list" aria-label="Pricing principles">
+          <span role="listitem">Fair entry plan</span>
+          <span role="listitem">Capped checkout fees</span>
+          <span role="listitem">Bank transfer supported</span>
+        </div>
+      </div>
+
+      <aside class="setup-preview" aria-label="Trennen setup path">
+        <div class="preview-topline">
+          <span>Setup path</span>
+          <strong>3 calm steps</strong>
+        </div>
+        <ol class="setup-steps">
+          <li>
+            <span class="step-index">1</span>
+            <div>
+              <strong>Choose your plan</strong>
+              <p>Start free, try Starter or Growth, or ask about Scale.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-index">2</span>
+            <div>
+              <strong>Set shop basics</strong>
+              <p>Your shop name, email, and quote volume.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-index">3</span>
+            <div>
+              <strong>Choose payments</strong>
+              <p>Start with bank transfer, or add checkout later.</p>
+            </div>
+          </li>
+        </ol>
+        <div class="preview-note">
+          <span>Fee model</span>
+          <p>Card fees stay separate from your Trennen plan.</p>
+        </div>
+      </aside>
+    </section>
+
+    <section class="onboarding-section plan-section" id="plans" aria-labelledby="plansTitle">
+      <div class="section-intro">
+        <p class="signup-eyebrow">Choose your plan</p>
+        <h2 id="plansTitle">Fair pricing. Easy to read.</h2>
+        <p>Your plan pays for the software. Card fees are separate, and Trennen checkout fees are capped where they apply.</p>
+      </div>
+
+      <div class="plan-grid" role="list">
+        <article class="plan-card" role="listitem" data-plan-card="community">
+          <div class="plan-card-head">
+            <h3>Community</h3>
+            <p>For testing or very small shops.</p>
+          </div>
+          <div class="plan-price"><span>NZ$0</span><small>/month</small></div>
+          <ul>
+            <li>3 quotes/month</li>
+            <li>No overages</li>
+            <li>Checkout: disabled</li>
+            <li>Payments: bank transfer only</li>
+          </ul>
+          <button class="plan-select" type="button" data-plan-select="community">Start free</button>
+        </article>
+
+        <article class="plan-card featured" role="listitem" data-plan-card="starter">
+          <div class="plan-badge">Best for small print shops</div>
+          <div class="plan-card-head">
+            <h3>Starter</h3>
+            <p>For small shops ready to quote faster.</p>
+          </div>
+          <div class="plan-price"><span>NZ$29</span><small>/month + GST</small></div>
+          <ul>
+            <li>25 quotes/month</li>
+            <li>Extra quotes: NZ$1 each</li>
+            <li>14-day trial</li>
+            <li>Card checkout: 0.5%, capped at NZ$29/month</li>
+          </ul>
+          <button class="plan-select" type="button" data-plan-select="starter">Start Starter trial</button>
+        </article>
+
+        <article class="plan-card" role="listitem" data-plan-card="growth">
+          <div class="plan-card-head">
+            <h3>Growth</h3>
+            <p>For busier shops quoting every week.</p>
+          </div>
+          <div class="plan-price"><span>NZ$129</span><small>/month + GST</small></div>
+          <ul>
+            <li>250 quotes/month</li>
+            <li>Extra quotes: NZ$0.50 each</li>
+            <li>Eligible 14-day trial</li>
+            <li>Card checkout: 0.5%, capped at NZ$79/month</li>
+          </ul>
+          <button class="plan-select" type="button" data-plan-select="growth">Start Growth trial</button>
+        </article>
+
+        <article class="plan-card" role="listitem" data-plan-card="scale">
+          <div class="plan-card-head">
+            <h3>Scale</h3>
+            <p>For larger shops that need more support.</p>
+          </div>
+          <div class="plan-price"><span>NZ$899</span><small>/month + GST</small></div>
+          <ul>
+            <li>1,000 quotes/month</li>
+            <li>Extra quotes: NZ$0.25 each</li>
+            <li>Custom support and usage</li>
+            <li>Checkout fee: none by default</li>
+          </ul>
+          <button class="plan-select" type="button" data-plan-select="scale">Talk to us</button>
+        </article>
+      </div>
+
+      <div class="fee-strip" role="note">
+        <strong>Bank transfer has no card fee and no Trennen checkout fee.</strong>
+        <span>Stripe/payment fees are separate. Trennen does not mark them up.</span>
+      </div>
+    </section>
+
+    <section class="onboarding-section setup-section" id="shop-setup" aria-labelledby="setupTitle">
+      <div class="setup-copy">
+        <p class="signup-eyebrow">Shop basics</p>
+        <h2 id="setupTitle">Create your shop workspace.</h2>
+        <p>Set your owner login, choose your shop URL, and start with bank transfer. You can add card checkout later from admin.</p>
+        <div class="handoff-list" aria-label="What happens next">
+          <div>
+            <strong>1. Create your owner account</strong>
+            <span>You will be signed in as soon as the workspace is created.</span>
+          </div>
+          <div>
+            <strong>2. Start with sensible defaults</strong>
+            <span>Starter materials, NZD pricing, GST, shipping, and bank transfer are prefilled.</span>
+          </div>
+          <div>
+            <strong>3. Finish the launch checklist</strong>
+            <span>Review materials, pricing, branding, shipping, notifications, and optional Stripe setup.</span>
+          </div>
+        </div>
+      </div>
+
+      <form class="signup-form" id="onboarding-form" novalidate>
+        <div class="form-row two">
+          <div class="field">
+            <label for="onboarding-owner-name">Your name</label>
+            <input id="onboarding-owner-name" name="ownerName" type="text" autocomplete="name" required>
+            <span class="field-error" data-field-error="ownerName" role="alert"></span>
+          </div>
+          <div class="field">
+            <label for="onboarding-email">Work email</label>
+            <input id="onboarding-email" name="email" type="email" autocomplete="email" required>
+            <span class="field-error" data-field-error="email" role="alert"></span>
+          </div>
+        </div>
+
+        <div class="form-row two">
+          <div class="field">
+            <label for="onboarding-shop-name">Shop name</label>
+            <input id="onboarding-shop-name" name="shopName" type="text" autocomplete="organization" required>
+            <span class="field-error" data-field-error="shopName" role="alert"></span>
+          </div>
+          <div class="field">
+            <label for="onboarding-slug">Shop URL</label>
+            <div class="slug-input-wrap">
+              <span>trennen.co.nz/</span>
+              <input id="onboarding-slug" name="slug" type="text" inputmode="url" autocomplete="off" required>
+            </div>
+            <span class="field-hint" id="slugAvailability" aria-live="polite">Use letters, numbers, and hyphens.</span>
+            <span class="field-error" data-field-error="slug" role="alert"></span>
+          </div>
+        </div>
+
+        <div class="form-row two">
+          <div class="field">
+            <label for="onboarding-plan">Plan</label>
+            <select id="onboarding-plan" name="plan" required>
+              <option value="community">Community - NZ$0/month</option>
+              <option value="starter" selected>Starter - NZ$29 + GST</option>
+              <option value="growth">Growth - NZ$129 + GST</option>
+              <option value="scale">Scale - NZ$899 + GST</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="onboarding-payment">Payments</label>
+            <select id="onboarding-payment" name="paymentPath" required>
+              <option value="bank_transfer_first">Bank transfer first</option>
+              <option value="stripe_later">Add Stripe checkout later</option>
+              <option value="talk_through_checkout">Talk through checkout</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row two">
+          <div class="field">
+            <label for="onboarding-volume">Monthly quote volume</label>
+            <select id="onboarding-volume" name="monthlyQuoteVolume" required>
+              <option value="">Select range</option>
+              <option value="1-25">1-25</option>
+              <option value="26-100">26-100</option>
+              <option value="101-300">101-300</option>
+              <option value="300+">300+</option>
+            </select>
+            <span class="field-error" data-field-error="monthlyQuoteVolume" role="alert"></span>
+          </div>
+          <div class="field">
+            <label for="onboarding-password">Password</label>
+            <input id="onboarding-password" name="password" type="password" autocomplete="new-password" required>
+            <span class="field-hint">At least 8 characters with uppercase, number, and symbol.</span>
+            <span class="field-error" data-field-error="password" role="alert"></span>
+          </div>
+        </div>
+
+        <div class="field hp-field" aria-hidden="true">
+          <label for="onboarding-website">Website</label>
+          <input id="onboarding-website" name="website" type="text" tabindex="-1" autocomplete="off">
+        </div>
+
+        <div class="form-status success" id="onboarding-success" hidden>
+          Your shop is ready. Opening your setup checklist...
+        </div>
+        <div class="form-status failure" id="onboarding-failure" hidden>
+          Something went wrong. Please check the fields and try again.
+        </div>
+
+        <button class="submit-action" type="submit">Create shop</button>
+        <p class="form-fine-print">No hidden fees. No uncapped revenue share. Start with bank transfer and add checkout when it helps.</p>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

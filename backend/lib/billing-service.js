@@ -93,6 +93,8 @@ export function ensureBillingSchema(db) {
       current_period_start TEXT NOT NULL,
       current_period_end TEXT NOT NULL,
       stripe_subscription_id TEXT,
+      cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
+      cancel_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
@@ -167,6 +169,18 @@ export function ensureBillingSchema(db) {
       ON payment_fee_records(order_id);
   `);
 
+  addColumnIfMissing(db, 'shops', 'billing_customer_id', 'TEXT');
+  addColumnIfMissing(db, 'shops', 'billing_subscription_id', 'TEXT');
+  addColumnIfMissing(db, 'shops', 'billing_price_id', 'TEXT');
+  addColumnIfMissing(db, 'shops', 'billing_status', "TEXT NOT NULL DEFAULT 'pending_subscription'");
+  addColumnIfMissing(db, 'shops', 'billing_current_period_end', 'TEXT');
+  addColumnIfMissing(db, 'shops', 'billing_checkout_session_id', 'TEXT');
+  addColumnIfMissing(db, 'shops', 'billing_checkout_status', 'TEXT');
+  addColumnIfMissing(db, 'shops', 'billing_cancel_at_period_end', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(db, 'shops', 'billing_cancel_at', 'TEXT');
+  addColumnIfMissing(db, 'shops', 'billing_updated_at', 'TEXT');
+  addColumnIfMissing(db, 'merchant_subscriptions', 'cancel_at_period_end', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(db, 'merchant_subscriptions', 'cancel_at', 'TEXT');
   addColumnIfMissing(db, 'store_settings', 'payment_fee_mode', "TEXT NOT NULL DEFAULT 'merchant_absorbs'");
   addColumnIfMissing(db, 'platform_settings', 'estimated_card_fee_basis_points', `INTEGER NOT NULL DEFAULT ${DEFAULT_CARD_FEE_BPS}`);
   addColumnIfMissing(db, 'platform_settings', 'estimated_card_fee_fixed_cents', `INTEGER NOT NULL DEFAULT ${DEFAULT_CARD_FEE_FIXED_CENTS}`);
@@ -332,7 +346,12 @@ export function billingPeriodForSubscription(subscription = null) {
 
 export function ensureMerchantSubscription(db, shopId) {
   ensureBillingReady(db);
-  const shop = db.prepare('SELECT id, plan, billing_status, billing_subscription_id FROM shops WHERE id = ?').get(shopId);
+  const shop = db.prepare(`
+    SELECT id, plan, billing_status, billing_subscription_id,
+           billing_cancel_at_period_end, billing_cancel_at
+    FROM shops
+    WHERE id = ?
+  `).get(shopId);
   if (!shop) return null;
   const period = currentMonthPeriod();
   const planId = normalisePlanId(shop.plan);
@@ -340,9 +359,10 @@ export function ensureMerchantSubscription(db, shopId) {
   if (!existing) {
     db.prepare(`
       INSERT INTO merchant_subscriptions (
-        shop_id, plan_id, status, current_period_start, current_period_end, stripe_subscription_id
+        shop_id, plan_id, status, current_period_start, current_period_end,
+        stripe_subscription_id, cancel_at_period_end, cancel_at
       )
-      VALUES (?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       shop.id,
       planId,
@@ -350,18 +370,60 @@ export function ensureMerchantSubscription(db, shopId) {
       period.start,
       period.end,
       shop.billing_subscription_id || null,
+      shop.billing_cancel_at_period_end ? 1 : 0,
+      shop.billing_cancel_at || null,
     );
-  } else if (existing.plan_id !== planId || existing.status !== shop.billing_status || existing.stripe_subscription_id !== shop.billing_subscription_id) {
+  } else if (
+    existing.plan_id !== planId
+    || existing.status !== shop.billing_status
+    || existing.stripe_subscription_id !== shop.billing_subscription_id
+    || Number(existing.cancel_at_period_end || 0) !== Number(shop.billing_cancel_at_period_end || 0)
+    || (existing.cancel_at || null) !== (shop.billing_cancel_at || null)
+  ) {
     db.prepare(`
       UPDATE merchant_subscriptions
       SET plan_id = ?,
           status = ?,
           stripe_subscription_id = ?,
+          cancel_at_period_end = ?,
+          cancel_at = ?,
           updated_at = datetime('now')
       WHERE shop_id = ?
-    `).run(planId, shop.billing_status || existing.status, shop.billing_subscription_id || existing.stripe_subscription_id, shop.id);
+    `).run(
+      planId,
+      shop.billing_status || existing.status,
+      shop.billing_subscription_id || existing.stripe_subscription_id,
+      shop.billing_cancel_at_period_end ? 1 : 0,
+      shop.billing_cancel_at || null,
+      shop.id,
+    );
   }
   const current = db.prepare('SELECT * FROM merchant_subscriptions WHERE shop_id = ?').get(shop.id);
+  const trialExpired = planId !== 'community'
+    && current?.status === 'trialing'
+    && !current?.stripe_subscription_id
+    && current?.trial_end
+    && new Date(current.trial_end).getTime() <= Date.now();
+  if (trialExpired) {
+    db.prepare(`
+      UPDATE shops
+      SET billing_status = 'pending_subscription',
+          billing_cancel_at_period_end = 0,
+          billing_cancel_at = NULL,
+          billing_updated_at = datetime('now'),
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).run(shop.id);
+    db.prepare(`
+      UPDATE merchant_subscriptions
+      SET status = 'pending_subscription',
+          cancel_at_period_end = 0,
+          cancel_at = NULL,
+          updated_at = datetime('now')
+      WHERE shop_id = ?
+    `).run(shop.id);
+  }
+  const reconciled = db.prepare('SELECT * FROM merchant_subscriptions WHERE shop_id = ?').get(shop.id);
   if (current?.current_period_end && new Date(current.current_period_end).getTime() <= Date.now()) {
     db.prepare(`
       UPDATE merchant_subscriptions
@@ -371,7 +433,7 @@ export function ensureMerchantSubscription(db, shopId) {
       WHERE shop_id = ?
     `).run(period.start, period.end, shop.id);
   }
-  return db.prepare('SELECT * FROM merchant_subscriptions WHERE shop_id = ?').get(shop.id);
+  return db.prepare('SELECT * FROM merchant_subscriptions WHERE shop_id = ?').get(reconciled.shop_id);
 }
 
 export function getMerchantPlan(db, shopId) {

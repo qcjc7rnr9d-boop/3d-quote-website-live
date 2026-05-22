@@ -13,6 +13,8 @@ import { calculateQuoteForShopSlug, PricingError } from '../lib/pricing-engine.j
 import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
 import { getExchangeRates, normaliseQuoteCurrencies } from '../lib/exchange-rates.js';
 import { previewQuoteUsage, recordQuoteUsageEvent } from '../lib/billing-service.js';
+import { billingStatusIsActive, reconcileShopBilling } from '../lib/billing.js';
+import { isSafeEmailAddress, normaliseEmailAddress } from '../lib/email-validation.js';
 
 const router = Router();
 const smokeRateLimitSkip = req => process.env.NODE_ENV !== 'production' && req.get('x-smoke-test') === '1';
@@ -60,7 +62,7 @@ const customerQuoteLimiter = rateLimit({
 function ensureSupportEmailColumns() {
   const cols = db.prepare('PRAGMA table_info(store_settings)').all().map(c => c.name);
   if (!cols.includes('support_email_mode')) {
-    db.exec("ALTER TABLE store_settings ADD COLUMN support_email_mode TEXT NOT NULL DEFAULT 'signup'");
+    db.exec("ALTER TABLE store_settings ADD COLUMN support_email_mode TEXT NOT NULL DEFAULT 'hidden'");
   }
   if (!cols.includes('support_email')) {
     db.exec('ALTER TABLE store_settings ADD COLUMN support_email TEXT');
@@ -104,20 +106,16 @@ function money(value) {
 }
 
 function normaliseCustomerEmail(value) {
-  return String(value || '').trim().toLowerCase();
+  return normaliseEmailAddress(value);
 }
 
 function isValidCustomerEmail(value) {
-  const email = normaliseCustomerEmail(value);
-  if (!email || email.length > 254) return false;
-  if (email.includes('..')) return false;
-  const [local, domain, ...extra] = email.split('@');
-  if (!local || !domain || extra.length) return false;
-  if (local.length > 64 || domain.length > 253) return false;
-  if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(local)) return false;
-  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain)) return false;
-  if (domain.split('.').some(part => !part || part.startsWith('-') || part.endsWith('-'))) return false;
-  return true;
+  return isSafeEmailAddress(value);
+}
+
+function normaliseSupportEmailMode(value) {
+  const mode = String(value || 'hidden').trim().toLowerCase();
+  return ['hidden', 'signup', 'custom'].includes(mode) ? mode : 'hidden';
 }
 
 function statusLabel(status) {
@@ -151,6 +149,15 @@ function getCustomerShop(req, requestedSlugOverride = null) {
     throw new CustomerPortalError('This customer session belongs to another shop.', 403);
   }
   return shop;
+}
+
+function assertPublicBillingActive(shop) {
+  const reconciled = reconcileShopBilling(db, shop.id);
+  const freshShop = reconciled?.shop || shop;
+  if (!billingStatusIsActive(freshShop.billing_status, freshShop.plan)) {
+    throw new CustomerPortalError('This store subscription is not active yet.', 402);
+  }
+  return freshShop;
 }
 
 function buildCustomerStats(shopId, email) {
@@ -381,8 +388,10 @@ router.get('/shop-info', (req, res) => {
   const s = db.prepare(
     'SELECT tagline, about, phone, address, support_email_mode, support_email, logo_url FROM store_settings WHERE shop_id = ?'
   ).get(shop.id) || {};
-  const supportMode = s.support_email_mode === 'custom' ? 'custom' : 'signup';
-  const supportEmail = supportMode === 'custom' && s.support_email ? s.support_email : shop.email;
+  const supportMode = normaliseSupportEmailMode(s.support_email_mode);
+  const supportEmail = supportMode === 'custom' && s.support_email
+    ? s.support_email
+    : (supportMode === 'signup' ? shop.email : null);
 
   res.json({
     name:     shop.name,
@@ -500,9 +509,19 @@ router.post('/quote-preview', customerQuoteLimiter, (req, res) => {
   try {
     const { shopSlug, shop, ...input } = req.body || {};
     const slug = shopSlug || shop;
+    const shopRow = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(slug);
+    if (!shopRow) throw new PricingError('Shop not found', 404, 'SHOP_NOT_FOUND');
+    assertPublicBillingActive(shopRow);
     const quote = calculateQuoteForShopSlug(db, slug, { ...input, shopSlug: slug });
     res.json(quote);
   } catch (err) {
+    if (err instanceof CustomerPortalError) {
+      return res.status(err.status).json({
+        ok: false,
+        code: 'SUBSCRIPTION_INACTIVE',
+        error: err.message,
+      });
+    }
     if (err instanceof PricingError) {
       return res.status(err.status).json({
         ok: false,
@@ -848,7 +867,7 @@ router.post('/quotes', customerQuoteLimiter, requireCustomerAuth, (req, res) => 
     const body = safeObject(req.body);
     const rawQuoteRequest = safeObject(body.quoteRequest || body.request || body);
     const requestedSlug = body.shopSlug || body.shop || rawQuoteRequest.shopSlug || rawQuoteRequest.shop;
-    const shop = getCustomerShop(req, requestedSlug);
+    const shop = assertPublicBillingActive(getCustomerShop(req, requestedSlug));
     const quoteRequest = normaliseSavedQuoteRequest(rawQuoteRequest, shop.slug);
     const usagePreview = previewQuoteUsage(db, shop.id);
     if (usagePreview.limit_reached) {

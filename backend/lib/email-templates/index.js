@@ -488,9 +488,13 @@ function getShopSupportEmail(shopId, fallbackEmail) {
   if (!shopId) return fallbackEmail;
   try {
     const row = db.prepare('SELECT support_email_mode, support_email FROM store_settings WHERE shop_id = ?').get(shopId) || {};
-    if (row.support_email_mode === 'custom' && row.support_email) return row.support_email;
+    const mode = ['hidden', 'signup', 'custom'].includes(row.support_email_mode)
+      ? row.support_email_mode
+      : 'hidden';
+    if (mode === 'custom' && row.support_email) return row.support_email;
+    if (mode === 'signup') return fallbackEmail;
   } catch {}
-  return fallbackEmail;
+  return undefined;
 }
 
 // ── Variable substitution ────────────────────────────────────
@@ -669,6 +673,7 @@ export function renderTemplate(templateId, data = {}) {
     shop: {
       ...data.shop,
       support_email: getShopSupportEmail(shopId, data.shop?.support_email || data.shop?.email),
+      email: undefined,
     },
   });
 

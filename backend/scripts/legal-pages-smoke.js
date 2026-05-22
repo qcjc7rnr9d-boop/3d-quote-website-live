@@ -19,20 +19,28 @@ assert(existsSync(privacyPath), 'privacy.html must exist at the public root');
 
 const termsHtml = read('terms.html');
 const privacyHtml = read('privacy.html');
+const indexHtml = read('index.html');
 const catalogHtml = read('catalog.html');
 const serverJs = read('backend/server.js');
 
 for (const [name, html] of [['terms.html', termsHtml], ['privacy.html', privacyHtml]]) {
   assert(html.includes('assets/brand.js'), `${name} must load the shared brand applier`);
+  assert(html.includes('data-platform-default'), `${name} must default to Trennen/platform branding without a shop param`);
   assert(html.includes('data-brand="name"') || html.includes('footer-wordmark'), `${name} must support dynamic shop branding`);
-  assert(html.includes('Draft placeholder'), `${name} must visibly mark legal copy as draft placeholder content`);
+  assert(html.includes('Pre-launch legal review'), `${name} must present legal copy as launch-review copy without rough placeholder language`);
+  assert(!/placeholder/i.test(html), `${name} must not show rough placeholder wording on launch-facing legal pages`);
   assert(html.includes('catalog.html?shop='), `${name} must link back to Materials with the shop slug`);
-  assert(html.includes('index.html?shop=') && html.includes('#uploadZone'), `${name} must link back to the upload-first quote start with the shop slug`);
+  assert(html.includes('quote.html?shop='), `${name} must link back to Quote with the shop slug`);
   assert(html.includes('customer/dashboard.html?shop='), `${name} must link to customer portal tabs with the shop slug`);
 }
 
+assert(read('assets/brand.js').includes('data-platform-default'), 'brand.js must respect platform-default public pages');
+
 assert(serverJs.includes("'/terms.html'"), 'server public root pages must include /terms.html');
 assert(serverJs.includes("'/privacy.html'"), 'server public root pages must include /privacy.html');
+
+assert(indexHtml.includes('href="terms.html"'), 'Sales homepage footer must link to Trennen terms without a shop slug');
+assert(indexHtml.includes('href="privacy.html"'), 'Sales homepage footer must link to Trennen privacy without a shop slug');
 
 for (const [name, html] of [['catalog.html', catalogHtml]]) {
   assert(html.includes('terms.html?shop='), `${name} footer must link to terms.html with shop slug`);

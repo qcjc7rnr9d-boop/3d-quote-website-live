@@ -116,11 +116,6 @@
       color: var(--ink);
       border-bottom-color: var(--sage);
     }
-    .nav-link.disabled {
-      color: var(--muted);
-      cursor: not-allowed;
-      border-bottom-color: transparent;
-    }
     .nav-right {
       display: flex; align-items: center; gap: 14px;
     }
@@ -141,10 +136,197 @@
     .currency-select:hover { border-color: var(--muted-2); }
     .currency-select:focus { outline: none; border-color: var(--sage); }
 
+    /* ── Upload-first quote start ─────────────────────────────── */
+    .quote-start {
+      display: none;
+      width: min(920px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: clamp(54px, 8vw, 92px) 0 clamp(70px, 10vw, 110px);
+      text-align: center;
+    }
+    .quote-start-mode .quote-start { display: block; }
+    .quote-start-mode .page-head,
+    .quote-start-mode .main-grid,
+    .quote-start-mode .summary,
+    .quote-start-mode #shippingBlock,
+    .quote-start-mode .trust {
+      display: none;
+    }
+    .quote-start-mode .nav-links {
+      display: none;
+    }
+    .quote-start-mode .nav-inner {
+      grid-template-columns: 190px minmax(0, 1fr) auto;
+    }
+    .quote-start-mode .quote-progress {
+      justify-content: center;
+      gap: clamp(7px, 1.3vw, 14px);
+      overflow: visible;
+    }
+    .quote-start-mode .quote-progress-step {
+      gap: 0;
+      width: 34px;
+      flex: 0 0 34px;
+      overflow: hidden;
+      font-size: 0;
+    }
+    .quote-start-mode .quote-progress-step span:first-child {
+      flex: 0 0 34px;
+      font-size: 15px;
+    }
+    .quote-start-mode .quote-progress-line {
+      min-width: 0;
+      width: clamp(30px, 6vw, 78px);
+      flex: 0 1 78px;
+    }
+    .quote-start-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: clamp(28px, 5vw, 44px);
+    }
+    .quote-start-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      margin: 0 0 26px;
+      padding: 0 18px;
+      border: 1px solid rgba(91,135,94,0.22);
+      border-radius: 999px;
+      background: var(--sage-soft);
+      color: var(--sage-dark);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .quote-start h1 {
+      max-width: 760px;
+      margin: 0 auto;
+      color: var(--ink);
+      font-family: var(--font-heading);
+      font-size: clamp(52px, 8vw, 92px);
+      font-weight: 700;
+      letter-spacing: -0.055em;
+      line-height: 0.96;
+    }
+    .quote-start-lede {
+      max-width: 560px;
+      margin: 24px auto 44px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.55;
+    }
+    .quote-start-card {
+      overflow: hidden;
+      width: min(640px, 100%);
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: rgba(255,255,255,0.86);
+      box-shadow: 0 24px 80px rgba(16,20,16,0.09);
+    }
+    .quote-start-drop {
+      width: 100%;
+      min-height: 262px;
+      padding: 36px 28px;
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(252,251,248,0.92));
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .quote-start-drop-inner {
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+      min-height: 198px;
+      place-content: center;
+      border: 1px dashed rgba(111,116,110,0.34);
+      border-radius: 18px;
+    }
+    .quote-start-icon {
+      display: grid;
+      width: 54px;
+      height: 54px;
+      place-items: center;
+      border: 1px solid rgba(91,135,94,0.2);
+      border-radius: 999px;
+      background: var(--sage-soft);
+      color: var(--sage);
+    }
+    .quote-start-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+    }
+    .quote-start-drop strong {
+      display: block;
+      font-size: 17px;
+      font-weight: 800;
+    }
+    .quote-start-drop span {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .quote-start-browse {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: auto;
+      min-width: 140px;
+      min-height: 42px;
+      margin-top: 10px;
+      padding: 0 18px;
+      border-radius: 10px;
+      background: var(--sage);
+      color: var(--white) !important;
+      font-size: 14px !important;
+      font-weight: 800;
+      line-height: 1;
+      box-shadow: var(--shadow-sm);
+    }
+    .quote-start-proof {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .quote-start-proof li {
+      display: grid;
+      gap: 4px;
+      min-height: 88px;
+      align-content: center;
+      padding: 18px;
+      border-right: 1px solid var(--border);
+    }
+    .quote-start-proof li:last-child { border-right: 0; }
+    .quote-start-proof strong {
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .quote-start-proof span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
     /* ── Page layout ──────────────────────────────────────────── */
     .page-head {
       max-width: 1220px; margin: 0 auto;
       padding: 36px 28px 12px;
+    }
+    .page-head-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
     }
     .page-title {
       font-family: var(--font-heading);
@@ -155,6 +337,71 @@
     }
     .page-sub {
       font-size: 13px; color: var(--muted);
+    }
+    .page-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .page-action {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 9px 13px;
+      background: rgba(255,255,255,0.72);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      transition: border-color 140ms, background 140ms;
+    }
+    .page-action:hover {
+      border-color: var(--sage);
+      background: var(--sage-soft);
+    }
+    .demo-context {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      margin-top: 18px;
+      padding: 16px 18px;
+      border: 1px solid rgba(91, 135, 94, 0.26);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(234, 243, 234, 0.92), rgba(255, 255, 255, 0.78)),
+        var(--white);
+      box-shadow: var(--shadow-sm);
+    }
+    .demo-context[hidden] { display: none; }
+    .demo-context-kicker {
+      margin: 0 0 4px;
+      color: var(--sage-dark);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .demo-context-title {
+      margin: 0;
+      color: var(--ink);
+      font: 700 15px var(--font-heading);
+      letter-spacing: -0.01em;
+    }
+    .demo-context-copy {
+      margin: 4px 0 0;
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .demo-context-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .main-grid {
@@ -253,16 +500,6 @@
       box-shadow: 0 10px 24px rgba(90,138,94,0.2);
     }
     .viewer-empty-btn:hover { background: var(--sage-dark); }
-    .viewer-empty-reset {
-      display: none;
-      border: 0;
-      background: transparent;
-      color: var(--sage-dark);
-      font: 700 12px var(--font-ui);
-      cursor: pointer;
-    }
-    .viewer-empty-reset.show { display: inline-flex; }
-    .viewer-empty-reset:hover { text-decoration: underline; }
 
     /* Floating viewer controls */
     .viewer-ctrls {
@@ -994,12 +1231,68 @@
       .summary { position: static; }
       .quote-progress { order: 3; width: 100%; overflow-x: auto; justify-content: flex-start; }
       .quote-progress-line { width: 28px; flex-shrink: 0; }
+      .quote-start-mode .nav-inner {
+        grid-template-columns: 1fr auto;
+      }
+      .quote-start-mode .quote-progress {
+        width: min(100%, 620px);
+        margin: 0 auto;
+      }
     }
     @media (max-width: 640px) {
       .nav-links { display: none; }
       .logo { font-size: 22px; }
       .currency-select { padding: 8px 30px 8px 11px; }
+      .quote-start {
+        width: min(100% - 32px, 640px);
+        padding-top: 34px;
+      }
+      .quote-start h1 {
+        font-size: clamp(44px, 13vw, 64px);
+      }
+      .quote-start-lede {
+        margin-bottom: 30px;
+        font-size: 15px;
+      }
+      .quote-start-drop {
+        min-height: 236px;
+        padding: 22px 16px;
+      }
+      .quote-start-proof {
+        grid-template-columns: 1fr;
+      }
+      .quote-start-proof li {
+        min-height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .quote-start-proof li:last-child { border-bottom: 0; }
+      .quote-start-mode .quote-progress {
+        justify-content: center;
+        gap: 7px;
+      }
+      .quote-start-mode .quote-progress-step {
+        width: 32px;
+        flex-basis: 32px;
+      }
+      .quote-start-mode .quote-progress-step span:first-child {
+        width: 32px;
+        height: 32px;
+        flex-basis: 32px;
+        font-size: 14px;
+      }
+      .quote-start-mode .quote-progress-line {
+        width: clamp(22px, 8vw, 34px);
+        flex-basis: clamp(22px, 8vw, 34px);
+      }
       .page-head, .main-grid, .trust { padding-left: 18px; padding-right: 18px; }
+      .page-head { padding-top: 22px; padding-bottom: 8px; }
+      .page-head-top { display: grid; gap: 14px; }
+      .page-actions { justify-content: flex-start; }
+      .demo-context { grid-template-columns: 1fr; margin-top: 12px; padding: 12px 14px; }
+      .demo-context-copy { font-size: 12px; }
+      .demo-context-actions { display: none; }
+      .main-grid { padding-top: 10px; }
       .viewer-wrap { padding: 18px 18px 0; }
       .file-row { margin: 14px 18px 0; }
       .settings-row { padding: 14px 18px; }
@@ -1024,15 +1317,15 @@
 <!-- ─── Top nav ────────────────────────────────────────────── -->
 <nav class="nav">
   <div class="nav-inner">
-    <a class="logo" href="index.html?shop=mahi3d" data-home-link>mahi<span class="logo-dot">3d</span></a>
+    <a class="logo" href="index.html">mahi<span class="logo-dot">3d</span></a>
     <div class="quote-progress" aria-label="Quote progress">
-      <div class="quote-progress-step active" data-progress-step="1" aria-current="step"><span>1</span>Upload</div>
+      <div class="quote-progress-step active" data-progress-step="upload"><span>1</span>Upload</div>
       <div class="quote-progress-line" aria-hidden="true"></div>
-      <div class="quote-progress-step" data-progress-step="2"><span>2</span>Material</div>
+      <div class="quote-progress-step" data-progress-step="material"><span>2</span>Material</div>
       <div class="quote-progress-line" aria-hidden="true"></div>
-      <div class="quote-progress-step" data-progress-step="3"><span>3</span>Options</div>
+      <div class="quote-progress-step" data-progress-step="options"><span>3</span>Options</div>
       <div class="quote-progress-line" aria-hidden="true"></div>
-      <div class="quote-progress-step" data-progress-step="4"><span>4</span>Quote</div>
+      <div class="quote-progress-step" data-progress-step="quote"><span>4</span>Quote</div>
     </div>
     <div class="nav-links">
       <a href="materials.html?shop=mahi3d" class="nav-link" data-quote-nav="materials">Materials</a>
@@ -1057,10 +1350,61 @@
   </div>
 </nav>
 
+<!-- ─── Upload-first quote start ──────────────────────────── -->
+<section class="quote-start" id="quoteStart" aria-labelledby="quoteStartTitle" hidden>
+  <div class="quote-start-actions" aria-label="Demo actions">
+    <button class="page-action" type="button" data-demo-start-over>Start over</button>
+    <a class="page-action" href="index.html" data-sales-home>Back to sales page</a>
+  </div>
+  <p class="quote-start-kicker">3D print on demand</p>
+  <h1 id="quoteStartTitle">Your 3D file,<br>priced instantly.</h1>
+  <p class="quote-start-lede">Upload your file, choose your material, and get an instant quote.</p>
+  <div class="quote-start-card">
+    <button class="quote-start-drop" id="quoteStartChoose" type="button" aria-label="Choose STL or OBJ files">
+      <span class="quote-start-drop-inner">
+        <span class="quote-start-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 17V7"/>
+            <path d="M7.5 11.5 12 7l4.5 4.5"/>
+            <path d="M5 19h14"/>
+          </svg>
+        </span>
+        <strong>Drop your STL or OBJ files here</strong>
+        <span>or click to browse · up to 20 models / 250 MB</span>
+        <span class="quote-start-browse">Browse Files</span>
+      </span>
+    </button>
+    <ul class="quote-start-proof" aria-label="Quote flow benefits">
+      <li><strong>Instant quotes</strong><span>See pricing before ordering</span></li>
+      <li><strong>Custom options</strong><span>Select material, colour and finish</span></li>
+      <li><strong>Secure upload</strong><span>Your files stay protected</span></li>
+    </ul>
+  </div>
+</section>
+
 <!-- ─── Page heading ───────────────────────────────────────── -->
 <header class="page-head">
-  <h1 class="page-title" id="quotePageTitle">Start your quote</h1>
-  <p class="page-sub" id="quotePageSub">Upload your 3D model to choose materials, options and checkout.</p>
+  <div class="page-head-top">
+    <div>
+      <h1 class="page-title">Your quote</h1>
+      <p class="page-sub" data-page-subtitle>Review your model and order details before checkout.</p>
+    </div>
+    <div class="page-actions" aria-label="Quote page actions">
+      <button class="page-action" id="startOverBtn" type="button">Start over</button>
+      <a class="page-action" href="index.html" data-sales-home>Trennen home</a>
+    </div>
+  </div>
+  <div class="demo-context" data-demo-context hidden>
+    <div>
+      <p class="demo-context-kicker">Trennen demo</p>
+      <p class="demo-context-title">Sample print shop quote flow</p>
+      <p class="demo-context-copy" data-demo-reset-note>This demo starts clean from upload so you can see the buyer path from the beginning. Use Start over any time to reset the sample quote.</p>
+    </div>
+    <div class="demo-context-actions" aria-label="Demo actions">
+      <button class="page-action" type="button" data-demo-start-over>Start over</button>
+      <a class="page-action" href="index.html" data-sales-home>Back to sales page</a>
+    </div>
+  </div>
 </header>
 
 <!-- ─── Main grid ──────────────────────────────────────────── -->
@@ -1092,10 +1436,9 @@
             <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
             <line x1="12" y1="22.08" x2="12" y2="12"/>
           </svg>
-          <h2 class="viewer-empty-title" id="viewerEmptyTitle">Upload your model</h2>
-          <p class="viewer-empty-copy" id="viewerEmptyCopy">Choose an STL or OBJ file to get instant material and price options.</p>
+          <h2 class="viewer-empty-title" id="viewerEmptyTitle">Upload the next model group</h2>
+          <p class="viewer-empty-copy" id="viewerEmptyCopy">You can upload the same model again to choose different material, colour or finish.</p>
           <button class="viewer-empty-btn" id="viewerEmptyChoose" type="button">Choose files</button>
-          <button class="viewer-empty-reset" id="viewerEmptyReset" type="button" hidden>Start a new quote</button>
         </div>
 
         <!-- Floating controls -->
@@ -1323,20 +1666,35 @@
 
   // ── Config ──────────────────────────────────────────────────
   const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'mahi3d';
-  document.querySelectorAll('[data-home-link]').forEach(link => {
-    link.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
-  });
   document.querySelectorAll('[data-quote-nav]').forEach(link => {
     if (link.dataset.quoteNav === 'materials') link.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
     if (link.dataset.quoteNav === 'quote') link.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
     if (link.dataset.quoteNav === 'portal') link.href = `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#overview`;
   });
   const URL_PARAMS = new URLSearchParams(location.search);
+  const IS_DEMO_START = URL_PARAMS.get('demoStart') === '1';
+  const DEMO_CONTEXT_KEY = 'trennen_quote_demo_mode';
   const SHOULD_PROMPT_UPLOAD = URL_PARAMS.get('promptUpload') === '1' || URL_PARAMS.get('newGroup') === '1';
   const IS_NEW_GROUP_FLOW = URL_PARAMS.get('newGroup') === '1';
   const MAX_MODELS_PER_GROUP = 20;
   const SIZE_WARNING_KEY = 'material_size_warning';
   const PENDING_SAVED_QUOTE_KEY = 'pending_saved_quote';
+  const QUOTE_STORAGE_KEYS = ['form_file', 'form_selection', 'cart', PENDING_SAVED_QUOTE_KEY];
+  if (IS_DEMO_START) {
+    try { QUOTE_STORAGE_KEYS.forEach(key => localStorage.removeItem(key)); } catch {}
+    try { sessionStorage.setItem(DEMO_CONTEXT_KEY, '1'); } catch {}
+  }
+  const IS_DEMO_CONTEXT = IS_DEMO_START || URL_PARAMS.get('demo') === '1' || (() => {
+    try { return sessionStorage.getItem(DEMO_CONTEXT_KEY) === '1'; }
+    catch { return false; }
+  })();
+  if (IS_DEMO_CONTEXT) {
+    document.body.classList.add('sales-demo-mode');
+    const demoContext = document.querySelector('[data-demo-context]');
+    const demoSubtitle = document.querySelector('[data-page-subtitle]');
+    if (demoContext) demoContext.hidden = false;
+    if (demoSubtitle) demoSubtitle.textContent = 'Explore the customer quote flow for a sample print shop. Upload a model to begin, or reset the demo at any time.';
+  }
 
   const CURRENCY_META = {
     NZD: { symbol: '$' },
@@ -1382,39 +1740,6 @@
   // ── Helpers ─────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
 
-  function setQuoteProgressStep(step) {
-    document.querySelectorAll('[data-progress-step]').forEach(el => {
-      const active = Number(el.dataset.progressStep) === step;
-      el.classList.toggle('active', active);
-      if (active) el.setAttribute('aria-current', 'step');
-      else el.removeAttribute('aria-current');
-    });
-  }
-
-  function updateQuoteNavState() {
-    const materialsLink = document.querySelector('[data-quote-nav="materials"]');
-    if (!materialsLink) return;
-    const hasModel = !!fileData;
-    materialsLink.classList.toggle('disabled', !hasModel);
-    materialsLink.setAttribute('aria-disabled', hasModel ? 'false' : 'true');
-    materialsLink.setAttribute('href', hasModel ? `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}` : '#upload');
-    materialsLink.title = hasModel ? '' : 'Upload your model before choosing materials.';
-  }
-
-  function updateQuotePageIntro() {
-    const hasModel = !!fileData;
-    setQuoteProgressStep(hasModel ? 4 : 1);
-    updateQuoteNavState();
-    const title = $('quotePageTitle');
-    const sub = $('quotePageSub');
-    if (title) title.textContent = hasModel ? 'Your quote' : 'Start your quote';
-    if (sub) {
-      sub.textContent = hasModel
-        ? 'Review your model and order details before checkout.'
-        : 'Upload your 3D model to choose materials, options and checkout.';
-    }
-  }
-
   function fmtBytes(n) {
     if (!n) return '—';
     if (n < 1024) return n + ' B';
@@ -1423,14 +1748,16 @@
   }
 
   function saveSelection() {
-    if (!fileData && SHOULD_PROMPT_UPLOAD) {
+    if (!fileData) {
       try { localStorage.removeItem('form_selection'); } catch {}
+      updateProgressState();
       return;
     }
     selectionData.qty      = qty;
     selectionData.currency = currency;
     selectionData.requiredSelections = { ...requiredSelections() };
     try { localStorage.setItem('form_selection', JSON.stringify(selectionData)); } catch {}
+    updateProgressState();
   }
 
   function saveFileMeta() {
@@ -1472,10 +1799,6 @@
     return issues;
   }
 
-  function quotePreviewBlockers(issues = reviewSelectionIssues()) {
-    return issues.filter(issue => issue.key !== 'shipping');
-  }
-
   function issuesSentence(issues) {
     const labels = issues.map(issue => issue.label);
     if (!labels.length) return '';
@@ -1494,6 +1817,22 @@
   function clearShippingValidation() {
     $('shippingBlock')?.classList.remove('invalid');
     $('shippingValidationError')?.classList.remove('show');
+  }
+
+  function activeProgressStep() {
+    if (!fileData) return 'upload';
+    if (!selectionData?.materialId) return 'material';
+    if (reviewSelectionIssues().length) return 'options';
+    return 'quote';
+  }
+
+  function updateProgressState() {
+    const active = activeProgressStep();
+    document.querySelectorAll('[data-progress-step]').forEach(step => {
+      const isActive = step.dataset.progressStep === active;
+      step.classList.toggle('active', isActive);
+      step.setAttribute('aria-current', isActive ? 'step' : 'false');
+    });
   }
 
   function redirectToMaterialSelection(message) {
@@ -1826,10 +2165,16 @@
 
   function updateAddToCartState() {
     const checkout = $('checkoutCartBtn');
-    if (!checkout) return;
+    const save = $('saveQuoteBtn');
     const ready = sizeValidation.ok && reviewSelectionIssues().length === 0 && !!serverQuote;
-    checkout.classList.toggle('disabled', !ready);
-    checkout.setAttribute('aria-disabled', ready ? 'false' : 'true');
+    if (checkout) {
+      checkout.classList.toggle('disabled', !ready);
+      checkout.setAttribute('aria-disabled', ready ? 'false' : 'true');
+    }
+    if (save) {
+      save.disabled = !fileData;
+      save.title = fileData ? '' : 'Upload a model before saving a quote';
+    }
   }
 
   function validateModelSize() {
@@ -1865,8 +2210,8 @@
     return sizeValidation.ok;
   }
 
-  function quotePayload({ previewWithoutShipping = false } = {}) {
-    const payload = {
+  function quotePayload() {
+    return {
       shopSlug: SHOP_SLUG,
       materialId: selectionData.materialId,
       materialName: selectionData.materialName || null,
@@ -1879,8 +2224,6 @@
       quantity: effectiveQty(),
       shippingId: selectedShipping?.id || null,
     };
-    if (previewWithoutShipping) payload.previewWithoutShipping = true;
-    return payload;
   }
 
   function normaliseCartItem(input = {}, index = 0) {
@@ -2036,11 +2379,15 @@
     return cartItem;
   }
 
-  function clearCurrentQuoteGroup() {
+  function clearCurrentQuoteGroup({ clearCart = false } = {}) {
     fileData = null;
     modelFiles = [];
     previewModelId = null;
     selectionData = { shopSlug: SHOP_SLUG };
+    selectedShipping = null;
+    serverQuote = null;
+    quoteRequestSeq += 1;
+    sizeValidation = { ok: true, message: '' };
     const input = $('fileInput');
     if (input) input.value = '';
     try {
@@ -2057,41 +2404,20 @@
     try {
       localStorage.removeItem('form_file');
       localStorage.removeItem('form_selection');
+      localStorage.removeItem(PENDING_SAVED_QUOTE_KEY);
+      if (clearCart) localStorage.removeItem('cart');
     } catch {}
-  }
-
-  function hasStaleSavedQuoteState() {
-    if (fileData || SHOULD_PROMPT_UPLOAD) return false;
-    let savedCart = null;
-    try { savedCart = JSON.parse(localStorage.getItem('cart') || 'null'); } catch {}
-    const hasCartItems = Array.isArray(savedCart?.items) && savedCart.items.length > 0;
-    const hasSelectionDetails = !!selectionData && Object.entries(selectionData).some(([key, value]) => {
-      if (['shopSlug', 'currency', 'qty', 'requiredSelections'].includes(key)) return false;
-      return value !== null && value !== undefined && value !== '';
-    });
-    return hasCartItems || hasSelectionDetails;
-  }
-
-  function resetSavedQuoteState() {
-    clearCurrentQuoteGroup();
-    try {
-      localStorage.removeItem('cart');
-      localStorage.removeItem(SIZE_WARNING_KEY);
-    } catch {}
-    selectionData = { shopSlug: SHOP_SLUG };
-    qty = 1;
-    serverQuote = null;
-    renderPrice();
-    updateCartActions(readCart());
-    updateQuotePageIntro();
-    showUploadPrompt();
+    updateProgressState();
   }
 
   function scrubPromptParams() {
-    if (!SHOULD_PROMPT_UPLOAD) return;
+    if (!SHOULD_PROMPT_UPLOAD && !IS_DEMO_START) return;
     const url = new URL(window.location.href);
     url.searchParams.delete('promptUpload');
     url.searchParams.delete('newGroup');
+    url.searchParams.delete('demoStart');
+    if (IS_DEMO_CONTEXT) url.searchParams.set('demo', '1');
+    else url.searchParams.delete('demo');
     window.history.replaceState({}, '', url);
   }
 
@@ -2109,23 +2435,51 @@
     input.click();
   }
 
-  function showUploadPrompt({ autoOpen = false } = {}) {
+  function updateQuoteStartMode({ mode = IS_NEW_GROUP_FLOW ? 'group' : 'start', focus = false } = {}) {
+    const start = $('quoteStart');
+    if (!start) return false;
+    const shouldShow = !fileData && !IS_NEW_GROUP_FLOW;
+    document.body.classList.toggle('quote-start-mode', shouldShow);
+    start.hidden = !shouldShow;
+    if (!shouldShow) return false;
+
+    const isGroup = mode === 'group';
+    const title = $('quoteStartTitle');
+    const lede = start.querySelector('.quote-start-lede');
+    const dropStrong = start.querySelector('.quote-start-drop strong');
+    const dropHelp = start.querySelector('.quote-start-drop span:not(.quote-start-drop-inner):not(.quote-start-icon):not(.quote-start-browse)');
+    if (title) title.innerHTML = isGroup ? 'Upload the next<br>model group.' : 'Your 3D file,<br>priced instantly.';
+    if (lede) lede.textContent = isGroup
+      ? 'Add the next parts for a different material, colour, finish, or quantity.'
+      : 'Upload your file, choose your material, and get an instant quote.';
+    if (dropStrong) dropStrong.textContent = isGroup ? 'Drop the next STL or OBJ files here' : 'Drop your STL or OBJ files here';
+    if (dropHelp) dropHelp.textContent = 'or click to browse · up to 20 models / 250 MB';
+    if (focus) requestAnimationFrame(() => $('quoteStartChoose')?.focus({ preventScroll: true }));
+    return true;
+  }
+
+  function showUploadPrompt({ autoOpen = false, mode = IS_NEW_GROUP_FLOW ? 'group' : 'start' } = {}) {
     const empty = $('viewerEmpty');
     if (!empty) return;
-    showNewUploadBanner();
+    const isGroup = mode === 'group';
+    if (isGroup) showNewUploadBanner();
+    const startActive = updateQuoteStartMode({ mode, focus: !autoOpen });
+    if (startActive) {
+      updateProgressState();
+      if (autoOpen) {
+        setTimeout(() => openFilePicker(), 80);
+        scrubPromptParams();
+      }
+      return;
+    }
     empty.style.display = 'flex';
     empty.setAttribute('tabindex', '-1');
-    $('viewerEmptyTitle').textContent = SHOULD_PROMPT_UPLOAD ? 'Upload the next model group' : 'Upload your model';
-    $('viewerEmptyCopy').textContent = SHOULD_PROMPT_UPLOAD
+    $('viewerEmptyTitle').textContent = isGroup ? 'Upload the next model group' : 'Upload your model to start a quote';
+    $('viewerEmptyCopy').textContent = isGroup
       ? 'You can upload the same model again to choose different material, colour or finish.'
-      : 'Choose an STL or OBJ file to get instant material and price options.';
-    const resetBtn = $('viewerEmptyReset');
-    if (resetBtn) {
-      const showReset = hasStaleSavedQuoteState();
-      resetBtn.hidden = !showReset;
-      resetBtn.classList.toggle('show', showReset);
-    }
+      : 'Choose an STL or OBJ file. Trennen will carry it into material, options, and quote review.';
     requestAnimationFrame(() => empty.focus({ preventScroll: true }));
+    updateProgressState();
     if (autoOpen) {
       setTimeout(() => openFilePicker(), 80);
       scrubPromptParams();
@@ -2145,10 +2499,7 @@
       renderPrice();
       return null;
     }
-    const selectionIssues = reviewSelectionIssues();
-    const blockers = quotePreviewBlockers(selectionIssues);
-    const previewWithoutShipping = selectionIssues.some(issue => issue.key === 'shipping');
-    if (blockers.length) {
+    if (reviewSelectionIssues().length) {
       serverQuote = null;
       removeCurrentQuoteFromCart();
       renderPrice();
@@ -2165,7 +2516,7 @@
       const res = await fetch('/api/customer/quote-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(quotePayload({ previewWithoutShipping })),
+        body: JSON.stringify(quotePayload()),
       });
       const data = await res.json().catch(() => ({}));
       if (seq !== quoteRequestSeq) return serverQuote;
@@ -2186,11 +2537,7 @@
         return null;
       }
       serverQuote = data;
-      if (previewWithoutShipping) {
-        removeCurrentQuoteFromCart();
-      } else {
-        syncCurrentQuoteToCart(data);
-      }
+      syncCurrentQuoteToCart(data);
       renderPrice();
       updateAddToCartState();
       return data;
@@ -2274,6 +2621,7 @@
   }
 
   function renderPrice() {
+    updateProgressState();
     const sym         = activeSymbol();
     const lines       = serverQuote?.lineItems || {};
     const unitNzd     = Number(lines.unit) || 0;
@@ -2290,8 +2638,7 @@
       $('sumUnit').textContent     = '—';
       $('sumSubtotal').textContent = '—';
     } else {
-      // Big price = the server quote total. Before shipping selection this is
-      // a preview-only item total with shipping priced at zero.
+      // Big price = full total INCLUDING the currently-selected shipping option
       const [intPart, decPart] = totalDisp.toFixed(2).split('.');
       $('priceInt').textContent = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       $('priceDec').textContent = '.' + decPart;
@@ -2300,15 +2647,17 @@
     }
     $('sumQty').textContent = modelFiles.length > 1 ? 'Per model' : '× ' + qty;
 
+    // Helper line under the big price tracks shipping inclusion + qty:
+    //   no shipping options yet -> "excluding shipping"
+    //   shipping included       -> "incl. shipping" (and qty hint)
     const helper = $('priceHelper');
     if (helper) {
       const qtyHint = modelFiles.length > 1
         ? `total for ${modelFiles.length} models with selected quantities`
         : (qty > 1 ? `total for ${qty} units` : 'total');
-      const includesShipping = Boolean(serverQuote?.selected?.shipping?.id);
-      helper.textContent = serverQuote
-        ? `${qtyHint} · ${includesShipping ? 'Includes selected shipping' : 'Shipping not included'}`
-        : 'Waiting for quote details';
+      helper.textContent = serverQuote && selectedShipping
+        ? `${qtyHint} · incl. shipping`
+        : (serverQuote ? `${qtyHint} · excluding shipping` : 'Waiting for quote details');
     }
     renderModelPrices();
     renderCurrencyEstimateNote();
@@ -2492,6 +2841,8 @@
     renderModelList();
     updateQuantityMode();
     validateModelSize();
+    updateQuoteStartMode();
+    updateProgressState();
   }
   applyFileMeta();
 
@@ -2850,14 +3201,9 @@
   // ── File replace flow ──────────────────────────────────────
   $('replaceBtn').addEventListener('click', () => $('fileInput').click());
   $('viewerEmptyChoose')?.addEventListener('click', () => openFilePicker());
-  $('viewerEmptyReset')?.addEventListener('click', () => resetSavedQuoteState());
-  document.querySelector('[data-quote-nav="materials"]')?.addEventListener('click', e => {
-    if (fileData) return;
-    e.preventDefault();
-    showUploadPrompt();
-    showToast('Upload your model before choosing materials.');
-  });
+  $('quoteStartChoose')?.addEventListener('click', () => openFilePicker());
   $('fileInput').addEventListener('change', async e => {
+    const wasStartMode = document.body.classList.contains('quote-start-mode');
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     if (files.length > MAX_MODELS_PER_GROUP) {
@@ -2904,17 +3250,21 @@
     refreshQuotePreview({ silent: true });
     if (SHOULD_PROMPT_UPLOAD) {
       window.location.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1`;
+      return;
+    }
+    if (wasStartMode) {
+      window.location.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}${IS_DEMO_CONTEXT ? '&demo=1' : ''}`;
     }
   });
 
   // ── Init the viewer ────────────────────────────────────────
-  updateQuotePageIntro();
+  if (IS_DEMO_START) clearCurrentQuoteGroup({ clearCart: true });
   const loaded = await tryLoadStoredModel();
   if (!loaded) {
     placePlaceholder();
-    if (!fileData) showUploadPrompt({ autoOpen: SHOULD_PROMPT_UPLOAD });
+    if (!fileData) showUploadPrompt({ autoOpen: SHOULD_PROMPT_UPLOAD, mode: IS_NEW_GROUP_FLOW ? 'group' : 'start' });
   }
-  if (fileData && SHOULD_PROMPT_UPLOAD) scrubPromptParams();
+  if (IS_DEMO_START || (fileData && SHOULD_PROMPT_UPLOAD)) scrubPromptParams();
   // After viewer is ready, also reflect the saved colour onto the material
   if (selectionData?.colorHex) setViewerColor(selectionData.colorHex);
 
@@ -2985,6 +3335,26 @@
   // ── Cart Actions / Save Quote ──────────────────────────────
   // A valid server quote now auto-syncs this material group into the
   // cart, so checkout can proceed without a separate manual cart step.
+  function resetQuoteToStart() {
+    clearCurrentQuoteGroup({ clearCart: true });
+    window.showModelPlaceholder?.();
+    applyFileMeta();
+    renderPrice();
+    updateCartActions(readCart());
+    showUploadPrompt({ autoOpen: false, mode: 'start' });
+    scrubPromptParams();
+  }
+
+  $('startOverBtn')?.addEventListener('click', resetQuoteToStart);
+  document.querySelectorAll('[data-demo-start-over]').forEach(button => {
+    button.addEventListener('click', resetQuoteToStart);
+  });
+  document.querySelectorAll('[data-sales-home]').forEach(link => {
+    link.addEventListener('click', () => {
+      try { sessionStorage.removeItem(DEMO_CONTEXT_KEY); } catch {}
+    });
+  });
+
   $('addAnotherBtn')?.addEventListener('click', () => {
     clearCurrentQuoteGroup();
     window.location.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`;

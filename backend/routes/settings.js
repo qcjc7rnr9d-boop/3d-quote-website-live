@@ -17,6 +17,7 @@ import {
   recentEmailEventsForShop,
   updateShopEmailDomainSettings,
 } from '../lib/email-delivery.js';
+import { isSafeEmailAddress, normaliseEmailAddress } from '../lib/email-validation.js';
 
 const router = Router();
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -36,7 +37,7 @@ const logoUpload = multer({
 function ensureSupportEmailColumns() {
   const cols = db.prepare('PRAGMA table_info(store_settings)').all().map(c => c.name);
   if (!cols.includes('support_email_mode')) {
-    db.exec("ALTER TABLE store_settings ADD COLUMN support_email_mode TEXT NOT NULL DEFAULT 'signup'");
+    db.exec("ALTER TABLE store_settings ADD COLUMN support_email_mode TEXT NOT NULL DEFAULT 'hidden'");
   }
   if (!cols.includes('support_email')) {
     db.exec('ALTER TABLE store_settings ADD COLUMN support_email TEXT');
@@ -52,11 +53,16 @@ function ensureSettings(shopId) {
 }
 
 function normaliseEmail(value) {
-  return String(value || '').trim().toLowerCase();
+  return normaliseEmailAddress(value);
 }
 
 function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+  return isSafeEmailAddress(value);
+}
+
+function normaliseSupportEmailMode(value, fallback = 'hidden') {
+  const mode = String(value || fallback || 'hidden').trim().toLowerCase();
+  return ['hidden', 'signup', 'custom'].includes(mode) ? mode : 'hidden';
 }
 
 function verifiedImageExtension(file) {
@@ -88,6 +94,7 @@ function parseSettings(row) {
   const thankYou = String(templates?._thank_you || '');
   return {
     ...row,
+    support_email_mode: normaliseSupportEmailMode(row.support_email_mode),
     notifications:   JSON.parse(row.notifications || '{}'),
     email_templates: templates,
     email_thank_you: thankYou,
@@ -158,8 +165,8 @@ router.put('/', requireShopAuth, (req, res) => {
       email_use_platform_fallback
     } = req.body;
     const supportMode = support_email_mode !== undefined
-      ? (support_email_mode === 'custom' ? 'custom' : 'signup')
-      : (existing.support_email_mode === 'custom' ? 'custom' : 'signup');
+      ? normaliseSupportEmailMode(support_email_mode)
+      : normaliseSupportEmailMode(existing.support_email_mode);
     const supportEmail = support_email !== undefined
       ? normaliseEmail(support_email)
       : normaliseEmail(existing.support_email);

@@ -10,8 +10,10 @@ import {
   updateShopStripeReadiness,
 } from '../lib/platform-payments.js';
 import {
+  billingStatusIsActive,
   liveOrderReadiness,
   markShopBillingPastDue,
+  reconcileShopBilling,
   updateShopBillingFromCheckoutSession,
   updateShopBillingFromSubscription,
 } from '../lib/billing.js';
@@ -100,6 +102,19 @@ function readinessErrorPayload(readiness) {
     billing_status: readiness.billing_status,
     can_accept_live_orders: false,
   };
+}
+
+function activeBillingShop(shop) {
+  const reconciled = reconcileShopBilling(db, shop.id);
+  const freshShop = reconciled?.shop || shop;
+  if (!billingStatusIsActive(freshShop.billing_status, freshShop.plan)) {
+    const err = new Error('This store subscription is not active yet.');
+    err.status = 402;
+    err.code = 'SUBSCRIPTION_INACTIVE';
+    err.billing_status = freshShop.billing_status || 'pending_subscription';
+    throw err;
+  }
+  return freshShop;
 }
 
 function validateEmail(email) {
@@ -217,7 +232,8 @@ router.get('/keys-status', requireShopAuth, async (req, res) => {
     const platform = getMaskedPlatformStripeConfig();
     const effectivePlatform = getEffectivePlatformStripeConfig();
     const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
-    const account = await syncShopStripeAccount(shop);
+    const reconciled = reconcileShopBilling(db, shop.id)?.shop || shop;
+    const account = await syncShopStripeAccount(reconciled);
     const refreshedShop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
     const baseReadiness = {
       ...liveOrderReadiness(refreshedShop, effectivePlatform),
@@ -243,12 +259,22 @@ router.get('/public-key', (req, res) => {
   const slug = req.query.shop;
   if (!slug) return res.status(400).json({ error: 'shop required' });
 
-  const shop = db.prepare(
+  let shop = db.prepare(
     `SELECT *
      FROM shops WHERE slug = ? AND plan != 'suspended'`
   ).get(slug);
 
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
+  try {
+    shop = activeBillingShop(shop);
+  } catch (err) {
+    return res.status(err.status || 402).json({
+      error: err.message,
+      code: err.code || 'SUBSCRIPTION_INACTIVE',
+      billing_status: err.billing_status || shop.billing_status,
+      can_accept_live_orders: false,
+    });
+  }
 
   try {
     assertCheckoutAllowed(db, shop.id, { method: 'card' });
@@ -285,8 +311,18 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       return res.status(400).json({ error: 'Enter a valid email address.' });
     }
 
-    const shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
+    let shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    try {
+      shop = activeBillingShop(shop);
+    } catch (err) {
+      return res.status(err.status || 402).json({
+        error: err.message,
+        code: err.code || 'SUBSCRIPTION_INACTIVE',
+        billing_status: err.billing_status || shop.billing_status,
+        can_accept_live_orders: false,
+      });
+    }
 
     const platform = getEffectivePlatformStripeConfig();
     const readiness = liveOrderReadiness(shop, platform);
@@ -437,8 +473,17 @@ router.post('/create-bank-transfer-order', paymentIntentLimiter, async (req, res
       return res.status(400).json({ error: 'Enter a valid email address.' });
     }
 
-    const shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
+    let shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    try {
+      shop = activeBillingShop(shop);
+    } catch (err) {
+      return res.status(err.status || 402).json({
+        error: err.message,
+        code: err.code || 'SUBSCRIPTION_INACTIVE',
+        billing_status: err.billing_status || shop.billing_status,
+      });
+    }
     const paymentFeeMode = getPaymentFeeMode(db, shop.id);
 
     const cart = validateCartForShop(db, shop, normaliseCart({
