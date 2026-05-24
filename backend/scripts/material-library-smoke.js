@@ -3,6 +3,8 @@ import {
   enrichMaterialSuggestion,
   findMaterialMatch,
 } from '../lib/material-library.js';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 let failures = 0;
 
@@ -22,6 +24,14 @@ function expect(condition, message) {
 
 const fdmMaterials = MATERIAL_LIBRARY.filter(material => material.category === 'FDM');
 expect(fdmMaterials.length >= 50, `FDM library has ${fdmMaterials.length} profiles`);
+expect(MATERIAL_LIBRARY.every(material => material.category === 'FDM'), 'Exposed material library is FDM-only');
+
+for (const query of ['Standard Resin', 'SLS PA12', 'Dental Resin', 'Castable Resin']) {
+  expect(findMaterialMatch(query) == null, `${query} is not exposed while FDM-only mode is active`);
+}
+
+const adminMaterialsHtml = readFileSync(resolve(import.meta.dirname, '..', '..', 'admin', 'materials.html'), 'utf8');
+expect(!/<option value="(?:Resin|SLS|Specialty)">/.test(adminMaterialsHtml), 'Admin material category picker exposes FDM only');
 
 const requiredQueries = new Map([
   ['Silk PLA', 'pla_silk'],

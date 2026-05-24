@@ -1004,6 +1004,7 @@
     let showSelectionValidation = false;
     let validationToastTimer = null;
     const openSpecs = new Set();
+    const hiddenMaterialFilters = new Set(['resin', 'sls', 'specialty']);
 
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     const money = n => Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1199,6 +1200,10 @@
       return `<div class="finish-preview ${String(finish.previewType || '').toLowerCase().includes('fine') ? 'fine' : ''}"></div>`;
     }
 
+    function isFdmMaterial(material) {
+      return String(material?.category || '').trim().toLowerCase() === 'fdm';
+    }
+
     function normaliseCatalogPayload(payload, pricing) {
       const rows = Array.isArray(payload) ? payload : (payload.materials || []);
       const pMap = Object.fromEntries((pricing.materials || []).map(m => [m.id, m]));
@@ -1206,7 +1211,7 @@
       if (!Array.isArray(settings.filters) && Array.isArray(payload.filters)) {
         settings.filters = payload.filters;
       }
-      return rows.map(m => {
+      return rows.filter(isFdmMaterial).map(m => {
         const pm = pMap[m.id] || {};
         const colours = Array.isArray(m.colours) ? m.colours.filter(c => c.enabled !== false) : [];
         let finishes = Array.isArray(m.finishes) ? m.finishes.filter(f => f.enabled !== false) : [];
@@ -1247,6 +1252,7 @@
         const cleaned = String(label || '').trim();
         if (!cleaned) return;
         const key = cleaned.toLowerCase();
+        if (hiddenMaterialFilters.has(key)) return;
         if (!filterMap.has(key)) filterMap.set(key, cleaned);
       };
       (settings.filters || []).forEach(addFilter);

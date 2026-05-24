@@ -8,6 +8,8 @@ import { db, requireShopAuth } from '../middleware/auth.js';
 import { MATERIAL_LIBRARY, enrichMaterialSuggestion, findMaterialMatch } from '../lib/material-library.js';
 import { aiLookupMaterial } from '../lib/material-ai.js';
 import {
+  VISIBLE_MATERIAL_CATEGORY,
+  isVisibleMaterialCategory,
   normalizeMaterialPayload,
   parseMaterialRow,
   safeJson,
@@ -59,6 +61,12 @@ router.post('/library/ai-lookup', requireShopAuth, async (req, res) => {
   }
   try {
     const result = await aiLookupMaterial(name);
+    if (!isVisibleMaterialCategory(result?.category)) {
+      return res.status(422).json({
+        error: 'Only FDM materials are available for customer quoting right now.',
+        code: 'FDM_ONLY',
+      });
+    }
     res.json({ match: result, query: name, source: 'ai' });
   } catch (err) {
     if (err.code === 'NO_API_KEY') {
@@ -88,8 +96,8 @@ function parseMaterialJSON(row) {
 // GET /api/materials/
 router.get('/', requireShopAuth, (req, res) => {
   const rows = db.prepare(
-    'SELECT * FROM materials WHERE shop_id = ? ORDER BY sort_order, name'
-  ).all(req.shop.id);
+    'SELECT * FROM materials WHERE shop_id = ? AND category = ? ORDER BY sort_order, name'
+  ).all(req.shop.id, VISIBLE_MATERIAL_CATEGORY);
 
   res.json(rows.map(parseMaterialJSON));
 });
@@ -142,7 +150,7 @@ router.post('/assets', requireShopAuth, upload.single('asset'), (req, res) => {
 router.post('/', requireShopAuth, (req, res) => {
   const {
     name,
-    category = 'FDM',
+    category: _category = VISIBLE_MATERIAL_CATEGORY,
     description_short = null,
     description_long = null,
     base_price = 0.18,
@@ -194,7 +202,7 @@ router.post('/', requireShopAuth, (req, res) => {
   `).run(
     req.shop.id,
     name,
-    category,
+    VISIBLE_MATERIAL_CATEGORY,
     description_short,
     description_long,
     image_url || null,
@@ -226,8 +234,8 @@ router.post('/', requireShopAuth, (req, res) => {
 
 // PATCH /api/materials/:id
 router.patch('/:id', requireShopAuth, (req, res) => {
-  const existing = db.prepare('SELECT * FROM materials WHERE id = ? AND shop_id = ?')
-    .get(req.params.id, req.shop.id);
+  const existing = db.prepare('SELECT * FROM materials WHERE id = ? AND shop_id = ? AND category = ?')
+    .get(req.params.id, req.shop.id, VISIBLE_MATERIAL_CATEGORY);
 
   if (!existing) {
     return res.status(404).json({ error: 'Material not found' });
@@ -235,7 +243,7 @@ router.patch('/:id', requireShopAuth, (req, res) => {
 
   const {
     name = existing.name,
-    category = existing.category,
+    category: _category = VISIBLE_MATERIAL_CATEGORY,
     description_short = existing.description_short,
     description_long = existing.description_long,
     base_price = existing.base_price,
@@ -288,7 +296,7 @@ router.patch('/:id', requireShopAuth, (req, res) => {
       max_x_mm = ?, max_y_mm = ?, max_z_mm = ?
     WHERE id = ? AND shop_id = ?
   `).run(
-    name, category, description_short, description_long,
+    name, VISIBLE_MATERIAL_CATEGORY, description_short, description_long,
     image_url || null, image_alt || null, price_unit || 'per cm³', recommended ? 1 : 0,
     JSON.stringify(normalized.tags), JSON.stringify(normalized.best_for), JSON.stringify(normalized.specs),
     base_price, min_charge, pricing_model, newColours,
@@ -305,21 +313,21 @@ router.patch('/:id', requireShopAuth, (req, res) => {
     req.params.id, req.shop.id
   );
 
-  const updated = db.prepare('SELECT * FROM materials WHERE id = ?').get(req.params.id);
+  const updated = db.prepare('SELECT * FROM materials WHERE id = ? AND category = ?').get(req.params.id, VISIBLE_MATERIAL_CATEGORY);
   res.json(parseMaterialJSON(updated));
 });
 
 // DELETE /api/materials/:id
 router.delete('/:id', requireShopAuth, (req, res) => {
-  const existing = db.prepare('SELECT * FROM materials WHERE id = ? AND shop_id = ?')
-    .get(req.params.id, req.shop.id);
+  const existing = db.prepare('SELECT * FROM materials WHERE id = ? AND shop_id = ? AND category = ?')
+    .get(req.params.id, req.shop.id, VISIBLE_MATERIAL_CATEGORY);
 
   if (!existing) {
     return res.status(404).json({ error: 'Material not found' });
   }
 
-  db.prepare('DELETE FROM materials WHERE id = ? AND shop_id = ?')
-    .run(req.params.id, req.shop.id);
+  db.prepare('DELETE FROM materials WHERE id = ? AND shop_id = ? AND category = ?')
+    .run(req.params.id, req.shop.id, VISIBLE_MATERIAL_CATEGORY);
 
   res.json({ ok: true });
 });

@@ -1,5 +1,5 @@
 import { parseInfillTiers } from './infill-tiers.js';
-import { parseMaterialRow, safeJson } from './material-config.js';
+import { VISIBLE_MATERIAL_CATEGORY, parseMaterialRow, safeJson } from './material-config.js';
 
 export class PricingError extends Error {
   constructor(message, status = 400, code = 'PRICING_ERROR', quote = null) {
@@ -237,8 +237,8 @@ function resolveMaterial(db, shop, input = {}) {
     const byId = parseMaterialRow(db.prepare(`
       SELECT *
       FROM materials
-      WHERE id = ? AND shop_id = ? AND active = 1
-    `).get(input.materialId, shop.id), { stableIds: true, publicOnly: true });
+      WHERE id = ? AND shop_id = ? AND active = 1 AND category = ?
+    `).get(input.materialId, shop.id, VISIBLE_MATERIAL_CATEGORY), { stableIds: true, publicOnly: true });
     if (byId) return byId;
   }
 
@@ -253,8 +253,8 @@ function resolveMaterial(db, shop, input = {}) {
   const rows = db.prepare(`
     SELECT *
     FROM materials
-    WHERE shop_id = ? AND active = 1
-  `).all(shop.id);
+    WHERE shop_id = ? AND active = 1 AND category = ?
+  `).all(shop.id, VISIBLE_MATERIAL_CATEGORY);
   const matches = rows.filter(row => normaliseLookupText(row.name) === materialName);
   if (matches.length !== 1) return null;
   return parseMaterialRow(matches[0], { stableIds: true, publicOnly: true });
