@@ -2,6 +2,9 @@
 (function () {
   'use strict';
 
+  const RESTRICTED_ITEMS_CERTIFICATION_VERSION = 'restricted-items-v1-2026-05-24';
+  const CERTIFICATION_ERROR_MESSAGE = 'Please certify that your order does not include restricted or unlawful items.';
+
   // Nav toggle
   const nt = document.getElementById('navToggle');
   const nl = document.getElementById('navLinks');
@@ -49,6 +52,7 @@
     if (target === 'quote') link.href = shopHref('quote.html');
     if (target === 'portal') link.href = `customer/dashboard.html?shop=${encodeURIComponent(shopSlug)}#overview`;
     if (target === 'help') link.href = `customer/dashboard.html?shop=${encodeURIComponent(shopSlug)}#help`;
+    if (target === 'terms') link.href = `${shopHref('terms.html')}#prohibited-uploads`;
   });
 
   if (!hasData) {
@@ -283,21 +287,48 @@
   let stripeReady = false;
   let paymentUnavailable = false;
 
+  function restrictedItemsCertified() {
+    return Boolean(document.getElementById('restrictedItemsCertification')?.checked);
+  }
+
+  function restrictedItemsCertificationPayload() {
+    return {
+      accepted: true,
+      version: RESTRICTED_ITEMS_CERTIFICATION_VERSION,
+    };
+  }
+
+  function updateBankTransferButton() {
+    const bankBtn = document.getElementById('bankTransferBtn');
+    if (!bankBtn) return;
+    bankBtn.disabled = selectedPaymentMethod !== 'bank_transfer' || !quoteValidated || !restrictedItemsCertified();
+    bankBtn.style.opacity = bankBtn.disabled ? '0.7' : '';
+    bankBtn.style.cursor = bankBtn.disabled ? 'not-allowed' : '';
+  }
+
   function updatePayButton(message) {
     const payBtn = document.getElementById('payBtn');
-    if (!payBtn) return;
-    if (totalNzd > 0) {
+    if (payBtn && totalNzd > 0) {
       const defaultLabel = 'Pay ' + fmtNzd(totalNzd + processingFeeCents / 100);
-      payBtn.textContent = paymentUnavailable ? 'Payment unavailable' : (message || defaultLabel);
-      payBtn.disabled = selectedPaymentMethod !== 'card' || !(quoteValidated && stripeReady) || paymentUnavailable;
+      const certificationMissing = !restrictedItemsCertified();
+      const certBlocksPayment = quoteValidated && stripeReady && !paymentUnavailable && certificationMissing;
+      payBtn.textContent = paymentUnavailable ? 'Payment unavailable' : (certBlocksPayment ? 'Review certification' : (message || defaultLabel));
+      payBtn.disabled = selectedPaymentMethod !== 'card' || !(quoteValidated && stripeReady) || paymentUnavailable || certificationMissing;
       payBtn.style.opacity = payBtn.disabled ? '0.7' : '';
       payBtn.style.cursor = payBtn.disabled ? 'not-allowed' : '';
-    } else {
+      const errEl = document.getElementById('card-errors');
+      if (errEl && certBlocksPayment && (!errEl.textContent || errEl.textContent === CERTIFICATION_ERROR_MESSAGE)) {
+        errEl.textContent = CERTIFICATION_ERROR_MESSAGE;
+      } else if (errEl && restrictedItemsCertified() && errEl.textContent === CERTIFICATION_ERROR_MESSAGE) {
+        errEl.textContent = '';
+      }
+    } else if (payBtn) {
       payBtn.textContent = 'No price set - contact the shop';
       payBtn.disabled = true;
       payBtn.style.opacity = '0.6';
       payBtn.style.cursor = 'not-allowed';
     }
+    updateBankTransferButton();
   }
 
   function setPaymentFieldsDisabled(disabled) {
@@ -605,6 +636,12 @@
       document.getElementById('card-errors').textContent = err.message || 'Could not refresh checkout total.';
     });
   });
+  document.getElementById('restrictedItemsCertification')?.addEventListener('change', () => {
+    const errEl = document.getElementById('card-errors');
+    if (restrictedItemsCertified() && errEl?.textContent === CERTIFICATION_ERROR_MESSAGE) errEl.textContent = '';
+    updatePayButton();
+  });
+
   if (hasData) {
     renderCart();
     refreshCheckoutQuote().catch(err => {
@@ -679,6 +716,11 @@
       errEl.textContent = 'Checkout total is still being validated. Please try again in a moment.';
       return;
     }
+    if (!restrictedItemsCertified()) {
+      errEl.textContent = CERTIFICATION_ERROR_MESSAGE;
+      updatePayButton();
+      return;
+    }
     if (!stripe || !cardEl || !stripeReady) {
       errEl.textContent = 'Card form is still loading - please try again in a moment.';
       return;
@@ -707,6 +749,7 @@
           customerEmail:   email,
           customerName:    name,
           orderData: cart,
+          restrictedItemsCertification: restrictedItemsCertificationPayload(),
         }),
       });
       const data = await res.json();
@@ -755,6 +798,11 @@
       if (errEl) errEl.textContent = 'Checkout total is still being validated. Please try again in a moment.';
       return;
     }
+    if (!restrictedItemsCertified()) {
+      if (errEl) errEl.textContent = CERTIFICATION_ERROR_MESSAGE;
+      updatePayButton();
+      return;
+    }
 
     const btn = document.getElementById('bankTransferBtn');
     const original = btn.textContent;
@@ -769,6 +817,7 @@
           customerEmail: email,
           customerName: name,
           orderData: cart,
+          restrictedItemsCertification: restrictedItemsCertificationPayload(),
         }),
       });
       const data = await res.json().catch(() => ({}));

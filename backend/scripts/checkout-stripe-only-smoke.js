@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '../..');
 const checkoutHtml = readFileSync(resolve(root, 'checkout.html'), 'utf8');
 const checkoutJs = readFileSync(resolve(root, 'assets/checkout.js'), 'utf8');
+const stripeRoute = readFileSync(resolve(root, 'backend/routes/stripe.js'), 'utf8');
+const schemaSql = readFileSync(resolve(root, 'backend/db/schema.sql'), 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -63,12 +65,49 @@ assert(
   'Checkout is missing the order-review validation error container'
 );
 assert(
+  checkoutHtml.includes('id="restrictedItemsCertification"'),
+  'Checkout is missing the restricted-items certification checkbox'
+);
+assert(
+  checkoutHtml.includes('I certify that the files, notes, and order I submit do not include'),
+  'Checkout is missing the required restricted-items certification wording'
+);
+assert(
   checkoutJs.includes('Material group') && checkoutJs.includes('Group total') && checkoutJs.includes('modelVolumeText'),
   'Checkout script must render full material groups with file and total detail'
 );
 assert(
   checkoutJs.includes('showReviewValidationError'),
   'Checkout script must surface quote validation failures in the order review'
+);
+assert(
+  checkoutJs.includes('RESTRICTED_ITEMS_CERTIFICATION_VERSION') && checkoutJs.includes('restricted-items-v1-2026-05-24'),
+  'Checkout script must use a versioned restricted-items certification'
+);
+assert(
+  checkoutJs.includes('restrictedItemsCertification') && checkoutJs.includes('Please certify that your order does not include restricted or unlawful items.'),
+  'Checkout script must block payment and send the restricted-items certification payload'
+);
+assert(
+  (checkoutJs.match(/restrictedItemsCertification: restrictedItemsCertificationPayload/g) || []).length >= 2,
+  'Checkout script must send the restricted-items certification for card and bank-transfer checkout'
+);
+
+assert(
+  stripeRoute.includes('RESTRICTED_ITEMS_CERTIFICATION_VERSION') && stripeRoute.includes('RESTRICTED_ITEMS_CERTIFICATION_REQUIRED'),
+  'Stripe payment route must reject missing restricted-items certification'
+);
+assert(
+  (stripeRoute.match(/validateRestrictedItemsCertification/g) || []).length >= 2,
+  'Stripe payment route must reject missing restricted-items certification for card and bank-transfer checkout'
+);
+assert(
+  stripeRoute.includes('restrictedItemsCertification') && stripeRoute.includes('restricted_items_certification_version'),
+  'Stripe payment route must persist the restricted-items certification'
+);
+assert(
+  schemaSql.includes('restricted_items_certification_version') && schemaSql.includes('restricted_items_certified_at'),
+  'Orders schema must store restricted-items certification evidence'
 );
 
 console.log('Stripe checkout fallback smoke checks passed.');

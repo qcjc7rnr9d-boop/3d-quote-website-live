@@ -457,6 +457,35 @@
 
     .bank-transfer-panel.show { display: block; }
 
+    .legal-certification {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      padding: 12px;
+      border: 1px solid rgba(90,138,94,0.22);
+      border-radius: 14px;
+      background: rgba(90,138,94,0.055);
+    }
+    .legal-certification input {
+      width: 16px;
+      height: 16px;
+      margin: 2px 0 0;
+      accent-color: var(--sage);
+    }
+    .legal-certification span {
+      display: block;
+      color: var(--ink);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .legal-certification a {
+      color: var(--sage-dark);
+      font-weight: 800;
+      text-underline-offset: 3px;
+    }
+
     /* ── Security caption ────────────────────────────────── */
     .security-caption {
       text-align: center;
@@ -617,6 +646,12 @@
           </label>
         </div>
 
+        <label class="legal-certification" for="restrictedItemsCertification">
+          <input type="checkbox" id="restrictedItemsCertification" name="restrictedItemsCertification" required>
+          <span>I certify that the files, notes, and order I submit do not include, request, or relate to any firearm, firearm part, major firearm part, prohibited part, magazine, ammunition, suppressor, silencer, weapon, restricted weapon, pistol carbine conversion kit, conversion device, explosive, or other regulated, unlawful, unsafe, or controlled item. I am responsible for the legality and intended use of my design. I agree that Trennen and the participating store may refuse, cancel, delete files, retain records, refund where appropriate, and disclose information to authorities if they reasonably believe an order is unlawful, unsafe, or breaches these terms. <a href="terms.html?shop=mahi3d#prohibited-uploads" data-checkout-link="terms">Terms</a></span>
+        </label>
+        <div id="card-errors" class="form-error" style="margin-top:-8px;margin-bottom:12px;" role="alert"></div>
+
         <div id="cardPanel">
           <div class="card-panel-inner">
             <div class="form-group">
@@ -647,7 +682,6 @@
               <div id="card-element-wrapper">
                 <div id="card-element"></div>
               </div>
-              <div id="card-errors" class="form-error" style="margin-top:6px;" role="alert"></div>
             </div>
             <button class="btn btn-primary lg full" id="payBtn">Pay —</button>
           </div>
