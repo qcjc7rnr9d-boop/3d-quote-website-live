@@ -20,6 +20,7 @@ assert(existsSync(privacyPath), 'privacy.html must exist at the public root');
 const termsHtml = read('terms.html');
 const privacyHtml = read('privacy.html');
 const catalogHtml = read('catalog.html');
+const checkoutHtml = read('checkout.html');
 const serverJs = read('backend/server.js');
 
 for (const [name, html] of [['terms.html', termsHtml], ['privacy.html', privacyHtml]]) {
@@ -33,6 +34,22 @@ for (const [name, html] of [['terms.html', termsHtml], ['privacy.html', privacyH
 
 assert(serverJs.includes("'/terms.html'"), 'server public root pages must include /terms.html');
 assert(serverJs.includes("'/privacy.html'"), 'server public root pages must include /privacy.html');
+assert(
+  termsHtml.includes('Prohibited uploads and customer responsibility'),
+  'Terms must include prohibited uploads and customer responsibility wording'
+);
+assert(
+  termsHtml.includes('Trennen is the software platform provider') && termsHtml.includes('participating store'),
+  'Terms must explain Trennen/store responsibility split'
+);
+assert(
+  termsHtml.includes('indemnify Trennen') && termsHtml.includes('non-excludable rights under New Zealand law'),
+  'Terms must include indemnity and non-excludable NZ rights language'
+);
+assert(
+  checkoutHtml.includes('terms.html?shop=') && checkoutHtml.includes('restrictedItemsCertification'),
+  'Checkout must link the restricted-items certification to the terms page'
+);
 
 for (const [name, html] of [['catalog.html', catalogHtml]]) {
   assert(html.includes('terms.html?shop='), `${name} footer must link to terms.html with shop slug`);

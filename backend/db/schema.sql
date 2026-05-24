@@ -125,6 +125,8 @@ CREATE TABLE IF NOT EXISTS orders (
   total               REAL    NOT NULL DEFAULT 0,
   stripe_payment_id   TEXT,
   public_token        TEXT UNIQUE,
+  restricted_items_certification_version TEXT,
+  restricted_items_certified_at TEXT,
   payment_processing_fee_cents INTEGER NOT NULL DEFAULT 0,
   checkout_platform_fee_cents INTEGER NOT NULL DEFAULT 0,
   customer_total_cents INTEGER NOT NULL DEFAULT 0,
