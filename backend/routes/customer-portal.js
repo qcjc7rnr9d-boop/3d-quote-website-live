@@ -8,7 +8,7 @@ import { renderTemplate } from '../lib/email-templates/index.js';
 import { buildEmailIdempotencyKey } from '../lib/email-delivery.js';
 import { BCRYPT_ROUNDS, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES, MIN_PASSWORD_LENGTH } from '../config.js';
 import { parseInfillTiers } from '../lib/infill-tiers.js';
-import { parseMaterialRow, safeJson } from '../lib/material-config.js';
+import { VISIBLE_MATERIAL_CATEGORY, parseMaterialRow, safeJson } from '../lib/material-config.js';
 import { calculateQuoteForShopSlug, PricingError } from '../lib/pricing-engine.js';
 import { normaliseCart, previewCartForShop } from '../lib/cart.js';
 import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
@@ -415,9 +415,9 @@ router.get('/pricing', (req, res) => {
   const materials = db.prepare(`
     SELECT id, name, base_price, min_charge, pricing_model, volume_tiers
     FROM materials
-    WHERE shop_id = ? AND active = 1
+    WHERE shop_id = ? AND active = 1 AND category = ?
     ORDER BY sort_order, name
-  `).all(shop.id).map(m => ({
+  `).all(shop.id, VISIBLE_MATERIAL_CATEGORY).map(m => ({
     ...m,
     volume_tiers: JSON.parse(m.volume_tiers || '[]'),
   }));
@@ -475,9 +475,9 @@ router.get('/catalog', (req, res) => {
             min_x_mm, min_y_mm, min_z_mm,
             max_x_mm, max_y_mm, max_z_mm
      FROM materials
-     WHERE shop_id = ? AND active = 1
+     WHERE shop_id = ? AND active = 1 AND category = ?
      ORDER BY sort_order, name`
-  ).all(shop.id);
+  ).all(shop.id, VISIBLE_MATERIAL_CATEGORY);
   const materials = rows.map(r => parseMaterialRow(r, { stableIds: true, publicOnly: true }));
   const filters = [...new Set(materials.flatMap(m => [m.category, ...(m.tags || [])])
     .map(v => String(v || '').trim())

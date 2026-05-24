@@ -565,9 +565,6 @@
             <label class="form-label" for="mCategory">Category</label>
             <select class="form-input" id="mCategory" name="category">
               <option value="FDM">FDM</option>
-              <option value="Resin">Resin</option>
-              <option value="SLS">SLS</option>
-              <option value="Specialty">Specialty</option>
             </select>
           </div>
           <div class="form-group">
@@ -775,8 +772,8 @@
               New materials auto-fill from the local library as you type names like <em>PLA</em>, <em>PETG-CF</em>,
               <em>TPU 95A</em>, <em>AMS TPU</em>, or <em>Nylon PA6</em>.
               Click Suggest to intentionally refresh populated fields or look up obscure materials online.
-              The system checks common material and additive manufacturing wording first, including AM, FDM/FFF,
-              SLA, SLS, MJF, powder bed fusion, filament, powder, resin, and regional spellings like fibre/fiber.
+              The system checks common FDM/FFF filament wording first, including PLA, PETG, ABS, ASA,
+              Nylon/PA, TPU/TPE, support materials, reinforced filaments, and regional spellings like fibre/fiber.
               If there is no close match it will offer to look the material up online for obscure or brand-specific materials.
               Every field remains editable after the suggestion is applied.
             </p>
@@ -1639,8 +1636,8 @@
     const flexibility = Number.isFinite(Number(sugg.flexibility)) ? Number(sugg.flexibility) : 50;
     const heat = Number.isFinite(Number(sugg.heat)) ? Number(sugg.heat) : 50;
     const ratings = sugg.ratings || {};
-    const category = sugg.category || 'FDM';
-    const detail = clampRating(sugg.detail ?? ratings.detail ?? (category === 'Resin' ? 5 : category === 'SLS' ? 4 : 3));
+    const category = 'FDM';
+    const detail = clampRating(sugg.detail ?? ratings.detail ?? 3);
     const outdoorUse = clampRating(sugg.outdoorUse ?? ratings.outdoorUse ?? inferOutdoorRating(sugg));
     const ideal = cleanSuggestionArray(sugg.ideal_for, 5);
     const avoid = cleanSuggestionArray(sugg.not_for, 4);
@@ -1650,7 +1647,7 @@
       if (flexibility >= 75) tags.push('Flexible');
       if (outdoorUse >= 4) tags.push('Outdoor');
       if (detail >= 4) tags.push('Smooth finish');
-      if (strength >= 80 || heat >= 75 || category === 'SLS') tags.push('Engineering');
+      if (strength >= 80 || heat >= 75) tags.push('Engineering');
       if (['PLA', 'PLA+', 'PETG'].includes(sugg.displayName)) tags.push('Low cost');
     }
     const bestFor = cleanSuggestionArray(sugg.best_for, 4).length
@@ -1960,7 +1957,7 @@
       if (e.code === 'NO_API_KEY') {
         showSuggestStatus(
           `Online lookup is disabled on this server. Add ANTHROPIC_API_KEY to the backend .env file to enable it. ` +
-          `For now, try a base material or process name (PLA, PETG, ABS, Nylon, PA12, TPU, Resin, SLS, MJF, and so on).`,
+          `For now, try an FDM filament name such as PLA, PETG, ABS, ASA, Nylon, PA-CF, TPU, PEBA, or support filament.`,
           'warn'
         );
       } else {
@@ -2000,8 +1997,8 @@
     );
     if (!wantsOnline) {
       showSuggestStatus(
-        `No match found for "${name}" in the local library. Try a base material or additive manufacturing term ` +
-        `(PLA, PETG, ABS, Nylon, PA12, TPU, Resin, SLS, MJF, and so on), or click Suggest again to look it up online.`,
+        `No match found for "${name}" in the local FDM library. Try a filament name such as ` +
+        `PLA, PETG, ABS, ASA, Nylon, PA-CF, TPU, PEBA, or support filament, or click Suggest again to look it up online.`,
         'warn'
       );
       return;
@@ -2345,7 +2342,7 @@
 
     const payload = {
       name,
-      category:       document.getElementById('mCategory').value,
+      category:       'FDM',
       description_short: document.getElementById('mDescription').value.trim(),
       description_long: document.getElementById('mLongDescription').value.trim(),
       image_url:       document.getElementById('mImageUrl').value.trim(),

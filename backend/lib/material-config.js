@@ -2,6 +2,17 @@ export function safeJson(value, fallback) {
   try { return JSON.parse(value || ''); } catch { return fallback; }
 }
 
+export const VISIBLE_MATERIAL_CATEGORY = 'FDM';
+const HIDDEN_PUBLIC_MATERIAL_LABELS = new Set(['resin', 'sls', 'specialty']);
+
+export function isVisibleMaterialCategory(category) {
+  return String(category || '').trim().toLowerCase() === VISIBLE_MATERIAL_CATEGORY.toLowerCase();
+}
+
+export function isVisiblePublicMaterialLabel(label) {
+  return !HIDDEN_PUBLIC_MATERIAL_LABELS.has(String(label || '').trim().toLowerCase());
+}
+
 export function cleanTextArray(value) {
   if (!Array.isArray(value)) return [];
   return value.map(v => String(v || '').trim()).filter(Boolean);
@@ -116,11 +127,12 @@ export function parseMaterialRow(row, { stableIds = false, publicOnly = false } 
   if (finishes.length && !finishes.some(f => f.default && f.enabled !== false)) {
     finishes = finishes.map((f, i) => ({ ...f, default: i === 0 }));
   }
+  const tags = cleanTextArray(safeJson(row.tags, []));
   return {
     ...row,
     active: row.active == null ? row.active : !!row.active,
     recommended: !!row.recommended,
-    tags: cleanTextArray(safeJson(row.tags, [])),
+    tags: publicOnly ? tags.filter(isVisiblePublicMaterialLabel) : tags,
     best_for: cleanTextArray(safeJson(row.best_for, [])),
     specs: safeJson(row.specs, []),
     colours,

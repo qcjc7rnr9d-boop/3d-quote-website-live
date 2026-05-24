@@ -690,6 +690,7 @@
     let configuredFilters = [];
     let activeFilter = 'all';
     const openSpecs = new Set();
+    const hiddenMaterialFilters = new Set(['resin', 'sls', 'specialty']);
 
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     const money = n => Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -801,7 +802,7 @@
       const priceMap = new Map(priceRows.map(row => [String(row.id), row]));
 
       return rows
-        .filter(row => row && row.active !== false && row.enabled !== false)
+        .filter(row => row && row.active !== false && row.enabled !== false && String(row.category || '').trim().toLowerCase() === 'fdm')
         .map(row => {
           const price = priceMap.get(String(row.id)) || {};
           const colours = Array.isArray(row.colours) ? row.colours.filter(c => c.enabled !== false) : [];
@@ -841,6 +842,7 @@
         const text = String(label || '').trim();
         if (!text) return;
         const key = keyFor(text);
+        if (hiddenMaterialFilters.has(key)) return;
         if (!map.has(key)) map.set(key, text);
       };
       configuredFilters.forEach(add);
