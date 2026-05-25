@@ -8,6 +8,10 @@ import { sendMail } from '../lib/mailer.js';
 import { renderTemplate } from '../lib/email-templates/index.js';
 import { buildEmailIdempotencyKey } from '../lib/email-delivery.js';
 import {
+  getMerchantLegalStatus,
+  recordMerchantLegalAcceptance,
+} from '../lib/legal-policy.js';
+import {
   BCRYPT_ROUNDS,
   SESSION_DAYS,
   LOGIN_MAX_ATTEMPTS,
@@ -125,6 +129,47 @@ router.get('/me', requireShopAuth, (req, res) => {
     phone:    s.phone    || null,
     address:  s.address  || null,
   });
+});
+
+// GET /api/auth/legal/status
+router.get('/legal/status', requireShopAuth, (req, res) => {
+  try {
+    res.json(getMerchantLegalStatus(db, req.shop.id));
+  } catch (err) {
+    console.error('Legal status error:', err);
+    res.status(500).json({ error: 'Could not load merchant legal status.' });
+  }
+});
+
+// POST /api/auth/legal/accept
+router.post('/legal/accept', requireShopAuth, (req, res) => {
+  try {
+    const accepted = req.body?.accepted === true;
+    if (!accepted) {
+      return res.status(400).json({ error: 'Merchant agreement acceptance is required.' });
+    }
+    const acceptance = recordMerchantLegalAcceptance(db, {
+      shopId: req.shop.id,
+      userEmail: req.shop.email,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') || null,
+      metadata: {
+        source: 'admin_account',
+        shopSlug: req.shop.slug,
+      },
+    });
+    res.json({
+      ok: true,
+      acceptance: {
+        version: acceptance.version,
+        accepted_at: acceptance.accepted_at,
+      },
+      legal: getMerchantLegalStatus(db, req.shop.id),
+    });
+  } catch (err) {
+    console.error('Legal acceptance error:', err);
+    res.status(500).json({ error: 'Could not record merchant legal acceptance.' });
+  }
 });
 
 // POST /api/auth/change-password

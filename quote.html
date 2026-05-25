@@ -344,6 +344,21 @@
       margin-top: 2px;
       font-variant-numeric: tabular-nums;
     }
+    .upload-legal-note {
+      margin: 12px 28px 0;
+      padding: 12px 14px;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.68);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .upload-legal-note a {
+      color: var(--sage-dark);
+      font-weight: 700;
+      text-decoration: none;
+    }
     .model-list {
       display: grid;
       gap: 8px;
@@ -1002,6 +1017,7 @@
       .page-head, .main-grid, .trust { padding-left: 18px; padding-right: 18px; }
       .viewer-wrap { padding: 18px 18px 0; }
       .file-row { margin: 14px 18px 0; }
+      .upload-legal-note { margin-left: 18px; margin-right: 18px; }
       .settings-row { padding: 14px 18px; }
       .card-pad { padding: 22px 18px; }
       .summary-head, .summary-body { padding-left: 20px; padding-right: 20px; }
@@ -1154,6 +1170,9 @@
       <button class="btn-link" id="replaceBtn" type="button">Add files</button>
       <input type="file" id="fileInput" class="hidden-input" accept=".stl,.obj" multiple>
     </div>
+    <p class="upload-legal-note">
+      By uploading a file, you confirm you have the right to use it and that it does not contain unlawful, infringing, unsafe, or restricted content. Uploads may be reviewed and stored for quoting, fulfilment, support, security, and compliance purposes. See <a href="terms.html?shop=mahi3d#uploads" data-quote-nav="terms">Terms</a>.
+    </p>
     <div class="model-list" id="modelList" aria-label="Uploaded models"></div>
 
     <!-- Editable settings -->
@@ -1330,6 +1349,7 @@
     if (link.dataset.quoteNav === 'materials') link.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
     if (link.dataset.quoteNav === 'quote') link.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
     if (link.dataset.quoteNav === 'portal') link.href = `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#overview`;
+    if (link.dataset.quoteNav === 'terms') link.href = `terms.html?shop=${encodeURIComponent(SHOP_SLUG)}#uploads`;
   });
   const URL_PARAMS = new URLSearchParams(location.search);
   const SHOULD_PROMPT_UPLOAD = URL_PARAMS.get('promptUpload') === '1' || URL_PARAMS.get('newGroup') === '1';

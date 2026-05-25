@@ -229,6 +229,29 @@
         </div>
       </div>
 
+      <!-- Merchant legal agreement -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Merchant legal agreement</span>
+        </div>
+        <div class="section-card-body">
+          <p style="font-size:13px;line-height:1.6;color:var(--muted);max-width:760px;margin-bottom:16px;">
+            Trennen provides the software platform. Your store remains responsible for customer-facing products, pricing, fulfilment, taxes, shipping settings, support commitments, and compliance with laws that apply to what you offer through the platform.
+          </p>
+          <label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.55;color:var(--ink);max-width:820px;">
+            <input type="checkbox" id="merchantAgreementCheckbox" style="margin-top:3px;">
+            <span>I accept the current Trennen merchant agreement and authorise Trennen to process operational data for support, security, billing, platform administration, dispute handling, legal compliance, and enforcement.</span>
+          </label>
+          <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="acceptMerchantAgreementBtn" type="button">Accept agreement</button>
+            <a class="btn btn-outline" id="merchantTermsLink" href="../terms.html?shop=mahi3d" target="_blank" rel="noopener">View customer terms</a>
+            <div class="inline-success" id="legalSuccess" style="margin-top:0;"></div>
+            <div class="inline-error" id="legalError" style="margin-top:0;"></div>
+          </div>
+          <p id="legalStatusText" style="font-size:12px;color:var(--muted);margin-top:12px;">Loading legal status...</p>
+        </div>
+      </div>
+
       <!-- Active sessions -->
       <div class="section-card">
         <div class="section-card-header">
@@ -260,6 +283,7 @@
       document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
       document.getElementById('profileEmail').value = shop.email || '';
       document.getElementById('profileName').value  = shop.owner_name || shop.name || '';
+      document.getElementById('merchantTermsLink').href = `../terms.html?shop=${encodeURIComponent(shop.slug || 'mahi3d')}`;
       if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
     } catch { window.location.href = 'login.html'; }
   })();
@@ -505,6 +529,62 @@
     }
   });
 
+  async function loadLegalStatus() {
+    const statusText = document.getElementById('legalStatusText');
+    const btn = document.getElementById('acceptMerchantAgreementBtn');
+    const checkbox = document.getElementById('merchantAgreementCheckbox');
+    try {
+      const r = await fetch('/api/auth/legal/status');
+      if (!r.ok) throw new Error('Could not load legal status.');
+      const status = await r.json();
+      if (status.accepted) {
+        statusText.textContent = `Accepted ${status.version} on ${formatDate(status.accepted_at)}.`;
+        checkbox.checked = true;
+        checkbox.disabled = true;
+        btn.disabled = true;
+        btn.textContent = 'Agreement accepted';
+      } else {
+        statusText.textContent = status.checkout_blocked
+          ? 'Checkout is blocked until the current merchant agreement is accepted.'
+          : `Agreement required. Grace days remaining: ${status.grace_days_remaining}.`;
+      }
+    } catch (err) {
+      statusText.textContent = err.message;
+    }
+  }
+
+  document.getElementById('acceptMerchantAgreementBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('acceptMerchantAgreementBtn');
+    const checkbox = document.getElementById('merchantAgreementCheckbox');
+    const successEl = document.getElementById('legalSuccess');
+    const errorEl = document.getElementById('legalError');
+    successEl.style.display = 'none';
+    errorEl.style.display = 'none';
+    if (!checkbox.checked) {
+      errorEl.textContent = 'Tick the agreement checkbox first.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Recording...';
+    try {
+      const r = await fetch('/api/auth/legal/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accepted: true }),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Could not record acceptance.');
+      successEl.textContent = 'Merchant agreement accepted.';
+      successEl.style.display = 'block';
+      await loadLegalStatus();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Accept agreement';
+    }
+  });
+
   // ── Utilities ──────────────────────────────────────────────
   function simplifyUA(ua) {
     if (!ua) return 'Unknown device';
@@ -539,6 +619,7 @@
 
   // ── Init ───────────────────────────────────────────────────
   loadSessions();
+  loadLegalStatus();
 </script>
 </body>
 </html>

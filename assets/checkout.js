@@ -53,6 +53,7 @@
     if (target === 'portal') link.href = `customer/dashboard.html?shop=${encodeURIComponent(shopSlug)}#overview`;
     if (target === 'help') link.href = `customer/dashboard.html?shop=${encodeURIComponent(shopSlug)}#help`;
     if (target === 'terms') link.href = `${shopHref('terms.html')}#prohibited-uploads`;
+    if (target === 'privacy') link.href = `${shopHref('privacy.html')}#storage`;
   });
 
   if (!hasData) {

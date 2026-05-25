@@ -33,6 +33,7 @@ import { normaliseCart, validateCartForShop } from '../lib/cart.js';
 import { saveOrderItems } from '../lib/order-files.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate } from '../lib/email-templates/index.js';
+import { assertMerchantCheckoutAllowed } from '../lib/legal-policy.js';
 
 const router = Router();
 const paymentIntentLimiter = rateLimit({
@@ -100,6 +101,15 @@ function readinessErrorPayload(readiness) {
     code,
     billing_status: readiness.billing_status,
     can_accept_live_orders: false,
+  };
+}
+
+function merchantLegalErrorPayload(err) {
+  return {
+    error: err.message || 'This store must accept the current merchant legal agreement before checkout can continue.',
+    code: err.code || 'MERCHANT_LEGAL_AGREEMENT_REQUIRED',
+    can_accept_live_orders: false,
+    legal: err.legal || null,
   };
 }
 
@@ -291,11 +301,16 @@ router.get('/public-key', (req, res) => {
 
   const platform = getEffectivePlatformStripeConfig();
   const readiness = liveOrderReadiness(shop, platform);
-  if (!readiness.can_accept_live_orders) {
-    return res.status(503).json(readinessErrorPayload(readiness));
-  }
+    if (!readiness.can_accept_live_orders) {
+      return res.status(503).json(readinessErrorPayload(readiness));
+    }
+    try {
+      assertMerchantCheckoutAllowed(db, shop.id);
+    } catch (err) {
+      return res.status(err.status || 423).json(merchantLegalErrorPayload(err));
+    }
 
-  res.json({
+    res.json({
     publishable_key: platform.publishableKey,
     has_connect: true,
     billing_status: readiness.billing_status,
@@ -329,6 +344,7 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
     if (!readiness.can_accept_live_orders) {
       return res.status(503).json(readinessErrorPayload(readiness));
     }
+    assertMerchantCheckoutAllowed(db, shop.id);
     assertCheckoutAllowed(db, shop.id, { method: 'card' });
 
     const stripe = ensurePlatformStripe();
@@ -486,6 +502,7 @@ router.post('/create-bank-transfer-order', paymentIntentLimiter, async (req, res
 
     const shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    assertMerchantCheckoutAllowed(db, shop.id);
     const paymentFeeMode = getPaymentFeeMode(db, shop.id);
 
     const cart = validateCartForShop(db, shop, normaliseCart({

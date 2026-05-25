@@ -1,0 +1,51 @@
+{
+  "version": "processors-v1-2026-05-24",
+  "updated_at": "2026-05-24",
+  "processors": [
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "status": "active",
+      "purpose": "Card payments, connected accounts, payment status, platform fees, and billing reconciliation.",
+      "data_categories": ["customer name", "customer email", "payment identifiers", "order totals", "connected account identifiers"],
+      "overseas_processing": true,
+      "notes": "Trennen does not store full card numbers on its servers."
+    },
+    {
+      "id": "email_delivery",
+      "name": "Transactional email provider",
+      "status": "active_when_configured",
+      "purpose": "Account, password reset, order, support, bounce, complaint, and delivery-status emails.",
+      "data_categories": ["email address", "message metadata", "delivery status", "bounce and complaint events"],
+      "overseas_processing": true,
+      "notes": "Production may use Resend or SMTP depending on environment configuration."
+    },
+    {
+      "id": "aws_lightsail",
+      "name": "AWS Lightsail and server storage",
+      "status": "active",
+      "purpose": "Application hosting, SQLite database storage, local uploads, logs, and operational backups.",
+      "data_categories": ["accounts", "quotes", "orders", "file metadata", "sessions", "logs", "uploads"],
+      "overseas_processing": true,
+      "notes": "Production deployment should confirm hosting region and backup retention."
+    },
+    {
+      "id": "shopify_optional",
+      "name": "Shopify",
+      "status": "optional_disabled_in_lean_release",
+      "purpose": "Optional store integration for quote sessions and draft order handoff if enabled.",
+      "data_categories": ["shop domain", "access token", "customer email", "customer name", "file metadata", "cart and quote snapshots"],
+      "overseas_processing": true,
+      "notes": "Lean production release currently disables public Shopify routes."
+    },
+    {
+      "id": "shipping_optional",
+      "name": "Shipping providers",
+      "status": "optional_future",
+      "purpose": "Shipping quotes, fulfilment, and delivery tracking if enabled by a store.",
+      "data_categories": ["delivery details", "order totals", "tracking identifiers"],
+      "overseas_processing": true,
+      "notes": "Current public checkout uses store-configured shipping options."
+    }
+  ]
+}
