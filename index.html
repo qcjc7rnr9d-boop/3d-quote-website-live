@@ -1436,6 +1436,7 @@
     <li><a href="index.html?shop=mahi3d#uploadZone" data-pv-quote>Quote</a></li>
     <li><a href="customer/dashboard.html?shop=mahi3d#orders" data-pv-tab="orders">My Orders</a></li>
     <li><a href="customer/dashboard.html?shop=mahi3d#help" data-pv-tab="help">Contact</a></li>
+    <li><a href="terms.html?shop=mahi3d#cancellations" data-pv-refund>Refund policy</a></li>
     <li><a href="terms.html?shop=mahi3d" data-pv-terms>Terms</a></li>
     <li><a href="privacy.html?shop=mahi3d" data-pv-privacy>Privacy</a></li>
   </ul>
@@ -1939,6 +1940,9 @@
     });
     document.querySelectorAll('[data-pv-terms]').forEach(a => {
       a.href = `terms.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`;
+    });
+    document.querySelectorAll('[data-pv-refund]').forEach(a => {
+      a.href = `terms.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}#cancellations`;
     });
     document.querySelectorAll('[data-pv-privacy]').forEach(a => {
       a.href = `privacy.html?shop=${encodeURIComponent(PORTAL_SHOP_SLUG)}`;

@@ -21,6 +21,8 @@ const termsHtml = read('terms.html');
 const privacyHtml = read('privacy.html');
 const catalogHtml = read('catalog.html');
 const checkoutHtml = read('checkout.html');
+const indexHtml = read('index.html');
+const pricingHtml = read('pricing.html');
 const quoteHtml = read('quote.html');
 const customerDashboardHtml = read('customer/dashboard.html');
 const adminAccountHtml = read('admin/account.html');
@@ -75,6 +77,13 @@ assert(
   'Terms must explain retention, deletion, backups, and the privacy policy'
 );
 assert(
+  termsHtml.includes('3D printed items ordered through this site are custom-made from customer-supplied files') &&
+    termsHtml.includes('does not have to provide a refund or exchange because a customer changes their mind') &&
+    termsHtml.includes('repair, reprint, replacement, refund, partial refund, or compensation') &&
+    termsHtml.includes('Nothing in this refund policy excludes'),
+  'Terms must include the fuller custom-order cancellation and refund policy'
+);
+assert(
   privacyHtml.includes('Who is involved') &&
     privacyHtml.includes('Trennen provides and supports the software platform'),
   'Privacy page must explain the store and Trennen roles'
@@ -110,6 +119,19 @@ assert(
   checkoutHtml.includes('Cart and quote details may be stored in your browser') &&
     checkoutHtml.includes('privacy.html?shop='),
   'Checkout must include a browser storage privacy notice'
+);
+assert(
+  pricingHtml.includes('terms.html?shop=mahi3d#cancellations') &&
+    pricingHtml.includes('terms.html?shop=mahi3d#prohibited-uploads') &&
+    pricingHtml.includes('terms.html?shop=mahi3d') &&
+    pricingHtml.includes('privacy.html?shop=mahi3d'),
+  'Pricing page must link to refund policy, prohibited uploads, terms, and privacy policy'
+);
+assert(
+  indexHtml.includes('terms.html?shop=mahi3d#cancellations') &&
+    indexHtml.includes('Refund policy') &&
+    indexHtml.includes('data-pv-refund'),
+  'Index footer must include a dynamic refund policy link'
 );
 assert(
   quoteHtml.includes('By uploading a file, you confirm you have the right to use it') &&

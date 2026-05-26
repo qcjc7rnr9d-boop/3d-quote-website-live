@@ -26,6 +26,11 @@
     .principles { margin-top:42px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
     .principle { padding:20px; border:1px solid rgba(33,29,22,.12); border-radius:8px; background:#fffdf8; }
     .principle strong { display:block; margin-bottom:8px; }
+    .legal-note { margin-top:28px; padding:18px 20px; border:1px solid rgba(33,29,22,.12); border-radius:8px; background:#fffdf8; color:#5f594f; font-size:14px; line-height:1.55; }
+    .legal-note strong { display:block; margin-bottom:6px; color:#211d16; }
+    .legal-links { display:flex; flex-wrap:wrap; gap:12px; margin-top:10px; }
+    .legal-links a { color:#2f6238; font-weight:800; text-decoration:none; }
+    .legal-links a:hover { text-decoration:underline; }
     @media (max-width:1000px) { .plans { grid-template-columns:repeat(2,minmax(0,1fr)); } .hero { grid-template-columns:1fr; } .hero-visual { min-height:260px; } }
     @media (max-width:680px) { .plans, .principles { grid-template-columns:1fr; } .pricing-wrap { padding:48px 16px; } }
   </style>
@@ -107,6 +112,17 @@
       <div class="principle"><strong>Payment processing fees are separate and passed through at cost.</strong><span class="meta">Stripe/card/payment costs are not part of the monthly Trennen subscription.</span></div>
       <div class="principle"><strong>Card checkout fees are capped so you are not punished for growing.</strong><span class="meta">Trennen platform fees apply only to processed card checkout and respect the monthly cap.</span></div>
       <div class="principle"><strong>No uncapped revenue-share by default.</strong><span class="meta">Meter customer-understandable events like sent quotes, not vague technical API calls.</span></div>
+    </section>
+
+    <section class="legal-note" aria-label="Legal and refund information">
+      <strong>Legal, refunds, and restricted uploads</strong>
+      <span>Customer orders are custom-made from uploaded files. Change-of-mind refunds are not automatic, restricted or unsafe uploads are not accepted, and non-excludable New Zealand consumer rights still apply.</span>
+      <div class="legal-links">
+        <a href="terms.html?shop=mahi3d#cancellations">Refund policy</a>
+        <a href="terms.html?shop=mahi3d#prohibited-uploads">Prohibited uploads</a>
+        <a href="terms.html?shop=mahi3d">Terms</a>
+        <a href="privacy.html?shop=mahi3d">Privacy</a>
+      </div>
     </section>
   </main>
 </body>
