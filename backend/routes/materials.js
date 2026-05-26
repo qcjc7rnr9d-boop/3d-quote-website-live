@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { db, requireShopAuth } from '../middleware/auth.js';
 import { MATERIAL_LIBRARY, enrichMaterialSuggestion, findMaterialMatch } from '../lib/material-library.js';
+import { getDefaultMaterialImage, withDefaultMaterialImage } from '../lib/material-default-images.js';
 import { aiLookupMaterial } from '../lib/material-ai.js';
 import {
   VISIBLE_MATERIAL_CATEGORY,
@@ -40,7 +41,7 @@ function verifiedImageExtension(file) {
 // ── Material library (curated reference data — used by the admin
 //     panel's "Suggest from library" feature) ──────────────────
 router.get('/library', requireShopAuth, (req, res) => {
-  res.json({ materials: MATERIAL_LIBRARY.map(enrichMaterialSuggestion) });
+  res.json({ materials: MATERIAL_LIBRARY.map(enrichMaterialSuggestion).map(withDefaultMaterialImage) });
 });
 
 // Optional server-side suggestion lookup — handy for scripting/tests
@@ -48,7 +49,7 @@ router.get('/library/suggest', requireShopAuth, (req, res) => {
   const { name } = req.query;
   const match = findMaterialMatch(name);
   if (!match) return res.status(404).json({ error: 'No close match found', query: name });
-  res.json({ match: enrichMaterialSuggestion(match), query: name, source: 'library' });
+  res.json({ match: withDefaultMaterialImage(enrichMaterialSuggestion(match)), query: name, source: 'library' });
 });
 
 // ── AI material lookup — used as a fallback when the curated
@@ -91,6 +92,18 @@ router.post('/library/ai-lookup', requireShopAuth, async (req, res) => {
 
 function parseMaterialJSON(row) {
   return parseMaterialRow(row);
+}
+
+export function resolveDefaultMaterialImageFields({ name, image_url = null, image_alt = null, properties = {} } = {}) {
+  const libraryKey = properties?.libraryKey || findMaterialMatch(name)?.key || null;
+  const defaultImage = !image_url ? getDefaultMaterialImage(libraryKey) : null;
+  const resolvedImageUrl = image_url || defaultImage?.image_url || null;
+  const resolvedImageAlt = image_alt || (resolvedImageUrl === defaultImage?.image_url ? defaultImage?.image_alt : null);
+  return {
+    image_url: resolvedImageUrl,
+    image_alt: resolvedImageAlt,
+    locked_default_image: Boolean(defaultImage?.locked_default_image && resolvedImageUrl === defaultImage.image_url),
+  };
 }
 
 // GET /api/materials/
@@ -188,6 +201,12 @@ router.post('/', requireShopAuth, (req, res) => {
   };
 
   const normalized = normalizeMaterialPayload({ colours, finishes, properties, tags, best_for, specs });
+  const resolvedImage = resolveDefaultMaterialImageFields({
+    name,
+    image_url,
+    image_alt,
+    properties: normalized.properties,
+  });
 
   const result = db.prepare(`
     INSERT INTO materials
@@ -205,8 +224,8 @@ router.post('/', requireShopAuth, (req, res) => {
     VISIBLE_MATERIAL_CATEGORY,
     description_short,
     description_long,
-    image_url || null,
-    image_alt || null,
+    resolvedImage.image_url,
+    resolvedImage.image_alt,
     price_unit || 'per cm³',
     recommended ? 1 : 0,
     JSON.stringify(normalized.tags),

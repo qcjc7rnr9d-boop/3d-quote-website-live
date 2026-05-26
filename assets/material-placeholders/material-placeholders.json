@@ -1,0 +1,91 @@
+{
+  "version": 2,
+  "status": "review",
+  "notes": "Uniform clean-cutout v2 trial assets for the first five common public FDM material categories. Existing live placeholder filenames and v1 review assets are intentionally untouched until visual approval.",
+  "recommendedCrop": {
+    "width": 840,
+    "height": 600,
+    "objectFit": "cover",
+    "safeArea": "center 80%"
+  },
+  "negativePrompt": "No text, no logos, no watermark, no labels, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic fantasy lighting, no cartoon, no 3D render aesthetics.",
+  "materials": [
+    {
+      "key": "pla",
+      "displayName": "PLA",
+      "category": "FDM",
+      "imageUrl": "assets/material-placeholders/pla-uniform-v2.png",
+      "alt": "Uniform clean cutout product photo of a matte pastel PLA 3D printed desk organizer with subtle FDM layer lines",
+      "prompt": "Hyperrealistic clean cutout-style product photograph of a matte pastel PLA 3D printed small desk organizer, subtle authentic FDM layer lines visible on close inspection. Near-white warm-grey seamless background, single centered object, consistent three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no props or room context.",
+      "negativePrompt": "No text, no logos, no watermark, no labels, no hands, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic fantasy lighting, no fake studio gradient, no cartoon, no 3D render aesthetics.",
+      "recommendedCrop": "840x600 center crop",
+      "status": "review-v2",
+      "previousImageUrls": [
+        "assets/material-placeholders/pla-hyperreal-v1.png"
+      ]
+    },
+    {
+      "key": "petg",
+      "displayName": "PETG",
+      "category": "FDM",
+      "imageUrl": "assets/material-placeholders/petg-uniform-v2.png",
+      "alt": "Uniform clean cutout product photo of a translucent smoke PETG 3D printed mounting bracket",
+      "prompt": "Hyperrealistic clean cutout-style product photograph of a slightly glossy translucent smoke-clear PETG 3D printed functional mounting bracket, subtle authentic FDM layer lines visible on close inspection. Near-white warm-grey seamless background, single centered object, consistent three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no props or room context.",
+      "negativePrompt": "No text, no logos, no watermark, no labels, no hands, no floating object, no impossible geometry, no broken part, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic fantasy lighting, no cartoon, no 3D render aesthetics.",
+      "recommendedCrop": "840x600 center crop",
+      "status": "review-v2",
+      "previousImageUrls": [
+        "assets/material-placeholders/petg-hyperreal-v1.png"
+      ]
+    },
+    {
+      "key": "asa",
+      "displayName": "ASA",
+      "category": "FDM",
+      "imageUrl": "assets/material-placeholders/asa-uniform-v2.png",
+      "alt": "Uniform clean cutout product photo of a satin graphite ASA 3D printed outdoor electronics enclosure",
+      "prompt": "Hyperrealistic clean cutout-style product photograph of a satin graphite ASA 3D printed outdoor electronics enclosure, subtle authentic FDM layer lines visible on close inspection. Near-white warm-grey seamless background, single centered object, consistent three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no props or room context.",
+      "negativePrompt": "No text, no logos, no watermark, no labels, no hands, no floating object, no impossible geometry, no cracked case, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic fantasy lighting, no cartoon, no 3D render aesthetics.",
+      "recommendedCrop": "840x600 center crop",
+      "status": "review-v2",
+      "previousImageUrls": [
+        "assets/material-placeholders/asa-hyperreal-v1.png"
+      ]
+    },
+    {
+      "key": "tpu",
+      "displayName": "TPU",
+      "category": "FDM",
+      "imageUrl": "assets/material-placeholders/tpu-uniform-v2.png",
+      "alt": "Uniform clean cutout product photo of a matte black TPU 3D printed flexible protective bumper",
+      "prompt": "Hyperrealistic clean cutout-style product photograph of a matte black TPU 3D printed flexible protective bumper or phone case, subtly flexed but freestanding, fine FDM layer texture visible on close inspection. Near-white warm-grey seamless background, single centered object, consistent three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no props or room context.",
+      "negativePrompt": "No text, no logos, no watermark, no labels, no hands, no floating object, no impossible geometry, no torn rubber, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic fantasy lighting, no cartoon, no 3D render aesthetics.",
+      "recommendedCrop": "840x600 center crop",
+      "status": "review-v2",
+      "previousImageUrls": [
+        "assets/material-placeholders/tpu-hyperreal-v1.png"
+      ]
+    },
+    {
+      "key": "nylon",
+      "displayName": "Nylon",
+      "category": "FDM",
+      "imageUrl": "assets/material-placeholders/nylon-uniform-v2.png",
+      "alt": "Uniform clean cutout product photo of off-white nylon 3D printed mechanical gear and bushing parts",
+      "prompt": "Hyperrealistic clean cutout-style product photograph of off-white nylon 3D printed mechanical gear and bushing parts, tough functional texture, subtle authentic FDM layer lines visible on close inspection. Near-white warm-grey seamless background, centered object group, consistent three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no props or room context.",
+      "negativePrompt": "No text, no logos, no watermark, no labels, no hands, no floating object, no impossible gear teeth, no broken part, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic fantasy lighting, no cartoon, no 3D render aesthetics.",
+      "recommendedCrop": "840x600 center crop",
+      "status": "review-v2",
+      "previousImageUrls": [
+        "assets/material-placeholders/nylon-hyperreal-v1.png"
+      ]
+    }
+  ],
+  "style": {
+    "name": "uniform clean cutout product photography",
+    "background": "near-white warm-grey seamless background (#f5f4ef)",
+    "lighting": "soft diffused studio lighting from upper left with a very soft grounding shadow",
+    "camera": "low three-quarter front angle, centered product, consistent object scale",
+    "composition": "horizontal 4:3 product photo, object fills about 62% of image width with generous margins"
+  }
+}
