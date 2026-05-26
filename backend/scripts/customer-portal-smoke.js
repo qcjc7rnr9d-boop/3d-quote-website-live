@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'crypto';
 import { createRequire } from 'module';
 import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 
 const base = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 dotenv.config();
@@ -11,8 +12,11 @@ const sessionSecret = process.env.SESSION_SECRET || 'dev-secret-change-me';
 const db = new DatabaseSync('data/rfdewi.db');
 let otherShopId = null;
 let otherOrderId = null;
+let suspendedShopId = null;
 let createdSessionId = null;
+let concurrentEmail = null;
 const otherSlug = `portal-smoke-${randomUUID().slice(0, 8)}`;
+const suspendedSlug = `portal-suspended-${randomUUID().slice(0, 8)}`;
 
 async function api(path, options = {}, expected = 200) {
   const res = await fetch(`${base}${path}`, {
@@ -64,8 +68,103 @@ function createOtherShopOrder() {
   otherOrderId = order.lastInsertRowid;
 }
 
+async function expectSuspendedShopBlocksCustomerAuth() {
+  const password = 'SuspendedSmoke!2026';
+  const hash = await bcrypt.hash(password, 4);
+  const result = db.prepare(`
+    INSERT INTO shops (name, slug, email, password_hash, is_temp_password, plan)
+    VALUES (?, ?, ?, ?, 0, 'suspended')
+  `).run(
+    'Suspended Portal Smoke',
+    suspendedSlug,
+    `${suspendedSlug}@example.test`,
+    hash
+  );
+  suspendedShopId = result.lastInsertRowid;
+  db.prepare(`
+    INSERT INTO customer_accounts (shop_id, email, name, password_hash)
+    VALUES (?, ?, ?, ?)
+  `).run(suspendedShopId, 'existing@suspended.example.test', 'Suspended Customer', hash);
+
+  await api('/api/customer/register', {
+    method: 'POST',
+    headers: { 'x-smoke-test': '1' },
+    body: JSON.stringify({
+      shopSlug: suspendedSlug,
+      name: 'Blocked Customer',
+      email: 'new@suspended.example.test',
+      password,
+    }),
+  }, 404);
+
+  await api('/api/customer/login', {
+    method: 'POST',
+    headers: { 'x-smoke-test': '1' },
+    body: JSON.stringify({
+      shopSlug: suspendedSlug,
+      email: 'existing@suspended.example.test',
+      password,
+    }),
+  }, 401);
+
+  const created = db.prepare(`
+    SELECT COUNT(*) AS c
+    FROM customer_accounts
+    WHERE shop_id = ? AND email = ?
+  `).get(suspendedShopId, 'new@suspended.example.test');
+  assert(created.c === 0, 'Suspended shop registration created a customer account');
+}
+
+async function expectConcurrentSignupIsAtomic() {
+  concurrentEmail = `race-${randomUUID().slice(0, 12)}@example.test`;
+  const password = 'RaceSmoke!2026';
+  const payload = {
+    shopSlug: 'mahi3d',
+    name: 'Race Smoke Customer',
+    email: ` ${concurrentEmail.toUpperCase()} `,
+    password,
+  };
+
+  const attempts = await Promise.all(Array.from({ length: 6 }, () => fetch(`${base}/api/customer/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-smoke-test': '1' },
+    body: JSON.stringify(payload),
+  })));
+  const statuses = attempts.map(res => res.status);
+  const created = statuses.filter(status => status === 201).length;
+  assert(created === 1, `Concurrent signup should create exactly one account, got statuses ${statuses.join(', ')}`);
+  assert(statuses.every(status => [201, 400, 409].includes(status)), `Concurrent signup returned unexpected statuses ${statuses.join(', ')}`);
+
+  const shop = db.prepare("SELECT id FROM shops WHERE slug = 'mahi3d'").get();
+  const accounts = db.prepare(`
+    SELECT id, email, name
+    FROM customer_accounts
+    WHERE shop_id = ? AND email = ?
+  `).all(shop.id, concurrentEmail);
+  const customers = db.prepare(`
+    SELECT id, email, name
+    FROM customers
+    WHERE shop_id = ? AND email = ?
+  `).all(shop.id, concurrentEmail);
+  assert(accounts.length === 1, `Concurrent signup created ${accounts.length} customer_accounts rows`);
+  assert(customers.length === 1, `Concurrent signup created ${customers.length} customers rows`);
+  assert(accounts[0].name === 'Race Smoke Customer', 'Concurrent signup account name was not normalized');
+  assert(customers[0].name === accounts[0].name, 'Concurrent signup customer/account names diverged');
+
+  await api('/api/customer/login', {
+    method: 'POST',
+    headers: { 'x-smoke-test': '1' },
+    body: JSON.stringify({
+      shopSlug: 'mahi3d',
+      email: concurrentEmail.toUpperCase(),
+      password,
+    }),
+  });
+}
+
 try {
   createOtherShopOrder();
+  await expectSuspendedShopBlocksCustomerAuth();
 
   await api('/api/customer/me', {}, 401);
   await api('/api/customer/orders', {}, 401);
@@ -128,6 +227,7 @@ try {
   await api(`/api/customer/orders/${otherOrderId}?shop=mahi3d`, { headers: { Cookie: cookie } }, 404);
   await api(`/api/customer/me?shop=${encodeURIComponent(otherSlug)}`, { headers: { Cookie: cookie } }, 403);
   await api(`/api/customer/orders?shop=${encodeURIComponent(otherSlug)}`, { headers: { Cookie: cookie } }, 403);
+  await expectConcurrentSignupIsAtomic();
 
   console.log('Customer portal smoke checks passed.');
 } finally {
@@ -136,6 +236,16 @@ try {
   }
   if (otherShopId) {
     db.prepare('DELETE FROM shops WHERE id = ?').run(otherShopId);
+  }
+  if (suspendedShopId) {
+    db.prepare('DELETE FROM shops WHERE id = ?').run(suspendedShopId);
+  }
+  if (concurrentEmail) {
+    const shop = db.prepare("SELECT id FROM shops WHERE slug = 'mahi3d'").get();
+    if (shop) {
+      db.prepare('DELETE FROM customer_accounts WHERE shop_id = ? AND email = ?').run(shop.id, concurrentEmail);
+      db.prepare('DELETE FROM customers WHERE shop_id = ? AND email = ?').run(shop.id, concurrentEmail);
+    }
   }
   db.close();
 }

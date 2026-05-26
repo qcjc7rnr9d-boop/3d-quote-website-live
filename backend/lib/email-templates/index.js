@@ -21,6 +21,17 @@ import { getShopEmailSettings } from '../email-delivery.js';
 
 const fmtMoney = n => Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+function safeHttpUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
 // ── Friendly status copy keyed by order.fulfilment_status ─────
 const STATUS_COPY = {
   pending: {
@@ -69,13 +80,14 @@ export function orderStatusEmail({ shop, order, customer_message, brand = {} }) 
   // Tracking section (only for "shipped")
   let trackingSection = '';
   if (status === 'shipped' && order.tracking_number) {
-    const inner = order.tracking_url
-      ? `<a href="${esc(order.tracking_url)}" style="color:${PALETTE.accent};font-weight:600;text-decoration:none;">${esc(order.tracking_number)}</a>`
+    const trackingUrl = safeHttpUrl(order.tracking_url);
+    const inner = trackingUrl
+      ? `<a href="${esc(trackingUrl)}" style="color:${PALETTE.accent};font-weight:600;text-decoration:none;">${esc(order.tracking_number)}</a>`
       : esc(order.tracking_number);
     trackingSection = infoBox(`
       <div style="font-size:10.5px;font-weight:600;letter-spacing:0.10em;text-transform:uppercase;color:${PALETTE.muted};margin-bottom:6px;">Tracking number</div>
       <div style="font-size:16px;font-weight:600;color:${PALETTE.ink};font-variant-numeric:tabular-nums;">${inner}</div>
-      ${order.tracking_url ? `<div style="margin-top:10px;">${btn('Track shipment', order.tracking_url, brand.accentColor || PALETTE.accent)}</div>` : ''}
+      ${trackingUrl ? `<div style="margin-top:10px;">${btn('Track shipment', trackingUrl, brand.accentColor || PALETTE.accent)}</div>` : ''}
     `, { tone: 'success' });
   }
 
@@ -544,14 +556,14 @@ function renderFromOverride({ templateId, override, recommended, data, brand }) 
     shop_name:       shopName,
     customer_name:   data.customerName || data.order?.customer_name || 'there',
     recipient_name:  data.recipientName || shopName,
-    reset_link:      data.resetLink || '',
-    reset_button:    data.resetLink ? btn('Reset password', data.resetLink, brand.accentColor || PALETTE.accent) : '',
-    dashboard_url:   data.dashboardUrl || '',
-    dashboard_button: data.dashboardUrl ? btn('Open dashboard', data.dashboardUrl, brand.accentColor || PALETTE.accent) : '',
+    reset_link:      safeHttpUrl(data.resetLink),
+    reset_button:    safeHttpUrl(data.resetLink) ? btn('Reset password', safeHttpUrl(data.resetLink), brand.accentColor || PALETTE.accent) : '',
+    dashboard_url:   safeHttpUrl(data.dashboardUrl),
+    dashboard_button: safeHttpUrl(data.dashboardUrl) ? btn('Open dashboard', safeHttpUrl(data.dashboardUrl), brand.accentColor || PALETTE.accent) : '',
     quote_name:      data.quoteName || 'Saved quote',
     total_display:   data.totalDisplay || '',
-    quote_url:       data.quoteUrl || '',
-    quote_button:    data.quoteUrl ? btn('Open your quote', data.quoteUrl, brand.accentColor || PALETTE.accent) : '',
+    quote_url:       safeHttpUrl(data.quoteUrl),
+    quote_button:    safeHttpUrl(data.quoteUrl) ? btn('Open your quote', safeHttpUrl(data.quoteUrl), brand.accentColor || PALETTE.accent) : '',
   };
 
   if (templateId === 'order_status' && data.order) {
@@ -565,7 +577,7 @@ function renderFromOverride({ templateId, override, recommended, data, brand }) 
     ctx.quantity          = data.order.quantity || 1;
     ctx.total             = `$${fmtMoney(data.order.total)}`;
     ctx.tracking_number   = data.order.tracking_number || '';
-    ctx.tracking_url      = data.order.tracking_url || '';
+    ctx.tracking_url      = safeHttpUrl(data.order.tracking_url);
     ctx.order_summary     = detailTable([
       ['File',     esc(ctx.file_name || '—')],
       ['Material', esc(ctx.material_name || '—')],

@@ -11,6 +11,7 @@ const base = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const secret = process.env.SESSION_SECRET || 'dev-secret-change-me';
 const db = new DatabaseSync('data/rfdewi.db');
 const createdSessions = [];
+const createdShopIds = [];
 
 function makeCookie(sessionPatch) {
   const sid = randomBytes(18).toString('base64url');
@@ -34,6 +35,21 @@ function makeCookie(sessionPatch) {
   return `connect.sid=${encodeURIComponent(`s:${signature.sign(sid, secret)}`)}`;
 }
 
+function createTempShop() {
+  const suffix = randomBytes(8).toString('hex');
+  const result = db.prepare(`
+    INSERT INTO shops (name, slug, email, password_hash, is_temp_password, plan)
+    VALUES (?, ?, ?, ?, 0, 'starter')
+  `).run(
+    'Platform Impersonation Smoke',
+    `platform-impersonation-${suffix}`,
+    `platform-impersonation-${suffix}@example.test`,
+    '$2a$04$platformimpersonationsmokehashonly'
+  );
+  createdShopIds.push(result.lastInsertRowid);
+  return { id: result.lastInsertRowid };
+}
+
 async function api(path, cookie, expected = 200) {
   const res = await fetch(`${base}${path}`, {
     headers: cookie ? { Cookie: cookie } : {},
@@ -44,6 +60,220 @@ async function api(path, cookie, expected = 200) {
     throw new Error(`${path} returned ${res.status}, expected ${expected}: ${JSON.stringify(data).slice(0, 200)}`);
   }
   return data;
+}
+
+async function csrfHeaders(cookie) {
+  const res = await fetch(`${base}/api/csrf-token`, {
+    headers: cookie ? { Cookie: cookie } : {},
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.csrfToken) {
+    throw new Error(`/api/csrf-token returned ${res.status}`);
+  }
+  return {
+    Cookie: cookie,
+    'Content-Type': 'application/json',
+    'X-CSRF-Token': data.csrfToken,
+  };
+}
+
+async function jsonApi(path, cookie, options = {}, expected = 200) {
+  const headers = options.csrf
+    ? await csrfHeaders(cookie)
+    : { ...(cookie ? { Cookie: cookie } : {}), 'Content-Type': 'application/json' };
+  const res = await fetch(`${base}${path}`, {
+    method: options.method || 'POST',
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    redirect: 'manual',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status !== expected) {
+    throw new Error(`${path} returned ${res.status}, expected ${expected}: ${JSON.stringify(data).slice(0, 200)}`);
+  }
+  return data;
+}
+
+async function createPlatformShop(cookie, body) {
+  const headers = await csrfHeaders(cookie);
+  const res = await fetch(`${base}/api/platform/shops`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+    redirect: 'manual',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (data?.id) createdShopIds.push(data.id);
+  return { res, data };
+}
+
+function rememberCreatedShopsByIdentity(slug, email) {
+  const rows = db.prepare(`
+    SELECT id
+    FROM shops
+    WHERE lower(slug) = lower(?)
+       OR lower(email) = lower(?)
+  `).all(String(slug || '').trim(), String(email || '').trim());
+  for (const row of rows) {
+    if (!createdShopIds.includes(row.id)) createdShopIds.push(row.id);
+  }
+  return rows;
+}
+
+async function expectBadShopCreateRejected(platformCookie, body) {
+  const { res, data } = await createPlatformShop(platformCookie, body);
+  const rows = rememberCreatedShopsByIdentity(body.slug, body.email);
+  if (res.status !== 400) {
+    throw new Error(`/api/platform/shops accepted invalid shop payload with ${res.status}: ${JSON.stringify(data).slice(0, 200)}`);
+  }
+  if (rows.length) {
+    throw new Error(`/api/platform/shops persisted invalid shop rows: ${rows.map(row => row.id).join(', ')}`);
+  }
+}
+
+async function expectPlatformShopCreationValidationAndAtomicity(platformCookie) {
+  const invalidSlug = `bad slug ${randomBytes(3).toString('hex')}`;
+  await expectBadShopCreateRejected(platformCookie, {
+    name: 'Bad Slug Smoke',
+    slug: invalidSlug,
+    email: `${invalidSlug.replace(/\s+/g, '-')}@example.test`,
+    password: 'ValidShop!2026',
+    plan: 'community',
+  });
+
+  const invalidEmailSlug = `bad-email-${randomBytes(4).toString('hex')}`;
+  await expectBadShopCreateRejected(platformCookie, {
+    name: 'Bad Email Smoke',
+    slug: invalidEmailSlug,
+    email: 'not-an-email',
+    password: 'ValidShop!2026',
+    plan: 'community',
+  });
+
+  const weakPasswordSlug = `weak-password-${randomBytes(4).toString('hex')}`;
+  await expectBadShopCreateRejected(platformCookie, {
+    name: 'Weak Password Smoke',
+    slug: weakPasswordSlug,
+    email: `${weakPasswordSlug}@example.test`,
+    password: 'password',
+    plan: 'community',
+  });
+
+  const raceSlug = `platform-create-race-${randomBytes(5).toString('hex')}`;
+  const raceEmail = `${raceSlug}@example.test`;
+  const payload = {
+    name: '  Platform Race Shop  ',
+    slug: ` ${raceSlug.toUpperCase()} `,
+    email: ` ${raceEmail.toUpperCase()} `,
+    password: 'RaceShop!2026',
+    plan: 'community',
+  };
+
+  const attempts = await Promise.all(Array.from({ length: 6 }, () => createPlatformShop(platformCookie, payload)));
+  const statuses = attempts.map(({ res }) => res.status);
+  const created = statuses.filter(status => status === 201).length;
+  if (created !== 1) {
+    throw new Error(`Concurrent platform shop create should create exactly one shop, got statuses ${statuses.join(', ')}`);
+  }
+  if (!statuses.every(status => [201, 400, 409].includes(status))) {
+    throw new Error(`Concurrent platform shop create returned unexpected statuses ${statuses.join(', ')}`);
+  }
+
+  const shops = db.prepare(`
+    SELECT id, name, slug, email
+    FROM shops
+    WHERE slug = ? OR email = ?
+  `).all(raceSlug, raceEmail);
+  for (const shop of shops) {
+    if (!createdShopIds.includes(shop.id)) createdShopIds.push(shop.id);
+  }
+  if (shops.length !== 1) {
+    throw new Error(`Concurrent platform shop create persisted ${shops.length} shop rows`);
+  }
+  if (shops[0].name !== 'Platform Race Shop' || shops[0].slug !== raceSlug || shops[0].email !== raceEmail) {
+    throw new Error(`Concurrent platform shop create did not normalize shop identity: ${JSON.stringify(shops[0])}`);
+  }
+
+  const pricingRows = db.prepare('SELECT COUNT(*) AS n FROM pricing_config WHERE shop_id = ?').get(shops[0].id).n;
+  const settingsRows = db.prepare('SELECT COUNT(*) AS n FROM store_settings WHERE shop_id = ?').get(shops[0].id).n;
+  const billingRows = db.prepare('SELECT COUNT(*) AS n FROM merchant_subscriptions WHERE shop_id = ?').get(shops[0].id).n;
+  if (pricingRows !== 1 || settingsRows !== 1 || billingRows !== 1) {
+    throw new Error(`Concurrent platform shop create left incomplete setup: pricing=${pricingRows}, settings=${settingsRows}, billing=${billingRows}`);
+  }
+
+  console.log('✓ platform shop creation validates identity and is atomic under duplicate concurrency');
+}
+
+async function expectPlatformImpersonationBoundary(platformCookie) {
+  const tempShop = createTempShop();
+  const impersonation = await jsonApi(
+    '/api/platform/impersonate',
+    platformCookie,
+    { csrf: true, body: { shopId: tempShop.id } },
+    200
+  );
+  if (!impersonation.impersonation?.active || impersonation.impersonation.shop_id !== tempShop.id) {
+    throw new Error('/api/platform/impersonate did not return active impersonation metadata');
+  }
+
+  const me = await api('/api/auth/me', platformCookie);
+  if (!me.impersonation?.active || me.impersonation.shop_id !== tempShop.id) {
+    throw new Error('/api/auth/me did not expose active platform impersonation metadata');
+  }
+
+  const blockedChange = await jsonApi(
+    '/api/auth/change-password',
+    platformCookie,
+    {
+      csrf: true,
+      body: { currentPassword: 'not-the-real-password', newPassword: 'BlockedChange!2026' },
+    },
+    403
+  );
+  if (blockedChange.code !== 'PLATFORM_IMPERSONATION_RESTRICTED') {
+    throw new Error('/api/auth/change-password did not return the impersonation restriction code');
+  }
+
+  await jsonApi('/api/auth/sessions/revoke-all', platformCookie, { csrf: true, body: {} }, 403);
+  await jsonApi('/api/stripe/connect-url', platformCookie, { method: 'GET', csrf: false }, 403);
+
+  const blockedSettings = await jsonApi(
+    '/api/settings',
+    platformCookie,
+    { method: 'PUT', csrf: true, body: { name: 'Blocked impersonation edit' } },
+    403
+  );
+  if (blockedSettings.code !== 'PLATFORM_IMPERSONATION_RESTRICTED') {
+    throw new Error('/api/settings did not return the impersonation restriction code');
+  }
+
+  const blockedPricing = await jsonApi(
+    '/api/pricing',
+    platformCookie,
+    { method: 'PUT', csrf: true, body: { currency: 'NZD', tax_rate: 0.15 } },
+    403
+  );
+  if (blockedPricing.code !== 'PLATFORM_IMPERSONATION_RESTRICTED') {
+    throw new Error('/api/pricing did not return the impersonation restriction code');
+  }
+
+  const blockedOrderEdit = await jsonApi(
+    '/api/orders/999999999',
+    platformCookie,
+    { method: 'PATCH', csrf: true, body: { notes: 'Blocked impersonation edit' } },
+    403
+  );
+  if (blockedOrderEdit.code !== 'PLATFORM_IMPERSONATION_RESTRICTED') {
+    throw new Error('/api/orders/:id did not return the impersonation restriction code');
+  }
+
+  const stopped = await jsonApi('/api/platform/impersonate/stop', platformCookie, { csrf: true, body: {} }, 200);
+  if (stopped.impersonation?.active) {
+    throw new Error('/api/platform/impersonate/stop left impersonation active');
+  }
+  await api('/api/auth/me', platformCookie, 401);
+
+  console.log('✓ platform impersonation is marked and shop write actions are blocked');
 }
 
 function assertNoSensitiveKeys(value, path = '$') {
@@ -103,6 +333,9 @@ try {
     await api('/api/platform/overview', shopCookie, 401);
   }
 
+  await expectPlatformImpersonationBoundary(platformCookie);
+  await expectPlatformShopCreationValidationAndAtomicity(platformCookie);
+
   if (firstOrder) {
     const detail = await api(`/api/platform/orders/${firstOrder.id}`, platformCookie);
     if (!detail.shop || !detail.customer || !('stripe_payment_id' in detail)) {
@@ -134,5 +367,7 @@ try {
 } finally {
   const del = db.prepare('DELETE FROM app_sessions WHERE sid = ?');
   for (const sid of createdSessions) del.run(sid);
+  const delShop = db.prepare('DELETE FROM shops WHERE id = ?');
+  for (const id of createdShopIds) delShop.run(id);
   db.close();
 }

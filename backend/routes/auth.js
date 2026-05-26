@@ -3,10 +3,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import rateLimit from 'express-rate-limit';
-import { db, requireShopAuth } from '../middleware/auth.js';
+import { blockPlatformImpersonation, db, requireShopAuth } from '../middleware/auth.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate } from '../lib/email-templates/index.js';
 import { buildEmailIdempotencyKey } from '../lib/email-delivery.js';
+import { resetTokenDigest, resetTokenLookupValues } from '../lib/reset-tokens.js';
+import { clearSessionCookie, destroySession, regenerateSession, revokeShopSessions } from '../lib/session-security.js';
 import {
   getMerchantLegalStatus,
   recordMerchantLegalAcceptance,
@@ -20,13 +22,15 @@ import {
 } from '../config.js';
 
 const router = Router();
+const smokeRateLimitSkip = req => process.env.NODE_ENV !== 'production' && req.get('x-smoke-test') === '1';
 
 const loginLimiter = rateLimit({
   windowMs: LOGIN_WINDOW_MINUTES * 60 * 1000,
   max: LOGIN_MAX_ATTEMPTS,
   message: { error: 'Too many login attempts, please try again later' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: smokeRateLimitSkip,
 });
 
 const resetLimiter = rateLimit({
@@ -34,7 +38,17 @@ const resetLimiter = rateLimit({
   max: 5,
   message: { ok: true, message: "If that email is registered, you'll receive a reset link shortly." },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: smokeRateLimitSkip,
+});
+
+const resetVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { valid: false, error: 'Too many reset link checks, please try again shortly.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: smokeRateLimitSkip,
 });
 
 function validatePasswordStrength(password) {
@@ -61,7 +75,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const shop = db.prepare('SELECT * FROM shops WHERE email = ?').get(email.trim().toLowerCase());
+    const shop = db.prepare("SELECT * FROM shops WHERE email = ? AND plan != 'suspended'").get(email.trim().toLowerCase());
     if (!shop) {
       return res.status(401).json({ error: 'Incorrect email or password' });
     }
@@ -71,6 +85,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Incorrect email or password' });
     }
 
+    await regenerateSession(req);
     req.session.shopId = shop.id;
 
     // Record session in sessions table
@@ -97,12 +112,18 @@ router.post('/login', loginLimiter, async (req, res) => {
 });
 
 // POST /api/auth/logout
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
   const sessionToken = req.sessionID;
-  req.session.destroy(() => {
+  try {
+    await destroySession(req);
+    db.prepare('DELETE FROM app_sessions WHERE sid = ?').run(sessionToken);
     db.prepare('DELETE FROM sessions WHERE token = ?').run(sessionToken);
+    clearSessionCookie(res);
     res.json({ ok: true });
-  });
+  } catch (err) {
+    console.error('Logout error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // GET /api/auth/me
@@ -128,6 +149,7 @@ router.get('/me', requireShopAuth, (req, res) => {
     logo_url: s.logo_url || null,
     phone:    s.phone    || null,
     address:  s.address  || null,
+    impersonation: req.platformImpersonation || { active: false },
   });
 });
 
@@ -173,7 +195,7 @@ router.post('/legal/accept', requireShopAuth, (req, res) => {
 });
 
 // POST /api/auth/change-password
-router.post('/change-password', requireShopAuth, async (req, res) => {
+router.post('/change-password', requireShopAuth, blockPlatformImpersonation, async (req, res) => {
   try {
     const current = req.body.current || req.body.currentPassword;
     const { newPassword } = req.body;
@@ -194,6 +216,7 @@ router.post('/change-password', requireShopAuth, async (req, res) => {
     const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     db.prepare('UPDATE shops SET password_hash = ?, is_temp_password = 0 WHERE id = ?')
       .run(hash, req.shop.id);
+    revokeShopSessions(db, req.shop.id, { exceptSid: req.sessionID });
 
     res.json({ ok: true });
   } catch (err) {
@@ -211,16 +234,16 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
       return res.json({ ok: true, message });
     }
 
-    const shop = db.prepare('SELECT * FROM shops WHERE email = ?').get(email.trim().toLowerCase());
+    const shop = db.prepare("SELECT * FROM shops WHERE email = ? AND plan != 'suspended'").get(email.trim().toLowerCase());
     if (!shop) {
       return res.json({ ok: true, message });
     }
 
-    const token = jwt.sign({ shopId: shop.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ shopId: shop.id, jti: uuidv4() }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     db.prepare(
       "INSERT INTO reset_tokens (shop_id, token, expires_at) VALUES (?, ?, datetime('now', '+1 hour'))"
-    ).run(shop.id, token);
+    ).run(shop.id, resetTokenDigest(token));
 
     const resetLink = `${process.env.BASE_URL}/admin/reset-password.html?token=${encodeURIComponent(token)}`;
 
@@ -248,22 +271,32 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 });
 
 // GET /api/auth/reset-password/verify?token=xxx
-router.get('/reset-password/verify', (req, res) => {
+router.get('/reset-password/verify', resetVerifyLimiter, (req, res) => {
   const { token } = req.query;
   if (!token) {
     return res.status(400).json({ valid: false, error: 'Token expired or invalid' });
   }
 
-  const row = db.prepare(
-    "SELECT * FROM reset_tokens WHERE token = ? AND used = 0 AND expires_at > datetime('now')"
-  ).get(token);
+  const lookup = resetTokenLookupValues(token);
+  const row = db.prepare(`
+    SELECT rt.*
+    FROM reset_tokens rt
+    JOIN shops s ON s.id = rt.shop_id
+    WHERE rt.token IN (?, ?)
+      AND rt.used = 0
+      AND rt.expires_at > datetime('now')
+      AND s.plan != 'suspended'
+  `).get(...lookup);
 
   if (!row) {
     return res.status(400).json({ valid: false, error: 'Token expired or invalid' });
   }
 
   try {
-    jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    if (Number(payload.shopId) !== Number(row.shop_id)) {
+      return res.status(400).json({ valid: false, error: 'Token expired or invalid' });
+    }
     res.json({ valid: true });
   } catch (err) {
     res.status(400).json({ valid: false, error: 'Token expired or invalid' });
@@ -278,9 +311,16 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Token and new password are required' });
     }
 
-    const row = db.prepare(
-      "SELECT * FROM reset_tokens WHERE token = ? AND used = 0 AND expires_at > datetime('now')"
-    ).get(token);
+    const lookup = resetTokenLookupValues(token);
+    const row = db.prepare(`
+      SELECT rt.*
+      FROM reset_tokens rt
+      JOIN shops s ON s.id = rt.shop_id
+      WHERE rt.token IN (?, ?)
+        AND rt.used = 0
+        AND rt.expires_at > datetime('now')
+        AND s.plan != 'suspended'
+    `).get(...lookup);
 
     if (!row) {
       return res.status(400).json({ error: 'Token expired or invalid' });
@@ -292,6 +332,9 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
     } catch (err) {
       return res.status(400).json({ error: 'Token expired or invalid' });
     }
+    if (Number(row.shop_id) !== Number(payload.shopId)) {
+      return res.status(400).json({ error: 'Token expired or invalid' });
+    }
 
     const strengthError = validatePasswordStrength(newPassword);
     if (strengthError) {
@@ -299,10 +342,19 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
     }
 
     const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    const claimed = db.prepare(`
+      UPDATE reset_tokens
+      SET used = 1
+      WHERE token IN (?, ?)
+        AND used = 0
+        AND expires_at > datetime('now')
+    `).run(...lookup);
+    if (claimed.changes !== 1) {
+      return res.status(400).json({ error: 'Token expired or invalid' });
+    }
     db.prepare('UPDATE shops SET password_hash = ?, is_temp_password = 0 WHERE id = ?')
       .run(hash, payload.shopId);
-
-    db.prepare('UPDATE reset_tokens SET used = 1 WHERE token = ?').run(token);
+    revokeShopSessions(db, payload.shopId);
 
     res.json({ ok: true });
   } catch (err) {
@@ -314,20 +366,23 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
 // GET /api/auth/sessions
 router.get('/sessions', requireShopAuth, (req, res) => {
   const sessions = db.prepare(
-    'SELECT id, token, ip, user_agent, created_at, expires_at FROM sessions WHERE shop_id = ? ORDER BY created_at DESC'
-  ).all(req.shop.id);
+    `SELECT id, ip, user_agent, created_at, expires_at,
+            CASE WHEN token = ? THEN 1 ELSE 0 END AS is_current
+     FROM sessions
+     WHERE shop_id = ?
+     ORDER BY created_at DESC`
+  ).all(req.sessionID, req.shop.id);
 
-  const currentToken = req.sessionID;
   const result = sessions.map(s => ({
     ...s,
-    is_current: s.token === currentToken
+    is_current: !!s.is_current
   }));
 
   res.json(result);
 });
 
 // DELETE /api/auth/sessions/:id
-router.delete('/sessions/:id', requireShopAuth, (req, res) => {
+router.delete('/sessions/:id', requireShopAuth, blockPlatformImpersonation, (req, res) => {
   const row = db.prepare('SELECT * FROM sessions WHERE id = ? AND shop_id = ?')
     .get(req.params.id, req.shop.id);
 
@@ -341,7 +396,7 @@ router.delete('/sessions/:id', requireShopAuth, (req, res) => {
 });
 
 // POST /api/auth/sessions/revoke-all
-router.post('/sessions/revoke-all', requireShopAuth, (req, res) => {
+router.post('/sessions/revoke-all', requireShopAuth, blockPlatformImpersonation, (req, res) => {
   const tokens = db.prepare('SELECT token FROM sessions WHERE shop_id = ? AND token != ?')
     .all(req.shop.id, req.sessionID);
   db.prepare('DELETE FROM sessions WHERE shop_id = ? AND token != ?').run(req.shop.id, req.sessionID);
@@ -351,14 +406,19 @@ router.post('/sessions/revoke-all', requireShopAuth, (req, res) => {
 });
 
 // DELETE /api/auth/account
-router.delete('/account', requireShopAuth, (req, res) => {
+router.delete('/account', requireShopAuth, blockPlatformImpersonation, async (req, res) => {
   const shopId = req.shop.id;
   const sessionToken = req.sessionID;
-  db.prepare('DELETE FROM shops WHERE id = ?').run(shopId);
-  req.session.destroy(() => {
+  try {
+    db.prepare('DELETE FROM shops WHERE id = ?').run(shopId);
+    await destroySession(req);
     db.prepare('DELETE FROM app_sessions WHERE sid = ?').run(sessionToken);
+    clearSessionCookie(res);
     res.json({ ok: true });
-  });
+  } catch (err) {
+    console.error('Account delete error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 export default router;

@@ -13,6 +13,7 @@ const dataDir = join(__dirname, '../data');
 mkdirSync(dataDir, { recursive: true });
 
 const db = new DatabaseSync(join(dataDir, 'rfdewi.db'));
+db.exec('PRAGMA busy_timeout = 5000');
 
 const sql = readFileSync(join(__dirname, 'schema.sql'), 'utf8');
 db.exec(sql);

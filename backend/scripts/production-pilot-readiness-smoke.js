@@ -42,6 +42,55 @@ assert.match(envAudit, /--pilot/, 'env-audit should support a stricter pilot pro
 assert.match(envAudit, /https:\/\/app\.trennen\.co\.nz/, 'pilot env audit should know the production app URL');
 assert.match(envAudit, /STRIPE_CLIENT_ID/, 'pilot env audit should check Stripe Connect client id');
 assert.match(envAudit, /STRIPE_WEBHOOK_SECRET/, 'pilot env audit should check Stripe webhook secret');
+assert.match(envAudit, /safeSecret/, 'env-audit should reject placeholder or weak production secrets');
+assert.match(envAudit, /SESSION_SECRET_safe/, 'env-audit should report SESSION_SECRET safety');
+assert.match(envAudit, /JWT_SECRET_safe/, 'env-audit should report JWT_SECRET safety');
+assert.match(envAudit, /PLATFORM_CONFIG_ENCRYPTION_KEY_safe/, 'env-audit should report encryption key safety');
+assert.match(envAudit, /PLATFORM_ADMIN_PASSWORD_safe/, 'env-audit should report optional platform bootstrap password safety');
+
+const server = read('backend/server.js');
+assert.match(
+  server,
+  /isUnsafeProductionSecret/,
+  'server should enforce production secret safety at startup, not only in audit scripts',
+);
+assert.match(
+  server,
+  /SESSION_SECRET\)\) missing\.push\('SESSION_SECRET'\)/,
+  'production startup should reject weak SESSION_SECRET values',
+);
+assert.match(
+  server,
+  /JWT_SECRET\)\) missing\.push\('JWT_SECRET'\)/,
+  'production startup should reject weak JWT_SECRET values',
+);
+assert.match(
+  server,
+  /PLATFORM_CONFIG_ENCRYPTION_KEY\)/,
+  'production startup should validate platform encryption key safety',
+);
+assert.match(
+  server,
+  /PLATFORM_ADMIN_PASSWORD/,
+  'production startup should reject weak optional platform bootstrap passwords',
+);
+
+const productionHealthSmoke = read('backend/scripts/production-health-smoke.js');
+assert.match(
+  productionHealthSmoke,
+  /data\.environment !== 'production'/,
+  'production health smoke should fail when the live server runs with NODE_ENV other than production',
+);
+assert.match(
+  productionHealthSmoke,
+  /TRUST_PROXY=1/,
+  'production health smoke should fail when proxy trust is not enabled',
+);
+assert.match(
+  productionHealthSmoke,
+  /platformEncryptionConfigured/,
+  'production health smoke should verify platform encryption readiness',
+);
 
 const envExample = read('backend/.env.example');
 assert.match(envExample, /BASE_URL=https:\/\/app\.trennen\.co\.nz/, '.env.example should default to the Trennen app domain');

@@ -14,6 +14,7 @@ import {
 import {
   ensureEmailDeliverySchema,
   getShopEmailSettings,
+  normaliseEmailDomain,
   recentEmailEventsForShop,
   updateShopEmailDomainSettings,
 } from '../lib/email-delivery.js';
@@ -81,22 +82,22 @@ function handleLogoUpload(req, res, next) {
 }
 
 function parseSettings(row) {
-  const templates = JSON.parse(row.email_templates || '{}');
+  const templates = parseJsonObjectSetting(row.email_templates, {});
   // Surface the optional "thank-you" sentence as a top-level field so the
   // admin notifications page can read/write it without touching the
   // per-template override structure.
   const thankYou = String(templates?._thank_you || '');
   return {
     ...row,
-    notifications:   JSON.parse(row.notifications || '{}'),
+    notifications:   parseJsonObjectSetting(row.notifications, {}),
     email_templates: templates,
     email_thank_you: thankYou,
-    shipping_zones:  JSON.parse(row.shipping_zones || '[]'),
+    shipping_zones:  parseJsonArraySetting(row.shipping_zones, []),
     embed_allowed_origins: parseEmbedAllowedOrigins(row.embed_allowed_origins),
     email_domain: {
       domain: row.email_sending_domain || '',
       status: row.email_sending_domain_status || 'not_configured',
-      records: parseJsonSetting(row.email_sending_domain_records, []),
+      records: parseJsonArraySetting(row.email_sending_domain_records, []),
       verified_at: row.email_sending_domain_verified_at || null,
       last_checked_at: row.email_sending_domain_last_checked_at || null,
       use_platform_fallback: row.email_use_platform_fallback !== 0,
@@ -106,6 +107,138 @@ function parseSettings(row) {
 
 function parseJsonSetting(value, fallback) {
   try { return JSON.parse(value || ''); } catch { return fallback; }
+}
+
+function parseJsonArraySetting(value, fallback = []) {
+  const parsed = parseJsonSetting(value, fallback);
+  return Array.isArray(parsed) ? parsed : fallback;
+}
+
+function parseJsonObjectSetting(value, fallback = {}) {
+  const parsed = parseJsonSetting(value, fallback);
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : fallback;
+}
+
+function finiteNumber(value, fallback = null) {
+  if (value === '' || value === null || value === undefined) return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function moneyValue(value, fallback = 0) {
+  const n = finiteNumber(value, fallback);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 100) / 100;
+}
+
+function integerDays(value, fallback) {
+  const n = finiteNumber(value, fallback);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n);
+}
+
+function packageLimit(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return undefined;
+  return n > 0 ? n : null;
+}
+
+function invalidShipping(message) {
+  const err = new Error(message);
+  err.code = 'INVALID_SHIPPING_CONFIG';
+  return err;
+}
+
+function invalidLogoUrl(message) {
+  const err = new Error(message);
+  err.code = 'INVALID_LOGO_URL';
+  return err;
+}
+
+function normaliseLogoUrlForShop(value, shopId) {
+  if (value === undefined) return undefined;
+  const url = String(value || '').trim();
+  if (!url) return null;
+  const safePrefix = `/uploads/logos/${shopId}/`;
+  const imageName = '[A-Za-z0-9._-]+\\.(?:png|jpe?g|webp|gif)';
+  const safePattern = new RegExp(`^${safePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${imageName}$`, 'i');
+  if (!safePattern.test(url)) {
+    throw invalidLogoUrl('Logo URL must be an uploaded image for this shop.');
+  }
+  return url;
+}
+
+function normaliseShippingBandForStorage(raw = {}, index = 0, fallbackPrice = 0) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw invalidShipping('Shipping bands must be valid package band objects.');
+  }
+  const label = String(raw.label || raw.name || (index === 0 ? 'Standard parcel' : `Band ${index + 1}`)).trim();
+  const price = moneyValue(raw.price ?? raw.rate, fallbackPrice);
+  const maxWeightKg = packageLimit(raw.maxWeightKg ?? raw.max_weight_kg ?? raw.weight_kg);
+  const maxLongestMm = packageLimit(raw.maxLongestMm ?? raw.max_longest_mm ?? raw.longest_mm);
+  const maxVolumeCm3 = packageLimit(raw.maxVolumeCm3 ?? raw.max_volume_cm3 ?? raw.volume_cm3);
+  if (price === null || maxWeightKg === undefined || maxLongestMm === undefined || maxVolumeCm3 === undefined) {
+    throw invalidShipping('Shipping band limits and prices must be zero or positive numbers.');
+  }
+  return {
+    id: String(raw.id || `band_${index + 1}`).trim().slice(0, 80) || `band_${index + 1}`,
+    label: label.slice(0, 80) || `Band ${index + 1}`,
+    maxWeightKg,
+    maxLongestMm,
+    maxVolumeCm3,
+    price,
+    active: raw.active === false ? false : true,
+  };
+}
+
+function normaliseShippingZonesForStorage(input, existingValue) {
+  const source = input === undefined ? parseJsonArraySetting(existingValue, []) : input;
+  if (!Array.isArray(source)) {
+    throw invalidShipping('Shipping options must be an array.');
+  }
+
+  let recommendedSeen = false;
+  return source.slice(0, 50).map((raw, index) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw invalidShipping('Shipping options must be valid objects.');
+    }
+    const active = raw.active === false ? false : true;
+    const courier = String(raw.courier || raw.name || '').trim();
+    const service = String(raw.service || '').trim();
+    if (active && (!courier || !service)) {
+      throw invalidShipping('Each active shipping option needs a courier and service.');
+    }
+    const price = moneyValue(raw.price ?? raw.rate, 0);
+    if (price === null) {
+      throw invalidShipping('Shipping prices must be zero or positive numbers.');
+    }
+    const daysMin = integerDays(raw.days_min ?? raw.est_days_min, 2);
+    const daysMaxFallback = daysMin === null ? 5 : Math.max(daysMin, 5);
+    const daysMax = integerDays(raw.days_max ?? raw.est_days_max, daysMaxFallback);
+    if (daysMin === null || daysMax === null || daysMax < daysMin) {
+      throw invalidShipping('Shipping delivery day ranges must be valid.');
+    }
+    if (raw.bands !== undefined && !Array.isArray(raw.bands)) {
+      throw invalidShipping('Shipping bands must be an array.');
+    }
+    const bands = (Array.isArray(raw.bands) ? raw.bands : [])
+      .slice(0, 40)
+      .map((band, bandIndex) => normaliseShippingBandForStorage(band, bandIndex, price));
+    const wantsRecommended = raw.recommended === true && !recommendedSeen;
+    if (wantsRecommended) recommendedSeen = true;
+    return {
+      id: String(raw.id || `${courier || 'shipping'}-${service || index}`).trim().slice(0, 80) || `shipping_${index + 1}`,
+      courier: courier.slice(0, 80) || 'Courier',
+      service: service.slice(0, 80) || 'Standard',
+      price,
+      days_min: daysMin,
+      days_max: daysMax,
+      active,
+      recommended: wantsRecommended,
+      bands,
+    };
+  });
 }
 
 // GET /api/settings/
@@ -147,6 +280,7 @@ router.post('/logo', requireShopAuth, handleLogoUpload, (req, res) => {
 // Updates BOTH the shop-level fields on the shops table (name) AND the
 // per-shop branding in store_settings. Single endpoint, single Save click.
 router.put('/', requireShopAuth, (req, res) => {
+  let inTransaction = false;
   try {
     const existing = ensureSettings(req.shop.id);
     const {
@@ -168,6 +302,8 @@ router.put('/', requireShopAuth, (req, res) => {
     }
     const shouldUpdateEmailDomain = email_sending_domain !== undefined || email_use_platform_fallback !== undefined;
     let embedAllowedOrigins;
+    let normalisedShippingZones;
+    let normalisedLogoUrl;
     try {
       embedAllowedOrigins = embed_allowed_origins !== undefined
         ? normaliseEmbedAllowedOrigins(embed_allowed_origins)
@@ -175,8 +311,40 @@ router.put('/', requireShopAuth, (req, res) => {
     } catch (err) {
       return res.status(400).json({ error: err.message || 'Enter valid embed website origins.' });
     }
+    try {
+      normalisedLogoUrl = logo_url !== undefined
+        ? normaliseLogoUrlForShop(logo_url, req.shop.id)
+        : normaliseLogoUrlForShop(existing.logo_url, req.shop.id);
+    } catch (err) {
+      if (err.code === 'INVALID_LOGO_URL') {
+        return res.status(400).json({ error: err.message, code: err.code });
+      }
+      throw err;
+    }
+    try {
+      normalisedShippingZones = normaliseShippingZonesForStorage(shipping_zones, existing.shipping_zones);
+    } catch (err) {
+      if (err.code === 'INVALID_SHIPPING_CONFIG') {
+        return res.status(400).json({ error: err.message, code: err.code });
+      }
+      throw err;
+    }
 
     // Update shop display name if supplied — slug stays stable for URLs
+    if (shouldUpdateEmailDomain && email_sending_domain !== undefined) {
+      try {
+        normaliseEmailDomain(email_sending_domain);
+      } catch (err) {
+        if (err.code === 'INVALID_EMAIL_DOMAIN') {
+          return res.status(400).json({ error: err.message });
+        }
+        throw err;
+      }
+    }
+
+    db.exec('BEGIN IMMEDIATE');
+    inTransaction = true;
+
     if (typeof name === 'string' && name.trim()) {
       db.prepare('UPDATE shops SET name = ? WHERE id = ?')
         .run(name.trim().slice(0, 80), req.shop.id);
@@ -207,13 +375,13 @@ router.put('/', requireShopAuth, (req, res) => {
       address !== undefined ? address : existing.address,
       supportMode,
       supportMode === 'custom' ? supportEmail : null,
-      logo_url !== undefined ? logo_url : existing.logo_url,
+      normalisedLogoUrl,
       gst_number !== undefined ? gst_number : existing.gst_number,
       invoice_footer !== undefined ? invoice_footer : existing.invoice_footer,
       invoice_logo !== undefined ? (invoice_logo ? 1 : 0) : (existing.invoice_logo ?? 1),
-      JSON.stringify(notifications !== undefined ? (notifications || {}) : parseJsonSetting(existing.notifications, {})),
-      JSON.stringify(email_templates !== undefined ? (email_templates || {}) : parseJsonSetting(existing.email_templates, {})),
-      JSON.stringify(shipping_zones !== undefined ? (Array.isArray(shipping_zones) ? shipping_zones : []) : parseJsonSetting(existing.shipping_zones, [])),
+      JSON.stringify(notifications !== undefined ? (notifications || {}) : parseJsonObjectSetting(existing.notifications, {})),
+      JSON.stringify(email_templates !== undefined ? (email_templates || {}) : parseJsonObjectSetting(existing.email_templates, {})),
+      JSON.stringify(normalisedShippingZones),
       JSON.stringify(embedAllowedOrigins),
       req.shop.id
     );
@@ -224,10 +392,19 @@ router.put('/', requireShopAuth, (req, res) => {
       });
     }
 
+    db.exec('COMMIT');
+    inTransaction = false;
+
     const updated = db.prepare('SELECT * FROM store_settings WHERE shop_id = ?').get(req.shop.id);
     const shop    = db.prepare('SELECT name FROM shops WHERE id = ?').get(req.shop.id) || {};
     res.json({ ...parseSettings(updated), name: shop.name || '' });
   } catch (err) {
+    if (inTransaction) {
+      try { db.exec('ROLLBACK'); } catch {}
+    }
+    if (err.code === 'INVALID_EMAIL_DOMAIN') {
+      return res.status(400).json({ error: err.message });
+    }
     console.error('Update settings error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }

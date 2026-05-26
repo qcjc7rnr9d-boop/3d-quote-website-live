@@ -15,6 +15,11 @@ const DEFAULT_CURRENCY = 'NZD';
 const DEFAULT_PLATFORM_FEE_PERCENT = 5;
 export const MAX_MODELS_PER_QUOTE = 20;
 export const MAX_MODEL_QUANTITY_SAFETY = 9999;
+export const MAX_MODEL_FILE_BYTES = 250 * 1024 * 1024;
+export const MAX_MODEL_DIMENSION_MM = 100000;
+const MAX_MODEL_NAME_LENGTH = 180;
+const MAX_MODEL_ID_LENGTH = 80;
+const MODEL_EXTENSIONS = new Set(['stl', 'obj']);
 
 function toNumber(value, fallback = 0) {
   const n = Number(value);
@@ -116,14 +121,15 @@ function roundOne(value) {
 
 function publicModel(model) {
   if (!model) return null;
+  const meta = normaliseModelDisplayMetadata(model, 0, { strict: false });
   return {
-    id: model.id || null,
-    name: model.name,
-    size: model.size ?? null,
-    ext: model.ext || '',
+    id: meta.id,
+    name: meta.name,
+    size: meta.size,
+    ext: meta.ext,
     volumeCm3: money(model.volumeCm3),
     quantity: clampInt(model.quantity, 1, MAX_MODEL_QUANTITY_SAFETY, 1),
-    dimensions: model.dimensions || null,
+    dimensions: meta.dimensions,
   };
 }
 
@@ -306,13 +312,89 @@ export function buildQuoteRequestFromCart(cart = {}) {
   };
 }
 
-function normaliseDimensions(input = {}) {
+function displayText(value, fallback, max = MAX_MODEL_NAME_LENGTH) {
+  const text = String(value ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/[<>]/g, '')
+    .replace(/[\\/]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const safe = text || fallback;
+  if (safe.length <= max) return safe;
+  const extMatch = safe.match(/(\.[a-z0-9]{1,8})$/i);
+  if (!extMatch || extMatch[1].length + 8 >= max) return safe.slice(0, max).trim();
+  const ext = extMatch[1];
+  return `${safe.slice(0, max - ext.length).trim()}${ext}`;
+}
+
+function modelName(value, index = 0) {
+  const raw = String(value ?? '').split(/[\\/]/).filter(Boolean).pop() || `Model ${index + 1}`;
+  return displayText(raw, `Model ${index + 1}`, MAX_MODEL_NAME_LENGTH);
+}
+
+function modelId(value, index = 0) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return `model-${index + 1}`;
+  const safe = raw
+    .replace(/[\u0000-\u001f\u007f]/g, '-')
+    .replace(/[^A-Za-z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, MAX_MODEL_ID_LENGTH);
+  return safe || `model-${index + 1}`;
+}
+
+function modelExt(value, safeName = '') {
+  const raw = String(value ?? '').replace(/^\./, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+  const inferred = String(safeName || '').split('.').pop()?.toLowerCase() || '';
+  if (MODEL_EXTENSIONS.has(raw)) return raw;
+  if (MODEL_EXTENSIONS.has(inferred)) return inferred;
+  return '';
+}
+
+function modelSize(value, safeName, strict = true) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > MAX_MODEL_FILE_BYTES) {
+    if (strict) {
+      throw new PricingError(`Model file size is invalid for ${safeName}.`, 400, 'INVALID_MODEL_SIZE');
+    }
+    return null;
+  }
+  return Math.round(n);
+}
+
+function normaliseDimensions(input = {}, options = {}) {
   const source = input.dimensions || input.file?.dimensions || {};
-  const xMm = toNumber(source.xMm ?? source.x_mm ?? source.x, NaN);
-  const yMm = toNumber(source.yMm ?? source.y_mm ?? source.y, NaN);
-  const zMm = toNumber(source.zMm ?? source.z_mm ?? source.z ?? source.heightMm ?? source.height, NaN);
-  if (![xMm, yMm, zMm].every(n => Number.isFinite(n) && n >= 0)) return null;
+  const rawX = source.xMm ?? source.x_mm ?? source.x;
+  const rawY = source.yMm ?? source.y_mm ?? source.y;
+  const rawZ = source.zMm ?? source.z_mm ?? source.z ?? source.heightMm ?? source.height;
+  const hasAny = [rawX, rawY, rawZ].some(value => value != null && value !== '');
+  if (!hasAny) return null;
+  const xMm = toNumber(rawX, NaN);
+  const yMm = toNumber(rawY, NaN);
+  const zMm = toNumber(rawZ, NaN);
+  const valid = [xMm, yMm, zMm].every(n => Number.isFinite(n) && n >= 0 && n <= MAX_MODEL_DIMENSION_MM);
+  if (!valid) {
+    if (options.throwOnInvalid !== false) {
+      const label = options.modelName ? ` for ${options.modelName}` : '';
+      throw new PricingError(`Model dimensions are invalid${label}.`, 400, 'INVALID_MODEL_DIMENSIONS');
+    }
+    return null;
+  }
   return { xMm, yMm, zMm };
+}
+
+export function normaliseModelDisplayMetadata(model = {}, index = 0, options = {}) {
+  const strict = options.strict !== false;
+  const name = modelName(model?.name || model?.fileName, index);
+  return {
+    id: modelId(model?.id, index),
+    name,
+    size: modelSize(model?.size ?? model?.fileSize, name, strict),
+    ext: modelExt(model?.ext || model?.fileExt || model?.type, name),
+    dimensions: normaliseDimensions({ dimensions: model?.dimensions }, { throwOnInvalid: strict, modelName: name }),
+  };
 }
 
 function modelQuantity(model = {}, index = 0, maxQuantity = MAX_MODEL_QUANTITY_SAFETY) {
@@ -350,21 +432,19 @@ function normaliseModels(input = {}, options = {}) {
   }
 
   return sourceModels.map((model, index) => {
+    const meta = normaliseModelDisplayMetadata(model, index);
     const volumeCm3 = toNumber(model?.volumeCm3, NaN);
     if (!Number.isFinite(volumeCm3) || volumeCm3 <= 0) {
-      throw new PricingError(`Model volume is missing or invalid for ${model?.name || `model ${index + 1}`}.`, 400, 'INVALID_VOLUME');
+      throw new PricingError(`Model volume is missing or invalid for ${meta.name}.`, 400, 'INVALID_VOLUME');
     }
-    const dimensions = normaliseDimensions({ dimensions: model?.dimensions });
-    const name = String(model?.name || `Model ${index + 1}`).slice(0, 240);
-    const ext = String(model?.ext || name.split('.').pop() || '').toLowerCase().slice(0, 12);
     return {
-      id: model?.id || `model-${index + 1}`,
-      name,
-      size: Number.isFinite(Number(model?.size)) ? Number(model.size) : null,
-      ext,
+      id: meta.id,
+      name: meta.name,
+      size: meta.size,
+      ext: meta.ext,
       volumeCm3,
-      quantity: rawModels ? modelQuantity(model, index, options.maxModelQuantity) : 1,
-      dimensions,
+      quantity: rawModels ? modelQuantity({ ...model, name: meta.name }, index, options.maxModelQuantity) : 1,
+      dimensions: meta.dimensions,
     };
   });
 }

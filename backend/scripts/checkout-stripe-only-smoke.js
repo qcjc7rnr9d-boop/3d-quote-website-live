@@ -118,6 +118,34 @@ assert(
   'Stripe payment route must persist the restricted-items certification'
 );
 assert(
+  stripeRoute.indexOf('INSERT INTO orders') < stripeRoute.indexOf('stripe.paymentIntents.create'),
+  'Stripe payment route must create a pending order before creating a PaymentIntent'
+);
+assert(
+  stripeRoute.includes('orderId: String(pendingOrderId)') && stripeRoute.includes('intentOrderLookup'),
+  'Stripe payment route and webhook must reconcile payments by order metadata'
+);
+assert(
+  stripeRoute.includes('metadataShopId') && stripeRoute.includes('Number(byMetadata.shop_id) !== Number(metadataShopId)'),
+  'Stripe webhook order lookup must bind order metadata to the expected shop id'
+);
+assert(
+  stripeRoute.includes("WHERE id = ? AND payment_status != 'paid'"),
+  'Stripe failed-payment webhook must not downgrade already-paid orders'
+);
+assert(
+  checkoutJs.includes('checkoutIdempotencyKey') && stripeRoute.includes('checkoutIdempotencyKey'),
+  'Checkout must send and enforce a stable checkout idempotency key'
+);
+assert(
+  schemaSql.includes('checkout_idempotency_key') && stripeRoute.includes('idx_orders_checkout_idempotency'),
+  'Orders schema and Stripe route must persist a unique checkout idempotency key'
+);
+assert(
+  stripeRoute.includes('{ idempotencyKey: checkoutIdempotencyKey }'),
+  'Stripe PaymentIntent creation must use the checkout idempotency key'
+);
+assert(
   schemaSql.includes('restricted_items_certification_version') && schemaSql.includes('restricted_items_certified_at'),
   'Orders schema must store restricted-items certification evidence'
 );

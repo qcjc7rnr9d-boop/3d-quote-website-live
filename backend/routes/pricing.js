@@ -24,6 +24,76 @@ function ensurePricingConfig(shopId) {
   return existing;
 }
 
+function finiteNumber(value, fallback = 0) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function normalisePricingConfig(input = {}, previous = {}) {
+  const currency = String(input.currency || previous.currency || 'NZD').trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) {
+    throw Object.assign(new Error('Choose a valid three-letter currency code.'), { status: 400 });
+  }
+
+  const taxRate = finiteNumber(input.tax_rate, previous.tax_rate ?? DEFAULT_GST);
+  const minOrderValue = finiteNumber(input.min_order_value, previous.min_order_value ?? 0);
+  const freeShippingAbove = finiteNumber(input.free_shipping_above, previous.free_shipping_above ?? 50);
+  const quoteRounding = finiteNumber(input.quote_rounding, previous.quote_rounding ?? 0.10);
+  const quoteValidHours = Number.parseInt(input.quote_valid_hours ?? previous.quote_valid_hours ?? 24, 10);
+  const timeRatePerHour = finiteNumber(input.time_rate_per_hour, previous.time_rate_per_hour ?? 0);
+  const timeRatePerGram = finiteNumber(input.time_rate_per_gram, previous.time_rate_per_gram ?? 0);
+  const maxModelQuantityRaw = input.max_model_quantity ?? previous.max_model_quantity ?? null;
+  const maxModelQuantity = maxModelQuantityRaw === null || maxModelQuantityRaw === ''
+    ? null
+    : Number.parseInt(maxModelQuantityRaw, 10);
+
+  const nonNegativeFields = [
+    ['tax_rate', taxRate],
+    ['min_order_value', minOrderValue],
+    ['free_shipping_above', freeShippingAbove],
+    ['quote_rounding', quoteRounding],
+    ['time_rate_per_hour', timeRatePerHour],
+    ['time_rate_per_gram', timeRatePerGram],
+  ];
+  const invalidField = nonNegativeFields.find(([, value]) => !Number.isFinite(value) || value < 0);
+  if (invalidField) {
+    throw Object.assign(new Error(`${invalidField[0]} must be zero or more.`), { status: 400 });
+  }
+  if (!Number.isInteger(quoteValidHours) || quoteValidHours < 1 || quoteValidHours > 8760) {
+    throw Object.assign(new Error('Quote validity must be between 1 and 8760 hours.'), { status: 400 });
+  }
+  if (maxModelQuantity !== null && (!Number.isInteger(maxModelQuantity) || maxModelQuantity < 1 || maxModelQuantity > 9999)) {
+    throw Object.assign(new Error('Maximum per-model quantity must be between 1 and 9999, or blank for no store limit.'), { status: 400 });
+  }
+
+  const surcharges = Array.isArray(input.surcharges) ? input.surcharges.map((item, index) => {
+    const name = String(item?.name || item?.label || '').trim();
+    const type = ['percent', 'fixed'].includes(item?.type) ? item.type : 'fixed';
+    const value = finiteNumber(item?.value ?? item?.amount, 0);
+    if (!name) {
+      throw Object.assign(new Error(`Surcharge ${index + 1} needs a name.`), { status: 400 });
+    }
+    if (!Number.isFinite(value) || value < 0 || (type === 'percent' && value > 100)) {
+      throw Object.assign(new Error(`Surcharge ${name} has an invalid value.`), { status: 400 });
+    }
+    return { name, type, value, active: item?.active === false ? false : true };
+  }) : [];
+
+  return {
+    currency,
+    taxRate,
+    minOrderValue,
+    freeShippingAbove,
+    quoteRounding,
+    quoteValidHours,
+    maxModelQuantity,
+    timeRatePerHour,
+    timeRatePerGram,
+    surcharges,
+  };
+}
+
 // GET /api/pricing/
 router.get('/', requireShopAuth, (req, res) => {
   try {
@@ -55,6 +125,15 @@ router.put('/', requireShopAuth, (req, res) => {
     } = req.body;
 
     const prev = ensurePricingConfig(req.shop.id);
+    let next;
+    try {
+      next = normalisePricingConfig(req.body, prev);
+    } catch (validationError) {
+      return res.status(validationError.status || 400).json({
+        error: validationError.message || 'Pricing settings are invalid.',
+        code: 'INVALID_PRICING_CONFIG',
+      });
+    }
 
     const validModes = ['material', 'time_material'];
     const mode = validModes.includes(pricing_mode) ? pricing_mode : 'material';
@@ -76,20 +155,20 @@ router.put('/', requireShopAuth, (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `).run(
       req.shop.id,
-      currency || 'NZD',
-      tax_rate ?? DEFAULT_GST,
+      next.currency,
+      next.taxRate,
       tax_inclusive ? 1 : 0,
-      min_order_value ?? 0,
-      free_shipping_above ?? 50,
-      quote_rounding ?? 0.10,
-      quote_valid_hours ?? 24,
-      Number.isFinite(Number(max_model_quantity)) && Number(max_model_quantity) > 0 ? Math.floor(Number(max_model_quantity)) : null,
+      next.minOrderValue,
+      next.freeShippingAbove,
+      next.quoteRounding,
+      next.quoteValidHours,
+      next.maxModelQuantity,
       show_breakdown ? 1 : 0,
-      JSON.stringify(Array.isArray(surcharges) ? surcharges : []),
+      JSON.stringify(next.surcharges),
       mode,
       mat_include_support ? 1 : 0,
-      parseFloat(time_rate_per_hour) || 0,
-      parseFloat(time_rate_per_gram) || 0,
+      next.timeRatePerHour,
+      next.timeRatePerGram,
       time_include_support ? 1 : 0,
       nextInfillTiers
     );
@@ -150,7 +229,7 @@ router.post('/discounts', requireShopAuth, (req, res) => {
       active === false ? 0 : 1
     );
 
-    const created = db.prepare('SELECT * FROM discount_codes WHERE id = ?').get(result.lastInsertRowid);
+    const created = db.prepare('SELECT * FROM discount_codes WHERE id = ? AND shop_id = ?').get(result.lastInsertRowid, req.shop.id);
     res.status(201).json(created);
   } catch (err) {
     if (err.message && err.message.includes('UNIQUE')) {
@@ -191,7 +270,7 @@ router.patch('/discounts/:id', requireShopAuth, (req, res) => {
       req.shop.id
     );
 
-    const updated = db.prepare('SELECT * FROM discount_codes WHERE id = ?').get(req.params.id);
+    const updated = db.prepare('SELECT * FROM discount_codes WHERE id = ? AND shop_id = ?').get(req.params.id, req.shop.id);
     res.json(updated);
   } catch (err) {
     console.error('Update discount error:', err);
@@ -210,7 +289,7 @@ router.delete('/discounts/:id', requireShopAuth, (req, res) => {
       return res.status(404).json({ error: 'Discount not found' });
     }
 
-    db.prepare('DELETE FROM discount_codes WHERE id = ?').run(req.params.id);
+    db.prepare('DELETE FROM discount_codes WHERE id = ? AND shop_id = ?').run(req.params.id, req.shop.id);
     res.json({ ok: true });
   } catch (err) {
     console.error('Delete discount error:', err);

@@ -166,17 +166,29 @@ Before moving servers or making risky changes, export:
 
 ```bash
 cd ~/3d-quote-website-live
-mkdir -p ~/3d-quote-backups/$(date +%Y%m%d-%H%M%S)
-BACKUP_DIR=$(ls -td ~/3d-quote-backups/* | head -1)
-cp backend/data/rfdewi.db "$BACKUP_DIR/rfdewi.db"
-cp backend/.env "$BACKUP_DIR/backend.env"
-sudo cp /etc/nginx/sites-available/3d-quote-website "$BACKUP_DIR/nginx-3d-quote-website.conf"
-pm2 save
-cp ~/.pm2/dump.pm2 "$BACKUP_DIR/pm2-dump.pm2"
-tar -czf "$BACKUP_DIR/uploads.tar.gz" uploads
+cd backend
+npm run ops:backup
 ```
 
-To restore on a fresh server, clone from GitHub, install Node 24 and Nginx, copy `backend.env` back to `backend/.env`, restore `backend/data/rfdewi.db`, unpack `uploads.tar.gz`, restore the Nginx site, run `npm install && npm run migrate`, then restart with `pm2`.
+The backup command writes a timestamped bundle under `~/3d-quote-backups/` by default. It uses SQLite's online `.backup` command when available and stores `rfdewi.db`, `backend.env`, `uploads.tar.gz`, `pm2-dump.pm2`, the Nginx site config when readable, and `manifest.json` hashes.
+
+Rehearse backup and restore locally before trusting a launch candidate:
+
+```bash
+cd ~/3d-quote-website-live/backend
+npm run ops:backup-smoke
+npm run ops:restore-smoke
+```
+
+To restore on a fresh server, clone from GitHub, install Node 24 and Nginx, copy or sync the chosen backup bundle onto the server, then run the guarded restore script:
+
+```bash
+cd ~/3d-quote-website-live/backend
+RESTORE_CONFIRM=restore-runtime-state BACKUP_DIR=~/3d-quote-backups/YYYYMMDD-HHMMSS RUN_MIGRATE=1 npm run ops:restore
+npm run production-health:smoke
+```
+
+The restore script verifies `manifest.json` hashes before overwriting files, snapshots the current target state into `~/3d-quote-restore-rollbacks/`, restores SQLite to `backend/data/rfdewi.db`, restores `.env`, uploads, PM2 dump, and Nginx config when present, then restarts PM2.
 
 ## Customer Embed
 

@@ -52,9 +52,44 @@ function assertOperationalScripts() {
   assert.equal(packageJson.scripts['env:audit'], 'node scripts/env-audit.js');
   assert.equal(packageJson.scripts['production-health:smoke'], 'node scripts/production-health-smoke.js');
   assert.equal(packageJson.scripts['ops:smoke'], 'node scripts/ops-readiness-smoke.js');
+  assert.equal(packageJson.scripts['ops:backup'], 'bash scripts/backup-runtime-state.sh');
+  assert.equal(packageJson.scripts['ops:backup-smoke'], 'node scripts/backup-runtime-state-smoke.js');
+  assert.equal(packageJson.scripts['ops:restore'], 'bash scripts/restore-runtime-state.sh');
+  assert.equal(packageJson.scripts['ops:restore-smoke'], 'node scripts/restore-runtime-state-smoke.js');
   assert.ok(packageJson.scripts['qa:full'].includes('npm run ops:smoke'), 'qa:full should include ops:smoke');
+  assert.ok(packageJson.scripts['qa:full'].includes('npm run ops:backup-smoke'), 'qa:full should include ops:backup-smoke');
+  assert.ok(packageJson.scripts['qa:full'].includes('npm run ops:restore-smoke'), 'qa:full should include ops:restore-smoke');
   assert.ok(existsSync(resolve(backend, 'scripts/env-audit.js')), 'env-audit script should exist');
   assert.ok(existsSync(resolve(backend, 'scripts/production-health-smoke.js')), 'production-health smoke script should exist');
+  assert.ok(existsSync(resolve(backend, 'scripts/backup-runtime-state.sh')), 'runtime backup script should exist');
+  assert.ok(existsSync(resolve(backend, 'scripts/backup-runtime-state-smoke.js')), 'runtime backup smoke script should exist');
+  assert.ok(existsSync(resolve(backend, 'scripts/restore-runtime-state.sh')), 'runtime restore script should exist');
+  assert.ok(existsSync(resolve(backend, 'scripts/restore-runtime-state-smoke.js')), 'runtime restore smoke script should exist');
+
+  const backupScript = read('backend/scripts/backup-runtime-state.sh');
+  for (const expected of [
+    'sqlite3',
+    '.backup',
+    'backend.env',
+    'uploads.tar.gz',
+    'pm2-dump.pm2',
+    'manifest.json',
+  ]) {
+    assert.match(backupScript, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `backup script should mention ${expected}`);
+  }
+
+  const restoreScript = read('backend/scripts/restore-runtime-state.sh');
+  for (const expected of [
+    'RESTORE_CONFIRM=restore-runtime-state',
+    'manifest.json',
+    'sha256',
+    'ROLLBACK_ROOT',
+    'pm2 stop',
+    'pm2 restart',
+    'uploads.tar.gz',
+  ]) {
+    assert.match(restoreScript, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `restore script should mention ${expected}`);
+  }
 }
 
 async function waitForHealth(base) {

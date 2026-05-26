@@ -4,6 +4,10 @@ import { normaliseShippingZones } from '../lib/pricing-engine.js';
 
 const router = Router();
 
+function parseJsonSetting(value, fallback) {
+  try { return JSON.parse(value || ''); } catch { return fallback; }
+}
+
 /**
  * Manual shipping options.
  *
@@ -28,7 +32,7 @@ router.post('/rates', (req, res) => {
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
     const s = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
-    const raw = JSON.parse(s.shipping_zones || '[]');
+    const raw = parseJsonSetting(s.shipping_zones, []);
     const rates = normaliseShippingZones(raw, packageMetrics || null).map(o => ({
       id:           o.id,
       methodId:     o.methodId || o.id,

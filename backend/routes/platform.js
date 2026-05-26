@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
-import { db, requirePlatformAuth } from '../middleware/auth.js';
+import { db, platformImpersonationFor, requirePlatformAuth } from '../middleware/auth.js';
 import { BCRYPT_ROUNDS, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES, RESET_TOKEN_HOURS } from '../config.js';
 import { sendMail, mailerStatus } from '../lib/mailer.js';
 import {
@@ -43,6 +43,7 @@ import {
   recentEmailEventsForShop,
   updateShopEmailDomainSettings,
 } from '../lib/email-delivery.js';
+import { clearSessionCookie, destroySession, regenerateSession, revokePlatformSessions } from '../lib/session-security.js';
 
 const router = Router();
 
@@ -62,6 +63,22 @@ const platformForgotLimiter = rateLimit({
   legacyHeaders: false
 });
 
+const platformResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many reset attempts, please try again shortly.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const platformResetVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { valid: false, error: 'Too many reset link checks, please try again shortly.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 function publicPlatformAccount(admin = getPlatformAdmin()) {
   const mail = mailerStatus();
   return {
@@ -76,6 +93,23 @@ function publicPlatformAccount(admin = getPlatformAdmin()) {
 }
 
 ensurePlatformAuditTable();
+
+function startPlatformImpersonation(req, shopId) {
+  req.session.shopId = shopId;
+  req.session.platformImpersonation = {
+    active: true,
+    shopId,
+    platformAdminId: req.session.platformAdminId || null,
+    startedAt: new Date().toISOString(),
+  };
+  return platformImpersonationFor(req);
+}
+
+function stopPlatformImpersonation(req) {
+  delete req.session.shopId;
+  delete req.session.platformImpersonation;
+  return platformImpersonationFor(req);
+}
 
 function toNumber(value, fallback = 0) {
   const n = Number(value);
@@ -142,6 +176,31 @@ function parseCustomerTarget(raw) {
   return { shopId, email };
 }
 
+function normaliseShopName(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+function normaliseShopSlug(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isValidShopSlug(value) {
+  const slug = normaliseShopSlug(value);
+  if (slug.length < 2 || slug.length > 64) return false;
+  return /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(slug);
+}
+
+function isValidEmailAddress(value) {
+  const email = normaliseEmail(value);
+  if (!email || email.length > 254 || email.includes('..')) return false;
+  const [local, domain, ...extra] = email.split('@');
+  if (!local || !domain || extra.length) return false;
+  if (local.length > 64 || domain.length > 253) return false;
+  if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(local)) return false;
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain)) return false;
+  return !domain.split('.').some(part => !part || part.startsWith('-') || part.endsWith('-'));
+}
+
 async function createBillingActivationForShop(shop) {
   const planId = normalisePlanId(shop.plan);
   if (planId === 'community') {
@@ -187,6 +246,9 @@ router.post('/login', platformLoginLimiter, async (req, res) => {
     if (!ownerEmail || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
+    if (!isValidEmailAddress(ownerEmail)) {
+      return res.status(400).json({ error: 'Enter a valid owner email.' });
+    }
 
     const emailMatches = !admin.owner_email || ownerEmail === normaliseEmail(admin.owner_email);
     const passwordOk = await verifyPlatformPassword(password);
@@ -196,11 +258,16 @@ router.post('/login', platformLoginLimiter, async (req, res) => {
 
     let nextAdmin = admin;
     if (!admin.password_hash) {
+      const strengthError = validatePlatformPassword(password);
+      if (strengthError) {
+        return res.status(400).json({ error: `Platform bootstrap password is unsafe. ${strengthError}.` });
+      }
       nextAdmin = await bootstrapPlatformAdmin(ownerEmail, password);
     } else if (!admin.owner_email) {
       nextAdmin = await updatePlatformAdminAccount({ ownerEmail });
     }
 
+    await regenerateSession(req);
     req.session.platformAdmin = true;
     req.session.platformAdminId = nextAdmin?.id || 1;
     res.json({ ok: true });
@@ -211,10 +278,17 @@ router.post('/login', platformLoginLimiter, async (req, res) => {
 });
 
 // ── POST /api/platform/logout ─────────────────────────────────
-router.post('/logout', (req, res) => {
-  req.session.platformAdmin = false;
-  req.session.platformAdminId = null;
-  res.json({ ok: true });
+router.post('/logout', async (req, res) => {
+  const sessionToken = req.sessionID;
+  try {
+    await destroySession(req);
+    db.prepare('DELETE FROM app_sessions WHERE sid = ?').run(sessionToken);
+    clearSessionCookie(res);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Platform logout error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // ── GET /api/platform/me ──────────────────────────────────────
@@ -235,10 +309,12 @@ router.put('/account', requirePlatformAuth, async (req, res) => {
       return res.status(400).json({ error: 'Enter a valid owner email.' });
     }
 
-    if (new_password) {
+    if (nextEmail !== undefined || new_password) {
       if (!current_password || !await verifyPlatformPassword(current_password)) {
         return res.status(400).json({ error: 'Current password is incorrect.' });
       }
+    }
+    if (new_password) {
       const strengthError = validatePlatformPassword(new_password);
       if (strengthError) return res.status(400).json({ error: strengthError });
     }
@@ -247,6 +323,9 @@ router.put('/account', requirePlatformAuth, async (req, res) => {
       ownerEmail: nextEmail,
       newPassword: new_password || undefined,
     });
+    if (new_password) {
+      revokePlatformSessions(db, { exceptSid: req.sessionID });
+    }
 
     logPlatformAudit(req, {
       action: 'update_platform_account',
@@ -295,12 +374,12 @@ router.post('/forgot-password', platformForgotLimiter, async (req, res) => {
   }
 });
 
-router.get('/reset-password/verify', (req, res) => {
+router.get('/reset-password/verify', platformResetVerifyLimiter, (req, res) => {
   const row = verifyPlatformResetToken(req.query.token);
   res.status(row ? 200 : 400).json({ valid: !!row });
 });
 
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', platformResetLimiter, async (req, res) => {
   try {
     const { token, newPassword } = req.body;
     const row = verifyPlatformResetToken(token);
@@ -309,8 +388,11 @@ router.post('/reset-password', async (req, res) => {
     const strengthError = validatePlatformPassword(newPassword);
     if (strengthError) return res.status(400).json({ error: strengthError });
 
+    if (!markPlatformResetTokenUsed(token)) {
+      return res.status(400).json({ error: 'Token expired or invalid' });
+    }
     await updatePlatformAdminAccount({ newPassword });
-    markPlatformResetTokenUsed(token);
+    revokePlatformSessions(db);
     res.json({ ok: true });
   } catch (err) {
     console.error('Platform reset password error:', err);
@@ -899,22 +981,49 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
     if (!name || !slug || !email || !password) {
       return res.status(400).json({ error: 'Name, slug, email and password are required' });
     }
+    const shopName = normaliseShopName(name);
+    const shopSlug = normaliseShopSlug(slug);
+    const shopEmail = normaliseEmail(email);
+    if (shopName.length < 2 || shopName.length > 120) {
+      return res.status(400).json({ error: 'Enter a shop name between 2 and 120 characters' });
+    }
+    if (!isValidShopSlug(shopSlug)) {
+      return res.status(400).json({ error: 'Enter a valid shop slug using letters, numbers and hyphens only' });
+    }
+    if (!isValidEmailAddress(shopEmail)) {
+      return res.status(400).json({ error: 'Enter a valid owner email address' });
+    }
+    const passwordError = validatePlatformPassword(password);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
+    }
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
     const selectedPlan = normalisePlanId(req.body?.plan || 'community');
     const initialBillingStatus = selectedPlan === 'suspended' ? 'suspended' : 'active';
-    const result = db.prepare(`
-      INSERT INTO shops (name, slug, email, password_hash, plan, is_temp_password, billing_status)
-      VALUES (?, ?, ?, ?, ?, 1, ?)
-    `).run(name, slug.toLowerCase(), email.toLowerCase(), hash, selectedPlan, initialBillingStatus);
+    let shopId = null;
+    try {
+      db.exec('BEGIN IMMEDIATE');
+      const result = db.prepare(`
+        INSERT INTO shops (name, slug, email, password_hash, plan, is_temp_password, billing_status)
+        VALUES (?, ?, ?, ?, ?, 1, ?)
+      `).run(shopName, shopSlug, shopEmail, hash, selectedPlan, initialBillingStatus);
 
-    const shopId = result.lastInsertRowid;
+      shopId = result.lastInsertRowid;
 
-    // Create default pricing config and store settings
-    db.prepare('INSERT OR IGNORE INTO pricing_config (shop_id) VALUES (?)').run(shopId);
-    db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shopId);
-    getBillingUsageSummary(db, shopId);
+      // Create default pricing config, store settings and merchant subscription as one setup unit.
+      db.prepare('INSERT OR IGNORE INTO pricing_config (shop_id) VALUES (?)').run(shopId);
+      db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shopId);
+      getBillingUsageSummary(db, shopId);
+      db.exec('COMMIT');
+    } catch (err) {
+      try { db.exec('ROLLBACK'); } catch {}
+      if (err.message && err.message.includes('UNIQUE')) {
+        return res.status(400).json({ error: 'A shop with that email or slug already exists' });
+      }
+      throw err;
+    }
 
     const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId);
     const billing = await createBillingActivationForShop(shop);
@@ -1072,14 +1181,28 @@ router.post('/impersonate', requirePlatformAuth, (req, res) => {
     return res.status(404).json({ error: 'Shop not found' });
   }
 
-  req.session.shopId = shop.id;
+  const impersonation = startPlatformImpersonation(req, shop.id);
   logPlatformAudit(req, {
     action: 'impersonate_shop',
     targetType: 'shop',
     targetId: shop.id,
     shopId: shop.id,
   });
-  res.json({ ok: true });
+  res.json({ ok: true, impersonation });
+});
+
+router.post('/impersonate/stop', requirePlatformAuth, (req, res) => {
+  const active = platformImpersonationFor(req);
+  const impersonation = stopPlatformImpersonation(req);
+  if (active.active) {
+    logPlatformAudit(req, {
+      action: 'stop_shop_impersonation',
+      targetType: 'shop',
+      targetId: active.shop_id,
+      shopId: active.shop_id,
+    });
+  }
+  res.json({ ok: true, impersonation });
 });
 
 export default router;

@@ -60,16 +60,32 @@ Do not use production cards, real customers, or live fulfilment actions during v
 Before every staging or production migration:
 
 ```bash
-cp backend/data/rfdewi.db backend/data/rfdewi.db.backup-$(date +%Y%m%d-%H%M%S)
+cd backend
+npm run ops:backup
 ```
 
-To restore:
+The backup command writes a timestamped bundle under `~/3d-quote-backups/` by default. It includes a SQLite online backup, `backend.env`, `uploads.tar.gz`, the PM2 dump when available, the Nginx site config when readable, and `manifest.json` hashes.
+
+To verify the backup mechanism locally before trusting it on a launch candidate:
 
 ```bash
-cp backend/data/rfdewi.db.backup-YYYYMMDD-HHMMSS backend/data/rfdewi.db
+cd backend
+npm run ops:backup-smoke
+npm run ops:restore-smoke
 ```
 
-If using hosted storage later, pair database backups with uploaded asset backups from the same timestamp.
+The backup smoke test runs the real backup script against a temporary SQLite database, env file, uploads directory, and Nginx config. It confirms the manifest hashes match, the database backup can be opened, the uploaded file archive contains the expected data, and the copied env file stays owner-readable only. The restore smoke test then runs a full rehearsal into a temporary app tree, verifies manifest hashes before overwrite, confirms stale uploads are removed, checks PM2 stop/restart behavior, and rejects a tampered backup before target files are touched.
+
+To restore on the same server:
+
+```bash
+cd ~/3d-quote-website-live
+BACKUP_DIR=~/3d-quote-backups/YYYYMMDD-HHMMSS
+cd backend
+RESTORE_CONFIRM=restore-runtime-state BACKUP_DIR="$BACKUP_DIR" RUN_MIGRATE=1 npm run ops:restore
+```
+
+If using hosted storage later, pair database backups with uploaded asset backups from the same timestamp and verify the restored app with `npm run production-health:smoke`.
 
 ## Launch Verification Checklist
 

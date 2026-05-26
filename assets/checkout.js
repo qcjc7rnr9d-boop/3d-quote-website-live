@@ -295,8 +295,29 @@
       taxNzd: Number(input.taxNzd) || sum(items, 'taxNzd'),
       totalNzd: Number(input.totalNzd) || (sum(items, 'totalNzd') + (Number(input.shippingNzd ?? rootShipping?.price) || 0)),
       totalCents: Number(input.totalCents) || items.reduce((total, item) => total + (Number(item.totalCents) || Math.round((Number(item.totalNzd) || 0) * 100)), 0),
+      checkoutIdempotencyKey: input.checkoutIdempotencyKey || input.checkout_idempotency_key || null,
       savedAt: input.savedAt || new Date().toISOString(),
     };
+  }
+
+  function newCheckoutIdempotencyKey() {
+    const id = (window.crypto && typeof window.crypto.randomUUID === 'function')
+      ? window.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return `chk_${id}`;
+  }
+
+  function ensureCheckoutIdempotencyKey() {
+    if (!cart.checkoutIdempotencyKey) cart.checkoutIdempotencyKey = newCheckoutIdempotencyKey();
+  }
+
+  function rotateCheckoutIdempotencyKey() {
+    cart.checkoutIdempotencyKey = newCheckoutIdempotencyKey();
+  }
+
+  if (hasData) {
+    ensureCheckoutIdempotencyKey();
+    try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
   }
 
   function persistCart() {
@@ -466,7 +487,11 @@
   function applyCartPreview(data) {
     const next = data?.cart || data;
     if (!next?.items) return;
-    cart = normaliseCart(next, shopSlug);
+    cart = normaliseCart({
+      ...next,
+      checkoutIdempotencyKey: next.checkoutIdempotencyKey || cart.checkoutIdempotencyKey,
+    }, shopSlug);
+    ensureCheckoutIdempotencyKey();
   }
 
   function selectedShippingOption(id) {
@@ -674,6 +699,7 @@
     const btn = e.target.closest('[data-remove-cart-item]');
     if (!btn) return;
     cart.items = cart.items.filter(item => String(item.id) !== String(btn.dataset.removeCartItem));
+    rotateCheckoutIdempotencyKey();
     persistCart();
     if (!cart.items.length) {
       try { localStorage.removeItem('cart'); } catch {}
@@ -701,6 +727,7 @@
     });
     cart.shippingId = cart.shipping.id;
     quoteValidated = false;
+    rotateCheckoutIdempotencyKey();
     persistCart();
     renderCart();
     refreshCheckoutQuote().catch(err => {
@@ -822,6 +849,7 @@
           customerEmail:   email,
           customerName:    name,
           orderData: cart,
+          checkoutIdempotencyKey: cart.checkoutIdempotencyKey,
           restrictedItemsCertification: restrictedItemsCertificationPayload(),
         }),
       });
