@@ -22,13 +22,21 @@
       grid-template-columns: minmax(0, 1fr) 400px;
       gap: 32px;
       padding-top: 32px;
+      align-items: start;
     }
 
     /* ── Left column: Order Review ───────────────────────── */
     .review-heading {
       font-size: 28px;
       font-weight: 400;
-      margin-bottom: 24px;
+      margin-bottom: 8px;
+    }
+
+    .review-helper {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
     }
 
     .review-validation-error {
@@ -124,15 +132,36 @@
       font-size: 11px;
       font-variant-numeric: tabular-nums;
     }
-    .cart-items-review { display: grid; gap: 14px; margin-bottom: 22px; }
+    .cart-items-review { display: grid; gap: 12px; margin-bottom: 22px; }
     .cart-item-review {
       border: 1px solid var(--border);
       border-radius: 18px;
       background: #fffdf8;
-      padding: 16px;
+      overflow: hidden;
       box-shadow: 0 10px 26px rgba(32, 28, 20, 0.05);
     }
-    .cart-item-head { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+    .cart-item-review.is-collapsed {
+      background: rgba(255,253,248,0.72);
+      box-shadow: 0 6px 18px rgba(32, 28, 20, 0.035);
+    }
+    .cart-item-toggle {
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 14px;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      padding: 16px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .cart-item-toggle:focus-visible {
+      outline: 3px solid rgba(90,138,94,0.24);
+      outline-offset: -4px;
+    }
+    .cart-item-head { min-width: 0; }
     .cart-item-kicker {
       display: block;
       margin-bottom: 3px;
@@ -143,8 +172,28 @@
       text-transform: uppercase;
     }
     .cart-item-head strong { display: block; font-family: var(--font-brand); font-size: 18px; line-height: 1.12; }
-    .cart-item-head span { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .cart-item-head span { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; line-height: 1.35; }
     .cart-item-total { color: var(--green); font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .cart-item-chevron {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      transition: transform 160ms ease-out, background 160ms ease-out;
+    }
+    .cart-item-toggle[aria-expanded="true"] .cart-item-chevron {
+      transform: rotate(180deg);
+      background: rgba(90,138,94,0.08);
+      color: var(--sage-dark);
+    }
+    .cart-item-panel {
+      padding: 0 16px 16px;
+      border-top: 1px solid rgba(41,36,27,0.08);
+    }
     .cart-item-section { margin-top: 13px; }
     .cart-item-section-title {
       display: block;
@@ -279,6 +328,12 @@
       font-size: 12px;
     }
     .remove-cart-item:hover { color: #9f2d2d; border-color: rgba(159,45,45,0.35); }
+
+    .checkout-payment-card {
+      position: sticky;
+      top: 96px;
+      align-self: start;
+    }
 
     .checkout-shipping {
       margin: 0 0 22px;
@@ -512,7 +567,7 @@
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       gap: 10px;
-      align-items: flex-start;
+      align-items: start;
       padding: 12px;
       border: 1px solid rgba(90,138,94,0.22);
       border-radius: 14px;
@@ -524,16 +579,37 @@
       margin: 2px 0 0;
       accent-color: var(--sage);
     }
-    .legal-certification span {
+    .legal-certification span,
+    .legal-certification details {
       display: block;
       color: var(--ink);
       font-size: 12px;
       line-height: 1.55;
     }
+    .legal-certification-summary {
+      font-weight: 700;
+    }
+    .legal-certification details {
+      margin-top: 4px;
+      color: var(--muted);
+    }
+    .legal-certification summary {
+      color: var(--sage-dark);
+      cursor: pointer;
+      font-weight: 800;
+      text-underline-offset: 3px;
+    }
     .legal-certification a {
       color: var(--sage-dark);
       font-weight: 800;
       text-underline-offset: 3px;
+    }
+
+    .mobile-checkout-bar {
+      display: none;
+    }
+    .mobile-checkout-bar[hidden] {
+      display: none !important;
     }
 
     /* ── Security caption ────────────────────────────────── */
@@ -575,16 +651,67 @@
       }
 
       .page-wrap {
-        padding: 80px 24px 48px;
+        padding: 80px 24px 112px;
+      }
+
+      .checkout-payment-card {
+        position: static;
+      }
+
+      .mobile-checkout-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 40;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--border);
+        background: rgba(255,253,248,0.96);
+        box-shadow: 0 -10px 30px rgba(32, 28, 20, 0.08);
+        backdrop-filter: blur(14px);
+      }
+
+      .mobile-checkout-total span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .mobile-checkout-total strong {
+        display: block;
+        color: var(--ink);
+        font-family: var(--font-brand);
+        font-size: 20px;
+        line-height: 1.05;
+      }
+
+      .mobile-checkout-bar .btn {
+        min-width: 132px;
       }
     }
 
     @media (max-width: 640px) {
       .page-wrap {
-        padding: 80px 16px 40px;
+        padding: 80px 16px 112px;
       }
-      .cart-item-head { flex-direction: column; }
-      .cart-item-total { align-self: flex-start; }
+      .cart-item-toggle {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+      .cart-item-total {
+        justify-self: end;
+      }
+      .cart-item-chevron {
+        grid-column: 2;
+        grid-row: 2;
+        justify-self: end;
+      }
       .cart-item-options { grid-template-columns: 1fr; }
       .cart-item-file { flex-direction: column; gap: 4px; }
       .cart-item-file span { text-align: left; }
@@ -636,7 +763,8 @@
 
       <!-- LEFT COLUMN: Order Review -->
       <div class="card" id="orderReviewCard">
-        <h2 class="review-heading">Order Review</h2>
+        <h2 class="review-heading">Review your order</h2>
+        <p class="review-helper">Open a material group to review files and item pricing.</p>
         <div class="cart-items-review" id="cartItemsReview"></div>
         <section class="checkout-shipping" id="checkoutShippingBlock">
           <div class="checkout-shipping-head">
@@ -687,7 +815,7 @@
       </div>
 
       <!-- RIGHT COLUMN: Payment -->
-      <div class="card">
+      <div class="card checkout-payment-card">
         <p class="overline" style="margin-bottom:8px;">Payment</p>
         <h2 style="font-family:var(--font-brand);font-size:24px;letter-spacing:-0.03em;margin-bottom:8px;">Secure card payment</h2>
         <p class="security-caption" style="text-align:left;margin:0 0 18px;">Card payment is processed by Stripe. We never see or store your card number.</p>
@@ -733,8 +861,15 @@
             </div>
             <label class="legal-certification" for="restrictedItemsCertification">
               <input type="checkbox" id="restrictedItemsCertification" name="restrictedItemsCertification" required>
-              <span>I certify that the files, notes, and order I submit do not include, request, or relate to any firearm, firearm part, major firearm part, prohibited part, magazine, ammunition, suppressor, silencer, weapon, restricted weapon, pistol carbine conversion kit, conversion device, explosive, or other regulated, unlawful, unsafe, or controlled item. I am responsible for the legality and intended use of my design. I agree that Trennen and the participating store may refuse, cancel, delete files, retain records, refund where appropriate, and disclose information to authorities if they reasonably believe an order is unlawful, unsafe, or breaches these terms. <a href="terms.html?shop=mahi3d#prohibited-uploads" data-checkout-link="terms">Terms</a></span>
+              <div>
+                <span class="legal-certification-summary">I certify this order does not include restricted or unlawful items. <a href="terms.html?shop=mahi3d#prohibited-uploads" data-checkout-link="terms">Terms</a></span>
+                <details>
+                  <summary>Read prohibited upload details</summary>
+                  <span>I certify that the files, notes, and order I submit do not include, request, or relate to any firearm, firearm part, major firearm part, prohibited part, magazine, ammunition, suppressor, silencer, weapon, restricted weapon, pistol carbine conversion kit, conversion device, explosive, or other regulated, unlawful, unsafe, or controlled item. I am responsible for the legality and intended use of my design. I agree that Trennen and the participating store may refuse, cancel, delete files, retain records, refund where appropriate, and disclose information to authorities if they reasonably believe an order is unlawful, unsafe, or breaches these terms.</span>
+                </details>
+              </div>
             </label>
+            <p class="security-caption" style="text-align:left;margin:-2px 0 14px;">Custom print orders are made to your files and selected options. Change-of-mind refunds are not automatic, and non-excludable NZ consumer rights still apply. <a href="terms.html?shop=mahi3d#cancellations" data-checkout-link="terms">Refund policy</a></p>
             <button class="btn btn-primary lg full" id="payBtn">Pay —</button>
           </div>
           <p class="security-caption">Your card details are processed securely by Stripe. We never see or store your card number.</p>
@@ -750,6 +885,14 @@
 
     </div><!-- /checkout-grid -->
   </div><!-- /page-wrap -->
+
+  <div class="mobile-checkout-bar" id="mobileCheckoutBar" aria-live="polite" hidden>
+    <div class="mobile-checkout-total">
+      <span>Total</span>
+      <strong id="mobileCheckoutTotal">—</strong>
+    </div>
+    <button class="btn btn-primary" id="mobilePayBtn" type="button">Pay</button>
+  </div>
 
   <script src="https://js.stripe.com/v3/"></script>
   <script src="assets/checkout.js" defer></script>

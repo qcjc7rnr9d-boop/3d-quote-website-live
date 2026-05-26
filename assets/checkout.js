@@ -148,6 +148,12 @@
     return `${Math.round(volume * 100) / 100} cm³`;
   }
 
+  function fileCountText(count) {
+    const total = Math.max(0, Number(count) || 0);
+    if (total === 1) return '1 file';
+    return `${total} files`;
+  }
+
   function swatchMarkup(hex) {
     const safeHex = String(hex || '').trim();
     if (!safeHex || safeHex === '-') return '';
@@ -296,8 +302,29 @@
       taxNzd: Number(input.taxNzd) || sum(items, 'taxNzd'),
       totalNzd: Number(input.totalNzd) || (sum(items, 'totalNzd') + (Number(input.shippingNzd ?? rootShipping?.price) || 0)),
       totalCents: Number(input.totalCents) || items.reduce((total, item) => total + (Number(item.totalCents) || Math.round((Number(item.totalNzd) || 0) * 100)), 0),
+      checkoutIdempotencyKey: input.checkoutIdempotencyKey || input.checkout_idempotency_key || null,
       savedAt: input.savedAt || new Date().toISOString(),
     };
+  }
+
+  function newCheckoutIdempotencyKey() {
+    const id = (window.crypto && typeof window.crypto.randomUUID === 'function')
+      ? window.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return `chk_${id}`;
+  }
+
+  function ensureCheckoutIdempotencyKey() {
+    if (!cart.checkoutIdempotencyKey) cart.checkoutIdempotencyKey = newCheckoutIdempotencyKey();
+  }
+
+  function rotateCheckoutIdempotencyKey() {
+    cart.checkoutIdempotencyKey = newCheckoutIdempotencyKey();
+  }
+
+  if (hasData) {
+    ensureCheckoutIdempotencyKey();
+    try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
   }
 
   function persistCart() {
@@ -318,7 +345,15 @@
 
   function updatePayButton(message) {
     const payBtn = document.getElementById('payBtn');
+    const mobilePayBtn = document.getElementById('mobilePayBtn');
     if (!payBtn) return;
+    const syncMobileButton = () => {
+      if (!mobilePayBtn) return;
+      mobilePayBtn.textContent = payBtn.textContent || 'Pay';
+      mobilePayBtn.disabled = payBtn.disabled;
+      mobilePayBtn.style.opacity = payBtn.style.opacity;
+      mobilePayBtn.style.cursor = payBtn.style.cursor;
+    };
     if (totalNzd > 0) {
       const defaultLabel = 'Pay ' + fmtNzd(totalNzd + processingFeeCents / 100);
       const certificationMissing = !restrictedItemsCertified();
@@ -339,6 +374,7 @@
       payBtn.style.opacity = '0.6';
       payBtn.style.cursor = 'not-allowed';
     }
+    syncMobileButton();
   }
 
   function setPaymentFieldsDisabled(disabled) {
@@ -460,7 +496,11 @@
   function applyCartPreview(data) {
     const next = data?.cart || data;
     if (!next?.items) return;
-    cart = normaliseCart(next, shopSlug);
+    cart = normaliseCart({
+      ...next,
+      checkoutIdempotencyKey: next.checkoutIdempotencyKey || cart.checkoutIdempotencyKey,
+    }, shopSlug);
+    ensureCheckoutIdempotencyKey();
   }
 
   function selectedShippingOption(id) {
@@ -562,64 +602,69 @@
         const finishText = [item.finishLabel || item.finish || 'Standard', finishDetails].filter(Boolean).join(' · ');
         const infillText = item.infillLabel || 'Standard';
         const quantityText = models.length > 1 ? 'Per model' : `x ${Math.max(1, parseInt(item.quantity, 10) || 1)}`;
-        return `<section class="cart-item-review" data-cart-item-id="${escapeHtml(item.id)}">
-          <div class="cart-item-head">
-            <div>
-              <span class="cart-item-kicker">Material group ${index + 1}</span>
+        const panelId = `cart-item-panel-${index + 1}`;
+        const isOpen = index === 0;
+        return `<section class="cart-item-review${isOpen ? ' is-open' : ' is-collapsed'}" data-cart-item-id="${escapeHtml(item.id)}">
+          <button class="cart-item-toggle" type="button" aria-expanded="${isOpen ? 'true' : 'false'}" aria-controls="${escapeHtml(panelId)}" data-cart-item-toggle="${escapeHtml(item.id)}">
+            <div class="cart-item-head">
+              <span class="cart-item-kicker">Material group ${index + 1} · ${escapeHtml(fileCountText(models.length))}</span>
               <strong>${escapeHtml(item.materialName || `Material group ${index + 1}`)}</strong>
               <span>${escapeHtml([colourText, finishText].filter(Boolean).join(' · '))}</span>
             </div>
             <div class="cart-item-total">${fmtNzd(item.totalNzd)}</div>
-          </div>
-          <div class="cart-item-section">
-            <span class="cart-item-section-title">Files</span>
-            <div class="cart-item-files">
-            ${models.map((model, modelIndex) => {
-              const dimsText = formatDimensions(normaliseDimensions(model.dimensions));
-              const quantity = Math.max(1, Math.floor(Number(model.quantity) || 1));
-              const qtyText = ` · Qty ${quantity}`;
-              const volumeText = modelVolumeText(model);
-              return `<div class="cart-item-file"><strong>${escapeHtml(model.name || 'Model')}</strong><span>${[formatBytes(model.size), dimsText, volumeText].filter(Boolean).join(' · ')}${qtyText}</span></div>`;
-            }).join('')}
-            </div>
-          </div>
-          <div class="cart-item-section">
-            <span class="cart-item-section-title">Per-item pricing</span>
-            <div class="cart-item-pricing">
+            <span class="cart-item-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="cart-item-panel" id="${escapeHtml(panelId)}" data-cart-item-panel ${isOpen ? '' : 'hidden'}>
+            <div class="cart-item-section">
+              <span class="cart-item-section-title">Files</span>
+              <div class="cart-item-files">
               ${models.map((model, modelIndex) => {
-                const priceLine = priceLineForModel(priceLines, model, modelIndex);
-                const quantity = Math.max(1, Math.floor(Number(priceLine?.quantity ?? model.quantity) || 1));
-                const unit = Number(priceLine?.unit) || 0;
-                const subtotal = Number(priceLine?.subtotal) || 0;
-                return `<div class="cart-item-price-row">
-                  <strong>${escapeHtml(model.name || priceLine?.name || `Model ${modelIndex + 1}`)}</strong>
-                  <span class="price-each">${fmtNzd(unit)} each × ${quantity}</span>
-                  <span class="price-total">${fmtNzd(subtotal)}</span>
-                </div>`;
+                const dimsText = formatDimensions(normaliseDimensions(model.dimensions));
+                const quantity = Math.max(1, Math.floor(Number(model.quantity) || 1));
+                const qtyText = ` · Qty ${quantity}`;
+                const volumeText = modelVolumeText(model);
+                return `<div class="cart-item-file"><strong>${escapeHtml(model.name || 'Model')}</strong><span>${[formatBytes(model.size), dimsText, volumeText].filter(Boolean).join(' · ')}${qtyText}</span></div>`;
               }).join('')}
-              ${Number(item.quoteSnapshot?.lineItems?.minOrderAdjustment) > 0 ? `<div class="cart-item-price-row">
-                <strong>Minimum order adjustment</strong>
-                <span class="price-each">Store minimum</span>
-                <span class="price-total">${fmtNzd(item.quoteSnapshot.lineItems.minOrderAdjustment)}</span>
-              </div>` : ''}
+              </div>
             </div>
-          </div>
-          <div class="cart-item-section">
-            <span class="cart-item-section-title">Options</span>
-            <div class="cart-item-options">
-              <div class="cart-option"><span class="label">Material</span><span class="value">${escapeHtml(item.materialName || '—')}</span></div>
-              <div class="cart-option"><span class="label">Colour</span><span class="value">${swatchMarkup(item.colorHex)}${escapeHtml(colourText)}</span></div>
-              <div class="cart-option cart-option-wide"><span class="label">Finish</span><span class="value">${escapeHtml(finishText)}</span></div>
-              <div class="cart-option"><span class="label">Infill</span><span class="value">${escapeHtml(infillText)}</span></div>
-              <div class="cart-option"><span class="label">Quantity</span><span class="value">${escapeHtml(quantityText)}</span></div>
+            <div class="cart-item-section">
+              <span class="cart-item-section-title">Per-item pricing</span>
+              <div class="cart-item-pricing">
+                ${models.map((model, modelIndex) => {
+                  const priceLine = priceLineForModel(priceLines, model, modelIndex);
+                  const quantity = Math.max(1, Math.floor(Number(priceLine?.quantity ?? model.quantity) || 1));
+                  const unit = Number(priceLine?.unit) || 0;
+                  const subtotal = Number(priceLine?.subtotal) || 0;
+                  return `<div class="cart-item-price-row">
+                    <strong>${escapeHtml(model.name || priceLine?.name || `Model ${modelIndex + 1}`)}</strong>
+                    <span class="price-each">${fmtNzd(unit)} each × ${quantity}</span>
+                    <span class="price-total">${fmtNzd(subtotal)}</span>
+                  </div>`;
+                }).join('')}
+                ${Number(item.quoteSnapshot?.lineItems?.minOrderAdjustment) > 0 ? `<div class="cart-item-price-row">
+                  <strong>Minimum order adjustment</strong>
+                  <span class="price-each">Store minimum</span>
+                  <span class="price-total">${fmtNzd(item.quoteSnapshot.lineItems.minOrderAdjustment)}</span>
+                </div>` : ''}
+              </div>
             </div>
+            <div class="cart-item-section">
+              <span class="cart-item-section-title">Options</span>
+              <div class="cart-item-options">
+                <div class="cart-option"><span class="label">Material</span><span class="value">${escapeHtml(item.materialName || '—')}</span></div>
+                <div class="cart-option"><span class="label">Colour</span><span class="value">${swatchMarkup(item.colorHex)}${escapeHtml(colourText)}</span></div>
+                <div class="cart-option cart-option-wide"><span class="label">Finish</span><span class="value">${escapeHtml(finishText)}</span></div>
+                <div class="cart-option"><span class="label">Infill</span><span class="value">${escapeHtml(infillText)}</span></div>
+                <div class="cart-option"><span class="label">Quantity</span><span class="value">${escapeHtml(quantityText)}</span></div>
+              </div>
+            </div>
+            <div class="cart-item-section cart-item-money">
+              <div class="cart-item-money-row"><span>Subtotal</span><strong>${fmtNzd(item.itemsNzd)}</strong></div>
+              ${Number(item.taxNzd) > 0 ? `<div class="cart-item-money-row"><span>Tax</span><strong>${fmtNzd(item.taxNzd)}</strong></div>` : ''}
+              <div class="cart-item-money-row"><span>Group total before shipping</span><strong>${fmtNzd(item.totalNzd)}</strong></div>
+            </div>
+            <div class="cart-item-actions"><button class="remove-cart-item" type="button" data-remove-cart-item="${escapeHtml(item.id)}">Remove group</button></div>
           </div>
-          <div class="cart-item-section cart-item-money">
-            <div class="cart-item-money-row"><span>Subtotal</span><strong>${fmtNzd(item.itemsNzd)}</strong></div>
-            ${Number(item.taxNzd) > 0 ? `<div class="cart-item-money-row"><span>Tax</span><strong>${fmtNzd(item.taxNzd)}</strong></div>` : ''}
-            <div class="cart-item-money-row"><span>Group total before shipping</span><strong>${fmtNzd(item.totalNzd)}</strong></div>
-          </div>
-          <div class="cart-item-actions"><button class="remove-cart-item" type="button" data-remove-cart-item="${escapeHtml(item.id)}">Remove group</button></div>
         </section>`;
       }).join('');
     }
@@ -660,14 +705,32 @@
     }
 
     document.getElementById('priceTotal').textContent = fmtNzd(totalNzd + processingFeeCents / 100);
+    const mobileBar = document.getElementById('mobileCheckoutBar');
+    const mobileTotal = document.getElementById('mobileCheckoutTotal');
+    if (mobileTotal) mobileTotal.textContent = fmtNzd(totalNzd + processingFeeCents / 100);
+    if (mobileBar) mobileBar.hidden = !hasData;
 
     updatePayButton();
   }
 
   document.getElementById('cartItemsReview')?.addEventListener('click', e => {
+    const toggle = e.target.closest('[data-cart-item-toggle]');
+    if (toggle) {
+      const review = toggle.closest('.cart-item-review');
+      const panel = review?.querySelector('[data-cart-item-panel]');
+      const nextOpen = toggle.getAttribute('aria-expanded') !== 'true';
+      toggle.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+      if (panel) panel.hidden = !nextOpen;
+      if (review) {
+        review.classList.toggle('is-open', nextOpen);
+        review.classList.toggle('is-collapsed', !nextOpen);
+      }
+      return;
+    }
     const btn = e.target.closest('[data-remove-cart-item]');
     if (!btn) return;
     cart.items = cart.items.filter(item => String(item.id) !== String(btn.dataset.removeCartItem));
+    rotateCheckoutIdempotencyKey();
     persistCart();
     if (!cart.items.length) {
       try { localStorage.removeItem('cart'); } catch {}
@@ -695,6 +758,7 @@
     });
     cart.shippingId = cart.shipping.id;
     quoteValidated = false;
+    rotateCheckoutIdempotencyKey();
     persistCart();
     renderCart();
     refreshCheckoutQuote().catch(err => {
@@ -708,6 +772,10 @@
     const errEl = document.getElementById('card-errors');
     if (restrictedItemsCertified() && errEl?.textContent === CERTIFICATION_ERROR_MESSAGE) errEl.textContent = '';
     updatePayButton();
+  });
+
+  document.getElementById('mobilePayBtn')?.addEventListener('click', () => {
+    document.getElementById('payBtn')?.click();
   });
 
   if (hasData) {
@@ -816,6 +884,7 @@
           customerEmail:   email,
           customerName:    name,
           orderData: cart,
+          checkoutIdempotencyKey: cart.checkoutIdempotencyKey,
           restrictedItemsCertification: {
             accepted: true,
             version: RESTRICTED_ITEMS_CERTIFICATION_VERSION,

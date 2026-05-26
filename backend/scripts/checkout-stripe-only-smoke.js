@@ -65,6 +65,18 @@ assert(
   'Checkout is missing the richer grouped order-review styles'
 );
 assert(
+  checkoutHtml.includes('Review your order') && checkoutHtml.includes('Open a material group to review files and item pricing.'),
+  'Checkout review copy must guide customers through the compact final page'
+);
+assert(
+  checkoutHtml.includes('checkout-payment-card') && checkoutHtml.includes('mobileCheckoutBar'),
+  'Checkout must keep payment actions reachable with sticky desktop/mobile summary surfaces'
+);
+assert(
+  checkoutHtml.includes('legal-certification-summary') && checkoutHtml.includes('<details') && checkoutHtml.includes('prohibited upload details'),
+  'Checkout certification must use compact checkbox copy with a disclosure for the full legal wording'
+);
+assert(
   checkoutHtml.includes('id="checkoutShippingBlock"') && checkoutHtml.includes('id="checkoutShippingOptions"'),
   'Checkout is missing the cart-level shipping selector'
 );
@@ -77,12 +89,20 @@ assert(
   'Checkout is missing the restricted-items certification checkbox'
 );
 assert(
-  checkoutHtml.includes('I certify that the files, notes, and order I submit do not include'),
-  'Checkout is missing the required restricted-items certification wording'
+  checkoutHtml.includes('I certify this order does not include restricted or unlawful items') && checkoutHtml.includes('I certify that the files, notes, and order I submit do not include'),
+  'Checkout is missing the compact and full restricted-items certification wording'
 );
 assert(
   checkoutJs.includes('Material group') && checkoutJs.includes('Group total') && checkoutJs.includes('modelVolumeText'),
   'Checkout script must render full material groups with file and total detail'
+);
+assert(
+  checkoutJs.includes('cart-item-toggle') && checkoutJs.includes('aria-expanded') && checkoutJs.includes('hidden') && checkoutJs.includes('data-cart-item-panel'),
+  'Checkout script must render material groups as accessible accordion sections'
+);
+assert(
+  checkoutJs.includes('index === 0') && checkoutJs.includes('fileCountText'),
+  'Checkout accordion must open the first group by default and summarize file counts'
 );
 assert(
   checkoutJs.includes('/api/customer/cart-preview') && checkoutJs.includes('cart.shippingOptions'),
