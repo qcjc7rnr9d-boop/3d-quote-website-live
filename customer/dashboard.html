@@ -117,6 +117,7 @@
       border: 1px solid var(--border); border-radius: 14px; padding: 14px; display: flex; justify-content: space-between; gap: 14px;
       text-decoration: none; background: var(--off-white);
     }
+    button.action-row { width: 100%; color: inherit; font: inherit; text-align: left; cursor: pointer; }
     .action-row strong { display: block; font-size: 13px; margin-bottom: 3px; }
     .action-row span { font-size: 12px; color: var(--muted); line-height: 1.45; }
 
@@ -369,6 +370,20 @@
                 <span class="inline-message" id="passwordMsg"></span>
               </div>
             </form>
+          </div>
+        </div>
+        <div class="portal-card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Privacy tools</div>
+              <div class="card-sub">Export data, clear local quote state, or request account deletion.</div>
+            </div>
+          </div>
+          <div class="card-body action-list">
+            <button class="action-row" type="button" id="exportDataBtn"><div><strong>Export my data</strong><span>Download the customer account, saved quote, and order data visible to this portal.</span></div><span>Download</span></button>
+            <button class="action-row" type="button" id="clearBrowserDataBtn"><div><strong>Clear saved browser data</strong><span>Remove cart, quote, model preview, and in-progress selection data from this browser.</span></div><span>Clear</span></button>
+            <button class="action-row" type="button" id="deleteAccountBtn"><div><strong>Delete my account</strong><span>Deletes your customer login and saved quotes. Order, payment, security, and legal records may be retained where lawfully required.</span></div><span>!</span></button>
+            <span class="inline-message" id="privacyMsg"></span>
           </div>
         </div>
       </div>
@@ -876,6 +891,56 @@
         setMessage('passwordMsg', err.message || 'Could not change password.', 'error');
       } finally {
         btn.disabled = false;
+      }
+    });
+
+    document.getElementById('exportDataBtn').addEventListener('click', async () => {
+      setMessage('privacyMsg', 'Preparing export...');
+      try {
+        const res = await fetch('/api/customer/privacy/export');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not export your data.');
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `trennen-customer-data-${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setMessage('privacyMsg', 'Export ready.', 'success');
+      } catch (err) {
+        setMessage('privacyMsg', err.message || 'Could not export your data.', 'error');
+      }
+    });
+
+    document.getElementById('clearBrowserDataBtn').addEventListener('click', () => {
+      ['cart', 'form_file', 'form_selection', 'pending_saved_quote', 'material_size_warning'].forEach(key => {
+        try { localStorage.removeItem(key); } catch {}
+        try { sessionStorage.removeItem(key); } catch {}
+      });
+      try { indexedDB.deleteDatabase('mahi3d-quote'); } catch {}
+      setMessage('privacyMsg', 'Saved browser quote and cart data cleared.', 'success');
+    });
+
+    document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
+      const password = prompt('Enter your current password to delete this customer account.');
+      if (!password) return;
+      if (!confirm('Delete your customer login and saved quotes for this store? Order, payment, security, and legal records may still be retained where lawfully required.')) return;
+      setMessage('privacyMsg', 'Deleting account...');
+      try {
+        const res = await fetch('/api/customer/privacy/delete-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not delete account.');
+        setMessage('privacyMsg', 'Account deleted. Redirecting...', 'success');
+        setTimeout(() => { window.location.href = loginUrl(); }, 900);
+      } catch (err) {
+        setMessage('privacyMsg', err.message || 'Could not delete account.', 'error');
       }
     });
 

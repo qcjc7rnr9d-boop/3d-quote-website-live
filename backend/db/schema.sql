@@ -125,6 +125,8 @@ CREATE TABLE IF NOT EXISTS orders (
   total               REAL    NOT NULL DEFAULT 0,
   stripe_payment_id   TEXT,
   public_token        TEXT UNIQUE,
+  restricted_items_certification_version TEXT,
+  restricted_items_certified_at TEXT,
   payment_processing_fee_cents INTEGER NOT NULL DEFAULT 0,
   checkout_platform_fee_cents INTEGER NOT NULL DEFAULT 0,
   customer_total_cents INTEGER NOT NULL DEFAULT 0,
@@ -546,4 +548,54 @@ CREATE TABLE IF NOT EXISTS app_sessions (
   sid TEXT PRIMARY KEY,
   sess TEXT NOT NULL,
   expires_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS legal_acceptances (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id INTEGER,
+  customer_account_id INTEGER,
+  user_email TEXT COLLATE NOCASE,
+  agreement_type TEXT NOT NULL,
+  version TEXT NOT NULL,
+  accepted_at TEXT NOT NULL DEFAULT (datetime('now')),
+  ip_address TEXT,
+  user_agent TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+  FOREIGN KEY (customer_account_id) REFERENCES customer_accounts(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_legal_acceptances_shop_type_version
+  ON legal_acceptances(shop_id, agreement_type, version, accepted_at);
+
+CREATE TABLE IF NOT EXISTS privacy_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id INTEGER,
+  customer_account_id INTEGER,
+  requester_email TEXT COLLATE NOCASE,
+  request_type TEXT NOT NULL,
+  requested_by TEXT NOT NULL DEFAULT 'customer',
+  status TEXT NOT NULL DEFAULT 'completed',
+  reason TEXT,
+  retained_order_count INTEGER NOT NULL DEFAULT 0,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  completed_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE SET NULL,
+  FOREIGN KEY (customer_account_id) REFERENCES customer_accounts(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_privacy_requests_email_created
+  ON privacy_requests(requester_email, created_at);
+CREATE INDEX IF NOT EXISTS idx_privacy_requests_shop_created
+  ON privacy_requests(shop_id, created_at);
+
+CREATE TABLE IF NOT EXISTS retention_cleanup_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  dry_run INTEGER NOT NULL DEFAULT 1,
+  started_at TEXT NOT NULL DEFAULT (datetime('now')),
+  finished_at TEXT,
+  summary_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

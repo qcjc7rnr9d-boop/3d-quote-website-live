@@ -14,6 +14,10 @@ import { normaliseCart, previewCartForShop } from '../lib/cart.js';
 import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
 import { getExchangeRates, normaliseQuoteCurrencies } from '../lib/exchange-rates.js';
 import { previewQuoteUsage, recordQuoteUsageEvent } from '../lib/billing-service.js';
+import {
+  deleteCustomerPrivacyData,
+  exportCustomerPrivacyData,
+} from '../lib/customer-privacy.js';
 
 const router = Router();
 const smokeRateLimitSkip = req => process.env.NODE_ENV !== 'production' && req.get('x-smoke-test') === '1';
@@ -817,6 +821,46 @@ router.patch('/me', requireCustomerAuth, (req, res) => {
   } catch (err) {
     console.error('Customer profile update error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── GET /api/customer/privacy/export ─────────────────────────
+router.get('/privacy/export', requireCustomerAuth, (req, res) => {
+  try {
+    getCustomerShop(req);
+    res.json(exportCustomerPrivacyData(db, {
+      customerAccountId: req.customerAccount.id,
+      shopId: req.customerAccount.shop_id,
+    }));
+  } catch (err) {
+    sendCustomerPortalError(res, err);
+  }
+});
+
+// ── POST /api/customer/privacy/delete-account ────────────────
+router.post('/privacy/delete-account', customerPasswordLimiter, requireCustomerAuth, async (req, res) => {
+  try {
+    getCustomerShop(req);
+    const password = String(req.body?.password || req.body?.currentPassword || '');
+    if (!password) return res.status(400).json({ error: 'Current password is required.' });
+    const valid = await bcrypt.compare(password, req.customerAccount.password_hash);
+    if (!valid) return res.status(401).json({ error: 'Current password is incorrect.' });
+
+    const sessionToken = req.sessionID;
+    const result = deleteCustomerPrivacyData(db, {
+      customerAccountId: req.customerAccount.id,
+      shopId: req.customerAccount.shop_id,
+      reason: req.body?.reason || 'customer_request',
+      requestedBy: 'customer',
+      metadata: { source: 'customer_portal' },
+    });
+
+    req.session.destroy(() => {
+      db.prepare('DELETE FROM app_sessions WHERE sid = ?').run(sessionToken);
+      res.json(result);
+    });
+  } catch (err) {
+    sendCustomerPortalError(res, err);
   }
 });
 

@@ -33,6 +33,7 @@ import { normaliseCart, validateCartForShop } from '../lib/cart.js';
 import { saveOrderItems } from '../lib/order-files.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate } from '../lib/email-templates/index.js';
+import { assertMerchantCheckoutAllowed } from '../lib/legal-policy.js';
 
 const router = Router();
 const paymentIntentLimiter = rateLimit({
@@ -49,6 +50,7 @@ const READINESS_ERROR_CODES = new Set([
   'NO_CONNECTED_ACCOUNT',
   'ONBOARDING_INCOMPLETE',
 ]);
+const RESTRICTED_ITEMS_CERTIFICATION_VERSION = 'restricted-items-v1-2026-05-24';
 
 function getPlatformStripe() {
   return getPlatformStripeClient();
@@ -130,6 +132,15 @@ function logRouteError(label, err) {
   console.error(label, stripeErrorSummary(err));
 }
 
+function merchantLegalErrorPayload(err) {
+  return {
+    error: err.message || 'This store must accept the current merchant legal agreement before checkout can continue.',
+    code: err.code || 'MERCHANT_LEGAL_AGREEMENT_REQUIRED',
+    can_accept_live_orders: false,
+    legal: err.legal || null,
+  };
+}
+
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
 }
@@ -144,6 +155,34 @@ function ensureOrderPublicTokenColumn() {
       ON orders(public_token)
       WHERE public_token IS NOT NULL
   `);
+}
+
+function ensureOrderRestrictedItemsCertificationColumns() {
+  const cols = db.prepare('PRAGMA table_info(orders)').all().map(c => c.name);
+  if (!cols.includes('restricted_items_certification_version')) {
+    db.exec('ALTER TABLE orders ADD COLUMN restricted_items_certification_version TEXT');
+  }
+  if (!cols.includes('restricted_items_certified_at')) {
+    db.exec('ALTER TABLE orders ADD COLUMN restricted_items_certified_at TEXT');
+  }
+}
+
+function validateRestrictedItemsCertification(certification = {}) {
+  if (
+    certification?.accepted !== true
+    || certification?.version !== RESTRICTED_ITEMS_CERTIFICATION_VERSION
+  ) {
+    return {
+      ok: false,
+      error: 'Please certify that your order does not include restricted or unlawful items.',
+      code: 'RESTRICTED_ITEMS_CERTIFICATION_REQUIRED',
+    };
+  }
+  return {
+    ok: true,
+    version: RESTRICTED_ITEMS_CERTIFICATION_VERSION,
+    certifiedAt: new Date().toISOString(),
+  };
 }
 
 function newPublicOrderToken() {
@@ -293,6 +332,11 @@ router.get('/public-key', (req, res) => {
   if (!readiness.can_accept_live_orders) {
     return res.status(503).json(readinessErrorPayload(readiness));
   }
+  try {
+    assertMerchantCheckoutAllowed(db, shop.id);
+  } catch (err) {
+    return res.status(err.status || 423).json(merchantLegalErrorPayload(err));
+  }
 
   res.json({
     publishable_key: platform.publishableKey,
@@ -304,13 +348,20 @@ router.get('/public-key', (req, res) => {
 
 router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => {
   try {
-    const { paymentMethodId, shopSlug, amount, customerEmail, customerName, orderData } = req.body;
+    const { paymentMethodId, shopSlug, amount, customerEmail, customerName, orderData, restrictedItemsCertification } = req.body;
 
     if (!paymentMethodId || !shopSlug || !amount || !customerEmail || !orderData) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     if (!validateEmail(customerEmail)) {
       return res.status(400).json({ error: 'Enter a valid email address.' });
+    }
+    const certification = validateRestrictedItemsCertification(restrictedItemsCertification);
+    if (!certification.ok) {
+      return res.status(400).json({
+        error: certification.error,
+        code: certification.code,
+      });
     }
 
     const shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
@@ -321,6 +372,7 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
     if (!readiness.can_accept_live_orders) {
       return res.status(503).json(readinessErrorPayload(readiness));
     }
+    assertMerchantCheckoutAllowed(db, shop.id);
     assertCheckoutAllowed(db, shop.id, { method: 'card' });
 
     const stripe = ensurePlatformStripe();
@@ -380,6 +432,7 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
         pricingVersion: 'pricing-v1-per-volume-cart',
         cartItems: String(cart.items.length),
         paymentFeeMode,
+        restrictedItemsCertificationVersion: certification.version,
       },
     };
     // Stripe/card fees for print orders are pass-through costs. Trennen's
@@ -395,13 +448,15 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
     `).run(shop.id, (customerEmail || '').toLowerCase(), customerName || null);
 
     ensureOrderPublicTokenColumn();
+    ensureOrderRestrictedItemsCertificationColumns();
     const publicToken = newPublicOrderToken();
     const order = db.prepare(`
       INSERT INTO orders
         (shop_id, customer_email, customer_name, file_name, material_id,
          colour, finish, quantity, subtotal, tax, shipping, total, stripe_payment_id, public_token,
+         restricted_items_certification_version, restricted_items_certified_at,
          payment_processing_fee_cents, checkout_platform_fee_cents, customer_total_cents)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       shop.id, (customerEmail || '').toLowerCase(), customerName || '',
       cart.items.length > 1 ? `${cart.items.length} material groups` : firstItem?.file?.name || null,
@@ -413,6 +468,7 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       cart.taxNzd ?? cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
       cart.shippingNzd ?? 0,
       cart.totalNzd, intent.id, publicToken,
+      certification.version, certification.certifiedAt,
       paymentProcessingFeeCents, feeCents, customerPayCents,
     );
     saveOrderItems(db, order.lastInsertRowid, cart.items);
