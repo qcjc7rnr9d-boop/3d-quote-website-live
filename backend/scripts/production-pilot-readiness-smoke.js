@@ -27,6 +27,11 @@ assert.equal(
   'node scripts/production-pilot-readiness-smoke.js',
   'backend/package.json should expose a production pilot readiness smoke script',
 );
+assert.equal(
+  packageJson.scripts['stripe-connect:smoke'],
+  'node scripts/stripe-connect-platform-smoke.js',
+  'backend/package.json should expose a Stripe Connect platform smoke script',
+);
 assert.ok(
   packageJson.scripts['qa:full'].includes('npm run production-pilot:smoke'),
   'qa:full should include production-pilot:smoke',
@@ -37,6 +42,55 @@ assert.match(envAudit, /--pilot/, 'env-audit should support a stricter pilot pro
 assert.match(envAudit, /https:\/\/app\.trennen\.co\.nz/, 'pilot env audit should know the production app URL');
 assert.match(envAudit, /STRIPE_CLIENT_ID/, 'pilot env audit should check Stripe Connect client id');
 assert.match(envAudit, /STRIPE_WEBHOOK_SECRET/, 'pilot env audit should check Stripe webhook secret');
+assert.match(envAudit, /safeSecret/, 'env-audit should reject placeholder or weak production secrets');
+assert.match(envAudit, /SESSION_SECRET_safe/, 'env-audit should report SESSION_SECRET safety');
+assert.match(envAudit, /JWT_SECRET_safe/, 'env-audit should report JWT_SECRET safety');
+assert.match(envAudit, /PLATFORM_CONFIG_ENCRYPTION_KEY_safe/, 'env-audit should report encryption key safety');
+assert.match(envAudit, /PLATFORM_ADMIN_PASSWORD_safe/, 'env-audit should report optional platform bootstrap password safety');
+
+const server = read('backend/server.js');
+assert.match(
+  server,
+  /isUnsafeProductionSecret/,
+  'server should enforce production secret safety at startup, not only in audit scripts',
+);
+assert.match(
+  server,
+  /SESSION_SECRET\)\) missing\.push\('SESSION_SECRET'\)/,
+  'production startup should reject weak SESSION_SECRET values',
+);
+assert.match(
+  server,
+  /JWT_SECRET\)\) missing\.push\('JWT_SECRET'\)/,
+  'production startup should reject weak JWT_SECRET values',
+);
+assert.match(
+  server,
+  /PLATFORM_CONFIG_ENCRYPTION_KEY\)/,
+  'production startup should validate platform encryption key safety',
+);
+assert.match(
+  server,
+  /PLATFORM_ADMIN_PASSWORD/,
+  'production startup should reject weak optional platform bootstrap passwords',
+);
+
+const productionHealthSmoke = read('backend/scripts/production-health-smoke.js');
+assert.match(
+  productionHealthSmoke,
+  /data\.environment !== 'production'/,
+  'production health smoke should fail when the live server runs with NODE_ENV other than production',
+);
+assert.match(
+  productionHealthSmoke,
+  /TRUST_PROXY=1/,
+  'production health smoke should fail when proxy trust is not enabled',
+);
+assert.match(
+  productionHealthSmoke,
+  /platformEncryptionConfigured/,
+  'production health smoke should verify platform encryption readiness',
+);
 
 const envExample = read('backend/.env.example');
 assert.match(envExample, /BASE_URL=https:\/\/app\.trennen\.co\.nz/, '.env.example should default to the Trennen app domain');
@@ -63,12 +117,19 @@ for (const expected of [
   'NODE_ENV=production',
   'BASE_URL=https://app.trennen.co.nz',
   'npm run env:audit:pilot',
+  'npm run stripe-connect:smoke',
   'npm run production-pilot:smoke',
+  'npm run qa:full',
+  'pm2 restart 3d-quote-website --update-env',
   'STRIPE_SECRET_KEY',
   'STRIPE_PUBLISHABLE_KEY',
   'STRIPE_CLIENT_ID',
   'STRIPE_WEBHOOK_SECRET',
   'Stripe Connect Express',
+  'Customer checkout is Stripe-only for launch',
+  'Free pilot',
+  '5% Trennen platform fee',
+  'BANK_TRANSFER_DISABLED',
   'application_fee_amount',
   'transfer_data',
   'pilot shop',
@@ -85,16 +146,54 @@ assertNoSecretLikeValue('docs/deployment/staged-saas-launch.md', runbook);
 
 const stripeRoute = read('backend/routes/stripe.js');
 for (const expected of [
+  'CONNECT_PLATFORM_NOT_REGISTERED',
   'PLATFORM_STRIPE_NOT_CONFIGURED',
   'NO_CONNECTED_ACCOUNT',
   'ONBOARDING_INCOMPLETE',
-  'SUBSCRIPTION_INACTIVE',
   'application_fee_amount',
   'transfer_data',
   'on_behalf_of',
+  '/dashboard-link',
+  'createLoginLink',
 ]) {
   assert.match(stripeRoute, new RegExp(expected), `Stripe route should include ${expected}`);
 }
+assert.match(
+  stripeRoute,
+  /create-bank-transfer-order[\s\S]*BANK_TRANSFER_DISABLED/,
+  'legacy bank-transfer API route should reject instead of creating customer orders',
+);
+assert.match(
+  stripeRoute,
+  /dashboard-link[\s\S]*requireShopAuth[\s\S]*stripe_account_id[\s\S]*createLoginLink[\s\S]*res\.json\(\{ url/,
+  'Stripe dashboard-link route should create a safe Express dashboard login link for connected shops',
+);
+assert.match(
+  stripeRoute,
+  /dashboard-link[\s\S]*No Stripe account connected/,
+  'Stripe dashboard-link route should reject shops without connected accounts',
+);
+
+const adminPayments = read('admin/payments.html');
+for (const expected of [
+  'Open Stripe dashboard',
+  'Resume Stripe setup',
+  'Ready for payments',
+  '/api/stripe/dashboard-link',
+]) {
+  assert.match(adminPayments, new RegExp(expected), `Admin payments page should include ${expected}`);
+}
+assert.match(
+  adminPayments,
+  /onboarding_complete[\s\S]*can_accept_live_orders[\s\S]*Open Stripe dashboard/,
+  'Admin payments page should only show dashboard access when Stripe is ready for live payments',
+);
+
+const stripeConnectSmoke = read('backend/scripts/stripe-connect-platform-smoke.js');
+assert.match(stripeConnectSmoke, /stripe\.accounts\.create/, 'Stripe Connect smoke should test account creation');
+assert.match(stripeConnectSmoke, /stripe\.accountLinks\.create/, 'Stripe Connect smoke should test onboarding link creation');
+assert.match(stripeConnectSmoke, /stripe\.accounts\.del/, 'Stripe Connect smoke should clean up the test account');
+assert.match(stripeConnectSmoke, /ALLOW_LIVE_STRIPE_CONNECT_SMOKE/, 'Stripe Connect smoke should refuse live keys unless explicitly allowed');
 
 assert.ok(existsSync(resolve(root, 'docs/pricing/trennen-pricing-and-fees.md')), 'pricing source-of-truth doc should exist');
 

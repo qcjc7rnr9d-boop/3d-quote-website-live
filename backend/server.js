@@ -37,17 +37,27 @@ const isProduction = process.env.NODE_ENV === 'production';
 const sessionStore = new SQLiteSessionStore(db);
 const startedAt = Date.now();
 const appVersion = process.env.npm_package_version || '1.0.0';
+const BASE_SECURITY_CSP = "base-uri 'self'; object-src 'none'; frame-ancestors 'self'";
+
+function isUnsafeProductionSecret(value) {
+  const raw = String(value || '').trim();
+  if (!raw || raw.length < 32) return true;
+  if (/^(?:dev|test|demo|example|sample|replace|change|set|your)[\w\s._-]*/i.test(raw)) return true;
+  if (/changeme|change-me|change_me|placeholder|password|secret/i.test(raw)) return true;
+  return false;
+}
 
 function assertProductionConfig() {
   if (!isProduction) return;
   const missing = [];
-  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'dev-secret-change-me') missing.push('SESSION_SECRET');
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-jwt-secret') missing.push('JWT_SECRET');
+  if (isUnsafeProductionSecret(process.env.SESSION_SECRET)) missing.push('SESSION_SECRET');
+  if (isUnsafeProductionSecret(process.env.JWT_SECRET)) missing.push('JWT_SECRET');
+  if (process.env.PLATFORM_ADMIN_PASSWORD && isUnsafeProductionSecret(process.env.PLATFORM_ADMIN_PASSWORD)) missing.push('PLATFORM_ADMIN_PASSWORD');
   if (!process.env.BASE_URL || !/^https:\/\//.test(process.env.BASE_URL)) missing.push('BASE_URL=https://...');
   if (!process.env.RESEND_API_KEY && !process.env.SMTP_HOST) missing.push('RESEND_API_KEY or SMTP_HOST');
   if (process.env.RESEND_API_KEY && !process.env.RESEND_WEBHOOK_SECRET) missing.push('RESEND_WEBHOOK_SECRET');
   if (process.env.RESEND_API_KEY && !process.env.APP_EMAIL_DOMAIN && !process.env.APP_EMAIL_FALLBACK) missing.push('APP_EMAIL_DOMAIN or APP_EMAIL_FALLBACK');
-  if (!process.env.PLATFORM_CONFIG_ENCRYPTION_KEY || !hasSecretEncryptionKey()) missing.push('PLATFORM_CONFIG_ENCRYPTION_KEY');
+  if (isUnsafeProductionSecret(process.env.PLATFORM_CONFIG_ENCRYPTION_KEY) || !hasSecretEncryptionKey()) missing.push('PLATFORM_CONFIG_ENCRYPTION_KEY');
   if (missing.length) {
     throw new Error(`Refusing to start in production. Missing/unsafe config: ${missing.join(', ')}`);
   }
@@ -65,8 +75,17 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   if (!embedSurface) {
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Content-Security-Policy', BASE_SECURITY_CSP);
   }
   res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(self)');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  if (isProduction) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+  }
   next();
 });
 
@@ -125,6 +144,12 @@ app.use('/assets', express.static(join(ROOT_DIR, 'assets'), { dotfiles: 'deny', 
 app.use('/admin', express.static(join(ROOT_DIR, 'admin'), { dotfiles: 'deny', index: false }));
 app.use('/customer', express.static(join(ROOT_DIR, 'customer'), { dotfiles: 'deny', index: false }));
 app.use('/platform', express.static(join(ROOT_DIR, 'platform'), { dotfiles: 'deny', index: false }));
+app.use('/uploads', (req, res, next) => {
+  if (!/\.(?:png|jpe?g|webp|gif)$/i.test(req.path)) {
+    return res.status(404).send('Not found');
+  }
+  next();
+});
 app.use('/uploads', express.static(join(ROOT_DIR, 'uploads'), {
   dotfiles: 'deny',
   index: false,
@@ -239,7 +264,7 @@ app.get('/embed/quote', (req, res) => {
   if (!shop) return res.status(404).send('Shop not found.');
   const settings = db.prepare('SELECT embed_allowed_origins FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
   res.removeHeader('X-Frame-Options');
-  res.setHeader('Content-Security-Policy', `frame-ancestors ${frameAncestorsForOrigins(parseEmbedAllowedOrigins(settings.embed_allowed_origins))};`);
+  res.setHeader('Content-Security-Policy', `base-uri 'self'; object-src 'none'; frame-ancestors ${frameAncestorsForOrigins(parseEmbedAllowedOrigins(settings.embed_allowed_origins))};`);
   res.sendFile(join(ROOT_DIR, 'quote.html'));
 });
 

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import rateLimit from 'express-rate-limit';
 import { db } from '../middleware/auth.js';
 import { sendMail } from '../lib/mailer.js';
@@ -8,8 +9,9 @@ import { renderTemplate } from '../lib/email-templates/index.js';
 import { buildEmailIdempotencyKey } from '../lib/email-delivery.js';
 import { BCRYPT_ROUNDS, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES, MIN_PASSWORD_LENGTH } from '../config.js';
 import { parseInfillTiers } from '../lib/infill-tiers.js';
-import { parseMaterialRow, safeJson } from '../lib/material-config.js';
-import { calculateQuoteForShopSlug, PricingError } from '../lib/pricing-engine.js';
+import { VISIBLE_MATERIAL_CATEGORY, parseMaterialRow, safeJson } from '../lib/material-config.js';
+import { calculateQuoteForShopSlug, normaliseModelDisplayMetadata, PricingError } from '../lib/pricing-engine.js';
+import { normaliseCart, previewCartForShop } from '../lib/cart.js';
 import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
 import { getExchangeRates, normaliseQuoteCurrencies } from '../lib/exchange-rates.js';
 import { previewQuoteUsage, recordQuoteUsageEvent } from '../lib/billing-service.js';
@@ -17,6 +19,13 @@ import {
   deleteCustomerPrivacyData,
   exportCustomerPrivacyData,
 } from '../lib/customer-privacy.js';
+import { resetTokenDigest, resetTokenLookupValues } from '../lib/reset-tokens.js';
+import {
+  clearSessionCookie,
+  destroySession,
+  regenerateSession,
+  revokeCustomerAccountSessions,
+} from '../lib/session-security.js';
 
 const router = Router();
 const smokeRateLimitSkip = req => process.env.NODE_ENV !== 'production' && req.get('x-smoke-test') === '1';
@@ -48,6 +57,14 @@ const customerResetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: { ok: true, message: "If that email is registered, you'll receive a reset link shortly." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: smokeRateLimitSkip,
+});
+const customerResetVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { valid: false, error: 'Too many reset link checks, please try again shortly.' },
   standardHeaders: true,
   legacyHeaders: false,
   skip: smokeRateLimitSkip,
@@ -256,6 +273,7 @@ function normaliseSavedQuoteRequest(input = {}, slug) {
     infillTierId: source.infillTierId ?? safeObject(source.infill).id ?? null,
     quantity: source.quantity,
     shippingId: source.shippingId ?? shipping.id ?? null,
+    previewWithoutShipping: source.previewWithoutShipping ?? !(source.shippingId ?? shipping.id),
     dimensions: source.dimensions ?? file.dimensions ?? null,
   };
 }
@@ -263,16 +281,23 @@ function normaliseSavedQuoteRequest(input = {}, slug) {
 function normaliseFileMeta(input = {}, quote = {}) {
   const file = safeObject(input.fileMeta || input.file);
   const selected = safeObject(quote.selected);
-  const models = Array.isArray(file.models) && file.models.length
-    ? file.models
-    : (Array.isArray(selected.models) ? selected.models : []);
+  const models = Array.isArray(selected.models) && selected.models.length
+    ? selected.models
+    : (Array.isArray(file.models) ? file.models.map((model, index) => normaliseModelDisplayMetadata(model, index, { strict: false })) : []);
+  const firstModelName = models.length === 1 ? models[0]?.name : null;
+  const fileMeta = normaliseModelDisplayMetadata({
+    name: file.name || file.fileName || firstModelName || 'Uploaded file',
+    size: file.size ?? file.fileSize,
+    ext: file.fileExt || file.type,
+    dimensions: file.dimensions,
+  }, 0, { strict: false });
   return {
-    name: String(file.name || file.fileName || 'Uploaded file').slice(0, 240),
-    size: file.size ?? file.fileSize ?? null,
+    name: fileMeta.name,
+    size: fileMeta.size,
     sizeLabel: file.sizeLabel || file.file_size || null,
     type: file.type || file.fileType || null,
     volumeCm3: file.volumeCm3 ?? selected.volumeCm3 ?? null,
-    dimensions: file.dimensions || selected.dimensions || null,
+    dimensions: selected.dimensions || fileMeta.dimensions || null,
     models,
   };
 }
@@ -352,6 +377,9 @@ function validateCustomerPassword(password) {
   if (!password || String(password).length < MIN_PASSWORD_LENGTH) {
     return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
   }
+  if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.';
+  if (!/[0-9]/.test(password)) return 'Password must contain at least one digit.';
+  if (!/[^A-Za-z0-9]/.test(password)) return 'Password must contain at least one special character.';
   return null;
 }
 
@@ -360,7 +388,12 @@ function requireCustomerAuth(req, res, next) {
   const id = req.session && req.session.customerId;
   if (!id) return res.status(401).json({ error: 'Not authenticated' });
 
-  const account = db.prepare('SELECT * FROM customer_accounts WHERE id = ?').get(id);
+  const account = db.prepare(`
+    SELECT ca.*
+    FROM customer_accounts ca
+    JOIN shops s ON s.id = ca.shop_id
+    WHERE ca.id = ? AND s.plan != 'suspended'
+  `).get(id);
   if (!account) return res.status(401).json({ error: 'Not authenticated' });
   if (req.session.customerShopId && Number(req.session.customerShopId) !== Number(account.shop_id)) {
     return res.status(401).json({ error: 'Not authenticated' });
@@ -417,9 +450,9 @@ router.get('/pricing', (req, res) => {
   const materials = db.prepare(`
     SELECT id, name, base_price, min_charge, pricing_model, volume_tiers
     FROM materials
-    WHERE shop_id = ? AND active = 1
+    WHERE shop_id = ? AND active = 1 AND category = ?
     ORDER BY sort_order, name
-  `).all(shop.id).map(m => ({
+  `).all(shop.id, VISIBLE_MATERIAL_CATEGORY).map(m => ({
     ...m,
     volume_tiers: JSON.parse(m.volume_tiers || '[]'),
   }));
@@ -477,9 +510,9 @@ router.get('/catalog', (req, res) => {
             min_x_mm, min_y_mm, min_z_mm,
             max_x_mm, max_y_mm, max_z_mm
      FROM materials
-     WHERE shop_id = ? AND active = 1
+     WHERE shop_id = ? AND active = 1 AND category = ?
      ORDER BY sort_order, name`
-  ).all(shop.id);
+  ).all(shop.id, VISIBLE_MATERIAL_CATEGORY);
   const materials = rows.map(r => parseMaterialRow(r, { stableIds: true, publicOnly: true }));
   const filters = [...new Set(materials.flatMap(m => [m.category, ...(m.tags || [])])
     .map(v => String(v || '').trim())
@@ -520,6 +553,33 @@ router.post('/quote-preview', customerQuoteLimiter, (req, res) => {
   }
 });
 
+// ── POST /api/customer/cart-preview  (checkout cart pricing source) ──
+router.post('/cart-preview', customerQuoteLimiter, (req, res) => {
+  try {
+    const { shopSlug, shop, items, shippingId, shipping } = req.body || {};
+    const slug = shopSlug || shop;
+    const shopRow = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(slug);
+    if (!shopRow) return res.status(404).json({ ok: false, code: 'SHOP_NOT_FOUND', error: 'Shop not found.' });
+    const cart = previewCartForShop(db, shopRow, normaliseCart({
+      shopSlug: slug,
+      items: Array.isArray(items) ? items : [],
+      shipping: shipping || (shippingId ? { id: shippingId } : null),
+    }, slug), { requireShipping: false });
+    res.json({ ok: true, cart });
+  } catch (err) {
+    if (err instanceof PricingError) {
+      return res.status(err.status).json({
+        ok: false,
+        code: err.code,
+        error: err.message,
+        quote: err.quote || null,
+      });
+    }
+    console.error('Cart preview error:', err);
+    res.status(500).json({ ok: false, error: 'Could not calculate checkout cart.' });
+  }
+});
+
 // ── POST /api/customer/register ───────────────────────────────
 router.post('/register', customerRegisterLimiter, async (req, res) => {
   try {
@@ -527,29 +587,48 @@ router.post('/register', customerRegisterLimiter, async (req, res) => {
     if (!shopSlug || !name || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
+    const trimmedName = String(name || '').trim();
+    if (trimmedName.length < 2) {
+      return res.status(400).json({ error: 'Enter your name.' });
+    }
+    if (trimmedName.length > 120) {
+      return res.status(400).json({ error: 'Name is too long.' });
+    }
     const normalisedEmail = normaliseCustomerEmail(email);
     if (!isValidCustomerEmail(normalisedEmail)) {
       return res.status(400).json({ error: 'Enter a valid email address' });
     }
-    if (password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    const strengthError = validateCustomerPassword(password);
+    if (strengthError) {
+      return res.status(400).json({ error: strengthError });
     }
 
-    const shop = db.prepare('SELECT id FROM shops WHERE slug = ?').get(shopSlug);
+    const shop = db.prepare("SELECT id FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
     try {
+      db.exec('BEGIN IMMEDIATE');
       const result = db.prepare(`
         INSERT INTO customer_accounts (shop_id, email, name, password_hash)
         VALUES (?, ?, ?, ?)
-      `).run(shop.id, normalisedEmail, name.trim(), hash);
+      `).run(shop.id, normalisedEmail, trimmedName, hash);
 
+      db.prepare(`
+        INSERT INTO customers (shop_id, email, name)
+        VALUES (?, ?, ?)
+        ON CONFLICT(shop_id, email) DO UPDATE SET
+          name = excluded.name
+      `).run(shop.id, normalisedEmail, trimmedName);
+      db.exec('COMMIT');
+
+      await regenerateSession(req);
       req.session.customerId  = result.lastInsertRowid;
       req.session.customerShopId = shop.id;
       res.status(201).json({ ok: true });
     } catch (err) {
+      try { db.exec('ROLLBACK'); } catch {}
       if (err.message && err.message.includes('UNIQUE')) {
         return res.status(400).json({ error: 'An account with this email already exists' });
       }
@@ -573,7 +652,7 @@ router.post('/login', customerLoginLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Incorrect email or password' });
     }
 
-    const shop = db.prepare('SELECT id FROM shops WHERE slug = ?').get(shopSlug);
+    const shop = db.prepare("SELECT id FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
     if (!shop) return res.status(401).json({ error: 'Incorrect email or password' });
 
     const account = db.prepare(
@@ -585,6 +664,7 @@ router.post('/login', customerLoginLimiter, async (req, res) => {
     const valid = await bcrypt.compare(password, account.password_hash);
     if (!valid) return res.status(401).json({ error: 'Incorrect email or password' });
 
+    await regenerateSession(req);
     req.session.customerId = account.id;
     req.session.customerShopId = shop.id;
     res.json({ ok: true });
@@ -616,14 +696,14 @@ router.post('/forgot-password', customerResetLimiter, async (req, res) => {
     if (!account) return res.json({ ok: true, message });
 
     const token = jwt.sign(
-      { customerAccountId: account.id, shopId: shop.id },
+      { customerAccountId: account.id, shopId: shop.id, jti: uuidv4() },
       process.env.JWT_SECRET || 'dev-jwt-secret',
       { expiresIn: '1h' }
     );
     db.prepare(`
       INSERT INTO customer_reset_tokens (shop_id, customer_account_id, token, expires_at)
       VALUES (?, ?, ?, datetime('now', '+1 hour'))
-    `).run(shop.id, account.id, token);
+    `).run(shop.id, account.id, resetTokenDigest(token));
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     const resetLink = `${baseUrl}/customer/reset-password.html?shop=${encodeURIComponent(shop.slug)}&token=${encodeURIComponent(token)}`;
@@ -654,7 +734,7 @@ router.post('/forgot-password', customerResetLimiter, async (req, res) => {
 });
 
 // ── GET /api/customer/reset-password/verify ──────────────────
-router.get('/reset-password/verify', (req, res) => {
+router.get('/reset-password/verify', customerResetVerifyLimiter, (req, res) => {
   try {
     ensureCustomerResetTokensTable();
     const token = String(req.query?.token || '');
@@ -662,13 +742,17 @@ router.get('/reset-password/verify', (req, res) => {
       return res.status(400).json({ valid: false, error: 'Token expired or invalid' });
     }
 
+    const lookup = resetTokenLookupValues(token);
     const row = db.prepare(`
       SELECT crt.*, ca.email, ca.name, s.slug, s.name AS shop_name
       FROM customer_reset_tokens crt
       JOIN customer_accounts ca ON ca.id = crt.customer_account_id AND ca.shop_id = crt.shop_id
       JOIN shops s ON s.id = crt.shop_id
-      WHERE crt.token = ? AND crt.used = 0 AND crt.expires_at > datetime('now')
-    `).get(token);
+      WHERE crt.token IN (?, ?)
+        AND crt.used = 0
+        AND crt.expires_at > datetime('now')
+        AND s.plan != 'suspended'
+    `).get(...lookup);
     if (!row) {
       return res.status(400).json({ valid: false, error: 'Token expired or invalid' });
     }
@@ -704,11 +788,16 @@ router.post('/reset-password', customerPasswordLimiter, async (req, res) => {
       return res.status(400).json({ error: strengthError });
     }
 
+    const lookup = resetTokenLookupValues(token);
     const row = db.prepare(`
-      SELECT *
-      FROM customer_reset_tokens
-      WHERE token = ? AND used = 0 AND expires_at > datetime('now')
-    `).get(token);
+      SELECT crt.*
+      FROM customer_reset_tokens crt
+      JOIN shops s ON s.id = crt.shop_id
+      WHERE crt.token IN (?, ?)
+        AND crt.used = 0
+        AND crt.expires_at > datetime('now')
+        AND s.plan != 'suspended'
+    `).get(...lookup);
     if (!row) {
       return res.status(400).json({ error: 'Token expired or invalid' });
     }
@@ -724,16 +813,27 @@ router.post('/reset-password', customerPasswordLimiter, async (req, res) => {
     }
 
     const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    const claimed = db.prepare(`
+      UPDATE customer_reset_tokens
+      SET used = 1
+      WHERE token IN (?, ?)
+        AND used = 0
+        AND expires_at > datetime('now')
+    `).run(...lookup);
+    if (claimed.changes !== 1) {
+      return res.status(400).json({ error: 'Token expired or invalid' });
+    }
     db.prepare(`
       UPDATE customer_accounts
       SET password_hash = ?
       WHERE id = ? AND shop_id = ?
     `).run(hash, row.customer_account_id, row.shop_id);
-    db.prepare('UPDATE customer_reset_tokens SET used = 1 WHERE token = ?').run(token);
+    revokeCustomerAccountSessions(db, row.customer_account_id);
 
     if (req.session && Number(req.session.customerId) === Number(row.customer_account_id)) {
-      req.session.customerId = null;
-      req.session.customerShopId = null;
+      await destroySession(req);
+      db.prepare('DELETE FROM app_sessions WHERE sid = ?').run(req.sessionID);
+      clearSessionCookie(res);
     }
 
     res.json({ ok: true });
@@ -744,10 +844,17 @@ router.post('/reset-password', customerPasswordLimiter, async (req, res) => {
 });
 
 // ── POST /api/customer/logout ─────────────────────────────────
-router.post('/logout', (req, res) => {
-  req.session.customerId = null;
-  req.session.customerShopId = null;
-  res.json({ ok: true });
+router.post('/logout', async (req, res) => {
+  const sessionToken = req.sessionID;
+  try {
+    await destroySession(req);
+    db.prepare('DELETE FROM app_sessions WHERE sid = ?').run(sessionToken);
+    clearSessionCookie(res);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Customer logout error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // ── GET /api/customer/me ──────────────────────────────────────
@@ -787,6 +894,11 @@ router.patch('/me', requireCustomerAuth, (req, res) => {
       SET name = ?
       WHERE id = ?
     `).run(name, req.customerAccount.id);
+    db.prepare(`
+      UPDATE customers
+      SET name = ?
+      WHERE shop_id = ? AND LOWER(email) = LOWER(?)
+    `).run(name, req.customerAccount.shop_id, req.customerAccount.email);
 
     res.json({ ok: true, name });
   } catch (err) {
@@ -859,6 +971,7 @@ router.post('/change-password', customerPasswordLimiter, requireCustomerAuth, as
       SET password_hash = ?
       WHERE id = ?
     `).run(hash, req.customerAccount.id);
+    revokeCustomerAccountSessions(db, req.customerAccount.id, { exceptSid: req.sessionID });
 
     res.json({ ok: true });
   } catch (err) {
@@ -929,7 +1042,10 @@ router.post('/quotes', customerQuoteLimiter, requireCustomerAuth, (req, res) => 
       sqlDatetime(now)
     );
 
-    const row = db.prepare('SELECT * FROM customer_saved_quotes WHERE id = ?').get(result.lastInsertRowid);
+    const row = db.prepare(`
+      SELECT * FROM customer_saved_quotes
+      WHERE id = ? AND shop_id = ? AND customer_account_id = ?
+    `).get(result.lastInsertRowid, shop.id, req.customerAccount.id);
     const usage = recordQuoteUsageEvent(db, {
       shopId: shop.id,
       quoteId: `saved:${result.lastInsertRowid}`,

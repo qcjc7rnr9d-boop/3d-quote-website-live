@@ -1,7 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'node:crypto';
 import { db } from '../middleware/auth.js';
 import { BCRYPT_ROUNDS, MIN_PASSWORD_LENGTH, RESET_TOKEN_HOURS } from '../config.js';
+import { resetTokenDigest, resetTokenLookupValues } from './reset-tokens.js';
 
 export const PLATFORM_ADMIN_ID = 1;
 
@@ -30,8 +32,8 @@ export function validatePlatformPassword(password) {
 
 export async function verifyPlatformPassword(password) {
   const admin = ensurePlatformAdmin();
-  if (admin?.password_hash && await bcrypt.compare(password || '', admin.password_hash)) {
-    return true;
+  if (admin?.password_hash) {
+    return await bcrypt.compare(password || '', admin.password_hash);
   }
   return !!(process.env.PLATFORM_ADMIN_PASSWORD && password === process.env.PLATFORM_ADMIN_PASSWORD);
 }
@@ -71,7 +73,7 @@ export async function updatePlatformAdminAccount({ ownerEmail, newPassword }) {
 export function createPlatformResetToken() {
   const admin = ensurePlatformAdmin();
   const token = jwt.sign(
-    { platformAdminId: PLATFORM_ADMIN_ID, purpose: 'platform_password_reset' },
+    { platformAdminId: PLATFORM_ADMIN_ID, purpose: 'platform_password_reset', jti: randomUUID() },
     process.env.JWT_SECRET,
     { expiresIn: `${RESET_TOKEN_HOURS}h` }
   );
@@ -79,17 +81,18 @@ export function createPlatformResetToken() {
   db.prepare(`
     INSERT INTO platform_reset_tokens (admin_id, token, expires_at)
     VALUES (?, ?, datetime('now', ?))
-  `).run(admin.id, token, `+${RESET_TOKEN_HOURS} hour`);
+  `).run(admin.id, resetTokenDigest(token), `+${RESET_TOKEN_HOURS} hour`);
 
   return token;
 }
 
 export function verifyPlatformResetToken(token) {
   if (!token) return null;
+  const lookup = resetTokenLookupValues(token);
   const row = db.prepare(`
     SELECT * FROM platform_reset_tokens
-    WHERE token = ? AND used = 0 AND expires_at > datetime('now')
-  `).get(token);
+    WHERE token IN (?, ?) AND used = 0 AND expires_at > datetime('now')
+  `).get(...lookup);
   if (!row) return null;
 
   try {
@@ -104,5 +107,12 @@ export function verifyPlatformResetToken(token) {
 }
 
 export function markPlatformResetTokenUsed(token) {
-  db.prepare('UPDATE platform_reset_tokens SET used = 1 WHERE token = ?').run(token);
+  const claimed = db.prepare(`
+    UPDATE platform_reset_tokens
+    SET used = 1
+    WHERE token IN (?, ?)
+      AND used = 0
+      AND expires_at > datetime('now')
+  `).run(...resetTokenLookupValues(token));
+  return claimed.changes === 1;
 }

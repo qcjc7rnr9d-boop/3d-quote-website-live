@@ -3,6 +3,7 @@
 
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;
+PRAGMA busy_timeout = 5000;
 
 -- ── Shops (one row per print-shop customer) ────────────────
 CREATE TABLE IF NOT EXISTS shops (
@@ -125,6 +126,7 @@ CREATE TABLE IF NOT EXISTS orders (
   total               REAL    NOT NULL DEFAULT 0,
   stripe_payment_id   TEXT,
   public_token        TEXT UNIQUE,
+  checkout_idempotency_key TEXT,
   restricted_items_certification_version TEXT,
   restricted_items_certified_at TEXT,
   payment_processing_fee_cents INTEGER NOT NULL DEFAULT 0,
@@ -524,12 +526,22 @@ CREATE TABLE IF NOT EXISTS reset_tokens (
 -- ── Indexes ────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_orders_shop     ON orders(shop_id);
 CREATE INDEX IF NOT EXISTS idx_orders_email    ON orders(customer_email);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_checkout_idempotency
+  ON orders(shop_id, checkout_idempotency_key)
+  WHERE checkout_idempotency_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_order_files_order ON order_files(order_id, sort_order);
 CREATE INDEX IF NOT EXISTS idx_order_files_item ON order_files(order_item_id, sort_order);
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id, sort_order);
 CREATE INDEX IF NOT EXISTS idx_materials_shop  ON materials(shop_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_materials_active_name_unique
+  ON materials(shop_id, lower(trim(category)), lower(trim(name)))
+  WHERE active = 1;
+CREATE INDEX IF NOT EXISTS idx_materials_shop_category_active_name
+  ON materials(shop_id, category, active, name);
 CREATE INDEX IF NOT EXISTS idx_customers_shop  ON customers(shop_id);
 CREATE INDEX IF NOT EXISTS idx_customer_accounts_email ON customer_accounts(shop_id, email);
+CREATE INDEX IF NOT EXISTS idx_orders_shop_email_created ON orders(shop_id, customer_email, created_at);
+CREATE INDEX IF NOT EXISTS idx_orders_shop_created ON orders(shop_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_customer_reset_token ON customer_reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_customer_reset_account ON customer_reset_tokens(customer_account_id, used, expires_at);
 CREATE INDEX IF NOT EXISTS idx_customer_saved_quotes_account ON customer_saved_quotes(customer_account_id, shop_id, status, created_at);
@@ -599,3 +611,5 @@ CREATE TABLE IF NOT EXISTS retention_cleanup_runs (
   summary_json TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_app_sessions_expires ON app_sessions(expires_at);

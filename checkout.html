@@ -280,6 +280,90 @@
     }
     .remove-cart-item:hover { color: #9f2d2d; border-color: rgba(159,45,45,0.35); }
 
+    .checkout-shipping {
+      margin: 0 0 22px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fffdf8;
+    }
+    .checkout-shipping.invalid {
+      border-color: rgba(201,90,82,0.55);
+      background: #fff7f5;
+    }
+    .checkout-shipping-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    .checkout-shipping-head h3 {
+      margin: 0 0 4px;
+      font-family: var(--font-brand);
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+    .checkout-shipping-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .package-pill {
+      align-self: flex-start;
+      border: 1px solid rgba(90,138,94,0.22);
+      background: rgba(90,138,94,0.08);
+      color: var(--sage-dark);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .checkout-shipping-options {
+      display: grid;
+      gap: 8px;
+    }
+    .checkout-ship-option {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .checkout-ship-option.selected {
+      border-color: var(--sage);
+      background: rgba(90,138,94,0.06);
+    }
+    .checkout-ship-option input { accent-color: var(--sage); margin: 0; }
+    .checkout-ship-option strong { display: block; font-size: 13px; }
+    .checkout-ship-option span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+    .checkout-ship-price { color: var(--ink); font-weight: 800; font-size: 13px; white-space: nowrap; }
+    .checkout-shipping-empty,
+    .checkout-shipping-error {
+      display: none;
+      padding: 12px;
+      border-radius: 14px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .checkout-shipping-empty {
+      background: rgba(25,27,25,0.04);
+      color: var(--muted);
+    }
+    .checkout-shipping-error {
+      margin-top: 10px;
+      background: #fff3f1;
+      color: #8a241a;
+      border: 1px solid #f1b7b0;
+    }
+    .checkout-shipping-empty.show,
+    .checkout-shipping-error.show { display: block; }
+
     /* ── Detail rows ─────────────────────────────────────── */
     .detail-rows {
       display: flex;
@@ -424,39 +508,6 @@
       margin-bottom: 4px;
     }
 
-    .payment-methods {
-      display: grid;
-      gap: 10px;
-      margin-bottom: 18px;
-    }
-
-    .payment-method {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: rgba(255,255,255,0.72);
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    .payment-method input { margin-top: 3px; }
-    .payment-method strong { display: block; color: var(--ink); }
-    .payment-method span { display: block; color: var(--muted); }
-
-    .bank-transfer-panel {
-      display: none;
-      margin-top: 16px;
-      padding: 16px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: rgba(90,138,94,0.06);
-    }
-
-    .bank-transfer-panel.show { display: block; }
-
     .legal-certification {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
@@ -588,6 +639,18 @@
       <div class="card" id="orderReviewCard">
         <h2 class="review-heading">Order Review</h2>
         <div class="cart-items-review" id="cartItemsReview"></div>
+        <section class="checkout-shipping" id="checkoutShippingBlock">
+          <div class="checkout-shipping-head">
+            <div>
+              <h3>Shipping</h3>
+              <p>Choose one shipping option for the whole order. Pricing uses the combined size and estimated print weight of every material group.</p>
+            </div>
+            <span class="package-pill" id="packageSummary">Estimating package</span>
+          </div>
+          <div class="checkout-shipping-options" id="checkoutShippingOptions"></div>
+          <div class="checkout-shipping-empty" id="checkoutShippingEmpty">Shipping options will appear once the order has been validated.</div>
+          <div class="checkout-shipping-error" id="checkoutShippingError" role="alert">Choose a shipping option before payment.</div>
+        </section>
         <div class="review-validation-error" id="reviewValidationError" role="alert" aria-live="polite">
           <span id="reviewValidationErrorText">This order needs to be reviewed before payment.</span>
           <a href="quote.html" id="reviewValidationEditLink">Edit group</a>
@@ -635,16 +698,7 @@
           <span id="paymentSetupErrorText">This store cannot accept card payments yet.</span>
         </div>
 
-        <div class="payment-methods" id="paymentMethods">
-          <label class="payment-method" id="bankTransferOption">
-            <input type="radio" name="paymentMethodChoice" value="bank_transfer">
-            <span><strong>Bank transfer — no processing fee</strong><span>Place the order now and pay the shop directly.</span></span>
-          </label>
-          <label class="payment-method" id="cardPaymentOption">
-            <input type="radio" name="paymentMethodChoice" value="card" checked>
-            <span><strong>Card</strong><span id="cardFeeSummary">Processing fee depends on merchant settings.</span></span>
-          </label>
-        </div>
+        <p class="security-caption" id="cardFeeSummary" style="text-align:left;margin:0 0 18px;">Stripe card checkout is the only live payment method.</p>
 
         <label class="legal-certification" for="restrictedItemsCertification">
           <input type="checkbox" id="restrictedItemsCertification" name="restrictedItemsCertification" required>
@@ -653,7 +707,6 @@
         <p class="security-caption" style="text-align:left;margin:-6px 0 18px;">
           Cart and quote details may be stored in your browser to keep checkout in progress. See the <a href="privacy.html?shop=mahi3d#storage" data-checkout-link="privacy">Privacy Policy</a>.
         </p>
-        <div id="card-errors" class="form-error" style="margin-top:-8px;margin-bottom:12px;" role="alert"></div>
 
         <div id="cardPanel">
           <div class="card-panel-inner">
@@ -685,22 +738,11 @@
               <div id="card-element-wrapper">
                 <div id="card-element"></div>
               </div>
+              <div id="card-errors" class="form-error" style="margin-top:6px;" role="alert"></div>
             </div>
             <button class="btn btn-primary lg full" id="payBtn">Pay —</button>
           </div>
           <p class="security-caption">Your card details are processed securely by Stripe. We never see or store your card number.</p>
-        </div>
-
-        <div class="bank-transfer-panel" id="bankTransferPanel">
-          <div class="form-group">
-            <label class="form-label" for="bankCustomerEmail">Email for receipt</label>
-            <input class="form-input" type="email" id="bankCustomerEmail" placeholder="you@example.com" autocomplete="email">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="bankCustomerName">Customer name</label>
-            <input class="form-input" type="text" id="bankCustomerName" placeholder="Your name" autocomplete="name">
-          </div>
-          <button class="btn btn-primary lg full" id="bankTransferBtn" type="button">Place bank transfer order</button>
         </div>
 
         <!-- Trust badges -->

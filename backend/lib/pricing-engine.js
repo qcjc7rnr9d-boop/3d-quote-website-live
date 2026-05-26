@@ -1,5 +1,5 @@
 import { parseInfillTiers } from './infill-tiers.js';
-import { parseMaterialRow, safeJson } from './material-config.js';
+import { VISIBLE_MATERIAL_CATEGORY, parseMaterialRow, safeJson } from './material-config.js';
 
 export class PricingError extends Error {
   constructor(message, status = 400, code = 'PRICING_ERROR', quote = null) {
@@ -12,8 +12,14 @@ export class PricingError extends Error {
 }
 
 const DEFAULT_CURRENCY = 'NZD';
+const DEFAULT_PLATFORM_FEE_PERCENT = 5;
 export const MAX_MODELS_PER_QUOTE = 20;
 export const MAX_MODEL_QUANTITY_SAFETY = 9999;
+export const MAX_MODEL_FILE_BYTES = 250 * 1024 * 1024;
+export const MAX_MODEL_DIMENSION_MM = 100000;
+const MAX_MODEL_NAME_LENGTH = 180;
+const MAX_MODEL_ID_LENGTH = 80;
+const MODEL_EXTENSIONS = new Set(['stl', 'obj']);
 
 function toNumber(value, fallback = 0) {
   const n = Number(value);
@@ -38,7 +44,7 @@ function money(value) {
   return fromCents(toCents(value));
 }
 
-function normaliseTaxRate(value) {
+export function normaliseTaxRate(value) {
   const n = toNumber(value, 0);
   if (n <= 0) return 0;
   return n > 1 ? n / 100 : n;
@@ -98,6 +104,9 @@ function publicShipping(shipping) {
   if (!shipping) return null;
   return {
     id: shipping.id,
+    methodId: shipping.methodId || shipping.id,
+    bandId: shipping.bandId || null,
+    bandLabel: shipping.bandLabel || null,
     label: shipping.label,
     price: shipping.originalPrice,
     finalPrice: shipping.price,
@@ -112,18 +121,45 @@ function roundOne(value) {
 
 function publicModel(model) {
   if (!model) return null;
+  const meta = normaliseModelDisplayMetadata(model, 0, { strict: false });
   return {
-    id: model.id || null,
-    name: model.name,
-    size: model.size ?? null,
-    ext: model.ext || '',
+    id: meta.id,
+    name: meta.name,
+    size: meta.size,
+    ext: meta.ext,
     volumeCm3: money(model.volumeCm3),
     quantity: clampInt(model.quantity, 1, MAX_MODEL_QUANTITY_SAFETY, 1),
-    dimensions: model.dimensions || null,
+    dimensions: meta.dimensions,
   };
 }
 
-export function normaliseShippingZones(rawZones = []) {
+function optionalPositiveNumber(value) {
+  const n = toNumber(value, NaN);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function normaliseShippingBand(raw = {}, index = 0, fallbackPrice = 0) {
+  const label = String(raw.label || raw.name || (index === 0 ? 'Standard parcel' : `Band ${index + 1}`)).trim();
+  const price = Math.max(0, money(raw.price ?? raw.rate ?? fallbackPrice));
+  return {
+    id: String(raw.id || `band_${index + 1}`),
+    label,
+    price,
+    maxWeightKg: optionalPositiveNumber(raw.maxWeightKg ?? raw.max_weight_kg ?? raw.weight_kg),
+    maxLongestMm: optionalPositiveNumber(raw.maxLongestMm ?? raw.max_longest_mm ?? raw.longest_mm),
+    maxVolumeCm3: optionalPositiveNumber(raw.maxVolumeCm3 ?? raw.max_volume_cm3 ?? raw.volume_cm3),
+  };
+}
+
+function shippingBandMatches(band, pkg = null) {
+  if (!pkg) return true;
+  if (band.maxWeightKg && toNumber(pkg.estimatedWeightKg, 0) > band.maxWeightKg) return false;
+  if (band.maxLongestMm && toNumber(pkg.maxLongestSideMm, 0) > band.maxLongestMm) return false;
+  if (band.maxVolumeCm3 && toNumber(pkg.packageVolumeCm3, 0) > band.maxVolumeCm3) return false;
+  return true;
+}
+
+export function normaliseShippingZones(rawZones = [], packageMetrics = null) {
   return (Array.isArray(rawZones) ? rawZones : [])
     .filter(o => o && o.active !== false)
     .map((o, index) => {
@@ -135,18 +171,38 @@ export function normaliseShippingZones(rawZones = []) {
         : (carrier || service || 'Shipping');
       const minDays = toNumber(o.days_min ?? o.est_days_min, null);
       const maxDays = toNumber(o.days_max ?? o.est_days_max, minDays);
+      const basePrice = Math.max(0, money(o.price ?? o.rate ?? 0));
+      const bands = (Array.isArray(o.bands) ? o.bands : [])
+        .filter(b => b && b.active !== false)
+        .map((b, bandIndex) => normaliseShippingBand(b, bandIndex, basePrice))
+        .sort((a, b) => {
+          if (a.maxWeightKg !== b.maxWeightKg) return toNumber(a.maxWeightKg, 999999) - toNumber(b.maxWeightKg, 999999);
+          if (a.maxLongestMm !== b.maxLongestMm) return toNumber(a.maxLongestMm, 999999) - toNumber(b.maxLongestMm, 999999);
+          if (a.maxVolumeCm3 !== b.maxVolumeCm3) return toNumber(a.maxVolumeCm3, 999999) - toNumber(b.maxVolumeCm3, 999999);
+          return a.price - b.price;
+        });
+      const selectedBand = bands.length
+        ? (packageMetrics ? bands.find(b => shippingBandMatches(b, packageMetrics)) : bands[0])
+        : null;
+      if (bands.length && packageMetrics && !selectedBand) return null;
+      const price = selectedBand ? selectedBand.price : basePrice;
       return {
         id,
+        methodId: id,
+        bandId: selectedBand?.id || null,
+        bandLabel: selectedBand?.label || null,
         label,
         carrier,
         service,
-        price: Math.max(0, money(o.price ?? o.rate ?? 0)),
-        originalPrice: Math.max(0, money(o.price ?? o.rate ?? 0)),
+        price,
+        originalPrice: price,
         est_days_min: minDays,
         est_days_max: maxDays,
         recommended: !!o.recommended,
+        bands,
       };
     })
+    .filter(Boolean)
     .sort((a, b) => {
       if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
       if (a.price !== b.price) return a.price - b.price;
@@ -187,8 +243,8 @@ function resolveMaterial(db, shop, input = {}) {
     const byId = parseMaterialRow(db.prepare(`
       SELECT *
       FROM materials
-      WHERE id = ? AND shop_id = ? AND active = 1
-    `).get(input.materialId, shop.id), { stableIds: true, publicOnly: true });
+      WHERE id = ? AND shop_id = ? AND active = 1 AND category = ?
+    `).get(input.materialId, shop.id, VISIBLE_MATERIAL_CATEGORY), { stableIds: true, publicOnly: true });
     if (byId) return byId;
   }
 
@@ -203,8 +259,8 @@ function resolveMaterial(db, shop, input = {}) {
   const rows = db.prepare(`
     SELECT *
     FROM materials
-    WHERE shop_id = ? AND active = 1
-  `).all(shop.id);
+    WHERE shop_id = ? AND active = 1 AND category = ?
+  `).all(shop.id, VISIBLE_MATERIAL_CATEGORY);
   const matches = rows.filter(row => normaliseLookupText(row.name) === materialName);
   if (matches.length !== 1) return null;
   return parseMaterialRow(matches[0], { stableIds: true, publicOnly: true });
@@ -223,7 +279,19 @@ function loadPricingInputs(db, shop, input = {}) {
 
   const cfg = db.prepare('SELECT * FROM pricing_config WHERE shop_id = ?').get(shop.id) || {};
   const settings = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
-  return { material, cfg, shippingZones: normaliseShippingZones(safeJson(settings.shipping_zones, [])) };
+  let platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT;
+  try {
+    const platformSettings = db.prepare('SELECT platform_fee_percent FROM platform_settings WHERE id = 1').get() || {};
+    platformFeePercent = toNumber(platformSettings.platform_fee_percent, DEFAULT_PLATFORM_FEE_PERCENT);
+  } catch {
+    platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT;
+  }
+  return {
+    material,
+    cfg,
+    shippingZones: normaliseShippingZones(safeJson(settings.shipping_zones, [])),
+    platformFeePercent,
+  };
 }
 
 export function buildQuoteRequestFromCart(cart = {}) {
@@ -244,13 +312,89 @@ export function buildQuoteRequestFromCart(cart = {}) {
   };
 }
 
-function normaliseDimensions(input = {}) {
+function displayText(value, fallback, max = MAX_MODEL_NAME_LENGTH) {
+  const text = String(value ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/[<>]/g, '')
+    .replace(/[\\/]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const safe = text || fallback;
+  if (safe.length <= max) return safe;
+  const extMatch = safe.match(/(\.[a-z0-9]{1,8})$/i);
+  if (!extMatch || extMatch[1].length + 8 >= max) return safe.slice(0, max).trim();
+  const ext = extMatch[1];
+  return `${safe.slice(0, max - ext.length).trim()}${ext}`;
+}
+
+function modelName(value, index = 0) {
+  const raw = String(value ?? '').split(/[\\/]/).filter(Boolean).pop() || `Model ${index + 1}`;
+  return displayText(raw, `Model ${index + 1}`, MAX_MODEL_NAME_LENGTH);
+}
+
+function modelId(value, index = 0) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return `model-${index + 1}`;
+  const safe = raw
+    .replace(/[\u0000-\u001f\u007f]/g, '-')
+    .replace(/[^A-Za-z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, MAX_MODEL_ID_LENGTH);
+  return safe || `model-${index + 1}`;
+}
+
+function modelExt(value, safeName = '') {
+  const raw = String(value ?? '').replace(/^\./, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+  const inferred = String(safeName || '').split('.').pop()?.toLowerCase() || '';
+  if (MODEL_EXTENSIONS.has(raw)) return raw;
+  if (MODEL_EXTENSIONS.has(inferred)) return inferred;
+  return '';
+}
+
+function modelSize(value, safeName, strict = true) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > MAX_MODEL_FILE_BYTES) {
+    if (strict) {
+      throw new PricingError(`Model file size is invalid for ${safeName}.`, 400, 'INVALID_MODEL_SIZE');
+    }
+    return null;
+  }
+  return Math.round(n);
+}
+
+function normaliseDimensions(input = {}, options = {}) {
   const source = input.dimensions || input.file?.dimensions || {};
-  const xMm = toNumber(source.xMm ?? source.x_mm ?? source.x, NaN);
-  const yMm = toNumber(source.yMm ?? source.y_mm ?? source.y, NaN);
-  const zMm = toNumber(source.zMm ?? source.z_mm ?? source.z ?? source.heightMm ?? source.height, NaN);
-  if (![xMm, yMm, zMm].every(n => Number.isFinite(n) && n >= 0)) return null;
+  const rawX = source.xMm ?? source.x_mm ?? source.x;
+  const rawY = source.yMm ?? source.y_mm ?? source.y;
+  const rawZ = source.zMm ?? source.z_mm ?? source.z ?? source.heightMm ?? source.height;
+  const hasAny = [rawX, rawY, rawZ].some(value => value != null && value !== '');
+  if (!hasAny) return null;
+  const xMm = toNumber(rawX, NaN);
+  const yMm = toNumber(rawY, NaN);
+  const zMm = toNumber(rawZ, NaN);
+  const valid = [xMm, yMm, zMm].every(n => Number.isFinite(n) && n >= 0 && n <= MAX_MODEL_DIMENSION_MM);
+  if (!valid) {
+    if (options.throwOnInvalid !== false) {
+      const label = options.modelName ? ` for ${options.modelName}` : '';
+      throw new PricingError(`Model dimensions are invalid${label}.`, 400, 'INVALID_MODEL_DIMENSIONS');
+    }
+    return null;
+  }
   return { xMm, yMm, zMm };
+}
+
+export function normaliseModelDisplayMetadata(model = {}, index = 0, options = {}) {
+  const strict = options.strict !== false;
+  const name = modelName(model?.name || model?.fileName, index);
+  return {
+    id: modelId(model?.id, index),
+    name,
+    size: modelSize(model?.size ?? model?.fileSize, name, strict),
+    ext: modelExt(model?.ext || model?.fileExt || model?.type, name),
+    dimensions: normaliseDimensions({ dimensions: model?.dimensions }, { throwOnInvalid: strict, modelName: name }),
+  };
 }
 
 function modelQuantity(model = {}, index = 0, maxQuantity = MAX_MODEL_QUANTITY_SAFETY) {
@@ -288,21 +432,19 @@ function normaliseModels(input = {}, options = {}) {
   }
 
   return sourceModels.map((model, index) => {
+    const meta = normaliseModelDisplayMetadata(model, index);
     const volumeCm3 = toNumber(model?.volumeCm3, NaN);
     if (!Number.isFinite(volumeCm3) || volumeCm3 <= 0) {
-      throw new PricingError(`Model volume is missing or invalid for ${model?.name || `model ${index + 1}`}.`, 400, 'INVALID_VOLUME');
+      throw new PricingError(`Model volume is missing or invalid for ${meta.name}.`, 400, 'INVALID_VOLUME');
     }
-    const dimensions = normaliseDimensions({ dimensions: model?.dimensions });
-    const name = String(model?.name || `Model ${index + 1}`).slice(0, 240);
-    const ext = String(model?.ext || name.split('.').pop() || '').toLowerCase().slice(0, 12);
     return {
-      id: model?.id || `model-${index + 1}`,
-      name,
-      size: Number.isFinite(Number(model?.size)) ? Number(model.size) : null,
-      ext,
+      id: meta.id,
+      name: meta.name,
+      size: meta.size,
+      ext: meta.ext,
       volumeCm3,
-      quantity: rawModels ? modelQuantity(model, index, options.maxModelQuantity) : 1,
-      dimensions,
+      quantity: rawModels ? modelQuantity({ ...model, name: meta.name }, index, options.maxModelQuantity) : 1,
+      dimensions: meta.dimensions,
     };
   });
 }
@@ -359,7 +501,32 @@ function checkMaterialSize(material, input = {}, models = null) {
   return dimensions;
 }
 
-export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], input = {} }) {
+function includedPlatformFeeCents(customerTotalCents, platformFeePercent) {
+  const percent = Math.max(0, Math.min(50, toNumber(platformFeePercent, 0)));
+  if (percent <= 0 || customerTotalCents <= 0) return 0;
+  return Math.max(0, customerTotalCents - Math.floor(customerTotalCents * (1 - percent / 100)));
+}
+
+export function grossUpForIncludedPlatformFee(sellerNetTotalCents, platformFeePercent) {
+  const percent = Math.max(0, Math.min(50, toNumber(platformFeePercent, 0)));
+  if (percent <= 0 || sellerNetTotalCents <= 0) {
+    return {
+      sellerNetTotalCents,
+      platformFeeIncludedCents: 0,
+      customerTotalCents: sellerNetTotalCents,
+      platformFeePercent: percent,
+    };
+  }
+  const customerTotalCents = Math.ceil(sellerNetTotalCents / (1 - percent / 100));
+  return {
+    sellerNetTotalCents,
+    platformFeeIncludedCents: includedPlatformFeeCents(customerTotalCents, percent),
+    customerTotalCents,
+    platformFeePercent: percent,
+  };
+}
+
+export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], input = {}, platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT }) {
   const warnings = [];
   const currency = String(cfg.currency || DEFAULT_CURRENCY).toUpperCase();
   if (currency !== DEFAULT_CURRENCY) {
@@ -491,7 +658,8 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
   const totalBeforeRounding = money(taxInclusive ? taxableSubtotal : taxableSubtotal + tax);
   const roundedTotal = money(ceilToStep(totalBeforeRounding, toNumber(cfg.quote_rounding, 0)));
   const roundingAdjustment = money(roundedTotal - totalBeforeRounding);
-  const totalCents = toCents(roundedTotal);
+  const sellerNet = grossUpForIncludedPlatformFee(toCents(roundedTotal), platformFeePercent);
+  const totalCents = sellerNet.customerTotalCents;
 
   return {
     ok: true,
@@ -522,6 +690,11 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
       shipping: shippingAmount,
       tax,
       roundingAdjustment,
+      sellerNetTotal: fromCents(sellerNet.sellerNetTotalCents),
+      sellerNetTotalCents: sellerNet.sellerNetTotalCents,
+      platformFeeIncluded: fromCents(sellerNet.platformFeeIncludedCents),
+      platformFeeIncludedCents: sellerNet.platformFeeIncludedCents,
+      platformFeePercent: sellerNet.platformFeePercent,
       total: fromCents(totalCents),
     },
     discounts: {

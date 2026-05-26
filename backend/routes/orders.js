@@ -13,8 +13,30 @@ const STATUS_LABELS = {
   complete:      'Delivered',
   cancelled:     'Cancelled'
 };
+const ALLOWED_STATUSES = new Set(Object.keys(STATUS_LABELS));
 
 const router = Router();
+
+const ADMIN_ORDER_FIELDS = `
+  o.id, o.shop_id, o.customer_email, o.customer_name, o.file_name,
+  o.material_id, o.colour, o.finish, o.quantity,
+  o.subtotal, o.tax, o.shipping, o.total,
+  o.stripe_payment_id,
+  o.payment_processing_fee_cents, o.checkout_platform_fee_cents, o.customer_total_cents,
+  o.payment_status, o.fulfilment_status,
+  o.notes, o.tracking_number, o.tracking_url, o.customer_message,
+  o.created_at,
+  m.name as material_name, m.name as material
+`;
+
+function getAdminOrder(orderId, shopId) {
+  return db.prepare(`
+    SELECT ${ADMIN_ORDER_FIELDS}
+    FROM orders o
+    LEFT JOIN materials m ON m.id = o.material_id
+    WHERE o.id = ? AND o.shop_id = ?
+  `).get(orderId, shopId);
+}
 
 function ensureOrderPublicTokenColumn() {
   const cols = db.prepare('PRAGMA table_info(orders)').all().map(c => c.name);
@@ -39,6 +61,39 @@ function ensureOrderPublicTokenColumn() {
 
 function newPublicOrderToken() {
   return randomBytes(24).toString('base64url');
+}
+
+function publicOrderResponse(order) {
+  const attached = attachOrderFiles(db, order);
+  return {
+    ...attached,
+    items: (attached.items || []).map(({ quoteSnapshot, ...item }) => item),
+  };
+}
+
+function normaliseOptionalText(value, maxLength, label) {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  if (text.length > maxLength) {
+    const err = new Error(`${label} is too long.`);
+    err.status = 400;
+    throw err;
+  }
+  return text;
+}
+
+function normaliseTrackingUrl(value) {
+  const text = normaliseOptionalText(value, 500, 'Tracking URL');
+  if (!text) return null;
+  try {
+    const url = new URL(text);
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error('invalid protocol');
+    return url.href;
+  } catch {
+    const err = new Error('Tracking URL must start with http:// or https://.');
+    err.status = 400;
+    throw err;
+  }
 }
 
 // Export createOrder for use by the stripe webhook handler
@@ -111,7 +166,7 @@ router.get('/public/:id', (req, res) => {
     WHERE o.id = ? AND o.public_token = ?
   `).get(req.params.id, token);
   if (!row) return res.status(404).json({ error: 'Order not found' });
-  res.json(attachOrderFiles(db, row));
+  res.json(publicOrderResponse(row));
 });
 
 // GET /api/orders/
@@ -151,7 +206,7 @@ router.get('/', requireShopAuth, (req, res) => {
   const total = totalRow.c;
 
   const orders = db.prepare(
-    `SELECT o.*, m.name as material_name, m.name as material
+    `SELECT ${ADMIN_ORDER_FIELDS}
      FROM orders o
      LEFT JOIN materials m ON m.id = o.material_id
      ${where}
@@ -169,12 +224,7 @@ router.get('/', requireShopAuth, (req, res) => {
 
 // GET /api/orders/:id
 router.get('/:id', requireShopAuth, (req, res) => {
-  const order = db.prepare(
-    `SELECT o.*, m.name as material_name, m.name as material
-     FROM orders o
-     LEFT JOIN materials m ON m.id = o.material_id
-     WHERE o.id = ? AND o.shop_id = ?`
-  ).get(req.params.id, req.shop.id);
+  const order = getAdminOrder(req.params.id, req.shop.id);
 
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
@@ -185,69 +235,84 @@ router.get('/:id', requireShopAuth, (req, res) => {
 
 // PATCH /api/orders/:id
 router.patch('/:id', requireShopAuth, async (req, res) => {
-  const existing = db.prepare('SELECT * FROM orders WHERE id = ? AND shop_id = ?')
-    .get(req.params.id, req.shop.id);
+  try {
+    const existing = db.prepare('SELECT * FROM orders WHERE id = ? AND shop_id = ?')
+      .get(req.params.id, req.shop.id);
 
-  if (!existing) return res.status(404).json({ error: 'Order not found' });
+    if (!existing) return res.status(404).json({ error: 'Order not found' });
 
-  const {
-    fulfilment_status = existing.fulfilment_status,
-    notes = existing.notes,
-    tracking_number = existing.tracking_number,
-    tracking_url    = existing.tracking_url,
-    customer_message = existing.customer_message,
-    notify_customer = false
-  } = req.body;
+    const {
+      fulfilment_status = existing.fulfilment_status,
+      notes = existing.notes,
+      tracking_number = existing.tracking_number,
+      tracking_url    = existing.tracking_url,
+      customer_message = existing.customer_message,
+      notify_customer = false
+    } = req.body;
 
-  db.prepare(`
-    UPDATE orders SET
-      fulfilment_status = ?,
-      notes             = ?,
-      tracking_number   = ?,
-      tracking_url      = ?,
-      customer_message  = ?
-    WHERE id = ? AND shop_id = ?
-  `).run(
-    fulfilment_status, notes,
-    tracking_number || null,
-    tracking_url    || null,
-    customer_message || null,
-    req.params.id, req.shop.id
-  );
-
-  // Send customer email notification if requested
-  if (notify_customer && existing.customer_email) {
-    try {
-      const shop = db.prepare('SELECT id, name, slug, email FROM shops WHERE id = ?').get(req.shop.id);
-      const order = {
-        ...existing,
-        fulfilment_status,
-        tracking_number,
-        tracking_url,
-      };
-      const tpl = renderTemplate('order_status', { shop, order, customer_message });
-      const result = await sendMail({
-        shopId:  req.shop.id,
-        shopSlug: req.shop.slug,
-        templateId: tpl.templateId,
-        category: tpl.category,
-        idempotencyKey: `order-status-${req.params.id}-${fulfilment_status}-${Date.now()}`,
-        to:      existing.customer_email,
-        from:    tpl.from,        // <slug>-orders@... or <slug>-shipping@... when shipped
-        replyTo: tpl.replyTo,
-        subject: tpl.subject,
-        text:    tpl.text,
-        html:    tpl.html,
-      });
-      if (result.previewUrl) console.log(`📬 Order update email: ${result.previewUrl}`);
-    } catch (err) {
-      console.error('Failed to send customer email:', err.message);
-      // Don't fail the request — order is already updated
+    if (!ALLOWED_STATUSES.has(fulfilment_status)) {
+      return res.status(400).json({ error: 'Invalid fulfilment status.' });
     }
-  }
 
-  const updated = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
-  res.json(updated);
+    const safeNotes = normaliseOptionalText(notes, 4000, 'Internal notes');
+    const safeTrackingNumber = normaliseOptionalText(tracking_number, 160, 'Tracking number');
+    const safeTrackingUrl = normaliseTrackingUrl(tracking_url);
+    const safeCustomerMessage = normaliseOptionalText(customer_message, 2000, 'Customer message');
+
+    db.prepare(`
+      UPDATE orders SET
+        fulfilment_status = ?,
+        notes             = ?,
+        tracking_number   = ?,
+        tracking_url      = ?,
+        customer_message  = ?
+      WHERE id = ? AND shop_id = ?
+    `).run(
+      fulfilment_status, safeNotes,
+      safeTrackingNumber,
+      safeTrackingUrl,
+      safeCustomerMessage,
+      req.params.id, req.shop.id
+    );
+
+    // Send customer email notification if requested
+    if (notify_customer && existing.customer_email) {
+      try {
+        const shop = db.prepare('SELECT id, name, slug, email FROM shops WHERE id = ?').get(req.shop.id);
+        const order = {
+          ...existing,
+          fulfilment_status,
+          tracking_number: safeTrackingNumber,
+          tracking_url: safeTrackingUrl,
+        };
+        const tpl = renderTemplate('order_status', { shop, order, customer_message: safeCustomerMessage });
+        const result = await sendMail({
+          shopId:  req.shop.id,
+          shopSlug: req.shop.slug,
+          templateId: tpl.templateId,
+          category: tpl.category,
+          idempotencyKey: `order-status-${req.params.id}-${fulfilment_status}-${Date.now()}`,
+          to:      existing.customer_email,
+          from:    tpl.from,        // <slug>-orders@... or <slug>-shipping@... when shipped
+          replyTo: tpl.replyTo,
+          subject: tpl.subject,
+          text:    tpl.text,
+          html:    tpl.html,
+        });
+        if (result.previewUrl) console.log(`📬 Order update email: ${result.previewUrl}`);
+      } catch (err) {
+        console.error('Failed to send customer email:', err.message);
+        // Don't fail the request — order is already updated
+      }
+    }
+
+    const updated = getAdminOrder(req.params.id, req.shop.id);
+    res.json(attachOrderFiles(db, updated));
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    console.error('Order update error:', err);
+    res.status(500).json({ error: 'Failed to update order.' });
+  }
 });
 
 // DELETE /api/orders/:id — soft cancel

@@ -1,3 +1,5 @@
+import { MAX_MODEL_QUANTITY_SAFETY, normaliseModelDisplayMetadata } from './pricing-engine.js';
+
 export function ensureOrderFilesTable(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS order_items (
@@ -65,14 +67,17 @@ export function normaliseOrderFiles(input = {}) {
         dimensions: input.dimensions ?? null,
       }] : []);
 
-  return raw.map((file, index) => ({
-    name: String(file.name || file.fileName || `Model ${index + 1}`).slice(0, 240),
-    size: Number.isFinite(Number(file.size)) ? Number(file.size) : null,
-    ext: String(file.ext || file.fileExt || file.name?.split('.').pop() || '').toLowerCase().slice(0, 12),
-    volumeCm3: Number.isFinite(Number(file.volumeCm3)) ? Number(file.volumeCm3) : null,
-    quantity: Math.max(1, Math.floor(Number(file.quantity) || 1)),
-    dimensions: file.dimensions && typeof file.dimensions === 'object' ? file.dimensions : null,
-  })).filter(file => file.name);
+  return raw.map((file, index) => {
+    const meta = normaliseModelDisplayMetadata(file, index, { strict: false });
+    return {
+      name: meta.name,
+      size: meta.size,
+      ext: meta.ext,
+      volumeCm3: Number.isFinite(Number(file.volumeCm3)) ? Number(file.volumeCm3) : null,
+      quantity: Math.max(1, Math.min(MAX_MODEL_QUANTITY_SAFETY, Math.floor(Number(file.quantity) || 1))),
+      dimensions: meta.dimensions,
+    };
+  }).filter(file => file.name);
 }
 
 export function saveOrderFiles(db, orderId, files = [], options = {}) {

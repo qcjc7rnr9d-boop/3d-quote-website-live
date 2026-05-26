@@ -8,6 +8,8 @@ import { db, requireShopAuth } from '../middleware/auth.js';
 import { MATERIAL_LIBRARY, enrichMaterialSuggestion, findMaterialMatch } from '../lib/material-library.js';
 import { aiLookupMaterial } from '../lib/material-ai.js';
 import {
+  VISIBLE_MATERIAL_CATEGORY,
+  isVisibleMaterialCategory,
   normalizeMaterialPayload,
   parseMaterialRow,
   safeJson,
@@ -25,6 +27,16 @@ const upload = multer({
   },
 });
 
+function handleMaterialAssetUpload(req, res, next) {
+  upload.single('asset')(req, res, err => {
+    if (!err) return next();
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Material asset file is too large. Upload an image under 5 MB.' });
+    }
+    return res.status(400).json({ error: err.message || 'Material asset upload failed.' });
+  });
+}
+
 function verifiedImageExtension(file) {
   const buf = file.buffer;
   const mime = file.mimetype;
@@ -32,6 +44,91 @@ function verifiedImageExtension(file) {
   if (mime === 'image/jpeg' && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return '.jpg';
   if (mime === 'image/gif' && (buf.subarray(0, 6).toString('ascii') === 'GIF87a' || buf.subarray(0, 6).toString('ascii') === 'GIF89a')) return '.gif';
   if (mime === 'image/webp' && buf.subarray(0, 4).toString('ascii') === 'RIFF' && buf.subarray(8, 12).toString('ascii') === 'WEBP') return '.webp';
+  return null;
+}
+
+function safeMaterialAssetUrl(value, shopId) {
+  if (!value) return null;
+  const url = String(value);
+  const safePrefix = `/uploads/material-assets/${shopId}/`;
+  return url.startsWith(safePrefix) ? url : null;
+}
+
+function cleanMaterialName(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function isMaterialNameConflict(err) {
+  const message = String(err?.message || err || '');
+  return /idx_materials_active_name_unique|UNIQUE constraint failed/i.test(message);
+}
+
+function materialNameConflictResponse(res) {
+  return res.status(409).json({
+    code: 'MATERIAL_NAME_EXISTS',
+    error: 'An active FDM material with this name already exists.',
+  });
+}
+
+function invalidMaterialResponse(res, message) {
+  return res.status(400).json({
+    code: 'INVALID_MATERIAL_CONFIG',
+    error: message,
+  });
+}
+
+function validateNonNegativeNumber(value, label, { allowBlank = false } = {}) {
+  if (value === undefined || value === null || value === '') return allowBlank ? null : `${label} is required`;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return `${label} must be a non-negative number`;
+  return null;
+}
+
+function validateMaterialConfig({ base_price, min_charge, colours, finishes, volume_tiers, dimensions, image_url, shopId }) {
+  for (const [value, label] of [
+    [base_price, 'Base price'],
+    [min_charge, 'Minimum charge'],
+  ]) {
+    const error = validateNonNegativeNumber(value, label);
+    if (error) return error;
+  }
+
+  if (image_url && !safeMaterialAssetUrl(image_url, shopId)) {
+    return 'Material image URL must use this shop upload directory';
+  }
+
+  if (!Array.isArray(colours)) return 'Colours must be an array';
+  for (const colour of colours) {
+    if (colour?.textureUrl && !safeMaterialAssetUrl(colour.textureUrl, shopId)) {
+      return 'Colour texture URL must use this shop upload directory';
+    }
+  }
+
+  if (!Array.isArray(finishes)) return 'Finishes must be an array';
+  for (const finish of finishes) {
+    const error = validateNonNegativeNumber(finish?.priceMultiplier ?? finish?.price_multiplier ?? 1, 'Finish price multiplier');
+    if (error) return error;
+    if (finish?.previewImageUrl && !safeMaterialAssetUrl(finish.previewImageUrl, shopId)) {
+      return 'Finish preview image URL must use this shop upload directory';
+    }
+  }
+
+  if (!Array.isArray(volume_tiers)) return 'Volume tiers must be an array';
+  for (const tier of volume_tiers) {
+    for (const [value, label] of [
+      [tier?.from_cm3 ?? tier?.fromCm3 ?? 0, 'Volume tier start'],
+      [tier?.price_per_cm3 ?? tier?.pricePerCm3 ?? 0, 'Volume tier price'],
+    ]) {
+      const error = validateNonNegativeNumber(value, label);
+      if (error) return error;
+    }
+  }
+
+  for (const [label, value] of Object.entries(dimensions || {})) {
+    const error = validateNonNegativeNumber(value, label, { allowBlank: true });
+    if (error) return error;
+  }
+
   return null;
 }
 
@@ -59,6 +156,12 @@ router.post('/library/ai-lookup', requireShopAuth, async (req, res) => {
   }
   try {
     const result = await aiLookupMaterial(name);
+    if (!isVisibleMaterialCategory(result?.category)) {
+      return res.status(422).json({
+        error: 'Only FDM materials are available for customer quoting right now.',
+        code: 'FDM_ONLY',
+      });
+    }
     res.json({ match: result, query: name, source: 'ai' });
   } catch (err) {
     if (err.code === 'NO_API_KEY') {
@@ -88,8 +191,8 @@ function parseMaterialJSON(row) {
 // GET /api/materials/
 router.get('/', requireShopAuth, (req, res) => {
   const rows = db.prepare(
-    'SELECT * FROM materials WHERE shop_id = ? ORDER BY sort_order, name'
-  ).all(req.shop.id);
+    'SELECT * FROM materials WHERE shop_id = ? AND category = ? ORDER BY sort_order, name'
+  ).all(req.shop.id, VISIBLE_MATERIAL_CATEGORY);
 
   res.json(rows.map(parseMaterialJSON));
 });
@@ -126,7 +229,7 @@ router.patch('/page-settings', requireShopAuth, (req, res) => {
 });
 
 // POST /api/materials/assets
-router.post('/assets', requireShopAuth, upload.single('asset'), (req, res) => {
+router.post('/assets', requireShopAuth, handleMaterialAssetUpload, (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'asset is required' });
   const ext = verifiedImageExtension(req.file);
   if (!ext) return res.status(400).json({ error: 'Uploaded image content did not match an allowed image type' });
@@ -142,7 +245,7 @@ router.post('/assets', requireShopAuth, upload.single('asset'), (req, res) => {
 router.post('/', requireShopAuth, (req, res) => {
   const {
     name,
-    category = 'FDM',
+    category: _category = VISIBLE_MATERIAL_CATEGORY,
     description_short = null,
     description_long = null,
     base_price = 0.18,
@@ -168,7 +271,8 @@ router.post('/', requireShopAuth, (req, res) => {
     max_x_mm = null, max_y_mm = null, max_z_mm = null
   } = req.body;
 
-  if (!name) {
+  const materialName = cleanMaterialName(name);
+  if (!materialName) {
     return res.status(400).json({ error: 'name is required' });
   }
 
@@ -180,54 +284,73 @@ router.post('/', requireShopAuth, (req, res) => {
   };
 
   const normalized = normalizeMaterialPayload({ colours, finishes, properties, tags, best_for, specs });
-
-  const result = db.prepare(`
-    INSERT INTO materials
-      (shop_id, name, category, description_short, description_long,
-       image_url, image_alt, price_unit, recommended, tags, best_for, specs,
-       base_price, min_charge, pricing_model, colours, finishes,
-       stock_status, active, volume_tiers, properties, sort_order,
-       production_days_min, production_days_max,
-       min_x_mm, min_y_mm, min_z_mm, max_x_mm, max_y_mm, max_z_mm)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-            ?, ?, ?, ?, ?, ?)
-  `).run(
-    req.shop.id,
-    name,
-    category,
-    description_short,
-    description_long,
-    image_url || null,
-    image_alt || null,
-    price_unit || 'per cm³',
-    recommended ? 1 : 0,
-    JSON.stringify(normalized.tags),
-    JSON.stringify(normalized.best_for),
-    JSON.stringify(normalized.specs),
+  const validationError = validateMaterialConfig({
     base_price,
     min_charge,
-    pricing_model,
-    JSON.stringify(normalized.colours),
-    JSON.stringify(normalized.finishes),
-    stock_status,
-    active ? 1 : 0,
-    JSON.stringify(volume_tiers),
-    JSON.stringify(normalized.properties),
-    sort_order,
-    production_days_min != null ? parseInt(production_days_min) : null,
-    production_days_max != null ? parseInt(production_days_max) : null,
-    numOrNull(min_x_mm), numOrNull(min_y_mm), numOrNull(min_z_mm),
-    numOrNull(max_x_mm), numOrNull(max_y_mm), numOrNull(max_z_mm)
-  );
+    colours: normalized.colours,
+    finishes: normalized.finishes,
+    volume_tiers,
+    dimensions: { min_x_mm, min_y_mm, min_z_mm, max_x_mm, max_y_mm, max_z_mm },
+    image_url,
+    shopId: req.shop.id,
+  });
+  if (validationError) return invalidMaterialResponse(res, validationError);
 
-  const created = db.prepare('SELECT * FROM materials WHERE id = ?').get(result.lastInsertRowid);
+  let result;
+  try {
+    result = db.prepare(`
+      INSERT INTO materials
+        (shop_id, name, category, description_short, description_long,
+         image_url, image_alt, price_unit, recommended, tags, best_for, specs,
+         base_price, min_charge, pricing_model, colours, finishes,
+         stock_status, active, volume_tiers, properties, sort_order,
+         production_days_min, production_days_max,
+         min_x_mm, min_y_mm, min_z_mm, max_x_mm, max_y_mm, max_z_mm)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?, ?)
+    `).run(
+      req.shop.id,
+      materialName,
+      VISIBLE_MATERIAL_CATEGORY,
+      description_short,
+      description_long,
+      safeMaterialAssetUrl(image_url, req.shop.id),
+      image_alt || null,
+      price_unit || 'per cm³',
+      recommended ? 1 : 0,
+      JSON.stringify(normalized.tags),
+      JSON.stringify(normalized.best_for),
+      JSON.stringify(normalized.specs),
+      base_price,
+      min_charge,
+      pricing_model,
+      JSON.stringify(normalized.colours),
+      JSON.stringify(normalized.finishes),
+      stock_status,
+      active ? 1 : 0,
+      JSON.stringify(volume_tiers),
+      JSON.stringify(normalized.properties),
+      sort_order,
+      production_days_min != null ? parseInt(production_days_min) : null,
+      production_days_max != null ? parseInt(production_days_max) : null,
+      numOrNull(min_x_mm), numOrNull(min_y_mm), numOrNull(min_z_mm),
+      numOrNull(max_x_mm), numOrNull(max_y_mm), numOrNull(max_z_mm)
+    );
+  } catch (err) {
+    if (isMaterialNameConflict(err)) return materialNameConflictResponse(res);
+    console.error('[materials:create] error:', err);
+    return res.status(500).json({ error: 'Material could not be saved' });
+  }
+
+  const created = db.prepare('SELECT * FROM materials WHERE id = ? AND shop_id = ? AND category = ?')
+    .get(result.lastInsertRowid, req.shop.id, VISIBLE_MATERIAL_CATEGORY);
   res.status(201).json(parseMaterialJSON(created));
 });
 
 // PATCH /api/materials/:id
 router.patch('/:id', requireShopAuth, (req, res) => {
-  const existing = db.prepare('SELECT * FROM materials WHERE id = ? AND shop_id = ?')
-    .get(req.params.id, req.shop.id);
+  const existing = db.prepare('SELECT * FROM materials WHERE id = ? AND shop_id = ? AND category = ?')
+    .get(req.params.id, req.shop.id, VISIBLE_MATERIAL_CATEGORY);
 
   if (!existing) {
     return res.status(404).json({ error: 'Material not found' });
@@ -235,7 +358,7 @@ router.patch('/:id', requireShopAuth, (req, res) => {
 
   const {
     name = existing.name,
-    category = existing.category,
+    category: _category = VISIBLE_MATERIAL_CATEGORY,
     description_short = existing.description_short,
     description_long = existing.description_long,
     base_price = existing.base_price,
@@ -260,11 +383,27 @@ router.patch('/:id', requireShopAuth, (req, res) => {
     min_x_mm, min_y_mm, min_z_mm,
     max_x_mm, max_y_mm, max_z_mm
   } = req.body;
+  const materialName = cleanMaterialName(name);
+  if (!materialName) {
+    return res.status(400).json({ error: 'name is required' });
+  }
 
   const normalized = normalizeMaterialPayload({ colours, finishes, properties, tags, best_for, specs }, existing);
   const newColours = JSON.stringify(normalized.colours);
   const newFinishes = JSON.stringify(normalized.finishes);
-  const newVolumeTiers = volume_tiers !== undefined ? JSON.stringify(volume_tiers) : existing.volume_tiers;
+  const effectiveVolumeTiers = volume_tiers !== undefined ? volume_tiers : safeJson(existing.volume_tiers, []);
+  const validationError = validateMaterialConfig({
+    base_price,
+    min_charge,
+    colours: normalized.colours,
+    finishes: normalized.finishes,
+    volume_tiers: effectiveVolumeTiers,
+    dimensions: { min_x_mm, min_y_mm, min_z_mm, max_x_mm, max_y_mm, max_z_mm },
+    image_url,
+    shopId: req.shop.id,
+  });
+  if (validationError) return invalidMaterialResponse(res, validationError);
+  const newVolumeTiers = JSON.stringify(effectiveVolumeTiers);
   const newProperties = JSON.stringify(normalized.properties);
 
   // Pass-through unless explicitly sent — empty string clears, undefined keeps
@@ -275,51 +414,58 @@ router.patch('/:id', requireShopAuth, (req, res) => {
     return Number.isFinite(n) ? n : prev;
   };
 
-  db.prepare(`
-    UPDATE materials SET
-      name = ?, category = ?, description_short = ?, description_long = ?,
-      image_url = ?, image_alt = ?, price_unit = ?, recommended = ?,
-      tags = ?, best_for = ?, specs = ?,
-      base_price = ?, min_charge = ?, pricing_model = ?, colours = ?,
-      finishes = ?, stock_status = ?, active = ?, volume_tiers = ?,
-      properties = ?, sort_order = ?,
-      production_days_min = ?, production_days_max = ?,
-      min_x_mm = ?, min_y_mm = ?, min_z_mm = ?,
-      max_x_mm = ?, max_y_mm = ?, max_z_mm = ?
-    WHERE id = ? AND shop_id = ?
-  `).run(
-    name, category, description_short, description_long,
-    image_url || null, image_alt || null, price_unit || 'per cm³', recommended ? 1 : 0,
-    JSON.stringify(normalized.tags), JSON.stringify(normalized.best_for), JSON.stringify(normalized.specs),
-    base_price, min_charge, pricing_model, newColours,
-    newFinishes, stock_status, active ? 1 : 0, newVolumeTiers,
-    newProperties, sort_order,
-    production_days_min === null || production_days_min === '' ? null : parseInt(production_days_min),
-    production_days_max === null || production_days_max === '' ? null : parseInt(production_days_max),
-    numField(min_x_mm, existing.min_x_mm),
-    numField(min_y_mm, existing.min_y_mm),
-    numField(min_z_mm, existing.min_z_mm),
-    numField(max_x_mm, existing.max_x_mm),
-    numField(max_y_mm, existing.max_y_mm),
-    numField(max_z_mm, existing.max_z_mm),
-    req.params.id, req.shop.id
-  );
+  try {
+    db.prepare(`
+      UPDATE materials SET
+        name = ?, category = ?, description_short = ?, description_long = ?,
+        image_url = ?, image_alt = ?, price_unit = ?, recommended = ?,
+        tags = ?, best_for = ?, specs = ?,
+        base_price = ?, min_charge = ?, pricing_model = ?, colours = ?,
+        finishes = ?, stock_status = ?, active = ?, volume_tiers = ?,
+        properties = ?, sort_order = ?,
+        production_days_min = ?, production_days_max = ?,
+        min_x_mm = ?, min_y_mm = ?, min_z_mm = ?,
+        max_x_mm = ?, max_y_mm = ?, max_z_mm = ?
+      WHERE id = ? AND shop_id = ?
+    `).run(
+      materialName, VISIBLE_MATERIAL_CATEGORY, description_short, description_long,
+      safeMaterialAssetUrl(image_url, req.shop.id), image_alt || null, price_unit || 'per cm³', recommended ? 1 : 0,
+      JSON.stringify(normalized.tags), JSON.stringify(normalized.best_for), JSON.stringify(normalized.specs),
+      base_price, min_charge, pricing_model, newColours,
+      newFinishes, stock_status, active ? 1 : 0, newVolumeTiers,
+      newProperties, sort_order,
+      production_days_min === null || production_days_min === '' ? null : parseInt(production_days_min),
+      production_days_max === null || production_days_max === '' ? null : parseInt(production_days_max),
+      numField(min_x_mm, existing.min_x_mm),
+      numField(min_y_mm, existing.min_y_mm),
+      numField(min_z_mm, existing.min_z_mm),
+      numField(max_x_mm, existing.max_x_mm),
+      numField(max_y_mm, existing.max_y_mm),
+      numField(max_z_mm, existing.max_z_mm),
+      req.params.id, req.shop.id
+    );
+  } catch (err) {
+    if (isMaterialNameConflict(err)) return materialNameConflictResponse(res);
+    console.error('[materials:update] error:', err);
+    return res.status(500).json({ error: 'Material could not be saved' });
+  }
 
-  const updated = db.prepare('SELECT * FROM materials WHERE id = ?').get(req.params.id);
+  const updated = db.prepare('SELECT * FROM materials WHERE id = ? AND shop_id = ? AND category = ?')
+    .get(req.params.id, req.shop.id, VISIBLE_MATERIAL_CATEGORY);
   res.json(parseMaterialJSON(updated));
 });
 
 // DELETE /api/materials/:id
 router.delete('/:id', requireShopAuth, (req, res) => {
-  const existing = db.prepare('SELECT * FROM materials WHERE id = ? AND shop_id = ?')
-    .get(req.params.id, req.shop.id);
+  const existing = db.prepare('SELECT * FROM materials WHERE id = ? AND shop_id = ? AND category = ?')
+    .get(req.params.id, req.shop.id, VISIBLE_MATERIAL_CATEGORY);
 
   if (!existing) {
     return res.status(404).json({ error: 'Material not found' });
   }
 
-  db.prepare('DELETE FROM materials WHERE id = ? AND shop_id = ?')
-    .run(req.params.id, req.shop.id);
+  db.prepare('DELETE FROM materials WHERE id = ? AND shop_id = ? AND category = ?')
+    .run(req.params.id, req.shop.id, VISIBLE_MATERIAL_CATEGORY);
 
   res.json({ ok: true });
 });

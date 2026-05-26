@@ -18,6 +18,7 @@ npm run migrate
 npm run check
 npm run env:audit
 npm run env:audit:pilot
+npm run qa:full
 pm2 restart 3d-quote-website --update-env
 pm2 save
 curl http://127.0.0.1:3001/api/health
@@ -90,7 +91,43 @@ STRIPE_CLIENT_ID=replace-with-stripe-connect-client-id
 STRIPE_WEBHOOK_SECRET=replace-with-stripe-webhook-secret
 ```
 
-Use Stripe Connect Express for each pilot business. The app blocks checkout until the platform Stripe keys are present, the shop subscription/readiness is valid, and the connected account has submitted details with charges and payouts enabled. Customer payments use a platform PaymentIntent with `transfer_data`, `on_behalf_of`, and `application_fee_amount` so Trennen can collect the configured checkout/platform fee while the remainder transfers to the connected business.
+Free pilot membership is the only active plan for launch. No Stripe Billing subscription is required during the pilot. Use Stripe Connect Express for each pilot business. The app blocks checkout until the platform Stripe keys are present and the connected account has submitted details with charges and payouts enabled. Customer payments use a platform PaymentIntent with `transfer_data`, `on_behalf_of`, and `application_fee_amount` so Trennen can collect the 5% Trennen platform fee included in the customer quote while the remainder transfers to the connected business.
+
+Customer checkout is Stripe-only for launch. Do not enable bank transfer, Shopify checkout, Shop Pay, or shop-entered Stripe API keys as live customer payment paths. Legacy bank-transfer API compatibility should return `BANK_TRANSFER_DISABLED` and must not create unpaid orders.
+
+After adding the Stripe test keys, prove the exact Stripe account/sandbox can create connected accounts:
+
+```bash
+cd /home/ubuntu/3d-quote-website-live/backend
+npm run stripe-connect:smoke
+```
+
+Expected result:
+
+```json
+{
+  "ok": true,
+  "created": true,
+  "accountLinkCreated": true,
+  "deleted": true
+}
+```
+
+If the smoke returns `CONNECT_PLATFORM_NOT_REGISTERED` or Stripe says `You can only create new accounts if you've signed up for Connect`, finish Stripe Connect setup in the same dashboard/sandbox that owns the server `sk_test_...` key, then rerun the smoke before retrying the admin Payments page.
+
+Final post-Stripe setup command sequence:
+
+```bash
+cd /home/ubuntu/3d-quote-website-live/backend
+npm run env:audit:pilot
+npm run stripe-connect:smoke
+npm run production-pilot:smoke
+npm run qa:full
+pm2 restart 3d-quote-website --update-env
+pm2 save
+curl -s http://127.0.0.1:3001/api/health
+pm2 logs 3d-quote-website --lines 80 --nostream
+```
 
 Use the Stripe CLI or dashboard webhook endpoint pointed at:
 
@@ -129,17 +166,29 @@ Before moving servers or making risky changes, export:
 
 ```bash
 cd ~/3d-quote-website-live
-mkdir -p ~/3d-quote-backups/$(date +%Y%m%d-%H%M%S)
-BACKUP_DIR=$(ls -td ~/3d-quote-backups/* | head -1)
-cp backend/data/rfdewi.db "$BACKUP_DIR/rfdewi.db"
-cp backend/.env "$BACKUP_DIR/backend.env"
-sudo cp /etc/nginx/sites-available/3d-quote-website "$BACKUP_DIR/nginx-3d-quote-website.conf"
-pm2 save
-cp ~/.pm2/dump.pm2 "$BACKUP_DIR/pm2-dump.pm2"
-tar -czf "$BACKUP_DIR/uploads.tar.gz" uploads
+cd backend
+npm run ops:backup
 ```
 
-To restore on a fresh server, clone from GitHub, install Node 24 and Nginx, copy `backend.env` back to `backend/.env`, restore `backend/data/rfdewi.db`, unpack `uploads.tar.gz`, restore the Nginx site, run `npm install && npm run migrate`, then restart with `pm2`.
+The backup command writes a timestamped bundle under `~/3d-quote-backups/` by default. It uses SQLite's online `.backup` command when available and stores `rfdewi.db`, `backend.env`, `uploads.tar.gz`, `pm2-dump.pm2`, the Nginx site config when readable, and `manifest.json` hashes.
+
+Rehearse backup and restore locally before trusting a launch candidate:
+
+```bash
+cd ~/3d-quote-website-live/backend
+npm run ops:backup-smoke
+npm run ops:restore-smoke
+```
+
+To restore on a fresh server, clone from GitHub, install Node 24 and Nginx, copy or sync the chosen backup bundle onto the server, then run the guarded restore script:
+
+```bash
+cd ~/3d-quote-website-live/backend
+RESTORE_CONFIRM=restore-runtime-state BACKUP_DIR=~/3d-quote-backups/YYYYMMDD-HHMMSS RUN_MIGRATE=1 npm run ops:restore
+npm run production-health:smoke
+```
+
+The restore script verifies `manifest.json` hashes before overwriting files, snapshots the current target state into `~/3d-quote-restore-rollbacks/`, restores SQLite to `backend/data/rfdewi.db`, restores `.env`, uploads, PM2 dump, and Nginx config when present, then restarts PM2.
 
 ## Customer Embed
 

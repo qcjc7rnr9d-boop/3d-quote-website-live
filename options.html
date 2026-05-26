@@ -410,7 +410,7 @@
 
     async function init() {
       if (!readModelGroup().length) {
-        window.location.replace(`quote.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`);
+        window.location.replace(`index.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`);
         return;
       }
       try { selection = JSON.parse(localStorage.getItem('form_selection') || '{}') || {}; } catch { selection = {}; }
@@ -425,7 +425,8 @@
       if (!catalogRes.ok) throw new Error('Catalog unavailable');
       const catalog = await catalogRes.json();
       const pricing = pricingRes.ok ? await pricingRes.json() : {};
-      const materials = Array.isArray(catalog) ? catalog : (catalog.materials || []);
+      const materials = (Array.isArray(catalog) ? catalog : (catalog.materials || []))
+        .filter(m => String(m?.category || '').trim().toLowerCase() === 'fdm');
       const priceMap = new Map((pricing.materials || []).map(m => [String(m.id), m]));
       material = materials.find(m => String(m.id) === String(selection.materialId) || m.name === selection.materialName);
       if (!material) {

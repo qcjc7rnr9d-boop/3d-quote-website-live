@@ -42,7 +42,7 @@ export function csrfProtection(req, res, next) {
   if (!isSessionAuthenticated(req)) return next();
 
   const expected = ensureCsrfToken(req);
-  const supplied = req.get('x-csrf-token') || req.body?._csrf || req.query?._csrf;
+  const supplied = req.get('x-csrf-token') || req.body?._csrf;
   if (tokensMatch(supplied, expected)) return next();
 
   return res.status(403).json({

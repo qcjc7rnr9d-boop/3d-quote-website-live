@@ -13,6 +13,15 @@ async function check(url) {
   if (data.database?.status !== 'ok') {
     throw new Error(`${url} database status is ${data.database?.status || 'missing'}`);
   }
+  if (data.environment !== 'production') {
+    throw new Error(`${url} is running NODE_ENV=${data.environment || 'missing'}; production must run with NODE_ENV=production`);
+  }
+  if (data.readiness?.proxy?.trustProxy !== true) {
+    throw new Error(`${url} is not trusting the reverse proxy; set TRUST_PROXY=1 behind Nginx`);
+  }
+  if (data.readiness?.secrets?.platformEncryptionConfigured !== true) {
+    throw new Error(`${url} is missing platform secret encryption readiness`);
+  }
   console.log(`✓ ${url} ok (${data.database.engine}, uptime ${data.uptime_seconds}s)`);
   return data;
 }

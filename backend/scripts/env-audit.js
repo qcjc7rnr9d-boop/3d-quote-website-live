@@ -18,6 +18,14 @@ function value(name, fallback = null) {
   return raw || fallback;
 }
 
+function safeSecret(name, { minLength = 32 } = {}) {
+  const raw = String(env[name] || '').trim();
+  if (!raw || raw.length < minLength) return false;
+  if (/^(?:dev|test|demo|example|sample|replace|change|set|your)[\w\s._-]*/i.test(raw)) return false;
+  if (/changeme|change-me|change_me|placeholder|password|secret/i.test(raw)) return false;
+  return true;
+}
+
 const checks = {
   profile: pilotMode ? 'production-pilot' : 'basic',
   app: {
@@ -43,6 +51,11 @@ const checks = {
     SESSION_SECRET_present: present('SESSION_SECRET'),
     JWT_SECRET_present: present('JWT_SECRET'),
     PLATFORM_CONFIG_ENCRYPTION_KEY_present: present('PLATFORM_CONFIG_ENCRYPTION_KEY'),
+    PLATFORM_ADMIN_PASSWORD_present: present('PLATFORM_ADMIN_PASSWORD'),
+    SESSION_SECRET_safe: safeSecret('SESSION_SECRET'),
+    JWT_SECRET_safe: safeSecret('JWT_SECRET'),
+    PLATFORM_CONFIG_ENCRYPTION_KEY_safe: safeSecret('PLATFORM_CONFIG_ENCRYPTION_KEY'),
+    PLATFORM_ADMIN_PASSWORD_safe: !present('PLATFORM_ADMIN_PASSWORD') || safeSecret('PLATFORM_ADMIN_PASSWORD'),
   },
   futureManagedAws: {
     DATABASE_URL_present: present('DATABASE_URL'),
@@ -58,9 +71,10 @@ const required = [
   ['app.TRUST_PROXY', checks.app.TRUST_PROXY === '1'],
   ['email.domain_or_fallback', present('APP_EMAIL_DOMAIN') || present('APP_EMAIL_FALLBACK')],
   ['email.provider', present('RESEND_API_KEY') || present('SMTP_HOST')],
-  ['secrets.SESSION_SECRET', checks.secrets.SESSION_SECRET_present],
-  ['secrets.JWT_SECRET', checks.secrets.JWT_SECRET_present],
-  ['secrets.PLATFORM_CONFIG_ENCRYPTION_KEY', checks.secrets.PLATFORM_CONFIG_ENCRYPTION_KEY_present],
+  ['secrets.SESSION_SECRET_safe', checks.secrets.SESSION_SECRET_safe],
+  ['secrets.JWT_SECRET_safe', checks.secrets.JWT_SECRET_safe],
+  ['secrets.PLATFORM_CONFIG_ENCRYPTION_KEY_safe', checks.secrets.PLATFORM_CONFIG_ENCRYPTION_KEY_safe],
+  ['secrets.PLATFORM_ADMIN_PASSWORD_safe', checks.secrets.PLATFORM_ADMIN_PASSWORD_safe],
 ];
 
 if (pilotMode) {

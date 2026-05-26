@@ -2,7 +2,7 @@ import { Router } from 'express';
 import Stripe from 'stripe';
 import { randomBytes } from 'crypto';
 import rateLimit from 'express-rate-limit';
-import { db, requireShopAuth } from '../middleware/auth.js';
+import { blockPlatformImpersonation, db, requireShopAuth } from '../middleware/auth.js';
 import {
   getEffectivePlatformStripeConfig,
   getMaskedPlatformStripeConfig,
@@ -30,7 +30,7 @@ import {
   PricingError,
 } from '../lib/pricing-engine.js';
 import { normaliseCart, validateCartForShop } from '../lib/cart.js';
-import { saveOrderItems } from '../lib/order-files.js';
+import { ensureOrderFilesTable, saveOrderItems } from '../lib/order-files.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate } from '../lib/email-templates/index.js';
 import { assertMerchantCheckoutAllowed } from '../lib/legal-policy.js';
@@ -60,6 +60,21 @@ function ensurePlatformStripe() {
   const stripe = getPlatformStripe();
   if (!stripe) throw new Error('Stripe is not configured on this server.');
   return stripe;
+}
+
+function stripeErrorSummary(err) {
+  return {
+    type: err?.type || null,
+    code: err?.code || null,
+    message: err?.message || 'Stripe request failed.',
+    requestId: err?.requestId || err?.raw?.requestId || null,
+    statusCode: err?.statusCode || null,
+  };
+}
+
+function isConnectPlatformRegistrationError(err) {
+  const message = String(err?.message || err?.raw?.message || '');
+  return message.includes("signed up for Connect");
 }
 
 async function syncShopStripeAccount(shop) {
@@ -104,6 +119,19 @@ function readinessErrorPayload(readiness) {
   };
 }
 
+function logRouteError(label, err) {
+  if (err instanceof PricingError) {
+    console.error(label, {
+      name: err.name,
+      code: err.code,
+      status: err.status,
+      message: err.message,
+    });
+    return;
+  }
+  console.error(label, stripeErrorSummary(err));
+}
+
 function merchantLegalErrorPayload(err) {
   return {
     error: err.message || 'This store must accept the current merchant legal agreement before checkout can continue.',
@@ -137,6 +165,40 @@ function ensureOrderRestrictedItemsCertificationColumns() {
   if (!cols.includes('restricted_items_certified_at')) {
     db.exec('ALTER TABLE orders ADD COLUMN restricted_items_certified_at TEXT');
   }
+}
+
+function ensureOrderCheckoutIdempotencyColumn() {
+  const cols = db.prepare('PRAGMA table_info(orders)').all().map(c => c.name);
+  if (!cols.includes('checkout_idempotency_key')) {
+    db.exec('ALTER TABLE orders ADD COLUMN checkout_idempotency_key TEXT');
+  }
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_checkout_idempotency
+      ON orders(shop_id, checkout_idempotency_key)
+      WHERE checkout_idempotency_key IS NOT NULL
+  `);
+}
+
+function normaliseCheckoutIdempotencyKey(value) {
+  const key = String(value || '').trim();
+  if (!key || key.length < 12 || key.length > 120) return null;
+  if (!/^[A-Za-z0-9._:-]+$/.test(key)) return null;
+  return key;
+}
+
+function recentPendingOrderWithoutStripe(order) {
+  if (!order || order.stripe_payment_id || order.payment_status !== 'pending') return false;
+  const created = Date.parse(`${order.created_at || ''}Z`);
+  if (!Number.isFinite(created)) return true;
+  return Date.now() - created < 15 * 60 * 1000;
+}
+
+function checkoutAttemptMatchesOrder(order, { customerEmail, customerPayCents }) {
+  if (!order) return false;
+  const orderEmail = String(order.customer_email || '').trim().toLowerCase();
+  const requestEmail = String(customerEmail || '').trim().toLowerCase();
+  const orderTotal = Number(order.customer_total_cents) || Math.round(Number(order.total || 0) * 100);
+  return orderEmail === requestEmail && orderTotal === customerPayCents;
 }
 
 function validateRestrictedItemsCertification(certification = {}) {
@@ -191,6 +253,25 @@ async function sendPaidOrderConfirmation(orderId) {
   }
 }
 
+function intentOrderLookup(intent = {}) {
+  const id = intent?.id || '';
+  const metadataOrderId = parseInt(intent?.metadata?.orderId || '', 10);
+  const metadataShopId = parseInt(intent?.metadata?.shopId || '', 10);
+  if (Number.isFinite(metadataOrderId) && metadataOrderId > 0) {
+    const byMetadata = db.prepare('SELECT id, shop_id FROM orders WHERE id = ?').get(metadataOrderId);
+    if (
+      byMetadata
+      && Number.isFinite(metadataShopId)
+      && Number(byMetadata.shop_id) !== Number(metadataShopId)
+    ) {
+      return null;
+    }
+    if (byMetadata) return byMetadata;
+  }
+  if (!id) return null;
+  return db.prepare('SELECT id, shop_id FROM orders WHERE stripe_payment_id = ?').get(id) || null;
+}
+
 export async function stripeWebhookHandler(req, res) {
   const sig = req.headers['stripe-signature'];
   const { secretKey, webhookSecret } = getEffectivePlatformStripeConfig();
@@ -206,21 +287,25 @@ export async function stripeWebhookHandler(req, res) {
 
   try {
     if (event.type === 'payment_intent.succeeded') {
-      db.prepare("UPDATE orders SET payment_status = 'paid' WHERE stripe_payment_id = ?")
-        .run(event.data.object.id);
-      const order = db.prepare('SELECT id FROM orders WHERE stripe_payment_id = ?').get(event.data.object.id);
+      const intent = event.data.object;
+      const order = intentOrderLookup(intent);
       if (order) {
+        db.prepare("UPDATE orders SET payment_status = 'paid', stripe_payment_id = COALESCE(stripe_payment_id, ?) WHERE id = ?")
+          .run(intent.id, order.id);
         markCheckoutLedgerStatus(db, order.id, 'charged');
-        await recordStripePaymentFeeFromIntent(db, getPlatformStripe(), event.data.object.id);
+        await recordStripePaymentFeeFromIntent(db, getPlatformStripe(), intent.id);
         await sendPaidOrderConfirmation(order.id);
       }
     }
 
     if (event.type === 'payment_intent.payment_failed') {
-      db.prepare("UPDATE orders SET payment_status = 'failed' WHERE stripe_payment_id = ?")
-        .run(event.data.object.id);
-      const order = db.prepare('SELECT id FROM orders WHERE stripe_payment_id = ?').get(event.data.object.id);
-      if (order) markCheckoutLedgerStatus(db, order.id, 'failed');
+      const intent = event.data.object;
+      const order = intentOrderLookup(intent);
+      if (order) {
+        db.prepare("UPDATE orders SET payment_status = 'failed', stripe_payment_id = COALESCE(stripe_payment_id, ?) WHERE id = ? AND payment_status != 'paid'")
+          .run(intent.id, order.id);
+        markCheckoutLedgerStatus(db, order.id, 'failed');
+      }
     }
 
     if (event.type === 'account.updated') {
@@ -245,7 +330,7 @@ export async function stripeWebhookHandler(req, res) {
       markShopBillingPastDue(db, event.data.object);
     }
   } catch (err) {
-    console.error('Webhook processing error:', err);
+    logRouteError('Webhook processing error:', err);
   }
 
   res.json({ received: true });
@@ -269,7 +354,7 @@ router.get('/keys-status', requireShopAuth, async (req, res) => {
       ...baseReadiness,
     });
   } catch (err) {
-    console.error('Stripe status error:', err);
+    logRouteError('Stripe status error:', err);
     res.status(500).json({ error: 'Failed to load Stripe status' });
   }
 });
@@ -301,16 +386,16 @@ router.get('/public-key', (req, res) => {
 
   const platform = getEffectivePlatformStripeConfig();
   const readiness = liveOrderReadiness(shop, platform);
-    if (!readiness.can_accept_live_orders) {
-      return res.status(503).json(readinessErrorPayload(readiness));
-    }
-    try {
-      assertMerchantCheckoutAllowed(db, shop.id);
-    } catch (err) {
-      return res.status(err.status || 423).json(merchantLegalErrorPayload(err));
-    }
+  if (!readiness.can_accept_live_orders) {
+    return res.status(503).json(readinessErrorPayload(readiness));
+  }
+  try {
+    assertMerchantCheckoutAllowed(db, shop.id);
+  } catch (err) {
+    return res.status(err.status || 423).json(merchantLegalErrorPayload(err));
+  }
 
-    res.json({
+  res.json({
     publishable_key: platform.publishableKey,
     has_connect: true,
     billing_status: readiness.billing_status,
@@ -319,11 +404,21 @@ router.get('/public-key', (req, res) => {
 });
 
 router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => {
+  let pendingOrderId = null;
   try {
     const { paymentMethodId, shopSlug, amount, customerEmail, customerName, orderData, restrictedItemsCertification } = req.body;
+    const checkoutIdempotencyKey = normaliseCheckoutIdempotencyKey(
+      req.body.checkoutIdempotencyKey || req.body.checkout_idempotency_key || orderData?.checkoutIdempotencyKey
+    );
 
     if (!paymentMethodId || !shopSlug || !amount || !customerEmail || !orderData) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+    if (!checkoutIdempotencyKey) {
+      return res.status(400).json({
+        error: 'Checkout session expired. Please refresh checkout and try again.',
+        code: 'CHECKOUT_IDEMPOTENCY_REQUIRED',
+      });
     }
     if (!validateEmail(customerEmail)) {
       return res.status(400).json({ error: 'Enter a valid email address.' });
@@ -387,6 +482,139 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
     });
     const feeCents = platformFee.final_platform_fee_cents;
 
+    ensureOrderPublicTokenColumn();
+    ensureOrderRestrictedItemsCertificationColumns();
+    ensureOrderCheckoutIdempotencyColumn();
+
+    const existingOrder = db.prepare(`
+      SELECT *
+      FROM orders
+      WHERE shop_id = ? AND checkout_idempotency_key = ?
+    `).get(shop.id, checkoutIdempotencyKey);
+    if (existingOrder) {
+      if (!checkoutAttemptMatchesOrder(existingOrder, { customerEmail, customerPayCents })) {
+        return res.status(409).json({
+          error: 'This checkout attempt has already been used for a different order. Please refresh checkout and try again.',
+          code: 'CHECKOUT_IDEMPOTENCY_CONFLICT',
+        });
+      }
+      if (existingOrder.stripe_payment_id) {
+        const intent = await stripe.paymentIntents.retrieve(existingOrder.stripe_payment_id);
+        return res.json({
+          clientSecret: intent.client_secret,
+          orderId: existingOrder.id,
+          orderToken: existingOrder.public_token || null,
+          status: intent.status,
+          payment_fee_mode: paymentFeeMode,
+          payment_processing_fee_cents: existingOrder.payment_processing_fee_cents || paymentProcessingFeeCents,
+          checkout_platform_fee_cents: existingOrder.checkout_platform_fee_cents || feeCents,
+          customer_total_cents: existingOrder.customer_total_cents || customerPayCents,
+          checkout_fee: platformFee,
+          usage: usagePreview,
+        });
+      }
+      if (recentPendingOrderWithoutStripe(existingOrder)) {
+        return res.status(409).json({
+          error: 'Checkout is already being processed. Please wait a moment before trying again.',
+          code: 'CHECKOUT_IN_PROGRESS',
+        });
+      }
+    }
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.prepare(`
+        INSERT INTO customers (shop_id, email, name) VALUES (?, ?, ?)
+        ON CONFLICT(shop_id, email) DO UPDATE SET name = excluded.name
+      `).run(shop.id, (customerEmail || '').toLowerCase(), customerName || null);
+
+      const existingInTxn = db.prepare(`
+        SELECT *
+        FROM orders
+        WHERE shop_id = ? AND checkout_idempotency_key = ?
+      `).get(shop.id, checkoutIdempotencyKey);
+      const orderValues = {
+        customerEmail: (customerEmail || '').toLowerCase(),
+        customerName: customerName || '',
+        fileName: cart.items.length > 1 ? `${cart.items.length} material groups` : firstItem?.file?.name || null,
+        materialId: firstItem?.materialId || null,
+        colour: cart.items.length > 1 ? 'Multiple' : firstItem?.colorName || null,
+        finish: cart.items.length > 1 ? 'Multiple' : firstItem?.finishLabel || null,
+        quantity: cart.items.length > 1 ? 1 : firstItem?.quantity || 1,
+        subtotal: cart.itemsNzd ?? cart.items.reduce((sum, item) => sum + Number(item.itemsNzd || 0), 0),
+        tax: cart.taxNzd ?? cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
+        shipping: cart.shippingNzd ?? 0,
+        total: cart.totalNzd,
+      };
+      if (existingInTxn) {
+        if (existingInTxn.stripe_payment_id || recentPendingOrderWithoutStripe(existingInTxn)) {
+          const err = new Error('Checkout is already being processed. Please wait a moment before trying again.');
+          err.status = 409;
+          err.code = 'CHECKOUT_IN_PROGRESS';
+          throw err;
+        }
+        pendingOrderId = existingInTxn.id;
+        const publicToken = existingInTxn.public_token || newPublicOrderToken();
+        db.prepare(`
+          UPDATE orders
+          SET customer_email = ?,
+              customer_name = ?,
+              file_name = ?,
+              material_id = ?,
+              colour = ?,
+              finish = ?,
+              quantity = ?,
+              subtotal = ?,
+              tax = ?,
+              shipping = ?,
+              total = ?,
+              stripe_payment_id = NULL,
+              public_token = ?,
+              checkout_idempotency_key = ?,
+              restricted_items_certification_version = ?,
+              restricted_items_certified_at = ?,
+              payment_processing_fee_cents = ?,
+              checkout_platform_fee_cents = ?,
+              customer_total_cents = ?,
+              payment_status = 'pending'
+          WHERE id = ? AND shop_id = ?
+        `).run(
+          orderValues.customerEmail, orderValues.customerName, orderValues.fileName, orderValues.materialId,
+          orderValues.colour, orderValues.finish, orderValues.quantity, orderValues.subtotal, orderValues.tax,
+          orderValues.shipping, orderValues.total, publicToken, checkoutIdempotencyKey,
+          certification.version, certification.certifiedAt,
+          paymentProcessingFeeCents, feeCents, customerPayCents,
+          pendingOrderId, shop.id,
+        );
+        ensureOrderFilesTable(db);
+        db.prepare('DELETE FROM order_files WHERE order_id = ?').run(pendingOrderId);
+        db.prepare('DELETE FROM order_items WHERE order_id = ?').run(pendingOrderId);
+      } else {
+        const publicToken = newPublicOrderToken();
+        const order = db.prepare(`
+          INSERT INTO orders
+            (shop_id, customer_email, customer_name, file_name, material_id,
+             colour, finish, quantity, subtotal, tax, shipping, total, stripe_payment_id, public_token,
+             checkout_idempotency_key, restricted_items_certification_version, restricted_items_certified_at,
+             payment_processing_fee_cents, checkout_platform_fee_cents, customer_total_cents)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          shop.id, orderValues.customerEmail, orderValues.customerName,
+          orderValues.fileName, orderValues.materialId, orderValues.colour, orderValues.finish,
+          orderValues.quantity, orderValues.subtotal, orderValues.tax, orderValues.shipping, orderValues.total,
+          publicToken, checkoutIdempotencyKey,
+          certification.version, certification.certifiedAt,
+          paymentProcessingFeeCents, feeCents, customerPayCents,
+        );
+        pendingOrderId = order.lastInsertRowid;
+      }
+      saveOrderItems(db, pendingOrderId, cart.items);
+      db.exec('COMMIT');
+    } catch (err) {
+      try { db.exec('ROLLBACK'); } catch {}
+      throw err;
+    }
+
     const paymentIntentPayload = {
       amount: customerPayCents,
       currency: 'nzd',
@@ -396,6 +624,7 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       transfer_data: { destination: shop.stripe_account_id },
       on_behalf_of: shop.stripe_account_id,
       metadata: {
+        orderId: String(pendingOrderId),
         shopId: String(shop.id),
         shopSlug: shop.slug,
         customerEmail: customerEmail || '',
@@ -404,6 +633,7 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
         pricingVersion: 'pricing-v1-per-volume-cart',
         cartItems: String(cart.items.length),
         paymentFeeMode,
+        checkoutIdempotencyKey,
         restrictedItemsCertificationVersion: certification.version,
       },
     };
@@ -412,56 +642,32 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
     if (feeCents > 0) paymentIntentPayload.application_fee_amount = feeCents;
     const intent = await stripe.paymentIntents.create({
       ...paymentIntentPayload,
-    });
+    }, { idempotencyKey: checkoutIdempotencyKey });
 
     db.prepare(`
-      INSERT INTO customers (shop_id, email, name) VALUES (?, ?, ?)
-      ON CONFLICT(shop_id, email) DO UPDATE SET name = excluded.name
-    `).run(shop.id, (customerEmail || '').toLowerCase(), customerName || null);
-
-    ensureOrderPublicTokenColumn();
-    ensureOrderRestrictedItemsCertificationColumns();
-    const publicToken = newPublicOrderToken();
-    const order = db.prepare(`
-      INSERT INTO orders
-        (shop_id, customer_email, customer_name, file_name, material_id,
-         colour, finish, quantity, subtotal, tax, shipping, total, stripe_payment_id, public_token,
-         restricted_items_certification_version, restricted_items_certified_at,
-         payment_processing_fee_cents, checkout_platform_fee_cents, customer_total_cents)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      shop.id, (customerEmail || '').toLowerCase(), customerName || '',
-      cart.items.length > 1 ? `${cart.items.length} material groups` : firstItem?.file?.name || null,
-      firstItem?.materialId || null,
-      cart.items.length > 1 ? 'Multiple' : firstItem?.colorName || null,
-      cart.items.length > 1 ? 'Multiple' : firstItem?.finishLabel || null,
-      cart.items.length > 1 ? 1 : firstItem?.quantity || 1,
-      cart.items.reduce((sum, item) => sum + Number(item.itemsNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.shippingNzd || 0), 0),
-      cart.totalNzd, intent.id, publicToken,
-      certification.version, certification.certifiedAt,
-      paymentProcessingFeeCents, feeCents, customerPayCents,
-    );
-    saveOrderItems(db, order.lastInsertRowid, cart.items);
+      UPDATE orders
+      SET stripe_payment_id = ?,
+          payment_status = CASE WHEN ? = 'succeeded' THEN 'paid' ELSE payment_status END
+      WHERE id = ? AND shop_id = ?
+    `).run(intent.id, intent.status, pendingOrderId, shop.id);
     recordQuoteUsageEvent(db, {
       shopId: shop.id,
-      quoteId: `order:${order.lastInsertRowid}`,
+      quoteId: `order:${pendingOrderId}`,
       eventType: 'checkout_order_created',
     });
     recordCheckoutFeeLedger(db, platformFee, {
-      orderId: order.lastInsertRowid,
+      orderId: pendingOrderId,
       status: intent.status === 'succeeded' ? 'charged' : 'pending',
     });
     if (intent.status === 'succeeded') {
       await recordStripePaymentFeeFromIntent(db, stripe, intent.id);
-      await sendPaidOrderConfirmation(order.lastInsertRowid);
+      await sendPaidOrderConfirmation(pendingOrderId);
     }
 
     res.json({
       clientSecret: intent.client_secret,
-      orderId: order.lastInsertRowid,
-      orderToken: publicToken,
+      orderId: pendingOrderId,
+      orderToken: db.prepare('SELECT public_token FROM orders WHERE id = ?').get(pendingOrderId)?.public_token || null,
       status: intent.status,
       payment_fee_mode: paymentFeeMode,
       payment_processing_fee_cents: paymentProcessingFeeCents,
@@ -471,7 +677,18 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       usage: usagePreview,
     });
   } catch (err) {
-    console.error('Create payment intent error:', err);
+    if (pendingOrderId) {
+      try {
+        db.prepare("UPDATE orders SET payment_status = 'failed' WHERE id = ? AND stripe_payment_id IS NULL").run(pendingOrderId);
+      } catch {}
+    }
+    logRouteError('Create payment intent error:', err);
+    if (err.status && err.code) {
+      return res.status(err.status).json({
+        error: err.message || 'Payment failed',
+        code: err.code,
+      });
+    }
     if (err instanceof PricingError) {
       return res.status(err.status).json({
         error: err.message || 'Payment failed',
@@ -483,105 +700,33 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
   }
 });
 
-router.post('/create-bank-transfer-order', paymentIntentLimiter, async (req, res) => {
+router.post('/create-bank-transfer-order', paymentIntentLimiter, (req, res) => {
+  res.status(410).json({
+    error: 'Offline checkout is no longer available. Please use Stripe card checkout.',
+    code: 'BANK_TRANSFER_DISABLED',
+  });
+});
+
+router.get('/dashboard-link', requireShopAuth, blockPlatformImpersonation, async (req, res) => {
   try {
-    const { shopSlug, customerEmail, customerName, orderData, restrictedItemsCertification } = req.body;
-    if (!shopSlug || !customerEmail || !orderData) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-    if (!validateEmail(customerEmail)) {
-      return res.status(400).json({ error: 'Enter a valid email address.' });
-    }
-    const certification = validateRestrictedItemsCertification(restrictedItemsCertification);
-    if (!certification.ok) {
-      return res.status(400).json({
-        error: certification.error,
-        code: certification.code,
-      });
+    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
+    if (!shop?.stripe_account_id) {
+      return res.status(400).json({ error: 'No Stripe account connected' });
     }
 
-    const shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
-    assertMerchantCheckoutAllowed(db, shop.id);
-    const paymentFeeMode = getPaymentFeeMode(db, shop.id);
-
-    const cart = validateCartForShop(db, shop, normaliseCart({
-      ...(orderData || {}),
-      shopSlug,
-      items: Array.isArray(orderData?.items) && orderData.items.length ? orderData.items : null,
-    }, shopSlug));
-    const usagePreview = previewQuoteUsage(db, shop.id);
-    if (usagePreview.limit_reached) {
-      return res.status(402).json({
-        error: 'You have used your included quotes for this billing period. Upgrade to keep sending quotes.',
-        code: 'QUOTE_LIMIT_REACHED',
-        usage: usagePreview,
-      });
-    }
-
-    db.prepare(`
-      INSERT INTO customers (shop_id, email, name) VALUES (?, ?, ?)
-      ON CONFLICT(shop_id, email) DO UPDATE SET name = excluded.name
-    `).run(shop.id, (customerEmail || '').toLowerCase(), customerName || null);
-
-    ensureOrderPublicTokenColumn();
-    ensureOrderRestrictedItemsCertificationColumns();
-    const publicToken = newPublicOrderToken();
-    const firstItem = cart.items[0];
-    const order = db.prepare(`
-      INSERT INTO orders
-        (shop_id, customer_email, customer_name, file_name, material_id,
-         colour, finish, quantity, subtotal, tax, shipping, total, public_token,
-         restricted_items_certification_version, restricted_items_certified_at,
-         payment_processing_fee_cents, checkout_platform_fee_cents, customer_total_cents)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
-    `).run(
-      shop.id,
-      (customerEmail || '').toLowerCase(),
-      customerName || '',
-      cart.items.length > 1 ? `${cart.items.length} material groups` : firstItem?.file?.name || null,
-      firstItem?.materialId || null,
-      cart.items.length > 1 ? 'Multiple' : firstItem?.colorName || null,
-      cart.items.length > 1 ? 'Multiple' : firstItem?.finishLabel || null,
-      cart.items.length > 1 ? 1 : firstItem?.quantity || 1,
-      cart.items.reduce((sum, item) => sum + Number(item.itemsNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.shippingNzd || 0), 0),
-      cart.totalNzd,
-      publicToken,
-      certification.version,
-      certification.certifiedAt,
-      cart.totalCents,
-    );
-    saveOrderItems(db, order.lastInsertRowid, cart.items);
-    recordQuoteUsageEvent(db, {
-      shopId: shop.id,
-      quoteId: `order:${order.lastInsertRowid}`,
-      eventType: 'bank_transfer_order_created',
-    });
-
-    res.status(201).json({
-      ok: true,
-      orderId: order.lastInsertRowid,
-      orderToken: publicToken,
-      payment_fee_mode: paymentFeeMode,
-      customer_total_cents: cart.totalCents,
-      usage: usagePreview,
-    });
+    const stripe = ensurePlatformStripe();
+    const loginLink = await stripe.accounts.createLoginLink(shop.stripe_account_id);
+    res.json({ url: loginLink.url });
   } catch (err) {
-    console.error('Create bank transfer order error:', err);
-    if (err instanceof PricingError) {
-      return res.status(err.status).json({
-        error: err.message || 'Order failed',
-        code: err.code,
-        quote: err.quote || null,
-      });
-    }
-    res.status(err.status || 500).json({ error: err.message || 'Order failed' });
+    console.error('Stripe dashboard-link error:', stripeErrorSummary(err));
+    res.status(500).json({
+      error: 'Stripe is connected. Dashboard access is temporarily unavailable.',
+      code: 'DASHBOARD_LINK_UNAVAILABLE',
+    });
   }
 });
 
-router.get('/connect-url', requireShopAuth, async (req, res) => {
+router.get('/connect-url', requireShopAuth, blockPlatformImpersonation, async (req, res) => {
   try {
     const stripe = ensurePlatformStripe();
     const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
@@ -625,12 +770,21 @@ router.get('/connect-url', requireShopAuth, async (req, res) => {
 
     res.json({ url: accountLink.url });
   } catch (err) {
-    console.error('Stripe connect-url error:', err);
+    const summary = stripeErrorSummary(err);
+    console.error('Stripe connect-url error:', summary);
+
+    if (isConnectPlatformRegistrationError(err)) {
+      return res.status(409).json({
+        error: 'Stripe Connect is not activated for this platform account yet. Finish Connect setup in the same Stripe dashboard/sandbox as the server API key, then run npm run stripe-connect:smoke on Lightsail.',
+        code: 'CONNECT_PLATFORM_NOT_REGISTERED',
+      });
+    }
+
     res.status(500).json({ error: err.message || 'Failed to start Stripe onboarding' });
   }
 });
 
-router.post('/connect', requireShopAuth, async (req, res) => {
+router.post('/connect', requireShopAuth, blockPlatformImpersonation, async (req, res) => {
   try {
     const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
     if (!shop?.stripe_account_id) {
@@ -642,12 +796,12 @@ router.post('/connect', requireShopAuth, async (req, res) => {
 
     res.json({ success: true, ...payload });
   } catch (err) {
-    console.error('Stripe connect completion error:', err);
+    logRouteError('Stripe connect completion error:', err);
     res.status(500).json({ error: err.message || 'Failed to complete Stripe connection' });
   }
 });
 
-router.post('/disconnect', requireShopAuth, (req, res) => {
+router.post('/disconnect', requireShopAuth, blockPlatformImpersonation, (req, res) => {
   try {
     if (!req.shop.stripe_account_id) {
       return res.status(400).json({ error: 'No Stripe account connected' });
@@ -665,7 +819,7 @@ router.post('/disconnect', requireShopAuth, (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
-    console.error('Stripe disconnect error:', err);
+    logRouteError('Stripe disconnect error:', err);
     res.status(500).json({ error: err.message || 'Failed to disconnect Stripe' });
   }
 });
@@ -688,7 +842,7 @@ router.get('/payouts', requireShopAuth, async (req, res) => {
 
     res.json({ payouts });
   } catch (err) {
-    console.error('Payouts error:', err);
+    logRouteError('Payouts error:', err);
     res.status(500).json({ error: 'Failed to fetch payouts' });
   }
 });

@@ -80,8 +80,9 @@ export function getMaskedPlatformStripeConfig() {
     estimated_card_fee_basis_points: effective.estimatedCardFeeBasisPoints,
     estimated_card_fee_fixed_cents: effective.estimatedCardFeeFixedCents,
     webhook_configured: !!effective.webhookSecret,
+    billing_mode: 'free_pilot',
     billing_prices_configured: billingPrices,
-    can_create_billing_sessions: !!(effective.secretKey && (billingPrices.starter || billingPrices.growth || billingPrices.scale)),
+    can_create_billing_sessions: false,
     from_db: effective.fromDb,
   };
 }

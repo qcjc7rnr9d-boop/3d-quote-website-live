@@ -188,6 +188,31 @@ try {
   assert.equal(recorded.status, 'bounced');
   assert.equal(isRecipientSuppressed(db, 'customer@example.test'), true, 'bounced recipient should be suppressed');
 
+  db.prepare(`
+    UPDATE store_settings
+    SET email_templates = ?
+    WHERE shop_id = ?
+  `).run(JSON.stringify({
+    order_status: {
+      subject: 'Tracking update {{shop_name}}',
+      body: '{{tracking_box}}\n\nTracking URL: {{tracking_url}}',
+    },
+  }), shopId);
+  const unsafeTracking = renderTemplate('order_status', {
+    shop,
+    order: {
+      id: 1234,
+      fulfilment_status: 'shipped',
+      tracking_number: 'TRACK123',
+      tracking_url: 'javascript:alert(1)',
+      file_name: 'unsafe.stl',
+      material_name: 'PLA',
+      quantity: 1,
+      total: 10,
+    },
+  });
+  assert.doesNotMatch(unsafeTracking.html, /javascript:/i, 'custom email template rendering must strip unsafe tracking URLs');
+
   console.log('Reliable email smoke checks passed.');
 } finally {
   globalThis.fetch = originalFetch;

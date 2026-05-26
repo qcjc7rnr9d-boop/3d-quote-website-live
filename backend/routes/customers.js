@@ -84,8 +84,8 @@ router.patch('/:id', requireShopAuth, (req, res) => {
       return res.status(404).json({ error: 'Customer not found' });
     }
 
-    db.prepare('UPDATE customers SET notes = ? WHERE id = ?')
-      .run(notes ?? null, req.params.id);
+    db.prepare('UPDATE customers SET notes = ? WHERE id = ? AND shop_id = ?')
+      .run(notes ?? null, req.params.id, req.shop.id);
 
     res.json({ ok: true });
   } catch (err) {

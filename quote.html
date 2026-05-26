@@ -1230,7 +1230,7 @@
       <div class="price-display" aria-live="polite">
         <span class="price-symbol" id="priceSymbol">$</span><span id="priceInt">—</span><span class="price-decimal" id="priceDec"></span>
       </div>
-      <div class="price-helper" id="priceHelper">excluding shipping</div>
+      <div class="price-helper" id="priceHelper">Shipping calculated at checkout</div>
       <div class="currency-note" id="currencyEstimateNote">Converted estimate. Checkout charges NZD.</div>
 
       <!-- Production time of the selected material, surfaced right next to
@@ -1263,15 +1263,9 @@
         <div class="sb-head">
           <span class="sb-lbl">Shipping</span>
         </div>
-        <!-- Loading state -->
-        <div id="shippingLoading" class="sb-loading">Loading options…</div>
-        <!-- Rendered option list (up to 3 best) -->
-        <div id="shippingOptions" class="sb-options" style="display:none;"></div>
-        <div id="shippingValidationError" class="shipping-validation-error" role="alert">Choose a shipping option before continuing.</div>
-        <!-- Empty / fallback state -->
-        <div id="shippingEmpty" class="sb-empty" style="display:none;">
-          <span class="sb-val">Select at checkout</span>
-          <p class="sb-help">Shipping options will be confirmed at checkout.</p>
+        <div id="shippingEmpty" class="sb-empty">
+          <span class="sb-val">Calculated at checkout</span>
+          <p class="sb-help">One shipping option is selected for the whole order after all material groups are ready.</p>
         </div>
       </div>
 
@@ -1488,12 +1482,11 @@
     if (!hasRequiredSelection('colour') || !selectionData.colorId) issues.push({ key: 'colour', label: 'colour' });
     if (!hasRequiredSelection('finish') || !(selectionData.finishId || selectionData.finish)) issues.push({ key: 'finish', label: 'print quality' });
     if (!hasRequiredSelection('infill') || !selectionData.infillTierId) issues.push({ key: 'infill', label: 'infill' });
-    if (!hasRequiredSelection('shipping') || !selectedShipping?.id) issues.push({ key: 'shipping', label: 'shipping' });
     return issues;
   }
 
   function quotePreviewBlockers(issues = reviewSelectionIssues()) {
-    return issues.filter(issue => issue.key !== 'shipping');
+    return issues;
   }
 
   function issuesSentence(issues) {
@@ -1506,9 +1499,6 @@
   function showReviewValidation(issues = reviewSelectionIssues()) {
     const message = `Choose a ${issuesSentence(issues)} before continuing.`;
     showToast(message, 'error');
-    const shippingMissing = issues.some(issue => issue.key === 'shipping');
-    $('shippingBlock')?.classList.toggle('invalid', shippingMissing);
-    $('shippingValidationError')?.classList.toggle('show', shippingMissing);
   }
 
   function clearShippingValidation() {
@@ -1570,9 +1560,6 @@
         qty: selected.quantity || qty,
         infillTierId: selected.infill?.id || selectionData.infillTierId || null,
         infillLabel: selected.infill?.label || selectionData.infillLabel || '',
-        shippingOptionId: selected.shipping?.id || selectedShipping?.id || selectionData.shippingOptionId || null,
-        shippingOptionLabel: selected.shipping?.label || selectedShipping?.label || selectionData.shippingOptionLabel || '',
-        shippingOptionPrice: selected.shipping?.finalPrice ?? selected.shipping?.price ?? selectedShipping?.price ?? selectionData.shippingOptionPrice ?? null,
         shopSlug: SHOP_SLUG,
       },
       totalCents: quote?.totalCents || 0,
@@ -1885,7 +1872,7 @@
     return sizeValidation.ok;
   }
 
-  function quotePayload({ previewWithoutShipping = false } = {}) {
+  function quotePayload({ previewWithoutShipping = true } = {}) {
     const payload = {
       shopSlug: SHOP_SLUG,
       materialId: selectionData.materialId,
@@ -1897,7 +1884,7 @@
       finishId: selectionData.finishId || selectionData.finish || null,
       infillTierId: selectionData.infillTierId || null,
       quantity: effectiveQty(),
-      shippingId: selectedShipping?.id || null,
+      shippingId: null,
     };
     if (previewWithoutShipping) payload.previewWithoutShipping = true;
     return payload;
@@ -2028,16 +2015,12 @@
       currency,
       unitNzd:         Number(lines.unit) || 0,
       itemsNzd:        Number(lines.itemSubtotal) || 0,
-      shippingNzd:     Number(lines.shipping) || 0,
+      shippingNzd:     0,
       taxNzd:          Number(lines.tax) || 0,
       totalNzd:        Number(lines.total) || 0,
       totalCents:      quote.totalCents,
       quoteSnapshot:   quote,
-      shipping:        selected.shipping ? {
-        id:     selected.shipping.id,
-        label:  selected.shipping.label || 'Shipping',
-        price:  Number(selected.shipping.finalPrice ?? selected.shipping.price) || 0,
-      } : null,
+      shipping:        null,
       savedAt:         new Date().toISOString(),
     });
   }
@@ -2167,7 +2150,7 @@
     }
     const selectionIssues = reviewSelectionIssues();
     const blockers = quotePreviewBlockers(selectionIssues);
-    const previewWithoutShipping = selectionIssues.some(issue => issue.key === 'shipping');
+    const previewWithoutShipping = true;
     if (blockers.length) {
       serverQuote = null;
       removeCurrentQuoteFromCart();
@@ -2206,11 +2189,7 @@
         return null;
       }
       serverQuote = data;
-      if (previewWithoutShipping) {
-        removeCurrentQuoteFromCart();
-      } else {
-        syncCurrentQuoteToCart(data);
-      }
+      syncCurrentQuoteToCart(data);
       renderPrice();
       updateAddToCartState();
       return data;
@@ -2310,8 +2289,8 @@
       $('sumUnit').textContent     = '—';
       $('sumSubtotal').textContent = '—';
     } else {
-      // Big price = the server quote total. Before shipping selection this is
-      // a preview-only item total with shipping priced at zero.
+      // Big price = the server item/group quote. Shipping is selected once
+      // for the whole cart during checkout.
       const [intPart, decPart] = totalDisp.toFixed(2).split('.');
       $('priceInt').textContent = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       $('priceDec').textContent = '.' + decPart;
@@ -2325,9 +2304,8 @@
       const qtyHint = modelFiles.length > 1
         ? `total for ${modelFiles.length} models with selected quantities`
         : (qty > 1 ? `total for ${qty} units` : 'total');
-      const includesShipping = Boolean(serverQuote?.selected?.shipping?.id);
       helper.textContent = serverQuote
-        ? `${qtyHint} · ${includesShipping ? 'Includes selected shipping' : 'Shipping not included'}`
+        ? `${qtyHint} · Shipping calculated at checkout`
         : 'Waiting for quote details';
     }
     renderModelPrices();
@@ -3007,7 +2985,7 @@
   // cart, so checkout can proceed without a separate manual cart step.
   $('addAnotherBtn')?.addEventListener('click', () => {
     clearCurrentQuoteGroup();
-    window.location.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`;
+    window.location.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`;
   });
 
   $('checkoutCartBtn')?.addEventListener('click', e => {
@@ -3019,7 +2997,8 @@
         showToast(sizeValidation.message || 'This model is too large for the selected material.', 'error');
         return;
       }
-      showReviewValidation(issues.length ? issues : [{ key: 'shipping', label: 'shipping' }]);
+      if (issues.length) showReviewValidation(issues);
+      else showToast('Wait for the quote price to finish calculating before checkout.', 'error');
     }
   });
 
@@ -3068,12 +3047,8 @@
     }
   });
 
-  // ── Shipping options (top 3) ───────────────────────────────
-  // Loaded fresh on every page open, sorted server-side
-  // (recommended first → cheapest → fastest), capped here at 3.
-  // State vars (shippingOptions, selectedShipping) are declared at the
-  // top of the script alongside the other state so renderPrice() can
-  // reference them safely before this block runs.
+  // ── Shipping ───────────────────────────────────────────────
+  // Shipping is selected once for the whole cart at checkout.
 
   function fmtEta(min, max) {
     if (min == null || max == null) return '';
@@ -3084,80 +3059,13 @@
   }
 
   function renderShipping(rates) {
-    const optsEl  = $('shippingOptions');
-    const loadEl  = $('shippingLoading');
-    const emptyEl = $('shippingEmpty');
-
-    loadEl.style.display  = 'none';
-    if (!rates || rates.length === 0) {
-      optsEl.style.display  = 'none';
-      emptyEl.style.display = '';
-      selectedShipping = null;
-      refreshQuotePreview({ silent: true });
-      return;
-    }
-
-    shippingOptions = rates.slice(0, 3);                      // max 3 best
-    emptyEl.style.display = 'none';
-    optsEl.style.display  = '';
-
-    // Restore only an explicit prior selection; do not auto-pick the first option.
-    const savedId = selectionData?.shippingOptionId;
-    const found   = hasRequiredSelection('shipping') ? shippingOptions.find(o => o.id === savedId) : null;
-    selectedShipping = found || null;
-
-    optsEl.innerHTML = shippingOptions.map((r, i) => {
-      const free   = Number(r.price) === 0;
-      const sym    = activeSymbol();
-      const price  = free ? 'Free' : `${sym}${fmtMoney(convert(Number(r.price) || 0))}`;
-      const name   = (r.carrier && r.service && r.carrier !== r.service)
-        ? `${r.carrier} · ${r.service}`
-        : (r.carrier || r.service || 'Standard');
-      const eta    = fmtEta(r.est_days_min, r.est_days_max);
-      const isSel  = selectedShipping && r.id === selectedShipping.id;
-      const recTag = r.recommended ? '<span class="ship-opt-rec">Recommended</span>' : '';
-      return `<label class="ship-opt${isSel ? ' selected' : ''}" data-idx="${i}">
-        <input type="radio" name="shippingOption" value="${i}" ${isSel ? 'checked' : ''}>
-        <div class="ship-opt-body">
-          <div class="ship-opt-name">${escapeHtml(name)}${recTag}</div>
-          ${eta ? `<div class="ship-opt-eta">${escapeHtml(eta)}</div>` : ''}
-        </div>
-        <span class="ship-opt-price${free ? ' free' : ''}">${escapeHtml(price)}</span>
-      </label>`;
-    }).join('');
-
-    // Selection handler
-    optsEl.querySelectorAll('input[type="radio"]').forEach((radio, i) => {
-      radio.addEventListener('change', () => {
-        selectedShipping = shippingOptions[i];
-        markRequiredSelected('shipping');
-        clearShippingValidation();
-        selectionData.shippingOptionId    = selectedShipping.id;
-        selectionData.shippingOptionLabel = selectedShipping.service || selectedShipping.carrier;
-        selectionData.shippingOptionPrice = selectedShipping.price;
-        saveSelection();
-        optsEl.querySelectorAll('.ship-opt').forEach((el, j) =>
-          el.classList.toggle('selected', j === i));
-        refreshQuotePreview({ silent: true });
-      });
-    });
-
-    refreshQuotePreview({ silent: true });
+    shippingOptions = [];
+    selectedShipping = null;
   }
 
   async function loadShippingOptions() {
-    try {
-      const r = await fetch('/api/shipping/rates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shopSlug: SHOP_SLUG }),
-      });
-      if (!r.ok) throw new Error('rates fetch failed');
-      const data = await r.json();
-      renderShipping(data.rates || []);
-    } catch {
-      renderShipping([]);   // fall back to "Select at checkout"
-    }
+    shippingOptions = [];
+    selectedShipping = null;
   }
 
   // Tiny HTML escaper for dynamic labels
@@ -3170,7 +3078,6 @@
   // ── Boot ────────────────────────────────────────────────────
   loadExchangeRates();
   loadCatalog().then(() => refreshQuotePreview({ silent: true }));
-  loadShippingOptions();
 </script>
 </body>
 </html>

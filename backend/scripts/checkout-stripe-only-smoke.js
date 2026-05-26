@@ -22,6 +22,10 @@ const forbidden = [
   "checkoutProvider === 'shopify'",
   'Shopify checkout',
   'buy-button-storefront',
+  'Bank transfer',
+  'bankTransferBtn',
+  'bankTransferPanel',
+  'paymentMethodChoice',
 ];
 
 for (const term of forbidden) {
@@ -45,12 +49,12 @@ assert(
   'Checkout script must process payments through Stripe PaymentIntents'
 );
 assert(
-  checkoutHtml.includes('Bank transfer — no processing fee') && checkoutHtml.includes('Payment processing fee'),
-  'Checkout must clearly show bank transfer and payment processing fee rows'
+  checkoutHtml.includes('Payment processing fee'),
+  'Checkout must clearly show the payment processing fee row'
 );
 assert(
-  checkoutJs.includes('/api/billing/public-checkout-settings') && checkoutJs.includes('/api/stripe/create-bank-transfer-order'),
-  'Checkout script must load payment fee mode and support bank-transfer orders'
+  checkoutJs.includes('/api/billing/public-checkout-settings') && !checkoutJs.includes('/api/stripe/create-bank-transfer-order'),
+  'Checkout script must load payment fee mode without creating offline checkout orders'
 );
 assert(
   !checkoutJs.includes('shopify_shop') && !checkoutJs.includes('shopifyShopDomain'),
@@ -59,6 +63,10 @@ assert(
 assert(
   checkoutHtml.includes('cart-item-options') && checkoutHtml.includes('cart-item-money'),
   'Checkout is missing the richer grouped order-review styles'
+);
+assert(
+  checkoutHtml.includes('id="checkoutShippingBlock"') && checkoutHtml.includes('id="checkoutShippingOptions"'),
+  'Checkout is missing the cart-level shipping selector'
 );
 assert(
   checkoutHtml.includes('id="reviewValidationError"'),
@@ -77,6 +85,10 @@ assert(
   'Checkout script must render full material groups with file and total detail'
 );
 assert(
+  checkoutJs.includes('/api/customer/cart-preview') && checkoutJs.includes('cart.shippingOptions'),
+  'Checkout script must price the full cart and render one order-level shipping selector'
+);
+assert(
   checkoutJs.includes('showReviewValidationError'),
   'Checkout script must surface quote validation failures in the order review'
 );
@@ -89,8 +101,8 @@ assert(
   'Checkout script must block payment and send the restricted-items certification payload'
 );
 assert(
-  (checkoutJs.match(/restrictedItemsCertification: restrictedItemsCertificationPayload/g) || []).length >= 2,
-  'Checkout script must send the restricted-items certification for card and bank-transfer checkout'
+  (checkoutJs.match(/restrictedItemsCertification: restrictedItemsCertificationPayload/g) || []).length >= 1,
+  'Checkout script must send the restricted-items certification for card checkout'
 );
 
 assert(
@@ -99,15 +111,48 @@ assert(
 );
 assert(
   (stripeRoute.match(/validateRestrictedItemsCertification/g) || []).length >= 2,
-  'Stripe payment route must reject missing restricted-items certification for card and bank-transfer checkout'
+  'Stripe payment route must define and use restricted-items certification validation'
 );
 assert(
   stripeRoute.includes('restrictedItemsCertification') && stripeRoute.includes('restricted_items_certification_version'),
   'Stripe payment route must persist the restricted-items certification'
 );
 assert(
+  stripeRoute.indexOf('INSERT INTO orders') < stripeRoute.indexOf('stripe.paymentIntents.create'),
+  'Stripe payment route must create a pending order before creating a PaymentIntent'
+);
+assert(
+  stripeRoute.includes('orderId: String(pendingOrderId)') && stripeRoute.includes('intentOrderLookup'),
+  'Stripe payment route and webhook must reconcile payments by order metadata'
+);
+assert(
+  stripeRoute.includes('metadataShopId') && stripeRoute.includes('Number(byMetadata.shop_id) !== Number(metadataShopId)'),
+  'Stripe webhook order lookup must bind order metadata to the expected shop id'
+);
+assert(
+  stripeRoute.includes("WHERE id = ? AND payment_status != 'paid'"),
+  'Stripe failed-payment webhook must not downgrade already-paid orders'
+);
+assert(
+  checkoutJs.includes('checkoutIdempotencyKey') && stripeRoute.includes('checkoutIdempotencyKey'),
+  'Checkout must send and enforce a stable checkout idempotency key'
+);
+assert(
+  schemaSql.includes('checkout_idempotency_key') && stripeRoute.includes('idx_orders_checkout_idempotency'),
+  'Orders schema and Stripe route must persist a unique checkout idempotency key'
+);
+assert(
+  stripeRoute.includes('{ idempotencyKey: checkoutIdempotencyKey }'),
+  'Stripe PaymentIntent creation must use the checkout idempotency key'
+);
+assert(
   schemaSql.includes('restricted_items_certification_version') && schemaSql.includes('restricted_items_certified_at'),
   'Orders schema must store restricted-items certification evidence'
+);
+
+assert(
+  stripeRoute.includes('/create-bank-transfer-order') && stripeRoute.includes('BANK_TRANSFER_DISABLED'),
+  'Legacy bank-transfer route must remain as a rejecting compatibility endpoint'
 );
 
 console.log('Stripe checkout fallback smoke checks passed.');

@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 
 const base = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const db = new DatabaseSync('data/rfdewi.db');
+db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -19,6 +20,7 @@ async function jsonFetch(path, options = {}) {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'x-smoke-test': '1',
       ...(options.headers || {}),
     },
   });
@@ -63,6 +65,13 @@ try {
   });
   assert(tokenRes.res.status === 200, `csrf token route returned ${tokenRes.res.status}`);
   assert(typeof tokenRes.data.csrfToken === 'string' && tokenRes.data.csrfToken.length >= 24, 'csrf token missing or too short');
+
+  const queryToken = await jsonFetch(`/api/settings?_csrf=${encodeURIComponent(tokenRes.data.csrfToken)}`, {
+    method: 'PUT',
+    headers: { Cookie: cookie },
+    body: JSON.stringify({ tagline: 'csrf query token should fail' }),
+  });
+  assert(queryToken.res.status === 403, `settings PUT with query CSRF token returned ${queryToken.res.status}`);
 
   const allowed = await jsonFetch('/api/settings', {
     method: 'PUT',

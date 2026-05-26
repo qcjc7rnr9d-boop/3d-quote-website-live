@@ -4,6 +4,7 @@ import { calculateQuoteForShopSlug, PricingError } from '../lib/pricing-engine.j
 import { parseInfillTiers } from '../lib/infill-tiers.js';
 
 const db = new DatabaseSync('data/rfdewi.db');
+db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -110,6 +111,100 @@ try {
     shippingId: shipping?.id,
   });
   assert(copiedBundle.lineItems.itemSubtotal > oneEachBundle.lineItems.itemSubtotal, 'increasing a model quantity must increase the final item subtotal');
+
+  const hostileName = `${'../'.repeat(4)}<img src=x onerror=alert(1)>\nVery unsafe customer file name that should not be returned raw to UI surfaces and should be trimmed before it is stored anywhere customer-visible.stl`;
+  const metadataQuote = calculateQuoteForShopSlug(db, 'mahi3d', {
+    materialId: material.id,
+    models: [
+      {
+        id: '../../bad<script>alert(1)</script>',
+        name: hostileName,
+        ext: '<svg/onload=alert(1)>',
+        size: 1024,
+        volumeCm3: 2,
+        quantity: 1,
+        dimensions: { xMm: 10, yMm: 10, zMm: 10 },
+      },
+    ],
+    colourId: colour?.id,
+    finishId: finish?.id,
+    infillTierId: infill?.id,
+    shippingId: shipping?.id,
+  });
+  const safeModel = metadataQuote.selected.models[0];
+  assert(!/[<>\n\r/\\]/.test(safeModel.name), `model name was returned unsafe: ${safeModel.name}`);
+  assert(safeModel.name.length <= 180, `model name was not bounded: ${safeModel.name.length}`);
+  assert(!/[<>\n\r/\\]/.test(String(safeModel.id || '')), `model id was returned unsafe: ${safeModel.id}`);
+  assert(!/[<>]/.test(safeModel.ext || ''), `model extension was returned unsafe: ${safeModel.ext}`);
+
+  try {
+    calculateQuoteForShopSlug(db, 'mahi3d', {
+      materialId: material.id,
+      models: [
+        { name: '../../../../<img src=x onerror=alert(1)>\nBad volume.stl', size: 100, volumeCm3: 0, quantity: 1, dimensions: { xMm: 5, yMm: 5, zMm: 5 } },
+      ],
+      colourId: colour?.id,
+      finishId: finish?.id,
+      infillTierId: infill?.id,
+      shippingId: shipping?.id,
+    });
+    throw new Error('invalid model volume was accepted');
+  } catch (err) {
+    assert(err instanceof PricingError, 'invalid model volume should throw PricingError');
+    assert(err.code === 'INVALID_VOLUME', `expected INVALID_VOLUME, got ${err.code}`);
+    assert(!/[<>\n\r/\\]/.test(err.message), `invalid volume error echoed unsafe name: ${err.message}`);
+  }
+
+  try {
+    calculateQuoteForShopSlug(db, 'mahi3d', {
+      materialId: material.id,
+      models: [
+        { name: 'Nonnumeric size.stl', size: 'not-a-number', volumeCm3: 1, quantity: 1, dimensions: { xMm: 5, yMm: 5, zMm: 5 } },
+      ],
+      colourId: colour?.id,
+      finishId: finish?.id,
+      infillTierId: infill?.id,
+      shippingId: shipping?.id,
+    });
+    throw new Error('nonnumeric model size was accepted');
+  } catch (err) {
+    assert(err instanceof PricingError, 'nonnumeric model size should throw PricingError');
+    assert(err.code === 'INVALID_MODEL_SIZE', `expected INVALID_MODEL_SIZE, got ${err.code}`);
+  }
+
+  try {
+    calculateQuoteForShopSlug(db, 'mahi3d', {
+      materialId: material.id,
+      models: [
+        { name: 'Negative size.stl', size: -1, volumeCm3: 1, quantity: 1, dimensions: { xMm: 5, yMm: 5, zMm: 5 } },
+      ],
+      colourId: colour?.id,
+      finishId: finish?.id,
+      infillTierId: infill?.id,
+      shippingId: shipping?.id,
+    });
+    throw new Error('negative model size was accepted');
+  } catch (err) {
+    assert(err instanceof PricingError, 'negative model size should throw PricingError');
+    assert(err.code === 'INVALID_MODEL_SIZE', `expected INVALID_MODEL_SIZE, got ${err.code}`);
+  }
+
+  try {
+    calculateQuoteForShopSlug(db, 'mahi3d', {
+      materialId: material.id,
+      models: [
+        { name: 'Bad dimensions.stl', size: 100, volumeCm3: 1, quantity: 1, dimensions: { xMm: -5, yMm: 5, zMm: 5 } },
+      ],
+      colourId: colour?.id,
+      finishId: finish?.id,
+      infillTierId: infill?.id,
+      shippingId: shipping?.id,
+    });
+    throw new Error('negative model dimensions were accepted');
+  } catch (err) {
+    assert(err instanceof PricingError, 'negative model dimensions should throw PricingError');
+    assert(err.code === 'INVALID_MODEL_DIMENSIONS', `expected INVALID_MODEL_DIMENSIONS, got ${err.code}`);
+  }
 
   try {
     calculateQuoteForShopSlug(db, 'mahi3d', {

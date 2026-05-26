@@ -157,6 +157,9 @@ async function run() {
 
   const checkoutJs = readFileSync(resolve(root, 'assets/checkout.js'), 'utf8');
   assert.doesNotMatch(checkoutJs, /\/api\/shopify|checkoutProvider\s*===\s*['"]shopify['"]|Shopify checkout/i, 'checkout should not expose Shopify mode in lean release');
+  assert.doesNotMatch(checkoutJs, /create-bank-transfer-order|bankTransfer|paymentMethodChoice/i, 'checkout should not expose offline payment mode in the Stripe-only release');
+  const checkoutHtml = readFileSync(resolve(root, 'checkout.html'), 'utf8');
+  assert.doesNotMatch(checkoutHtml, /Bank transfer|bank-transfer|paymentMethodChoice/i, 'checkout page should not expose offline payment controls in the Stripe-only release');
   const quoteHtml = readFileSync(resolve(root, 'quote.html'), 'utf8');
   assert.doesNotMatch(quoteHtml, /CHECKOUT_PROVIDER|shopify_shop|checkout['"],\s*['"]shopify/i, 'quote should not preserve Shopify checkout mode in lean release');
 

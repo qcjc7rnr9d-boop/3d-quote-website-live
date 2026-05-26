@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 
@@ -32,6 +33,14 @@ async function api(path, options = {}, expected = 200) {
 }
 
 try {
+  const loginHtml = readFileSync('../customer/login.html', 'utf8');
+  const resetHtml = readFileSync('../customer/reset-password.html', 'utf8');
+  for (const [label, html] of [['customer signup', loginHtml], ['customer reset', resetHtml]]) {
+    assert(html.includes('Password must contain at least one uppercase letter'), `${label} UI should mention uppercase password requirement`);
+    assert(html.includes('Password must contain at least one digit'), `${label} UI should mention digit password requirement`);
+    assert(html.includes('Password must contain at least one special character'), `${label} UI should mention special-character password requirement`);
+  }
+
   const hash = await bcrypt.hash('OwnerSmoke!2026', 4);
   const created = db.prepare(`
     INSERT INTO shops (name, slug, email, password_hash, is_temp_password, plan)
@@ -59,9 +68,12 @@ try {
     }),
   }, 201);
 
-  const account = db.prepare('SELECT email, name FROM customer_accounts WHERE shop_id = ?').get(shopId);
+  const account = db.prepare('SELECT id, email, name FROM customer_accounts WHERE shop_id = ?').get(shopId);
   assert(account.email === 'qa+smoke@sub.example.com', `Customer email was not normalized: ${account.email}`);
   assert(account.name === 'Plus Alias Customer', `Customer name was not trimmed: ${account.name}`);
+  const customer = db.prepare('SELECT email, name FROM customers WHERE shop_id = ? AND email = ?').get(shopId, account.email);
+  assert(customer, 'Customer signup did not create an admin-visible customers row');
+  assert(customer.name === account.name, 'Customer signup customers row name did not match account name');
 
   await api('/api/customer/register', {
     method: 'POST',
@@ -81,6 +93,16 @@ try {
       password: 'CustomerSmoke!2026',
     }),
   });
+
+  await api('/api/customer/register', {
+    method: 'POST',
+    body: JSON.stringify({
+      shopSlug: slug,
+      name: 'Weak Customer',
+      email: 'weak@example.test',
+      password: 'password',
+    }),
+  }, 400);
 
   const neutral = await api('/api/customer/forgot-password', {
     method: 'POST',

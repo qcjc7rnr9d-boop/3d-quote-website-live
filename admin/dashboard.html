@@ -197,10 +197,9 @@
           <select class="form-input" id="paymentFeeModeSelect" style="max-width:260px">
             <option value="merchant_absorbs">Absorb card fees</option>
             <option value="pass_to_customer_at_cost">Pass card fees at cost</option>
-            <option value="bank_transfer_only">Bank transfer only</option>
           </select>
         </div>
-        <p class="muted" style="padding:0 24px 14px;margin:0">Subscription access, capped card checkout fees, and Stripe processing costs are tracked separately. Bank transfer has no processing fee.</p>
+        <p class="muted" style="padding:0 24px 14px;margin:0">Subscription access, capped Stripe checkout fees, and card processing costs are tracked separately. Customer checkout is Stripe-only.</p>
         <div class="stats-row" style="padding:0 24px 24px">
           <div class="stat-card"><div class="stat-label">Plan</div><div class="stat-value" id="billingPlanName">—</div></div>
           <div class="stat-card"><div class="stat-label">Quotes used this month</div><div class="stat-value" id="billingQuotesUsed">—</div></div>
@@ -416,7 +415,8 @@
     try {
       const r = await fetch('/api/orders?limit=5');
       if (!r.ok) throw new Error('Could not load orders.');
-      const orders = await r.json();
+      const payload = await r.json();
+      const orders = Array.isArray(payload) ? payload : (Array.isArray(payload.orders) ? payload.orders : []);
 
       if (!orders.length) {
         body.innerHTML = `<div class="empty-state">
@@ -441,7 +441,7 @@
           <td>${escHtml(o.customer_name || o.customer?.name || '—')}</td>
           <td>${escHtml(o.material || o.material_name || '—')}</td>
           <td>${o.total != null ? fmtMoney(o.total) : '—'}</td>
-          <td>${statusBadge(o.status || 'pending')}</td>
+          <td>${statusBadge(o.fulfilment_status || o.status || 'pending')}</td>
           <td style="white-space:nowrap;color:var(--muted)">${formatDate(o.created_at)}</td>`;
         tbody.appendChild(tr);
       });

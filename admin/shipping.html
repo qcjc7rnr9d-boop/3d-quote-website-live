@@ -28,6 +28,36 @@
       color: var(--muted); font-size: 13px; line-height: 1.6;
     }
     .empty-state strong { color: var(--ink); display: block; margin-bottom: 6px; font-weight: 600; }
+    .shipping-band-list { display:grid; gap:10px; margin-top:10px; }
+    .shipping-band-row {
+      display:grid;
+      grid-template-columns: 1.2fr repeat(4, minmax(92px, 1fr)) auto;
+      gap:8px;
+      align-items:end;
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:#fffdf8;
+    }
+    .shipping-band-row label { display:grid; gap:5px; color:var(--muted); font-size:11px; font-weight:600; }
+    .shipping-band-row input {
+      height:38px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:0 10px;
+      font:inherit;
+      color:var(--ink);
+    }
+    .shipping-band-remove {
+      height:38px;
+      border:1px solid rgba(201,90,82,0.35);
+      color:#9f2d2d;
+      background:#fff;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:700;
+    }
+    @media (max-width: 760px) { .shipping-band-row { grid-template-columns:1fr; } }
   </style>
   <script src="../assets/brand.js" defer></script>
   <script src="/assets/csrf.js"></script>
@@ -122,9 +152,7 @@
         </div>
         <div class="section-card-body" style="padding:0;">
           <p style="font-size:13px;color:var(--muted);padding:14px 22px 0;line-height:1.6;">
-            Add any number of courier services with their own price and delivery speed.
-            Customers see every active option; the one marked <strong>Recommended</strong> is
-            pre-selected as the best price-and-speed match (if none is marked, the cheapest wins).
+            Add courier services and optional parcel bands. Customers choose one shipping option for the whole order at checkout; the matching band is chosen from the combined package estimate.
           </p>
           <div id="optionsTableWrapper">
             <table class="data-table options-table" id="optionsTable">
@@ -133,6 +161,7 @@
                   <th>Courier</th>
                   <th>Service</th>
                   <th>Price</th>
+                  <th>Bands</th>
                   <th>Speed</th>
                   <th>Recommended</th>
                   <th>Active</th>
@@ -140,7 +169,7 @@
                 </tr>
               </thead>
               <tbody id="optionsBody">
-                <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Loading…</td></tr>
+                <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Loading…</td></tr>
               </tbody>
             </table>
           </div>
@@ -175,9 +204,9 @@
 
     <div class="form-grid-2" style="margin-bottom:16px;">
       <div class="form-group" style="margin-bottom:0;">
-        <label class="form-label" for="optPrice">Price ($ NZD)</label>
+        <label class="form-label" for="optPrice">Fallback price ($ NZD)</label>
         <input type="number" class="form-input" id="optPrice" min="0" step="0.01" placeholder="e.g. 7.50">
-        <span class="form-hint">Set to 0 for free shipping.</span>
+        <span class="form-hint">Used when no bands are added. Set to 0 for free shipping.</span>
       </div>
       <div class="form-group" style="margin-bottom:0;">
         <label class="form-label">Delivery time (business days)</label>
@@ -188,6 +217,15 @@
         </div>
         <span class="form-hint">Use the same number for both for an exact time.</span>
       </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;">
+        <label class="form-label" style="margin:0;">Package bands</label>
+        <button class="table-action" id="addBandBtn" type="button">Add band</button>
+      </div>
+      <span class="form-hint">Optional. Bands match the combined order package. Leave a limit blank for no limit.</span>
+      <div class="shipping-band-list" id="bandsList"></div>
     </div>
 
     <div class="form-group" style="margin-bottom:14px;">
@@ -266,11 +304,13 @@
         const s = await res.json();
         // Backwards compat: old "zones" shape gets coerced into the new option shape
         options = (s.shipping_zones || []).map(o => ({
+          id:          o.id || '',
           courier:     o.courier     || o.name || '',
           service:     o.service     || (o.rate_type === 'free' ? 'Free shipping' : 'Standard'),
           price:       o.price != null ? Number(o.price) : Number(o.rate || 0),
           days_min:    Number(o.days_min) || 2,
           days_max:    Number(o.days_max) || 5,
+          bands:       Array.isArray(o.bands) ? o.bands.map(normaliseBand) : [],
           recommended: !!o.recommended,
           active:      o.active !== false,
         }));
@@ -293,7 +333,7 @@
     const tbody = document.getElementById('optionsBody');
     if (options.length === 0) {
       tbody.innerHTML = `
-        <tr><td colspan="7">
+        <tr><td colspan="8">
           <div class="empty-state">
             <strong>No shipping options yet</strong>
             Add at least one courier service so customers can check out.
@@ -307,6 +347,7 @@
         <td class="col-courier">${escHtml(o.courier || '—')}</td>
         <td class="col-service">${escHtml(o.service || '—')}</td>
         <td class="col-price">${fmtPrice(o.price)}</td>
+        <td class="col-speed">${(o.bands || []).length ? `${o.bands.length} band${o.bands.length === 1 ? '' : 's'}` : 'Flat'}</td>
         <td class="col-speed">${escHtml(fmtSpeed(o.days_min, o.days_max))}</td>
         <td>${o.recommended ? '<span class="badge-recommended">★ Recommended</span>' : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
         <td>
@@ -333,6 +374,55 @@
     renderOptions();
   }
 
+  function makeId(prefix = 'ship') {
+    return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function normaliseBand(b = {}, index = 0) {
+    return {
+      id: String(b.id || makeId('band')),
+      label: String(b.label || b.name || (index === 0 ? 'Standard parcel' : `Band ${index + 1}`)),
+      maxWeightKg: b.maxWeightKg ?? b.max_weight_kg ?? '',
+      maxLongestMm: b.maxLongestMm ?? b.max_longest_mm ?? '',
+      maxVolumeCm3: b.maxVolumeCm3 ?? b.max_volume_cm3 ?? '',
+      price: b.price != null ? Number(b.price) : Number(b.rate || 0),
+    };
+  }
+
+  function renderBands(bands = []) {
+    const list = document.getElementById('bandsList');
+    if (!list) return;
+    if (!bands.length) {
+      list.innerHTML = '<div class="empty-state" style="padding:14px;">No package bands. This option uses the fallback price for every order size.</div>';
+      return;
+    }
+    list.innerHTML = bands.map((b, index) => `
+      <div class="shipping-band-row" data-band-index="${index}" data-band-id="${escHtml(b.id || '')}">
+        <label>Label<input type="text" data-band-field="label" value="${escHtml(b.label || '')}" placeholder="Small parcel"></label>
+        <label>Max kg<input type="number" min="0" step="0.01" data-band-field="maxWeightKg" value="${escHtml(b.maxWeightKg ?? '')}" placeholder="2"></label>
+        <label>Max side mm<input type="number" min="0" step="1" data-band-field="maxLongestMm" value="${escHtml(b.maxLongestMm ?? '')}" placeholder="300"></label>
+        <label>Max cm³<input type="number" min="0" step="1" data-band-field="maxVolumeCm3" value="${escHtml(b.maxVolumeCm3 ?? '')}" placeholder="8000"></label>
+        <label>Price<input type="number" min="0" step="0.01" data-band-field="price" value="${escHtml(b.price ?? 0)}" placeholder="8.50"></label>
+        <button class="shipping-band-remove" type="button" data-remove-band="${index}">Delete</button>
+      </div>
+    `).join('');
+  }
+
+  function currentModalBands() {
+    const rows = Array.from(document.querySelectorAll('#bandsList .shipping-band-row'));
+    return rows.map((row, index) => {
+      const value = field => row.querySelector(`[data-band-field="${field}"]`)?.value.trim() || '';
+      return normaliseBand({
+        id: row.getAttribute('data-band-id') || undefined,
+        label: value('label') || `Band ${index + 1}`,
+        maxWeightKg: value('maxWeightKg'),
+        maxLongestMm: value('maxLongestMm'),
+        maxVolumeCm3: value('maxVolumeCm3'),
+        price: parseFloat(value('price') || '0'),
+      }, index);
+    });
+  }
+
   // ── Modal ─────────────────────────────────────────────────────
   function resetOptionModal() {
     document.getElementById('optCourier').value = '';
@@ -343,6 +433,7 @@
     document.getElementById('optRecommended').checked = false;
     document.getElementById('optActive').checked      = true;
     document.getElementById('optionModalError').style.display = 'none';
+    renderBands([]);
   }
 
   function openAddOption() {
@@ -365,6 +456,7 @@
     document.getElementById('optDaysMax').value     = o.days_max ?? '';
     document.getElementById('optRecommended').checked = !!o.recommended;
     document.getElementById('optActive').checked      = o.active !== false;
+    renderBands(o.bands || []);
     document.getElementById('optionModal').classList.remove('hidden');
   }
 
@@ -382,6 +474,21 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeOptionModal();
   });
+  document.getElementById('addBandBtn').addEventListener('click', () => {
+    const bands = currentModalBands();
+    bands.push(normaliseBand({
+      label: bands.length === 0 ? 'Small parcel' : `Band ${bands.length + 1}`,
+      price: parseFloat(document.getElementById('optPrice').value || '0') || 0,
+    }, bands.length));
+    renderBands(bands);
+  });
+  document.getElementById('bandsList').addEventListener('click', e => {
+    const removeIndex = e.target?.getAttribute?.('data-remove-band');
+    if (removeIndex == null) return;
+    const bands = currentModalBands();
+    bands.splice(Number(removeIndex), 1);
+    renderBands(bands);
+  });
 
   // ── Save option ───────────────────────────────────────────────
   document.getElementById('saveOptionBtn').addEventListener('click', () => {
@@ -395,6 +502,7 @@
     let daysMax    = parseInt(document.getElementById('optDaysMax').value);
     const recommended = document.getElementById('optRecommended').checked;
     const active   = document.getElementById('optActive').checked;
+    const bands = currentModalBands();
 
     if (!courier) {
       errEl.textContent = 'Courier name is required.';
@@ -416,8 +524,37 @@
     }
     if (isNaN(daysMin) || daysMin < 1) daysMin = 2;
     if (isNaN(daysMax) || daysMax < daysMin) daysMax = daysMin;
+    for (const band of bands) {
+      const numericFields = [
+        ['price', band.price],
+        ['maxWeightKg', band.maxWeightKg],
+        ['maxLongestMm', band.maxLongestMm],
+        ['maxVolumeCm3', band.maxVolumeCm3],
+      ];
+      for (const [field, raw] of numericFields) {
+        if (raw === '' || raw == null) continue;
+        const value = Number(raw);
+        if (!Number.isFinite(value) || value < 0) {
+          errEl.textContent = 'Band limits and prices must be zero or positive numbers.';
+          errEl.style.display = 'block';
+          return;
+        }
+        band[field] = value;
+      }
+    }
 
-    const option = { courier, service, price, days_min: daysMin, days_max: daysMax, recommended, active };
+    const existing = editingOptionIndex === null ? null : options[editingOptionIndex];
+    const option = {
+      id: existing?.id || makeId('ship'),
+      courier,
+      service,
+      price,
+      days_min: daysMin,
+      days_max: daysMax,
+      bands,
+      recommended,
+      active,
+    };
 
     // If marked recommended, clear it on every other option
     if (recommended) {
