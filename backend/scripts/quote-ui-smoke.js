@@ -6,6 +6,7 @@ const root = resolve(import.meta.dirname, '../..');
 const base = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const quoteHtml = readFileSync(resolve(root, 'quote.html'), 'utf8');
 const materialsHtml = readFileSync(resolve(root, 'materials.html'), 'utf8');
+const catalogHtml = readFileSync(resolve(root, 'catalog.html'), 'utf8');
 const optionsHtml = readFileSync(resolve(root, 'options.html'), 'utf8');
 
 function assert(condition, message) {
@@ -68,12 +69,34 @@ assert(optionsHtml.includes('Colour'), 'Options step should render colour contro
 assert(optionsHtml.includes('Print quality'), 'Options step should render finish controls');
 assert(optionsHtml.includes('Infill'), 'Options step should render infill controls');
 assert(
-  materialsHtml.includes('quality-pill') && materialsHtml.includes('quality-layer'),
-  'Material cards should preview print quality as compact finish pills with layer-height metadata',
+  materialsHtml.includes('quality-summary-trigger') && materialsHtml.includes('quality-menu'),
+  'Material cards should preview print quality as a compact summary with an accessible preset dropdown',
 );
 assert(
-  !materialsHtml.includes('Configured print quality option.</p>') && !materialsHtml.includes('finishPreview(f)'),
-  'Material cards should not render long finish descriptions or preview graphics',
+  catalogHtml.includes('quality-summary-trigger') && catalogHtml.includes('quality-menu'),
+  'Catalogue cards should use the same compact print quality summary dropdown',
+);
+assert(
+  !materialsHtml.includes('quality-pill')
+    && !materialsHtml.includes('quality-card')
+    && !materialsHtml.includes('finish-preview')
+    && !materialsHtml.includes('Scroll for more'),
+  'Material cards should not render cramped finish pills, large finish cards, preview graphics, or scroll overlays',
+);
+assert(
+  !catalogHtml.includes('quality-pill')
+    && !catalogHtml.includes('quality-card')
+    && !catalogHtml.includes('finish-preview')
+    && !catalogHtml.includes('Scroll for more'),
+  'Catalogue cards should not render cramped finish pills, large finish cards, preview graphics, or scroll overlays',
+);
+assert(
+  materialsHtml.includes('print-quality preset') && materialsHtml.includes('View presets'),
+  'Material cards should show count/range summary copy and a preset disclosure control',
+);
+assert(
+  catalogHtml.includes('print-quality preset') && catalogHtml.includes('View presets'),
+  'Catalogue cards should show count/range summary copy and a preset disclosure control',
 );
 assert(
   optionsHtml.includes('f.description ||') && optionsHtml.includes('Configured print quality option.'),
