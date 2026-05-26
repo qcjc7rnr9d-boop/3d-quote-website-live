@@ -1584,6 +1584,7 @@
       const input = document.getElementById(marker.id);
       if (input && getFieldValue(marker.id) === String(marker.value)) {
         input.value = marker.reset ?? '';
+        if (marker.id === 'mImageUrl') setImagePreview(input.value);
       }
     });
 
@@ -1689,6 +1690,8 @@
       not_for: avoid,
       production_days_min: sugg.production_days_min,
       production_days_max: sugg.production_days_max,
+      image_url: String(sugg.image_url || sugg.default_image_url || '').trim(),
+      image_alt: String(sugg.image_alt || sugg.default_image_alt || '').trim(),
       confidence: sugg.confidence,
       notes: sugg.notes,
     };
@@ -1754,10 +1757,10 @@
     let appliedCount = 0;
     const appliedAutoFields = [];
     const isNew = !document.getElementById('materialId').value;
-    const applyOrDefer = ({ label, value, canApply, canAutoApply, apply, autoCapture }) => {
+    const applyOrDefer = ({ label, value, canApply, canAutoApply, apply, autoCapture, allowForce = true }) => {
       const displayValue = formatSuggestionValue(value);
       if (!displayValue) return;
-      const shouldApply = force || (auto && typeof canAutoApply === 'function' ? canAutoApply() : canApply());
+      const shouldApply = (allowForce && force) || (auto && typeof canAutoApply === 'function' ? canAutoApply() : canApply());
       if (shouldApply) {
         apply();
         appliedCount += 1;
@@ -1860,6 +1863,23 @@
       canApply: () => !document.getElementById('mLearnMore').value.trim(),
       apply: () => { document.getElementById('mLearnMore').value = suggestion.learn_more; },
       autoCapture: () => captureAutoField('mLearnMore'),
+    });
+    applyOrDefer({
+      label: 'Default material image',
+      value: suggestion.image_url,
+      canApply: () => !document.getElementById('mImageUrl').value.trim() && !document.getElementById('mImageFile').files?.length,
+      apply: () => {
+        document.getElementById('mImageUrl').value = suggestion.image_url;
+        if (suggestion.image_alt && !document.getElementById('mImageAlt').value.trim()) {
+          document.getElementById('mImageAlt').value = suggestion.image_alt;
+        }
+        setImagePreview(suggestion.image_url);
+      },
+      autoCapture: () => [
+        captureAutoField('mImageUrl'),
+        captureAutoField('mImageAlt'),
+      ],
+      allowForce: false,
     });
     applyOrDefer({
       label: 'Ideal for',

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { db, requireShopAuth } from '../middleware/auth.js';
 import { MATERIAL_LIBRARY, enrichMaterialSuggestion, findMaterialMatch } from '../lib/material-library.js';
+import { resolveDefaultMaterialImageFields, withDefaultMaterialImage } from '../lib/material-default-images.js';
 import { aiLookupMaterial } from '../lib/material-ai.js';
 import {
   normalizeMaterialPayload,
@@ -38,7 +39,7 @@ function verifiedImageExtension(file) {
 // ── Material library (curated reference data — used by the admin
 //     panel's "Suggest from library" feature) ──────────────────
 router.get('/library', requireShopAuth, (req, res) => {
-  res.json({ materials: MATERIAL_LIBRARY.map(enrichMaterialSuggestion) });
+  res.json({ materials: MATERIAL_LIBRARY.map(enrichMaterialSuggestion).map(withDefaultMaterialImage) });
 });
 
 // Optional server-side suggestion lookup — handy for scripting/tests
@@ -46,7 +47,7 @@ router.get('/library/suggest', requireShopAuth, (req, res) => {
   const { name } = req.query;
   const match = findMaterialMatch(name);
   if (!match) return res.status(404).json({ error: 'No close match found', query: name });
-  res.json({ match: enrichMaterialSuggestion(match), query: name, source: 'library' });
+  res.json({ match: withDefaultMaterialImage(enrichMaterialSuggestion(match)), query: name, source: 'library' });
 });
 
 // ── AI material lookup — used as a fallback when the curated
@@ -180,6 +181,12 @@ router.post('/', requireShopAuth, (req, res) => {
   };
 
   const normalized = normalizeMaterialPayload({ colours, finishes, properties, tags, best_for, specs });
+  const resolvedImage = resolveDefaultMaterialImageFields({
+    name,
+    image_url,
+    image_alt,
+    properties: normalized.properties,
+  });
 
   const result = db.prepare(`
     INSERT INTO materials
@@ -197,8 +204,8 @@ router.post('/', requireShopAuth, (req, res) => {
     category,
     description_short,
     description_long,
-    image_url || null,
-    image_alt || null,
+    resolvedImage.image_url,
+    resolvedImage.image_alt,
     price_unit || 'per cm³',
     recommended ? 1 : 0,
     JSON.stringify(normalized.tags),

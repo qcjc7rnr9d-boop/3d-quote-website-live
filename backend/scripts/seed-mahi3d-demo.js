@@ -6,6 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import bcrypt from 'bcryptjs';
 import { BCRYPT_ROUNDS } from '../config.js';
 import { MATERIAL_LIBRARY, enrichMaterialSuggestion } from '../lib/material-library.js';
+import { getDefaultMaterialImage } from '../lib/material-default-images.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -239,6 +240,8 @@ function buildDemoPricing(material) {
 
 function buildDemoMaterialRecord(material, index, existing = null) {
   const enriched = enrichMaterialSuggestion(material);
+  const defaultImage = getDefaultMaterialImage(enriched.key);
+  const hasCustomImage = Boolean(existing?.image_url && existing.image_url !== defaultImage?.image_url);
   const pricing = buildDemoPricing(enriched);
   const ratingsPercent = {
     strength: Number(material.strength ?? enriched.strength ?? 60),
@@ -262,8 +265,10 @@ function buildDemoMaterialRecord(material, index, existing = null) {
     category: enriched.category || 'FDM',
     colours: json(buildDemoColours(enriched)),
     finishes: json(buildDemoFinishes(enriched)),
-    image_url: existing?.image_url || null,
-    image_alt: existing?.image_alt || `Example ${enriched.displayName} printed part`,
+    image_url: existing?.image_url || defaultImage?.image_url || null,
+    image_alt: hasCustomImage
+      ? (existing?.image_alt || `Example ${enriched.displayName} printed part`)
+      : (defaultImage?.image_alt || existing?.image_alt || `Example ${enriched.displayName} printed part`),
     price_unit: 'per cm³',
     recommended: ['pla', 'petg', 'asa', 'tpu', 'tpu_95a', 'tpu_ams', 'pa12', 'nylon'].includes(enriched.key) ? 1 : 0,
     tags: json([...new Set([enriched.category, ...(enriched.tags || [])].filter(Boolean))]),

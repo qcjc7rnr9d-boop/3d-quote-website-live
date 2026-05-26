@@ -1,0 +1,767 @@
+[
+  {
+    "sourceOrder": 1,
+    "key": "pla",
+    "displayName": "PLA",
+    "filename": "001-pla.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: small rounded desk organizer. Material appearance: muted sage pastel; matte PLA surface with subtle layer lines. Material: PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A pastel desk object is a recognizable general-purpose PLA demo.",
+    "approvedSource": "../pla-uniform-v2.png"
+  },
+  {
+    "sourceOrder": 2,
+    "key": "pla_plus",
+    "displayName": "PLA+",
+    "filename": "002-pla-plus.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: snap-fit clip and small bracket sample. Material appearance: clean satin blue; stronger-looking satin PLA with subtle layers. Material: PLA+. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Clip and bracket geometry communicates tougher functional PLA use.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 3,
+    "key": "tough_pla",
+    "displayName": "Tough PLA / PLA Pro",
+    "filename": "003-tough-pla.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: snap-fit clip and small bracket sample. Material appearance: clean satin blue; stronger-looking satin PLA with subtle layers. Material: Tough PLA / PLA Pro. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Clip and bracket geometry communicates tougher functional PLA use.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 4,
+    "key": "matte_pla",
+    "displayName": "Matte PLA",
+    "filename": "004-matte-pla.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: architectural massing model block. Material appearance: muted clay matte; soft low-gloss matte finish with fine layers. Material: Matte PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Architectural forms and a dead-matte finish distinguish matte PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 5,
+    "key": "pla_silk",
+    "displayName": "Silk PLA",
+    "filename": "005-pla-silk.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: decorative spiral vase. Material appearance: metallic rose-gold silk; glossy silk sheen with fine layer lines. Material: Silk PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A shiny spiral display print is a common visual shorthand for Silk PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 6,
+    "key": "pla_dual_silk",
+    "displayName": "Dual / Tri-Colour Silk PLA",
+    "filename": "006-pla-dual-silk.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: decorative faceted trophy with a smooth twist. Material appearance: two-tone colour-shift silk blue and magenta; glossy silk sheen with fine layer lines. Material: Dual / Tri-Colour Silk PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A colour-shift decorative trophy makes dual/tri-colour silk PLA visually identifiable.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 7,
+    "key": "pla_high_speed",
+    "displayName": "High-Speed PLA",
+    "filename": "007-pla-high-speed.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: fast draft calibration block with clean stepped geometry, no letters. Material appearance: bright practical orange; slightly coarser fast-print layer rhythm. Material: High-Speed PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A draft calibration form and visible fast layers suggest high-speed printing material.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 8,
+    "key": "recycled_pla",
+    "displayName": "Recycled PLA",
+    "filename": "008-recycled-pla.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: simple reusable desk tray. Material appearance: muted recycled grey with tiny mixed-colour flecks; matte recycled speckled PLA. Material: Recycled PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Mixed flecks and practical reuse-focused object cue recycled PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 9,
+    "key": "pla_lightweight",
+    "displayName": "Lightweight PLA / LW-PLA",
+    "filename": "009-pla-lightweight.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: thin RC aircraft wing rib sample. Material appearance: matte off-white foam-light plastic; slightly airy foamed layer texture. Material: Lightweight PLA / LW-PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A thin aircraft rib and low-density surface cue lightweight PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 10,
+    "key": "pla_cf",
+    "displayName": "PLA-CF",
+    "filename": "010-pla-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: stiff lightweight drone arm bracket. Material appearance: matte charcoal black; fine carbon-fiber speckled matte surface. Material: PLA-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Charcoal speckling and a lightweight structural part cue carbon-fiber PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 11,
+    "key": "pla_gf",
+    "displayName": "PLA-GF",
+    "filename": "011-pla-gf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: dimensional jig block with clean holes. Material appearance: matte warm grey; fine glass-fiber speckled matte surface. Material: PLA-GF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A precise jig and pale speckled matte texture cue glass-fiber PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 12,
+    "key": "pla_wood",
+    "displayName": "Wood PLA",
+    "filename": "012-pla-wood.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: small sanded picture-frame corner sample. Material appearance: warm tan wood-fill with darker flecks; wood-like grain flecks plus visible print lines. Material: Wood PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Wood-coloured flecks and a frame-like object cue wood-filled PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 13,
+    "key": "pla_metal_fill",
+    "displayName": "Metal-Fill PLA",
+    "filename": "013-pla-metal-fill.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: small polished decorative hardware knob. Material appearance: aged bronze metallic fill; heavy semi-polished metallic speckle. Material: Metal-Fill PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A weighted metallic decorative part shows the metal-fill PLA character.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 14,
+    "key": "pla_marble",
+    "displayName": "Marble / Stone PLA",
+    "filename": "014-pla-marble.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: small classical column base or planter. Material appearance: white stone with grey marble speckles; stone-like speckled surface with fine layers. Material: Marble / Stone PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Marble speckling and a sculptural form make stone PLA easy to recognize.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 15,
+    "key": "pla_glow",
+    "displayName": "Glow-in-the-Dark PLA",
+    "filename": "015-pla-glow.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: small safety marker tag with raised geometric ridges but no text. Material appearance: pale translucent green phosphorescent plastic; smooth glow-in-the-dark plastic with visible layers. Material: Glow-in-the-Dark PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "The pale green translucent colour strongly cues glow-in-the-dark PLA without needing text.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 16,
+    "key": "pla_conductive",
+    "displayName": "Conductive PLA",
+    "filename": "016-pla-conductive.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: simple low-voltage touch button cap with two clean contact-pad shapes, no symbols. Material appearance: matte carbon black; slightly rough graphite-like conductive surface. Material: Conductive PLA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Carbon black and simple electronics-like geometry suggest conductive PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 17,
+    "key": "pvb",
+    "displayName": "PVB",
+    "filename": "017-pvb.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: smooth decorative shell or display dome. Material appearance: glossy translucent teal; alcohol-smoothed glossy surface with softened layer lines. Material: PVB. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Glossy smoothed translucency communicates PVB finishing.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 18,
+    "key": "petg",
+    "displayName": "PETG",
+    "filename": "018-petg.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: functional arched mounting bracket. Material appearance: translucent smoke clear; slightly glossy PETG with visible layers. Material: PETG. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A smoky translucent bracket is a recognizable PETG cue.",
+    "approvedSource": "../petg-uniform-v2.png"
+  },
+  {
+    "sourceOrder": 19,
+    "key": "recycled_petg",
+    "displayName": "Recycled PETG",
+    "filename": "019-recycled-petg.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: reusable utility hook. Material appearance: translucent smoky green recycled tint; slightly cloudy recycled PETG gloss. Material: Recycled PETG. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Green smoky translucency and a reusable object cue recycled PETG.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 20,
+    "key": "petg_hf",
+    "displayName": "High-Flow PETG",
+    "filename": "020-petg-hf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: fast draft calibration block with clean stepped geometry, no letters. Material appearance: bright practical orange; slightly coarser fast-print layer rhythm. Material: High-Flow PETG. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A draft calibration form and visible fast layers suggest high-speed printing material.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 21,
+    "key": "petg_cf",
+    "displayName": "PETG-CF",
+    "filename": "021-petg-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: rigid robotics mounting bracket. Material appearance: matte carbon black; carbon-fiber speckled copolyester surface. Material: PETG-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Carbon-black speckling and a rigid bracket show reinforced PET/PETG.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 22,
+    "key": "petg_gf",
+    "displayName": "PETG-GF",
+    "filename": "022-petg-gf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: stiff fixture block with two mounting holes. Material appearance: matte medium grey; glass-fiber speckled functional surface. Material: PETG-GF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Pale speckles and fixture geometry distinguish glass-filled PETG.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 23,
+    "key": "petg_v0",
+    "displayName": "PETG V0 / PETG-FR",
+    "filename": "023-petg-v0.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: small electrical enclosure cover. Material appearance: dark smoke grey; satin flame-retardant engineering plastic. Material: PETG V0 / PETG-FR. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Electrical enclosure geometry cues flame-retardant PETG use.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 24,
+    "key": "petg_tungsten",
+    "displayName": "PETG Tungsten",
+    "filename": "024-petg-tungsten.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: compact weighted ballast puck. Material appearance: dark metallic grey; dense metallic powder-filled surface. Material: PETG Tungsten. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A squat ballast shape and dark metallic density cue tungsten-filled PETG.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 25,
+    "key": "petg_magnetite",
+    "displayName": "PETG Magnetite",
+    "filename": "025-petg-magnetite.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: magnetic fixture puck with a simple slot, no symbols. Material appearance: iron-dark charcoal with subtle mineral speckles; powder-filled ferromagnetic-looking surface. Material: PETG Magnetite. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Iron-dark speckling and fixture geometry cue magnetite PETG.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 26,
+    "key": "pctg",
+    "displayName": "PCTG",
+    "filename": "026-pctg.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: impact-resistant transparent corner guard. Material appearance: clear slightly blue tough copolyester; glossy transparent PCTG with clean layers. Material: PCTG. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A clear impact guard communicates tough transparent PCTG.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 27,
+    "key": "pet",
+    "displayName": "PET",
+    "filename": "027-pet.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: clear functional clip. Material appearance: near-clear PET with slight cool tint; glossy translucent surface. Material: PET. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Clear clip geometry shows PET as a transparent functional filament.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 28,
+    "key": "pet_cf",
+    "displayName": "PET-CF",
+    "filename": "028-pet-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: rigid robotics mounting bracket. Material appearance: matte carbon black; carbon-fiber speckled copolyester surface. Material: PET-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Carbon-black speckling and a rigid bracket show reinforced PET/PETG.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 29,
+    "key": "cpe",
+    "displayName": "CPE",
+    "filename": "029-cpe.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: chemical-resistant small container cap. Material appearance: translucent light grey; glossy copolyester surface with clean layers. Material: CPE. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A cap/container form and translucent gloss cue CPE.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 30,
+    "key": "cpe_plus",
+    "displayName": "CPE+",
+    "filename": "030-cpe-plus.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: higher-heat functional housing. Material appearance: translucent amber-grey; glossy chemical-resistant copolyester surface. Material: CPE+. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A tougher housing and amber copolyester gloss cue CPE+.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 31,
+    "key": "abs",
+    "displayName": "ABS",
+    "filename": "031-abs.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: functional electronics housing. Material appearance: satin warm grey; slightly smoothed ABS surface with softened layers. Material: ABS. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A practical housing and smoother satin plastic cue ABS.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 32,
+    "key": "abs_gf",
+    "displayName": "ABS-GF",
+    "filename": "032-abs-gf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: stiff utility housing with ribs. Material appearance: matte grey glass-filled ABS; subtle fiber-speckled rigid surface. Material: ABS-GF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Ribs and speckled grey texture cue glass-filled ABS stiffness.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 33,
+    "key": "abs_cf",
+    "displayName": "ABS-CF",
+    "filename": "033-abs-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: rigid tool-housing corner sample. Material appearance: matte carbon black; carbon-fiber speckled ABS surface. Material: ABS-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Black speckles and tool-housing geometry cue ABS-CF.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 34,
+    "key": "asa",
+    "displayName": "ASA",
+    "filename": "034-asa.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: rectangular outdoor electronics enclosure. Material appearance: satin graphite black; UV-stable satin surface with subtle layers. Material: ASA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Outdoor enclosure geometry is the clearest ASA visual cue.",
+    "approvedSource": "../asa-uniform-v2.png"
+  },
+  {
+    "sourceOrder": 35,
+    "key": "asa_cf",
+    "displayName": "ASA-CF",
+    "filename": "035-asa-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: weather-resistant outdoor bracket. Material appearance: matte carbon graphite; carbon-speckled UV-stable surface. Material: ASA-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Outdoor bracket geometry and carbon texture cue ASA-CF.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 36,
+    "key": "asa_gf",
+    "displayName": "ASA-GF",
+    "filename": "036-asa-gf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: stiff outdoor fixture mount. Material appearance: matte light graphite grey; glass-fiber speckled UV-stable surface. Material: ASA-GF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Outdoor fixture form and pale fiber speckles cue ASA-GF.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 37,
+    "key": "tpu",
+    "displayName": "TPU",
+    "filename": "037-tpu.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: flexible protective bumper frame. Material appearance: matte black; rubber-like TPU surface with fine layers. Material: TPU. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A curved protective bumper is a recognizable TPU object.",
+    "approvedSource": "../tpu-uniform-v2.png"
+  },
+  {
+    "sourceOrder": 38,
+    "key": "tpu_98a",
+    "displayName": "TPU 98A",
+    "filename": "038-tpu-98a.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: semi-flexible black hinge bracket. Material appearance: matte black; firm rubber-like TPU with fine layer lines. Material: TPU 98A. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A semi-rigid hinge bracket distinguishes harder TPU 98A.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 39,
+    "key": "tpu_95a",
+    "displayName": "TPU 95A",
+    "filename": "039-tpu-95a.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: phone-case style protective bumper. Material appearance: matte black; rubber-like flexible surface with fine layers. Material: TPU 95A. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Phone cases and bumpers are common TPU 95A examples.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 40,
+    "key": "tpu_95a_hf",
+    "displayName": "TPU 95A High Flow",
+    "filename": "040-tpu-95a-hf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: smooth production bumper strip. Material appearance: matte dark blue TPU; smooth high-flow flexible surface. Material: TPU 95A High Flow. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A simple smooth bumper suggests fast-printing high-flow TPU.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 41,
+    "key": "tpu_ams",
+    "displayName": "TPU for AMS / AMS-Compatible TPU",
+    "filename": "041-tpu-ams.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: multimaterial flexible insert sample with two clean colour sections. Material appearance: black TPU with small muted blue insert; firm flexible AMS-compatible surface. Material: TPU for AMS / AMS-Compatible TPU. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Two-colour insert geometry suggests AMS-compatible TPU.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 42,
+    "key": "tpu_90a",
+    "displayName": "TPU 90A",
+    "filename": "042-tpu-90a.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: soft flexible grip sleeve. Material appearance: matte charcoal; soft rubber-like surface. Material: TPU 90A. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A grip sleeve communicates softer TPU 90A.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 43,
+    "key": "tpu_85a",
+    "displayName": "TPU 85A",
+    "filename": "043-tpu-85a.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: very flexible gasket ring. Material appearance: matte black; soft pliable elastomer surface. Material: TPU 85A. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A gasket ring makes TPU 85A softness visually obvious.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 44,
+    "key": "tpu_83a",
+    "displayName": "TPU 83A",
+    "filename": "044-tpu-83a.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: ultra-soft cushioning pad with curved edges. Material appearance: matte dark grey; very soft elastomer with visible compressed-looking curves. Material: TPU 83A. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A soft pad form differentiates the lower-shore TPU grades.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 45,
+    "key": "tpu_80a",
+    "displayName": "TPU 80A",
+    "filename": "045-tpu-80a.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: ultra-soft cushioning pad with curved edges. Material appearance: matte dark grey; very soft elastomer with visible compressed-looking curves. Material: TPU 80A. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A soft pad form differentiates the lower-shore TPU grades.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 46,
+    "key": "tpu_75a",
+    "displayName": "TPU 75A",
+    "filename": "046-tpu-75a.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: ultra-soft cushioning pad with curved edges. Material appearance: matte dark grey; very soft elastomer with visible compressed-looking curves. Material: TPU 75A. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A soft pad form differentiates the lower-shore TPU grades.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 47,
+    "key": "tpu_70a",
+    "displayName": "TPU 70A",
+    "filename": "047-tpu-70a.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: ultra-soft cushioning pad with curved edges. Material appearance: matte dark grey; very soft elastomer with visible compressed-looking curves. Material: TPU 70A. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A soft pad form differentiates the lower-shore TPU grades.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 48,
+    "key": "peba",
+    "displayName": "PEBA / High-Rebound Flexible",
+    "filename": "048-peba.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: springy sports-sole lattice sample. Material appearance: matte off-white flexible polymer; resilient smooth elastomer surface. Material: PEBA / High-Rebound Flexible. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A sports-sole lattice cues high-rebound PEBA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 49,
+    "key": "peba_cf",
+    "displayName": "PEBA-CF",
+    "filename": "049-peba-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: thin RC aircraft wing rib sample. Material appearance: matte off-white foam-light plastic; slightly airy foamed layer texture. Material: PEBA-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A thin aircraft rib and low-density surface cue lightweight PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 50,
+    "key": "tpe",
+    "displayName": "TPE",
+    "filename": "050-tpe.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: rubber-like seal strip. Material appearance: matte black; soft rubbery TPE surface. Material: TPE. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A seal strip is a direct visual cue for TPE.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 51,
+    "key": "tpc",
+    "displayName": "TPC",
+    "filename": "051-tpc.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: flexible outdoor wear strip. Material appearance: matte dark teal; tough flexible copolyester elastomer surface. Material: TPC. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A wear strip and teal engineering look cue TPC.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 52,
+    "key": "pa6",
+    "displayName": "Nylon PA6",
+    "filename": "052-pa6.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: cream mechanical gear. Material appearance: natural off-white nylon; slightly satin polyamide surface. Material: Nylon PA6. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A gear in natural nylon colour strongly cues PA6.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 53,
+    "key": "pa12",
+    "displayName": "Nylon PA12",
+    "filename": "053-pa12.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: cream snap-fit clip and bushing. Material appearance: natural ivory nylon; smooth low-moisture PA12 surface. Material: Nylon PA12. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Snap-fit and bushing parts cue PA12 toughness and wear resistance.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 54,
+    "key": "nylon_copa",
+    "displayName": "Nylon CoPA",
+    "filename": "054-nylon-copa.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: tough functional bracket with rounded arms. Material appearance: natural cream nylon; satin nylon copolymer surface. Material: Nylon CoPA. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A tough rounded bracket communicates CoPA engineering nylon.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 55,
+    "key": "pa11_cf",
+    "displayName": "PA11-CF",
+    "filename": "055-pa11-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: thin RC aircraft wing rib sample. Material appearance: matte off-white foam-light plastic; slightly airy foamed layer texture. Material: PA11-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A thin aircraft rib and low-density surface cue lightweight PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 56,
+    "key": "pa6_cf",
+    "displayName": "PA6-CF",
+    "filename": "056-pa6-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: industrial tooling fixture bracket. Material appearance: matte carbon black; dry carbon-fiber PA6 speckle. Material: PA6-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Dry black speckled texture and tooling geometry cue PA6-CF.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 57,
+    "key": "pa6_gf",
+    "displayName": "PA6-GF",
+    "filename": "057-pa6-gf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: stiff jig block with clean locating holes. Material appearance: matte pale grey; glass-fiber speckled nylon surface. Material: PA6-GF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A precise jig and pale fiber speckles cue glass-filled nylon/PA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 58,
+    "key": "pa12_cf",
+    "displayName": "PA12-CF",
+    "filename": "058-pa12-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: thin RC aircraft wing rib sample. Material appearance: matte off-white foam-light plastic; slightly airy foamed layer texture. Material: PA12-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A thin aircraft rib and low-density surface cue lightweight PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 59,
+    "key": "paht_cf",
+    "displayName": "PAHT-CF",
+    "filename": "059-paht-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: heat-resistant tooling bracket. Material appearance: matte carbon black; dry high-temperature carbon-fiber nylon surface. Material: PAHT-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A heat-stable tooling bracket cues PAHT-CF.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 60,
+    "key": "ppa_cf",
+    "displayName": "PPA-CF",
+    "filename": "060-ppa-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: high-performance industrial bracket. Material appearance: matte carbon black; dry carbon-fiber PPA surface. Material: PPA-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A high-performance black reinforced bracket cues PPA-CF.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 61,
+    "key": "pc",
+    "displayName": "Polycarbonate (PC)",
+    "filename": "061-pc.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: transparent impact-resistant lens cover. Material appearance: clear smoky polycarbonate; glossy transparent high-heat surface. Material: Polycarbonate (PC). The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Clear impact-resistant cover makes PC identifiable.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 62,
+    "key": "pc_blend",
+    "displayName": "PC Blend",
+    "filename": "062-pc-blend.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: impact-resistant protective housing. Material appearance: translucent smoky grey; tough PC blend satin gloss. Material: PC Blend. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A smoky tough housing represents PC Blend.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 63,
+    "key": "pc_abs",
+    "displayName": "PC-ABS",
+    "filename": "063-pc-abs.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: functional electronics housing. Material appearance: satin warm grey; slightly smoothed ABS surface with softened layers. Material: PC-ABS. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A practical housing and smoother satin plastic cue ABS.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 64,
+    "key": "pc_cf",
+    "displayName": "PC-CF",
+    "filename": "064-pc-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: rigid high-heat fixture. Material appearance: matte carbon black; carbon-fiber speckled PC surface. Material: PC-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A black reinforced high-heat fixture cues PC-CF.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 65,
+    "key": "pc_fr",
+    "displayName": "PC-FR",
+    "filename": "065-pc-fr.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: electrical housing shell. Material appearance: dark grey flame-retardant plastic; satin engineering surface. Material: PC-FR. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Electrical housing geometry suggests flame-retardant PC.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 66,
+    "key": "pp",
+    "displayName": "Polypropylene (PP)",
+    "filename": "066-pp.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: living hinge container tab. Material appearance: milky translucent polypropylene; waxy flexible PP surface. Material: Polypropylene (PP). The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A living hinge and milky waxy surface cue polypropylene.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 67,
+    "key": "pp_cf",
+    "displayName": "PP-CF",
+    "filename": "067-pp-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: fatigue-resistant living hinge bracket. Material appearance: matte dark charcoal with carbon flecks; reinforced polypropylene speckle. Material: PP-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Living-hinge form and carbon flecks cue PP-CF.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 68,
+    "key": "pp_gf",
+    "displayName": "PP-GF",
+    "filename": "068-pp-gf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: stiff chemical-resistant clip. Material appearance: matte pale grey with glass flecks; glass-filled polypropylene surface. Material: PP-GF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A stiff clip and pale speckling cue PP-GF.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 69,
+    "key": "pom",
+    "displayName": "POM / Acetal",
+    "filename": "069-pom.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: low-friction gear and sliding bushing. Material appearance: clean white acetal; smooth low-friction satin surface. Material: POM / Acetal. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Gears and bushings are the clearest POM/acetal cues.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 70,
+    "key": "pmma",
+    "displayName": "PMMA / Acrylic",
+    "filename": "070-pmma.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: clear light-guide display block. Material appearance: clear acrylic with polished edges; glossy transparent acrylic-like surface. Material: PMMA / Acrylic. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A clear light guide is a strong PMMA/acrylic visual cue.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 71,
+    "key": "peek",
+    "displayName": "PEEK",
+    "filename": "071-peek.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: small high-performance aerospace bracket. Material appearance: natural beige PEEK; high-temp satin engineering polymer. Material: PEEK. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Beige high-performance bracket cues PEEK.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 72,
+    "key": "pei",
+    "displayName": "PEI / ULTEM",
+    "filename": "072-pei.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: small electrical enclosure cover. Material appearance: dark smoke grey; satin flame-retardant engineering plastic. Material: PEI / ULTEM. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Electrical enclosure geometry cues flame-retardant PETG use.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 73,
+    "key": "pekk",
+    "displayName": "PEKK",
+    "filename": "073-pekk.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: high-heat chemical-resistant bracket. Material appearance: warm tan high-performance polymer; satin high-temp PEKK surface. Material: PEKK. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Tan high-temp engineering part cues PEKK.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 74,
+    "key": "pps",
+    "displayName": "PPS",
+    "filename": "074-pps.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: chemical-resistant pump impeller sample. Material appearance: natural beige-grey PPS; satin chemical-resistant surface. Material: PPS. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "An impeller-like part cues chemical-resistant PPS.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 75,
+    "key": "pps_cf",
+    "displayName": "PPS-CF",
+    "filename": "075-pps-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: rigid chemical-resistant fixture. Material appearance: matte carbon black; carbon-speckled PPS surface. Material: PPS-CF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Black reinforced fixture cues PPS-CF.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 76,
+    "key": "ppsu",
+    "displayName": "PPSU",
+    "filename": "076-ppsu.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: sterilizable high-heat fitting. Material appearance: translucent honey amber; glossy medical-grade high-temp surface. Material: PPSU. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Honey amber fitting cues PPSU.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 77,
+    "key": "psu",
+    "displayName": "PSU",
+    "filename": "077-psu.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: high-temperature electrical insulator block. Material appearance: translucent pale amber; glossy high-temp PSU surface. Material: PSU. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Amber electrical insulator geometry cues PSU.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 78,
+    "key": "pvdf",
+    "displayName": "PVDF",
+    "filename": "078-pvdf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: chemical-resistant outdoor pipe clamp. Material appearance: opaque natural white fluoropolymer; smooth chemical-resistant PVDF surface. Material: PVDF. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "White pipe-clamp geometry cues PVDF chemical resistance.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 79,
+    "key": "pva",
+    "displayName": "PVA Support",
+    "filename": "079-pva.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: delicate soluble support scaffold tower. Material appearance: translucent pale cream; slightly matte water-soluble support texture. Material: PVA Support. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A scaffold tower and pale soluble look cue PVA support.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 80,
+    "key": "bvoh",
+    "displayName": "BVOH Support",
+    "filename": "080-bvoh.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: clean soluble support interface lattice. Material appearance: translucent pale yellow; smooth soluble support material surface. Material: BVOH Support. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A lattice support interface cues BVOH support.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 81,
+    "key": "hips",
+    "displayName": "HIPS Support",
+    "filename": "081-hips.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: thin RC aircraft wing rib sample. Material appearance: matte off-white foam-light plastic; slightly airy foamed layer texture. Material: HIPS Support. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A thin aircraft rib and low-density surface cue lightweight PLA.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 82,
+    "key": "breakaway_support",
+    "displayName": "Breakaway Support",
+    "filename": "082-breakaway-support.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: manual breakaway support tower with snapped-clean interface. Material appearance: matte light grey; crisp breakaway support surface. Material: Breakaway Support. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Snapped support interface cues breakaway support material.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 83,
+    "key": "nylon",
+    "displayName": "Nylon",
+    "filename": "083-nylon.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: mechanical gear and bushing pair. Material appearance: off-white natural nylon; tough satin polyamide surface. Material: Nylon. The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Off-white gears and bushings make nylon recognizable.",
+    "approvedSource": "../nylon-uniform-v2.png"
+  },
+  {
+    "sourceOrder": 84,
+    "key": "nylon_cf",
+    "displayName": "Nylon-CF (Carbon Fiber)",
+    "filename": "084-nylon-cf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: industrial tooling fixture bracket. Material appearance: matte carbon black; dry carbon-fiber nylon speckle. Material: Nylon-CF (Carbon Fiber). The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "Dry black speckled texture and tooling geometry cue carbon-fiber nylon.",
+    "approvedSource": null
+  },
+  {
+    "sourceOrder": 85,
+    "key": "nylon_gf",
+    "displayName": "Nylon-GF (Glass Fiber)",
+    "filename": "085-nylon-gf.png",
+    "prompt": "Uniform clean cutout-style hyperrealistic product photograph on near-white warm-grey seamless background (#f5f4ef), single centered object or tight object pair, consistent low three-quarter front camera angle, soft diffused studio lighting from upper left, very soft natural grounding shadow, no visible room, no props, no hands. Horizontal 4:3 ecommerce material sample, object fills about 62% of image width with generous margins. Subject: stiff jig block with clean locating holes. Material appearance: matte pale grey; glass-fiber speckled nylon surface. Material: Nylon-GF (Glass Fiber). The image should make the material guessable from form, texture, colour, and finish. High-quality DSLR product photography, realistic FDM printed polymer, not CGI, not illustration. Negative prompt: no text, no logos, no watermark, no labels, no hands, no props, no room scene, no workshop background, no outdoor background, no floating object, no impossible geometry, no melted plastic, no waxy AI look, no oversaturated colors, no dramatic lighting, no gradient backdrop, no cartoon, no 3D render aesthetics.",
+    "visualReasoning": "A precise jig and pale fiber speckles cue glass-filled nylon/PA.",
+    "approvedSource": null
+  }
+]

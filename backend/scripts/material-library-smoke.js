@@ -3,6 +3,9 @@ import {
   enrichMaterialSuggestion,
   findMaterialMatch,
 } from '../lib/material-library.js';
+import { getDefaultMaterialImage } from '../lib/material-default-images.js';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 let failures = 0;
 
@@ -22,6 +25,17 @@ function expect(condition, message) {
 
 const fdmMaterials = MATERIAL_LIBRARY.filter(material => material.category === 'FDM');
 expect(fdmMaterials.length >= 50, `FDM library has ${fdmMaterials.length} profiles`);
+
+function pngSize(filePath) {
+  const buf = readFileSync(filePath);
+  if (buf.subarray(0, 8).compare(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) !== 0) {
+    return null;
+  }
+  return {
+    width: buf.readUInt32BE(16),
+    height: buf.readUInt32BE(20),
+  };
+}
 
 const requiredQueries = new Map([
   ['Silk PLA', 'pla_silk'],
@@ -62,6 +76,15 @@ for (const material of fdmMaterials) {
   if (!Array.isArray(enriched.best_for) || enriched.best_for.length === 0) missing.push('best_for');
   if (!Array.isArray(enriched.specs) || enriched.specs.length === 0) missing.push('specs');
   if (!enriched.learn_more) missing.push('learn_more');
+  const defaultImage = getDefaultMaterialImage(material.key);
+  if (!defaultImage?.image_url) missing.push('default image');
+  if (!defaultImage?.image_alt) missing.push('default image alt');
+  if (defaultImage && defaultImage.locked_default_image !== true) missing.push('locked_default_image');
+  if (defaultImage?.image_url) {
+    const filePath = resolve(import.meta.dirname, '..', '..', defaultImage.image_url.replace(/^\//, ''));
+    const size = pngSize(filePath);
+    if (size?.width !== 840 || size?.height !== 600) missing.push('840x600 default image');
+  }
   for (const key of ['strength', 'flexibility', 'heatResistance', 'detail', 'outdoorUse']) {
     if (!Number.isFinite(Number(enriched.ratings?.[key]))) missing.push(`ratings.${key}`);
   }
