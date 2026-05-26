@@ -33,10 +33,25 @@
     }
 
     .review-helper {
-      margin: 0 0 22px;
+      margin: 0 0 10px;
       color: var(--muted);
       font-size: 14px;
       line-height: 1.55;
+    }
+
+    .review-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 22px;
+      padding: 7px 11px;
+      border: 1px solid rgba(90,138,94,0.18);
+      border-radius: 999px;
+      background: rgba(90,138,94,0.065);
+      color: var(--sage-dark);
+      font-size: 12px;
+      font-weight: 750;
+      line-height: 1.35;
     }
 
     .review-validation-error {
@@ -347,9 +362,7 @@
       background: #fff7f5;
     }
     .checkout-shipping-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
+      display: block;
       margin-bottom: 14px;
     }
     .checkout-shipping-head h3 {
@@ -365,7 +378,8 @@
       line-height: 1.45;
     }
     .package-pill {
-      align-self: flex-start;
+      display: inline-flex;
+      margin-top: 9px;
       border: 1px solid rgba(90,138,94,0.22);
       background: rgba(90,138,94,0.08);
       color: var(--sage-dark);
@@ -483,6 +497,7 @@
       display: flex;
       flex-direction: column;
       border-top: 1px solid var(--stone);
+      margin-bottom: 18px;
     }
 
     .price-row {
@@ -501,6 +516,7 @@
     .price-row.total {
       font-weight: 500;
       font-size: 15px;
+      padding-bottom: 0;
     }
 
     .price-row .price-label {
@@ -513,6 +529,12 @@
 
     .price-row .price-amount {
       color: var(--ink);
+    }
+
+    .checkout-payment-heading {
+      margin-top: 22px;
+      padding-top: 20px;
+      border-top: 1px solid var(--stone);
     }
 
     .edit-link {
@@ -765,25 +787,14 @@
       <div class="card" id="orderReviewCard">
         <h2 class="review-heading">Review your order</h2>
         <p class="review-helper">Open a material group to review files and item pricing.</p>
+        <p class="review-meta" id="checkoutReviewMeta">Validating order summary</p>
         <div class="cart-items-review" id="cartItemsReview"></div>
-        <section class="checkout-shipping" id="checkoutShippingBlock">
-          <div class="checkout-shipping-head">
-            <div>
-              <h3>Shipping</h3>
-              <p>Choose one shipping option for the whole order. Pricing uses the combined size and estimated print weight of every material group.</p>
-            </div>
-            <span class="package-pill" id="packageSummary">Estimating package</span>
-          </div>
-          <div class="checkout-shipping-options" id="checkoutShippingOptions"></div>
-          <div class="checkout-shipping-empty" id="checkoutShippingEmpty">Shipping options will appear once the order has been validated.</div>
-          <div class="checkout-shipping-error" id="checkoutShippingError" role="alert">Choose a shipping option before payment.</div>
-        </section>
-        <div class="review-validation-error" id="reviewValidationError" role="alert" aria-live="polite">
-          <span id="reviewValidationErrorText">This order needs to be reviewed before payment.</span>
-          <a href="quote.html" id="reviewValidationEditLink">Edit group</a>
-        </div>
+        <a href="quote.html" class="edit-link">← Edit order</a>
+      </div>
 
-        <!-- Price breakdown -->
+      <!-- RIGHT COLUMN: Payment -->
+      <div class="card checkout-payment-card">
+        <p class="overline" style="margin-bottom:8px;">Order total</p>
         <div class="price-table">
           <div class="price-row" id="priceUnitRow">
             <span class="price-label" id="priceUnitLabel">Unit price</span>
@@ -811,14 +822,29 @@
           </div>
         </div>
 
-        <a href="quote.html" class="edit-link">← Edit order</a>
-      </div>
+        <section class="checkout-shipping" id="checkoutShippingBlock">
+          <div class="checkout-shipping-head">
+            <div>
+              <h3>Shipping</h3>
+              <p>Choose one rate for the whole order.</p>
+            </div>
+            <span class="package-pill" id="packageSummary">Estimating package</span>
+          </div>
+          <div class="checkout-shipping-options" id="checkoutShippingOptions"></div>
+          <div class="checkout-shipping-empty" id="checkoutShippingEmpty">Shipping options will appear once the order has been validated.</div>
+          <div class="checkout-shipping-error" id="checkoutShippingError" role="alert">Choose a shipping option before payment.</div>
+        </section>
 
-      <!-- RIGHT COLUMN: Payment -->
-      <div class="card checkout-payment-card">
-        <p class="overline" style="margin-bottom:8px;">Payment</p>
-        <h2 style="font-family:var(--font-brand);font-size:24px;letter-spacing:-0.03em;margin-bottom:8px;">Secure card payment</h2>
-        <p class="security-caption" style="text-align:left;margin:0 0 18px;">Card payment is processed by Stripe. We never see or store your card number.</p>
+        <div class="review-validation-error" id="reviewValidationError" role="alert" aria-live="polite">
+          <span id="reviewValidationErrorText">This order needs to be reviewed before payment.</span>
+          <a href="quote.html" id="reviewValidationEditLink">Edit group</a>
+        </div>
+
+        <div class="checkout-payment-heading">
+          <p class="overline" style="margin-bottom:8px;">Payment</p>
+          <h2 style="font-family:var(--font-brand);font-size:24px;letter-spacing:-0.03em;margin-bottom:8px;">Secure card payment</h2>
+          <p class="security-caption" style="text-align:left;margin:0 0 18px;">Card payment is processed by Stripe. We never see or store your card number.</p>
+        </div>
 
         <div class="payment-setup-error" id="paymentSetupError" role="alert" aria-live="polite">
           <strong>Stripe payment is not ready</strong>

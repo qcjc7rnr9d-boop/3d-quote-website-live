@@ -69,6 +69,10 @@ assert(
   'Checkout review copy must guide customers through the compact final page'
 );
 assert(
+  checkoutHtml.includes('id="checkoutReviewMeta"'),
+  'Checkout review must include a compact cart summary line above material groups'
+);
+assert(
   checkoutHtml.includes('checkout-payment-card') && checkoutHtml.includes('mobileCheckoutBar'),
   'Checkout must keep payment actions reachable with sticky desktop/mobile summary surfaces'
 );
@@ -80,6 +84,16 @@ assert(
   checkoutHtml.includes('id="checkoutShippingBlock"') && checkoutHtml.includes('id="checkoutShippingOptions"'),
   'Checkout is missing the cart-level shipping selector'
 );
+{
+  const paymentCardIndex = checkoutHtml.indexOf('<div class="card checkout-payment-card">');
+  const priceTableIndex = checkoutHtml.indexOf('<div class="price-table">');
+  const shippingIndex = checkoutHtml.indexOf('id="checkoutShippingBlock"');
+  const cardPanelIndex = checkoutHtml.indexOf('<div id="cardPanel">');
+  assert(
+    paymentCardIndex >= 0 && priceTableIndex > paymentCardIndex && shippingIndex > priceTableIndex && shippingIndex < cardPanelIndex,
+    'Checkout payment card must show totals first, then shipping, before payment fields'
+  );
+}
 assert(
   checkoutHtml.includes('id="reviewValidationError"'),
   'Checkout is missing the order-review validation error container'
@@ -101,8 +115,16 @@ assert(
   'Checkout script must render material groups as accessible accordion sections'
 );
 assert(
-  checkoutJs.includes('index === 0') && checkoutJs.includes('fileCountText'),
-  'Checkout accordion must open the first group by default and summarize file counts'
+  checkoutJs.includes('cart.items.length === 1') && checkoutJs.includes('fileCountText'),
+  'Checkout accordion must collapse multi-group orders by default and summarize file counts'
+);
+assert(
+  checkoutJs.includes('checkoutReviewMeta') && checkoutJs.includes('Shipping selected at checkout'),
+  'Checkout script must render a compact top-level cart summary'
+);
+assert(
+  checkoutJs.includes('headerFinishText') && checkoutJs.includes('finishLayerHeaderText') && checkoutJs.includes('infillText'),
+  'Checkout group headers must use short finish/layer/infill summaries instead of long finish descriptions'
 );
 assert(
   checkoutJs.includes('/api/customer/cart-preview') && checkoutJs.includes('cart.shippingOptions'),

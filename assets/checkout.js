@@ -142,6 +142,10 @@
     return /layer/i.test(text) ? text : `${text} layer height`;
   }
 
+  function finishLayerHeaderText(layerHeight) {
+    return String(layerHeight || '').trim().replace(/\s*layer height$/i, '');
+  }
+
   function modelVolumeText(model) {
     const volume = Number(model?.volumeCm3);
     if (!Number.isFinite(volume) || volume <= 0) return '';
@@ -592,24 +596,36 @@
   }
 
   function renderCart() {
+    const reviewMeta = document.getElementById('checkoutReviewMeta');
+    if (reviewMeta) {
+      const groupCount = cart.items.length;
+      const modelCount = cart.items.reduce((total, item) => total + cartModels(item).length, 0);
+      const shippingStatus = cart.shipping?.id ? 'Shipping selected' : 'Shipping selected at checkout';
+      reviewMeta.textContent = `${groupCount === 1 ? '1 group' : `${groupCount} groups`} · ${fileCountText(modelCount)} · ${shippingStatus}`;
+    }
+
     const cartItemsReview = document.getElementById('cartItemsReview');
     if (cartItemsReview) {
       cartItemsReview.innerHTML = cart.items.map((item, index) => {
         const models = cartModels(item);
         const priceLines = modelPriceLines(item, models);
-        const finishDetails = [finishLayerText(item.finishLayerHeight), item.finishDescription || ''].filter(Boolean).join(' · ');
+        const finishLayer = finishLayerText(item.finishLayerHeight);
+        const finishLayerHeader = finishLayerHeaderText(item.finishLayerHeight);
+        const finishDetails = [finishLayer, item.finishDescription || ''].filter(Boolean).join(' · ');
         const colourText = item.colorName || 'No colour selected';
-        const finishText = [item.finishLabel || item.finish || 'Standard', finishDetails].filter(Boolean).join(' · ');
+        const finishLabel = item.finishLabel || item.finish || 'Standard';
+        const finishText = [finishLabel, finishDetails].filter(Boolean).join(' · ');
+        const headerFinishText = [finishLabel, finishLayerHeader].filter(Boolean).join(' · ');
         const infillText = item.infillLabel || 'Standard';
         const quantityText = models.length > 1 ? 'Per model' : `x ${Math.max(1, parseInt(item.quantity, 10) || 1)}`;
         const panelId = `cart-item-panel-${index + 1}`;
-        const isOpen = index === 0;
+        const isOpen = cart.items.length === 1;
         return `<section class="cart-item-review${isOpen ? ' is-open' : ' is-collapsed'}" data-cart-item-id="${escapeHtml(item.id)}">
           <button class="cart-item-toggle" type="button" aria-expanded="${isOpen ? 'true' : 'false'}" aria-controls="${escapeHtml(panelId)}" data-cart-item-toggle="${escapeHtml(item.id)}">
             <div class="cart-item-head">
               <span class="cart-item-kicker">Material group ${index + 1} · ${escapeHtml(fileCountText(models.length))}</span>
               <strong>${escapeHtml(item.materialName || `Material group ${index + 1}`)}</strong>
-              <span>${escapeHtml([colourText, finishText].filter(Boolean).join(' · '))}</span>
+              <span>${escapeHtml([colourText, headerFinishText, infillText].filter(Boolean).join(' · '))}</span>
             </div>
             <div class="cart-item-total">${fmtNzd(item.totalNzd)}</div>
             <span class="cart-item-chevron" aria-hidden="true">⌄</span>
