@@ -342,7 +342,7 @@
     .material-card {
       position: relative;
       display: grid;
-      grid-template-columns: 168px minmax(210px, 1.05fr) minmax(190px, 0.85fr) minmax(210px, 0.9fr) minmax(260px, 1.15fr) 132px;
+      grid-template-columns: 168px minmax(210px, 1.05fr) minmax(190px, 0.85fr) minmax(190px, 0.75fr) minmax(206px, 0.82fr) 132px;
       gap: 18px;
       align-items: stretch;
       padding: 20px;
@@ -505,14 +505,14 @@
     }
     .quality-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(118px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
     }
     .quality-scroll {
       position: relative;
-      max-height: 304px;
+      max-height: 142px;
       overflow: auto;
-      padding-right: 5px;
+      padding-right: 4px;
       scrollbar-gutter: stable;
       scrollbar-width: thin;
       scrollbar-color: rgba(47,125,67,0.38) transparent;
@@ -528,7 +528,7 @@
       border-radius: 999px;
     }
     .quality-scroll.has-more {
-      padding-bottom: 42px;
+      padding-bottom: 24px;
     }
     .quality-scroll.has-more::after {
       content: "";
@@ -537,9 +537,9 @@
       right: 0;
       bottom: -1px;
       display: block;
-      height: 44px;
-      margin: -30px -5px 0 0;
-      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.96) 66%);
+      height: 28px;
+      margin: -18px -4px 0 0;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.96) 72%);
       pointer-events: none;
     }
     .quality-scroll.at-bottom {
@@ -550,71 +550,55 @@
     }
     .quality-scroll-hint {
       position: sticky;
-      bottom: 8px;
+      bottom: 5px;
       z-index: 2;
       width: max-content;
-      margin: 10px auto -32px;
-      padding: 6px 10px;
+      margin: 7px auto -20px;
+      padding: 4px 8px;
       border: 1px solid var(--sage-line);
       border-radius: 999px;
       background: rgba(236,245,237,0.96);
       color: var(--sage-dark);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 850;
-      box-shadow: 0 8px 18px rgba(31,37,31,0.08);
+      box-shadow: 0 6px 14px rgba(31,37,31,0.07);
       pointer-events: none;
     }
     .quality-scroll.at-bottom .quality-scroll-hint {
       display: none;
     }
-    .quality-card {
-      min-height: 126px;
+    .quality-pill {
       border: 1px solid var(--line);
-      border-radius: 9px;
-      background: rgba(255,255,255,0.76);
-      padding: 12px;
-      cursor: pointer;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.82);
+      padding: 7px 9px;
+      min-width: 0;
       text-align: left;
-      position: relative;
       transition: border-color 160ms, background 160ms, box-shadow 160ms;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
     }
-    .quality-card.selected {
-      border-color: var(--sage);
+    .quality-pill:hover {
+      border-color: rgba(31,107,53,0.28);
       background: var(--sage-soft);
-      box-shadow: inset 0 0 0 1px rgba(31,107,53,0.14);
     }
-    .quality-card strong {
-      display: block;
-      font-size: 12px;
-      margin-bottom: 2px;
-    }
-    .quality-card .layer {
-      font-family: var(--font-code);
-      display: block;
-      font-size: 11px;
-      color: var(--ink);
-      margin-bottom: 8px;
-    }
-    .quality-card p {
-      margin: 0 0 10px;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.4;
-    }
-    .finish-preview {
-      height: 34px;
-      border-radius: 4px;
+    .quality-name {
+      min-width: 0;
       overflow: hidden;
-      background: repeating-linear-gradient(0deg, #bfc0bb 0 4px, #e1e0da 4px 8px);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--ink);
     }
-    .finish-preview.fine {
-      background: repeating-linear-gradient(0deg, #c8c9c4 0 2px, #e8e7e1 2px 5px);
-    }
-    .finish-preview img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
+    .quality-layer {
+      flex: 0 0 auto;
+      font-family: var(--font-code);
+      font-size: 10.5px;
+      color: var(--muted);
+      white-space: nowrap;
     }
     .card-actions {
       display: flex;
@@ -1195,11 +1179,6 @@
       return Math.max(0, Math.min(100, n > 5 ? Math.round(n) : Math.round(n * 20)));
     }
 
-    function finishPreview(finish) {
-      if (finish.previewImageUrl) return `<img src="${esc(finish.previewImageUrl)}" alt="">`;
-      return `<div class="finish-preview ${String(finish.previewType || '').toLowerCase().includes('fine') ? 'fine' : ''}"></div>`;
-    }
-
     function isFdmMaterial(material) {
       return String(material?.category || '').trim().toLowerCase() === 'fdm';
     }
@@ -1360,18 +1339,16 @@
           </div>
           <div class="column">
             <p class="column-title">Print quality</p>
-            <div class="quality-scroll ${mat.finishes.length > 2 ? 'has-more' : ''}">
+            <div class="quality-scroll ${mat.finishes.length > 6 ? 'has-more' : ''}">
               <div class="quality-grid">
                 ${mat.finishes.map(f => `
-                  <div class="quality-card">
-                    <strong>${esc(f.name)}</strong>
-                    ${f.layerHeight ? `<span class="layer">${esc(f.layerHeight)}</span>` : ''}
-                    ${f.description ? `<p>${esc(f.description)}</p>` : '<p>Configured print quality option.</p>'}
-                    ${finishPreview(f)}
+                  <div class="quality-pill" title="${esc([f.name, f.layerHeight || f.layer_height].filter(Boolean).join(' · '))}">
+                    <span class="quality-name">${esc(f.name)}</span>
+                    ${(f.layerHeight || f.layer_height) ? `<span class="quality-layer">${esc(f.layerHeight || f.layer_height)}</span>` : ''}
                   </div>
                 `).join('') || '<span class="material-desc muted">Add finish presets in the admin portal.</span>'}
               </div>
-              ${mat.finishes.length > 2 ? '<div class="quality-scroll-hint">Scroll for more ↓</div>' : ''}
+              ${mat.finishes.length > 6 ? '<div class="quality-scroll-hint">Scroll for more ↓</div>' : ''}
             </div>
           </div>
           <div class="card-actions">

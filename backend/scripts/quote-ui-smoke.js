@@ -68,6 +68,18 @@ assert(optionsHtml.includes('Colour'), 'Options step should render colour contro
 assert(optionsHtml.includes('Print quality'), 'Options step should render finish controls');
 assert(optionsHtml.includes('Infill'), 'Options step should render infill controls');
 assert(
+  materialsHtml.includes('quality-pill') && materialsHtml.includes('quality-layer'),
+  'Material cards should preview print quality as compact finish pills with layer-height metadata',
+);
+assert(
+  !materialsHtml.includes('Configured print quality option.</p>') && !materialsHtml.includes('finishPreview(f)'),
+  'Material cards should not render long finish descriptions or preview graphics',
+);
+assert(
+  optionsHtml.includes('f.description ||') && optionsHtml.includes('Configured print quality option.'),
+  'Options step should keep the full finish descriptions for actual selection',
+);
+assert(
   quoteHtml.includes('New uploads') && quoteHtml.includes('SHOULD_PROMPT_UPLOAD'),
   'Quote page must be the quote-first upload experience',
 );
