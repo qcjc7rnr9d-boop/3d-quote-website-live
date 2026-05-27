@@ -7,8 +7,8 @@ dotenv.config();
 
 const base = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const db = new DatabaseSync('data/rfdewi.db');
-const email = 'alex@mahi3d-demo.test';
-const shopSlug = 'mahi3d';
+const email = 'alex@trennen-demo.test';
+const shopSlug = 'trennen';
 let originalHash = null;
 let token = null;
 
@@ -49,7 +49,7 @@ try {
     JOIN shops s ON s.id = ca.shop_id
     WHERE s.slug = ? AND ca.email = ?
   `).get(shopSlug, email);
-  assert(account, 'Demo customer account is missing; run npm run demo:seed:mahi3d first');
+  assert(account, 'Demo customer account is missing; run npm run demo:seed:trennen first');
   originalHash = account.password_hash;
 
   const neutral = await api('/api/customer/forgot-password', {

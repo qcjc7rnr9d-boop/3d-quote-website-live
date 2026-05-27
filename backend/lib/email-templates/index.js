@@ -59,7 +59,7 @@ const STATUS_COPY = {
 export function orderStatusEmail({ shop, order, customer_message, brand = {} }) {
   const status = order.fulfilment_status || 'pending';
   const copy   = STATUS_COPY[status] || STATUS_COPY.pending;
-  const shopName = shop?.name || 'Mahi3d';
+  const shopName = shop?.name || 'Trennen';
 
   // Optional shop owner note
   const noteSection = customer_message
@@ -136,7 +136,7 @@ export function orderStatusEmail({ shop, order, customer_message, brand = {} }) 
 
 // ── 2. Admin password reset ───────────────────────────────────
 export function adminPasswordResetEmail({ shop, resetLink, brand = {} }) {
-  const shopName = shop?.name || 'Mahi3d';
+  const shopName = shop?.name || 'Trennen';
   const content = `
     ${eyebrow('Account security')}
     ${heading('Reset your password')}
@@ -160,7 +160,7 @@ export function adminPasswordResetEmail({ shop, resetLink, brand = {} }) {
 
 // ── 3. Customer password reset (separate from admin) ──────────
 export function customerPasswordResetEmail({ shop, customerName, resetLink, brand = {} }) {
-  const shopName = shop?.name || 'Mahi3d';
+  const shopName = shop?.name || 'Trennen';
   const content = `
     ${eyebrow('Account security')}
     ${heading('Reset your password')}
@@ -182,7 +182,7 @@ export function customerPasswordResetEmail({ shop, customerName, resetLink, bran
 
 // ── 4. Customer welcome ───────────────────────────────────────
 export function customerWelcomeEmail({ shop, customerName, dashboardUrl, brand = {} }) {
-  const shopName = shop?.name || 'Mahi3d';
+  const shopName = shop?.name || 'Trennen';
   const content = `
     ${eyebrow('Welcome')}
     ${heading(`Welcome to ${shopName}`)}
@@ -212,7 +212,7 @@ export function customerWelcomeEmail({ shop, customerName, dashboardUrl, brand =
 
 // ── 5. Quote saved (customer saved a quote) ───────────────────
 export function quoteSavedEmail({ shop, customerName, quoteName, quoteUrl, totalDisplay, brand = {} }) {
-  const shopName = shop?.name || 'Mahi3d';
+  const shopName = shop?.name || 'Trennen';
   const content = `
     ${eyebrow('Quote saved')}
     ${heading('Your quote is saved')}
@@ -237,7 +237,7 @@ export function quoteSavedEmail({ shop, customerName, quoteName, quoteUrl, total
 
 // ── 6. Test notification (admin → Notifications page) ────────
 export function testNotificationEmail({ shop, recipientName, brand = {} }) {
-  const shopName = shop?.name || 'Mahi3d';
+  const shopName = shop?.name || 'Trennen';
   const content = `
     ${eyebrow('Notification test')}
     ${heading('Your email setup is working')}
@@ -536,7 +536,7 @@ function bodyToHtml(text) {
  * buttons, etc. without the admin having to write HTML.
  */
 function renderFromOverride({ templateId, override, recommended, data, brand }) {
-  const shopName = data.shop?.name || 'Mahi3d';
+  const shopName = data.shop?.name || 'Trennen';
 
   // Build the variables map by gathering "context" from the data object.
   // Anything specific to the template lives below in each branch.

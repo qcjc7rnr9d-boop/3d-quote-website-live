@@ -21,7 +21,7 @@
   try { savedSelection = JSON.parse(localStorage.getItem('form_selection') || 'null'); } catch {}
   const URL_PARAMS = new URLSearchParams(window.location.search);
   const urlShop = URL_PARAMS.get('shop');
-  const shopSlug = cart?.shopSlug || urlShop || savedSelection?.shopSlug || 'mahi3d';
+  const shopSlug = cart?.shopSlug || urlShop || savedSelection?.shopSlug || 'trennen';
   cart = normaliseCart(cart, shopSlug);
   const hasData = cart.items.length > 0;
 

@@ -203,7 +203,7 @@ async function run() {
   assertStatus(rootLanding, 200, '/');
   assertUploadHomepage(await rootLanding.text(), '/');
 
-  const indexLanding = await api('/index.html?shop=mahi3d');
+  const indexLanding = await api('/index.html?shop=trennen');
   assertStatus(indexLanding, 200, '/index.html');
   assertUploadHomepage(await indexLanding.text(), '/index.html');
 
@@ -235,7 +235,7 @@ async function run() {
   assert.doesNotMatch(csp, /https:\/\/evil\.example/, 'embed CSP should not include unapproved origins');
   assert.match(await embed.text(), /Drop your STL or OBJ files here|New uploads|Instant/i, 'embed route should serve quote content');
 
-  const normalQuote = await api('/quote.html?shop=mahi3d');
+  const normalQuote = await api('/quote.html?shop=trennen');
   assertStatus(normalQuote, 200, '/quote.html');
   assert.equal(normalQuote.headers.get('x-frame-options'), 'SAMEORIGIN', 'normal quote page should keep frame protection');
 

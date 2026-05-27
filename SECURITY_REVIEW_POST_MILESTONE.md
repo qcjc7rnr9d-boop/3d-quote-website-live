@@ -183,7 +183,7 @@ cd backend && npm run materials:filter-smoke
 Outdoor filter ranking smoke passed.
 
 cd backend && npm run demo:materials:smoke
-Mahi3D demo material range smoke checks passed.
+Trennen demo material range smoke checks passed.
 
 cd backend && npm run legal:smoke
 Legal page smoke checks passed.

@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import { BCRYPT_ROUNDS } from '../config.js';
 import { MATERIAL_LIBRARY, enrichMaterialSuggestion } from '../lib/material-library.js';
 import { getDefaultMaterialImage } from '../lib/material-default-images.js';
+import { DEMO_SHOP_SLUG, LEGACY_DEMO_SHOP_SLUG } from '../lib/shop-lookup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,11 +15,12 @@ const backendDir = resolve(__dirname, '..');
 const defaultDbPath = join(backendDir, 'data', 'rfdewi.db');
 const backupDir = join(backendDir, 'data', 'demo-backups');
 
-export const DEMO_SHOP_SLUG = 'mahi3d';
-export const DEMO_OWNER_EMAIL = 'owner@mahi3d-demo.test';
-export const DEMO_OWNER_PASSWORD = 'MahiDemo!2026';
-export const DEMO_CUSTOMER_EMAIL = 'alex@mahi3d-demo.test';
-export const DEMO_CUSTOMER_PASSWORD = 'CustomerDemo!2026';
+export { DEMO_SHOP_SLUG };
+export const DEMO_LEGACY_SHOP_SLUG = LEGACY_DEMO_SHOP_SLUG;
+export const DEMO_OWNER_EMAIL = 'owner@trennen-demo.test';
+export const DEMO_OWNER_PASSWORD = 'TrennenAdmin!2026';
+export const DEMO_CUSTOMER_EMAIL = 'alex@trennen-demo.test';
+export const DEMO_CUSTOMER_PASSWORD = 'TrennenCustomer!2026';
 export const DEMO_CUSTOMER_NAME = 'Alex Morgan';
 
 function roundMoney(value) {
@@ -38,7 +40,7 @@ function toSqlDatetime(date) {
 function materialId(materials, key) {
   const material = materials[key];
   if (!material?.id) {
-    throw new Error(`Missing active Mahi3D demo material: ${key}`);
+    throw new Error(`Missing active Trennen demo material: ${key}`);
   }
   return material.id;
 }
@@ -310,9 +312,11 @@ export function assertDemoSeedAllowed({ env = process.env, argv = process.argv.s
   if (env.NODE_ENV === 'production') {
     throw new Error('Refusing to seed demo data while NODE_ENV=production.');
   }
-  const allowed = env.ALLOW_MAHI3D_DEMO_SEED === '1' || argv.includes('--yes');
+  const allowed = env.ALLOW_TRENNEN_DEMO_SEED === '1'
+    || env.ALLOW_MAHI3D_DEMO_SEED === '1'
+    || argv.includes('--yes');
   if (!allowed) {
-    throw new Error('Set ALLOW_MAHI3D_DEMO_SEED=1 or pass --yes to seed local demo data.');
+    throw new Error('Set ALLOW_TRENNEN_DEMO_SEED=1 or pass --yes to seed local demo data.');
   }
 }
 
@@ -320,7 +324,7 @@ export function buildDemoShippingZones() {
   return [
     {
       id: 'demo-pickup',
-      courier: 'Mahi3D',
+      courier: 'Trennen',
       service: 'Local pickup',
       price: 0,
       recommended: false,
@@ -359,11 +363,11 @@ export function buildDemoOrders(materials, { now = new Date() } = {}) {
       subtotal: 62.4,
       tax: 9.36,
       shipping: 8.5,
-      stripe_payment_id: 'pi_demo_mahi3d_drone_mount',
+      stripe_payment_id: 'pi_demo_trennen_drone_mount',
       fulfilment_status: 'complete',
       payment_status: 'paid',
-      tracking_number: 'M3D-DEMO-1001',
-      tracking_url: 'https://example.com/tracking/M3D-DEMO-1001',
+      tracking_number: 'TRN-DEMO-1001',
+      tracking_url: 'https://example.com/tracking/TRN-DEMO-1001',
       customer_message: 'Your mount has been completed and is ready in the demo tracking view.',
       notes: 'Demo order. Dimensions: 118.4 × 65.2 × 42.0 mm. Volume: 34.6 cm³. Shipping: Standard tracked.',
       created_at: toSqlDatetime(daysAgo(27)),
@@ -379,11 +383,11 @@ export function buildDemoOrders(materials, { now = new Date() } = {}) {
       subtotal: 38.4,
       tax: 5.76,
       shipping: 0,
-      stripe_payment_id: 'pi_demo_mahi3d_cable_clips',
+      stripe_payment_id: 'pi_demo_trennen_cable_clips',
       fulfilment_status: 'complete',
       payment_status: 'paid',
-      tracking_number: 'M3D-DEMO-1002',
-      tracking_url: 'https://example.com/tracking/M3D-DEMO-1002',
+      tracking_number: 'TRN-DEMO-1002',
+      tracking_url: 'https://example.com/tracking/TRN-DEMO-1002',
       customer_message: 'Your cable clips have been completed for the demo customer portal.',
       notes: 'Demo order. Batch of 12 small clips. Dimensions: 32.0 × 18.0 × 9.5 mm each. Shipping: Local pickup.',
       created_at: toSqlDatetime(daysAgo(19)),
@@ -399,11 +403,11 @@ export function buildDemoOrders(materials, { now = new Date() } = {}) {
       subtotal: 145,
       tax: 21.75,
       shipping: 8.5,
-      stripe_payment_id: 'pi_demo_mahi3d_sensor_housing',
+      stripe_payment_id: 'pi_demo_trennen_sensor_housing',
       fulfilment_status: 'shipped',
       payment_status: 'paid',
-      tracking_number: 'M3D-DEMO-1003',
-      tracking_url: 'https://example.com/tracking/M3D-DEMO-1003',
+      tracking_number: 'TRN-DEMO-1003',
+      tracking_url: 'https://example.com/tracking/TRN-DEMO-1003',
       customer_message: 'Your demo tracking details are attached to this order.',
       notes: 'Demo order. Two-part enclosure. Dimensions: 142.0 × 88.0 × 54.5 mm. Shipping: Standard tracked.',
       created_at: toSqlDatetime(daysAgo(9)),
@@ -419,7 +423,7 @@ export function buildDemoOrders(materials, { now = new Date() } = {}) {
       subtotal: 72,
       tax: 10.8,
       shipping: 8.5,
-      stripe_payment_id: 'pi_demo_mahi3d_grip_sleeve',
+      stripe_payment_id: 'pi_demo_trennen_grip_sleeve',
       fulfilment_status: 'in_production',
       payment_status: 'paid',
       tracking_number: null,
@@ -439,7 +443,7 @@ export function buildDemoOrders(materials, { now = new Date() } = {}) {
       subtotal: 126.6,
       tax: 18.99,
       shipping: 14.9,
-      stripe_payment_id: 'pi_demo_mahi3d_nylon_gear',
+      stripe_payment_id: 'pi_demo_trennen_nylon_gear',
       fulfilment_status: 'processing',
       payment_status: 'paid',
       tracking_number: null,
@@ -463,7 +467,7 @@ function getRows(db, sql, ...params) {
 function backupExistingDemoData(db, shop) {
   mkdirSync(backupDir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupPath = join(backupDir, `mahi3d-demo-backup-${stamp}.json`);
+  const backupPath = join(backupDir, `trennen-demo-backup-${stamp}.json`);
   const backup = {
     created_at: new Date().toISOString(),
     shop: db.prepare('SELECT * FROM shops WHERE id = ?').get(shop.id),
@@ -604,12 +608,12 @@ function upsertStoreSettings(db, shopId) {
   `).run(
     shopId,
     'Instant quotes for practical 3D printed parts.',
-    'Mahi3D is configured as a demo store for showing the quoting, checkout, order tracking, and customer portal flow.',
+    'Trennen is configured as a demo store for showing the quoting, checkout, order tracking, and customer portal flow.',
     '+64 9 887 0000',
     '12 Workshop Lane, Auckland 1010',
     JSON.stringify(buildDemoShippingZones()),
     'custom',
-    'support@mahi3d-demo.test'
+    'support@trennen.co.nz'
   );
 }
 
@@ -678,12 +682,18 @@ function insertDemoOrders(db, shopId, materials) {
   }
 }
 
+function findDemoShop(db) {
+  const canonical = db.prepare('SELECT * FROM shops WHERE slug = ?').get(DEMO_SHOP_SLUG);
+  if (canonical) return canonical;
+  return db.prepare('SELECT * FROM shops WHERE slug = ?').get(LEGACY_DEMO_SHOP_SLUG) || null;
+}
+
 export async function seedMahi3dDemo({ dbPath = defaultDbPath } = {}) {
   const db = new DatabaseSync(dbPath);
   db.exec('PRAGMA foreign_keys = ON');
 
   try {
-    const shop = db.prepare('SELECT * FROM shops WHERE slug = ?').get(DEMO_SHOP_SLUG);
+    const shop = findDemoShop(db);
     if (!shop) throw new Error(`Shop "${DEMO_SHOP_SLUG}" was not found.`);
 
     const ownerHash = await bcrypt.hash(DEMO_OWNER_PASSWORD, BCRYPT_ROUNDS);
@@ -696,6 +706,7 @@ export async function seedMahi3dDemo({ dbPath = defaultDbPath } = {}) {
       db.prepare(`
         UPDATE shops SET
           name = ?,
+          slug = ?,
           email = ?,
           password_hash = ?,
           is_temp_password = 0,
@@ -711,7 +722,7 @@ export async function seedMahi3dDemo({ dbPath = defaultDbPath } = {}) {
           billing_updated_at = datetime('now'),
           updated_at = datetime('now')
         WHERE id = ?
-      `).run('Mahi3D', DEMO_OWNER_EMAIL, ownerHash, shop.id);
+      `).run('Trennen', DEMO_SHOP_SLUG, DEMO_OWNER_EMAIL, ownerHash, shop.id);
 
       materialCount = syncDemoMaterials(db, shop.id);
       const materials = loadRequiredMaterials(db, shop.id);
@@ -755,10 +766,12 @@ export async function seedMahi3dDemo({ dbPath = defaultDbPath } = {}) {
   }
 }
 
+export const seedTrennenDemo = seedMahi3dDemo;
+
 async function main() {
   assertDemoSeedAllowed();
   const result = await seedMahi3dDemo();
-  console.log('Mahi3D demo seed complete.');
+  console.log('Trennen demo seed complete.');
   console.log(`Backup: ${result.backupPath}`);
   console.log(`Shop admin: ${result.ownerEmail} / ${result.ownerPassword}`);
   console.log(`Customer: ${result.customerEmail} / ${result.customerPassword}`);

@@ -6,20 +6,20 @@
  * recipient's mail client) can tell apart an order confirmation from
  * an invoice from a password-reset.
  *
- * Example outputs (with APP_EMAIL_DOMAIN=mahi3d-app.com, shop slug=mahi3d):
+ * Example outputs (with APP_EMAIL_DOMAIN=trennen-app.com, shop slug=trennen):
  *
  *   category      | local part                | display name
  *   --------------+---------------------------+--------------------------
- *   orders        | mahi3d-orders             | mahi3d · Orders
- *   invoices      | mahi3d-invoices           | mahi3d · Billing
- *   account       | mahi3d-account            | mahi3d · Account
- *   quotes        | mahi3d-quotes             | mahi3d · Quotes
- *   shipping      | mahi3d-shipping           | mahi3d · Shipping
- *   alerts        | mahi3d-alerts             | mahi3d · Alerts
- *   support       | mahi3d                    | mahi3d
+ *   orders        | trennen-orders             | trennen · Orders
+ *   invoices      | trennen-invoices           | trennen · Billing
+ *   account       | trennen-account            | trennen · Account
+ *   quotes        | trennen-quotes             | trennen · Quotes
+ *   shipping      | trennen-shipping           | trennen · Shipping
+ *   alerts        | trennen-alerts             | trennen · Alerts
+ *   support       | trennen                    | trennen
  *
  * Configuration via .env:
- *   APP_EMAIL_DOMAIN     verified sending domain (e.g. mahi3d-app.com)
+ *   APP_EMAIL_DOMAIN     verified sending domain (e.g. trennen-app.com)
  *   APP_EMAIL_FALLBACK   used if APP_EMAIL_DOMAIN is not set yet
  *                        (default: onboarding@resend.dev — Resend sandbox)
  */
@@ -51,8 +51,8 @@ function emailAddressOnly(value) {
  * Build a From header for a given shop + category.
  *
  * @param {object} opts
- * @param {string} opts.shopName   Display name of the shop (e.g. "Mahi3d")
- * @param {string} opts.shopSlug   URL slug (e.g. "mahi3d")
+ * @param {string} opts.shopName   Display name of the shop (e.g. "Trennen")
+ * @param {string} opts.shopSlug   URL slug (e.g. "trennen")
  * @param {string} opts.category   One of the keys in CATEGORY_META
  * @returns {string}               "Shop · Purpose <slug-purpose@domain>"
  */

@@ -31,8 +31,8 @@ function expectPricingError(code, fn) {
 }
 
 try {
-  const shop = db.prepare("SELECT * FROM shops WHERE slug = 'mahi3d'").get();
-  assert(shop, 'Mahi3D shop is missing; run npm run demo:seed:mahi3d first');
+  const shop = db.prepare("SELECT * FROM shops WHERE slug = 'trennen'").get();
+  assert(shop, 'Trennen shop is missing; run npm run demo:seed:trennen first');
 
   const material = db.prepare(`
     SELECT *
@@ -50,8 +50,8 @@ try {
 
   assert(colour?.id, 'PETG needs at least one enabled colour for explicit-selection smoke');
   assert(finish?.id, 'PETG needs at least one enabled finish for explicit-selection smoke');
-  assert(infill?.id, 'Mahi3D needs at least one active infill tier for explicit-selection smoke');
-  assert(shipping?.id, 'Mahi3D needs at least one active shipping option for explicit-selection smoke');
+  assert(infill?.id, 'Trennen needs at least one active infill tier for explicit-selection smoke');
+  assert(shipping?.id, 'Trennen needs at least one active shipping option for explicit-selection smoke');
 
   const baseQuote = {
     materialId: material.id,
@@ -137,7 +137,7 @@ try {
         models: [{ id: 'explicit-model', name: 'explicit-selection.stl', size: 2048, volumeCm3: 10, quantity: 1, dimensions: { xMm: 20, yMm: 20, zMm: 20 } }],
       }));
       localStorage.setItem('form_selection', JSON.stringify({
-        shopSlug: 'mahi3d',
+        shopSlug: 'trennen',
         materialId,
         materialName,
         material: materialName,

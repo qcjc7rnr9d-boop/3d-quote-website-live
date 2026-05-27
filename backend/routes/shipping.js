@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../middleware/auth.js';
 import { normaliseShippingZones } from '../lib/pricing-engine.js';
+import { getShopBySlug } from '../lib/shop-lookup.js';
 
 const router = Router();
 
@@ -22,9 +23,7 @@ router.post('/rates', (req, res) => {
       return res.status(400).json({ error: 'shopSlug is required' });
     }
 
-    const shop = db.prepare(
-      "SELECT id FROM shops WHERE slug = ? AND plan != 'suspended'"
-    ).get(shopSlug);
+    const shop = getShopBySlug(db, shopSlug);
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
     const s = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(shop.id) || {};

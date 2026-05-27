@@ -9,7 +9,7 @@
  *   • Pages under /admin/  → fetches /api/auth/me (requires a session)
  *   • Anywhere else        → fetches /api/customer/shop-info?shop=<slug>
  *                            (slug from ?shop= URL param, or localStorage,
- *                             or falls back to "mahi3d")
+ *                             or falls back to "trennen")
  *
  * The page can mark elements that should receive brand content using
  * `data-brand="…"` attributes, OR rely on the legacy class names below
@@ -24,13 +24,15 @@
  * Legacy class auto-matches (treated as data-brand="name"):
  *   .wordmark .nav-wordmark .footer-wordmark .auth-wordmark .brand-name
  *
- * The placeholder string "mahi3d" inside <title> is also replaced.
+ * The placeholder strings "trennen" and the legacy "mahi3d" inside
+ * <title> are also replaced.
  */
 
 (function () {
   'use strict';
 
-  const PLACEHOLDER = 'mahi3d';
+  const PLACEHOLDER = 'trennen';
+  const LEGACY_PLACEHOLDER = 'mahi3d';
 
   function detectSlug() {
     try {
@@ -90,19 +92,19 @@
     if (!b || !b.name) return;
     const NAME = String(b.name);
 
-    // 1. <title> — replace either placeholder ("mahi3d" was the legacy
-    // default; "Trennen" is the platform default). Whichever appears in
-    // the source HTML gets swapped for the live brand.
+    // 1. <title> — replace either the current or legacy demo placeholder.
     if (document.title) {
       document.title = document.title
-        .replace(/mahi3d/gi, NAME)
-        .replace(/Trennen/g, NAME);
+        .replace(new RegExp(LEGACY_PLACEHOLDER, 'gi'), NAME)
+        .replace(new RegExp(PLACEHOLDER, 'gi'), NAME);
     }
 
     // 2. Explicit slots (data-brand="name") + legacy class names
     const nameSelectors = [
       '[data-brand="name"]',
       '.wordmark',
+      '.brand',
+      '.logo',
       '.nav-wordmark',
       '.footer-wordmark',
       '.auth-wordmark',

@@ -11,7 +11,7 @@
  *
  * Required env (Resend path):
  *   RESEND_API_KEY=re_xxx
- *   EMAIL_FROM="Mahi3d <hello@yourdomain.com>"   ← verified domain in Resend
+ *   EMAIL_FROM="Trennen <hello@yourdomain.com>"   ← verified domain in Resend
  *
  * Required env (SMTP path):
  *   SMTP_HOST   e.g. smtp.gmail.com

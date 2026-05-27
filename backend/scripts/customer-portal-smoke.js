@@ -60,7 +60,7 @@ function createOtherShopOrder() {
       subtotal, tax, shipping, total, payment_status, fulfilment_status
     )
     VALUES (?, ?, ?, ?, 1, 10, 1.5, 2, 13.5, 'paid', 'complete')
-  `).run(otherShopId, 'alex@mahi3d-demo.test', 'Alex Morgan', 'Other Shop Part.stl');
+  `).run(otherShopId, 'alex@trennen-demo.test', 'Alex Morgan', 'Other Shop Part.stl');
   otherOrderId = order.lastInsertRowid;
 }
 
@@ -74,9 +74,9 @@ try {
     SELECT ca.id, ca.shop_id
     FROM customer_accounts ca
     JOIN shops s ON s.id = ca.shop_id
-    WHERE s.slug = 'mahi3d' AND ca.email = 'alex@mahi3d-demo.test'
+    WHERE s.slug = 'trennen' AND ca.email = 'alex@trennen-demo.test'
   `).get();
-  assert(demoAccount, 'Demo customer account does not exist; run npm run demo:seed:mahi3d first');
+  assert(demoAccount, 'Demo customer account does not exist; run npm run demo:seed:trennen first');
   createdSessionId = randomUUID();
   const expires = Date.now() + 15 * 60 * 1000;
   db.prepare(`
@@ -96,12 +96,12 @@ try {
   }), expires);
   const cookie = `connect.sid=${encodeURIComponent(`s:${signature.sign(createdSessionId, sessionSecret)}`)}`;
 
-  const { data: me } = await api('/api/customer/me?shop=mahi3d', { headers: { Cookie: cookie } });
-  assert(me.shop?.slug === 'mahi3d', '/me returned the wrong shop');
-  assert(me.email === 'alex@mahi3d-demo.test', '/me returned the wrong customer');
+  const { data: me } = await api('/api/customer/me?shop=trennen', { headers: { Cookie: cookie } });
+  assert(me.shop?.slug === 'trennen', '/me returned the wrong shop');
+  assert(me.email === 'alex@trennen-demo.test', '/me returned the wrong customer');
   assert(me.stats && typeof me.stats === 'object', '/me missing stats object');
 
-  const { data: orders } = await api('/api/customer/orders?shop=mahi3d', { headers: { Cookie: cookie } });
+  const { data: orders } = await api('/api/customer/orders?shop=trennen', { headers: { Cookie: cookie } });
   assert(Array.isArray(orders), '/orders did not return an array');
   assert(orders.length === 5, `Expected 5 demo orders, got ${orders.length}`);
   assert(orders.every(o => typeof o.total === 'number'), 'Order totals must be numeric');
@@ -124,8 +124,8 @@ try {
   const activeOrder = orders.find(o => o.fulfilment_status === 'in_production');
   assert(activeOrder && !activeOrder.customer_message, 'Active non-shipped orders must not expose customer_message');
 
-  await api(`/api/customer/orders/${shipped.id}?shop=mahi3d`, { headers: { Cookie: cookie } });
-  await api(`/api/customer/orders/${otherOrderId}?shop=mahi3d`, { headers: { Cookie: cookie } }, 404);
+  await api(`/api/customer/orders/${shipped.id}?shop=trennen`, { headers: { Cookie: cookie } });
+  await api(`/api/customer/orders/${otherOrderId}?shop=trennen`, { headers: { Cookie: cookie } }, 404);
   await api(`/api/customer/me?shop=${encodeURIComponent(otherSlug)}`, { headers: { Cookie: cookie } }, 403);
   await api(`/api/customer/orders?shop=${encodeURIComponent(otherSlug)}`, { headers: { Cookie: cookie } }, 403);
 

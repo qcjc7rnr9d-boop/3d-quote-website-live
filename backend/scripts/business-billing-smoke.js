@@ -138,21 +138,21 @@ try {
   db.prepare('INSERT OR IGNORE INTO platform_settings (id) VALUES (1)').run();
   db.prepare("UPDATE platform_settings SET platform_fee_percent = 5, updated_at = datetime('now') WHERE id = 1").run();
 
-  const demoShop = db.prepare("SELECT id FROM shops WHERE slug = 'mahi3d'").get();
-  assert.ok(demoShop, 'Mahi3D shop is missing; run npm run demo:seed:mahi3d first');
+  const demoShop = db.prepare("SELECT id FROM shops WHERE slug = 'trennen'").get();
+  assert.ok(demoShop, 'Trennen shop is missing; run npm run demo:seed:trennen first');
   const material = db.prepare(`
     SELECT id, colours, finishes
     FROM materials
     WHERE shop_id = ? AND active = 1 AND name = 'PETG'
   `).get(demoShop.id);
-  assert.ok(material, 'PETG material is missing from Mahi3D');
+  assert.ok(material, 'PETG material is missing from Trennen');
   const colour = (parseJson(material.colours, []) || []).find(c => c.enabled !== false);
   const finish = (parseJson(material.finishes, []) || []).find(f => f.enabled !== false);
   const pricingRows = db.prepare('SELECT infill_tiers FROM pricing_config WHERE shop_id = ?').get(demoShop.id) || {};
   const infill = parseInfillTiers(pricingRows.infill_tiers).find(t => t.active !== false);
   const shippingRows = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(demoShop.id) || {};
   const shipping = (parseJson(shippingRows.shipping_zones, []) || []).find(s => s.active !== false);
-  const quote = calculateQuoteForShopSlug(db, 'mahi3d', {
+  const quote = calculateQuoteForShopSlug(db, 'trennen', {
     materialId: material.id,
     volumeCm3: 12,
     dimensions: { xMm: 20, yMm: 20, zMm: 12 },

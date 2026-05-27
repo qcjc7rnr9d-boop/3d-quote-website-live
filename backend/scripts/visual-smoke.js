@@ -29,8 +29,8 @@ function parseModels() {
   };
 }
 
-const catalog = await json('/api/customer/catalog?shop=mahi3d');
-const pricing = await json('/api/customer/pricing?shop=mahi3d');
+const catalog = await json('/api/customer/catalog?shop=trennen');
+const pricing = await json('/api/customer/pricing?shop=trennen');
 const material = (catalog.materials || []).find(m => Array.isArray(m.colours) && m.colours.length && Array.isArray(m.finishes) && m.finishes.length)
   || (catalog.materials || [])[0];
 assert(material, 'No material available for visual smoke');
@@ -40,14 +40,14 @@ const infill = (pricing.infill_tiers || []).find(i => i.enabled !== false) || (p
 const shippingRates = await json('/api/shipping/rates', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ shopSlug: 'mahi3d', subtotal: 10 }),
+  body: JSON.stringify({ shopSlug: 'trennen', subtotal: 10 }),
 });
 const shipping = (shippingRates.rates || [])[0];
 assert(colour?.id && finish?.id && infill?.id && shipping?.id, 'Visual smoke needs colour, finish, infill and shipping data');
 
 const formFile = parseModels();
 const formSelection = {
-  shopSlug: 'mahi3d',
+  shopSlug: 'trennen',
   materialId: material.id,
   materialName: material.name,
   material: material.name,
@@ -69,10 +69,10 @@ const formSelection = {
   requiredSelections: { material: true, colour: true, finish: true, infill: true, shipping: true },
 };
 const cart = {
-  shopSlug: 'mahi3d',
+  shopSlug: 'trennen',
   items: [{
     id: 'visual-cart-group',
-    shopSlug: 'mahi3d',
+    shopSlug: 'trennen',
     models: formFile.models,
     file: formFile,
     materialId: material.id,
@@ -107,12 +107,12 @@ try {
   }, { formFile, formSelection, cart });
 
   const pages = [
-    ['quote-first', '/quote.html?shop=mahi3d'],
-    ['materials', '/materials.html?shop=mahi3d'],
-    ['options', '/options.html?shop=mahi3d'],
-    ['quote', '/quote.html?shop=mahi3d'],
-    ['checkout', '/checkout.html?shop=mahi3d'],
-    ['customer-login', '/customer/login.html?shop=mahi3d'],
+    ['quote-first', '/quote.html?shop=trennen'],
+    ['materials', '/materials.html?shop=trennen'],
+    ['options', '/options.html?shop=trennen'],
+    ['quote', '/quote.html?shop=trennen'],
+    ['checkout', '/checkout.html?shop=trennen'],
+    ['customer-login', '/customer/login.html?shop=trennen'],
     ['admin-login', '/admin/login.html'],
     ['platform-login', '/platform/login.html'],
   ];

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>mahi3d - Materials</title>
+  <title>trennen - Materials</title>
   <meta name="description" content="Browse configured 3D printing materials, colours, finishes, and specs before starting a quote.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -669,13 +669,13 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" data-link="home" href="index.html?shop=mahi3d">mahi3d</a>
+    <a class="brand" data-link="home" href="index.html?shop=trennen">trennen</a>
     <nav class="nav-links" aria-label="Main navigation">
-      <a data-link="materials" href="catalog.html?shop=mahi3d" aria-current="page">Materials</a>
-      <a data-link="how" href="catalog.html?shop=mahi3d">How it works</a>
+      <a data-link="materials" href="catalog.html?shop=trennen" aria-current="page">Materials</a>
+      <a data-link="how" href="catalog.html?shop=trennen">How it works</a>
     </nav>
     <div class="nav-actions">
-      <a class="btn-dark" data-link="quote" href="index.html?shop=mahi3d#uploadZone">Start a Quote</a>
+      <a class="btn-dark" data-link="quote" href="index.html?shop=trennen#uploadZone">Start a Quote</a>
       <button class="menu-btn" type="button" aria-label="Open customer portal" data-portal-button>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
@@ -703,7 +703,7 @@
         <strong>Ready to price your part?</strong>
         <p>Start the normal quote flow when you are ready to upload a file and choose options.</p>
       </div>
-      <a class="btn-light" data-link="quote" href="index.html?shop=mahi3d#uploadZone">Start a Quote &rarr;</a>
+      <a class="btn-light" data-link="quote" href="index.html?shop=trennen#uploadZone">Start a Quote &rarr;</a>
     </section>
 
     <div class="filters" id="filters" aria-label="Material filters"></div>
@@ -714,16 +714,16 @@
   </main>
 
   <footer class="footer">
-    <a data-link="home" href="index.html?shop=mahi3d" class="footer-wordmark">mahi3d</a>
+    <a data-link="home" href="index.html?shop=trennen" class="footer-wordmark">trennen</a>
     <ul class="footer-links">
-      <li><a data-link="materials" href="catalog.html?shop=mahi3d">Materials</a></li>
-      <li><a data-link="quote" href="index.html?shop=mahi3d#uploadZone">Quote</a></li>
-      <li><a data-link="orders" href="customer/dashboard.html?shop=mahi3d#orders">My Orders</a></li>
-      <li><a data-link="help" href="customer/dashboard.html?shop=mahi3d#help">Contact</a></li>
-      <li><a data-link="terms" href="terms.html?shop=mahi3d">Terms</a></li>
-      <li><a data-link="privacy" href="privacy.html?shop=mahi3d">Privacy</a></li>
+      <li><a data-link="materials" href="catalog.html?shop=trennen">Materials</a></li>
+      <li><a data-link="quote" href="index.html?shop=trennen#uploadZone">Quote</a></li>
+      <li><a data-link="orders" href="customer/dashboard.html?shop=trennen#orders">My Orders</a></li>
+      <li><a data-link="help" href="customer/dashboard.html?shop=trennen#help">Contact</a></li>
+      <li><a data-link="terms" href="terms.html?shop=trennen">Terms</a></li>
+      <li><a data-link="privacy" href="privacy.html?shop=trennen">Privacy</a></li>
     </ul>
-    <p class="footer-copy">&copy; 2026 mahi3d. All rights reserved.</p>
+    <p class="footer-copy">&copy; 2026 trennen. All rights reserved.</p>
   </footer>
 
   <script>
@@ -733,9 +733,9 @@
         if (fromUrl) return fromUrl;
       } catch {}
       try {
-        return JSON.parse(localStorage.getItem('form_selection') || '{}').shopSlug || 'mahi3d';
+        return JSON.parse(localStorage.getItem('form_selection') || '{}').shopSlug || 'trennen';
       } catch {
-        return 'mahi3d';
+        return 'trennen';
       }
     })();
 

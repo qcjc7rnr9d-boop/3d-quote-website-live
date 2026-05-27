@@ -7,6 +7,7 @@ import {
   planRowFromDefault,
   publicPlan,
 } from './billing-plans.js';
+import { getShopBySlug } from './shop-lookup.js';
 
 const DEFAULT_CARD_FEE_BPS = 290;
 const DEFAULT_CARD_FEE_FIXED_CENTS = 30;
@@ -666,7 +667,7 @@ export function checkoutSettingsForShop(db, shopSlugOrId, amountCents = 0) {
   ensureBillingReady(db);
   const shop = typeof shopSlugOrId === 'number'
     ? db.prepare("SELECT * FROM shops WHERE id = ? AND plan != 'suspended'").get(shopSlugOrId)
-    : db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlugOrId);
+    : getShopBySlug(db, shopSlugOrId);
   if (!shop) return null;
   const merchant = getMerchantPlan(db, shop.id);
   const mode = getPaymentFeeMode(db, shop.id);

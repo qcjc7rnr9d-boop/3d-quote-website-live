@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Confirmed — mahi3d</title>
+  <title>Order Confirmed — trennen</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -160,10 +160,10 @@
 <body>
 
   <nav class="nav" role="navigation">
-    <a href="index.html?shop=mahi3d" class="nav-wordmark" data-home-link>mahi3d</a>
+    <a href="index.html?shop=trennen" class="nav-wordmark" data-home-link>trennen</a>
     <ul class="nav-links" id="navLinks">
       <li><a href="materials.html">Materials</a></li>
-      <li><a href="index.html?shop=mahi3d#uploadZone" data-start-link>Quote</a></li>
+      <li><a href="index.html?shop=trennen#uploadZone" data-start-link>Quote</a></li>
       <li><a href="customer/dashboard.html#help">Contact</a></li>
     </ul>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
@@ -256,7 +256,7 @@
     <p class="info-text">A confirmation email will be sent to your inbox.</p>
 
     <!-- 7. CTA -->
-    <a href="index.html?shop=mahi3d" class="btn btn-outline" style="margin-top:20px; display:inline-flex;" data-home-link>Back to home</a>
+    <a href="index.html?shop=trennen" class="btn btn-outline" style="margin-top:20px; display:inline-flex;" data-home-link>Back to home</a>
 
     <!-- 8. Trust strip -->
     <div class="trust-strip">
@@ -282,7 +282,7 @@
     const params = new URLSearchParams(location.search);
     const orderId = params.get('order');
     const orderToken = params.get('token');
-    const shopSlug = params.get('shop') || 'mahi3d';
+    const shopSlug = params.get('shop') || 'trennen';
     const orderRefEl = document.getElementById('orderRef');
     const fmtNzd = value => 'NZ$' + Number(value || 0).toFixed(2);
     const centsToNzd = value => Number(value || 0) / 100;
