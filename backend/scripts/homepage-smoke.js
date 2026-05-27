@@ -83,7 +83,7 @@ try {
   const uploadState = await page.evaluate(async () => {
     const formFile = JSON.parse(localStorage.getItem('form_file') || 'null');
     const idbModel = await new Promise(resolve => {
-      const req = indexedDB.open('mahi3d-quote', 1);
+      const req = indexedDB.open('trennen-quote', 1);
       req.onupgradeneeded = () => req.result.createObjectStore('files');
       req.onerror = () => resolve(null);
       req.onsuccess = () => {
@@ -106,10 +106,10 @@ try {
   assert(uploadState.modelCount === 1, `Expected one uploaded model, got ${uploadState.modelCount}`);
   assert(Number(uploadState.dimensions?.xMm) > 0, 'Uploaded model dimensions were not saved');
   assert(uploadState.hasIndexedModel, 'Uploaded model buffer was not saved for the viewer');
-  assert(/materials\.html\?shop=mahi3d$/.test(uploadState.continueHref), `Choose Material link should include shop slug, got ${uploadState.continueHref}`);
+  assert(/materials\.html\?shop=trennen$/.test(uploadState.continueHref), `Choose Material link should include shop slug, got ${uploadState.continueHref}`);
 
   await page.click('#continueBtn');
-  await page.waitForURL(/\/materials\.html\?shop=mahi3d$/, { timeout: 7000 });
+  await page.waitForURL(/\/materials\.html\?shop=trennen$/, { timeout: 7000 });
 
   console.log('Homepage smoke checks passed.');
 } finally {

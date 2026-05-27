@@ -57,7 +57,7 @@ const secret = 'shpss_test_secret';
 
 {
   const cart = {
-    shopSlug: 'mahi3d',
+    shopSlug: 'trennen',
     currency: 'NZD',
     items: [
       {
@@ -92,7 +92,7 @@ const secret = 'shpss_test_secret';
   const input = buildShopifyDraftOrderInput({
     cart,
     customer: { email: 'customer@example.test', name: 'Ada Lovelace' },
-    shop: { name: 'Mahi3D', slug: 'mahi3d' },
+    shop: { name: 'Trennen', slug: 'trennen' },
     quoteSession: { token: 'quote_session_token', files: [{ name: 'Bracket.stl', url: 'https://files.example.test/bracket.stl' }] },
   });
 

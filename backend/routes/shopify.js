@@ -356,7 +356,7 @@ function requireProxySignature(req, res, next) {
 function shopSlugForProxy(req) {
   const domain = req.query.shop ? normaliseShopifyDomain(req.query.shop) : null;
   const shop = domain ? findShopForShopifyDomain(db, domain) : null;
-  return shop?.slug || domain?.replace(/\.myshopify\.com$/, '') || req.query.shopSlug || 'mahi3d';
+  return shop?.slug || domain?.replace(/\.myshopify\.com$/, '') || req.query.shopSlug || 'trennen';
 }
 
 shopifyProxyRouter.use(requireProxySignature);

@@ -109,14 +109,14 @@ assert(
 
 const browser = await chromium.launch({ headless: true });
 try {
-  const catalogRes = await fetch(`${base}/api/customer/catalog?shop=mahi3d`);
+  const catalogRes = await fetch(`${base}/api/customer/catalog?shop=trennen`);
   const catalog = await catalogRes.json();
-  const pricingRes = await fetch(`${base}/api/customer/pricing?shop=mahi3d`);
+  const pricingRes = await fetch(`${base}/api/customer/pricing?shop=trennen`);
   const pricing = await pricingRes.json();
   const shippingRes = await fetch(`${base}/api/shipping/rates`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ shopSlug: 'mahi3d' }),
+    body: JSON.stringify({ shopSlug: 'trennen' }),
   });
   const shippingData = await shippingRes.json();
   const material = (catalog.materials || []).find(m => m.enabled !== false);
@@ -131,7 +131,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
   const errors = [];
   page.on('pageerror', err => errors.push(err.message));
-  await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${base}/quote.html?shop=trennen`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#viewerEmpty', { state: 'visible', timeout: 10000 });
   const freshState = await page.evaluate(() => ({
     activeProgress: document.querySelector('.quote-progress-step.active')?.textContent?.replace(/\s+/g, ' ').trim() || '',
@@ -144,7 +144,7 @@ try {
   assert(/^1\s*Upload$/.test(freshState.activeProgress), `Fresh quote should start on Upload progress, got ${freshState.activeProgress}`);
   assert(freshState.emptyTitle === 'Upload your model', `Fresh quote empty title should invite the first upload, got ${freshState.emptyTitle}`);
   assert(!/next model group|same model again/i.test(freshState.emptyCopy), `Fresh quote copy should not describe add-another flow: ${freshState.emptyCopy}`);
-  assert(freshState.logoHref === 'index.html?shop=mahi3d', `Quote logo should link home with shop slug, got ${freshState.logoHref}`);
+  assert(freshState.logoHref === 'index.html?shop=trennen', `Quote logo should link home with shop slug, got ${freshState.logoHref}`);
   assert(freshState.materialsDisabled === 'true', 'Fresh quote should disable Materials nav until a model is uploaded');
   assert(freshState.materialsHref === '#upload', `Fresh quote Materials nav should target upload prompt, got ${freshState.materialsHref}`);
 
@@ -158,7 +158,7 @@ try {
       models: [{ id: 'no-shipping-model', name: 'no-shipping-preview.stl', size: 1024, volumeCm3: 8, quantity: 1, dimensions: { xMm: 20, yMm: 20, zMm: 20 } }],
     }));
     localStorage.setItem('form_selection', JSON.stringify({
-      shopSlug: 'mahi3d',
+      shopSlug: 'trennen',
       materialId: material.id,
       materialName: material.name,
       colorId: colour.id || null,
@@ -175,7 +175,7 @@ try {
       currency: 'NZD',
     }));
   }, { material, colour, finish, infill });
-  await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/quote.html?shop=trennen`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => {
     const price = document.querySelector('#priceInt')?.textContent?.trim() || '';
     const helper = document.querySelector('#priceHelper')?.textContent || '';
@@ -210,7 +210,7 @@ try {
       dimensions: { xMm: 20, yMm: 20, zMm: 20 },
     }));
     localStorage.setItem('form_selection', JSON.stringify({
-      shopSlug: 'mahi3d',
+      shopSlug: 'trennen',
       materialId: material.id,
       materialName: material.name,
       colorId: colour.id || null,
@@ -230,7 +230,7 @@ try {
       currency: 'NZD',
     }));
     const db = await new Promise((resolve, reject) => {
-      const req = indexedDB.open('mahi3d-quote', 1);
+      const req = indexedDB.open('trennen-quote', 1);
       req.onupgradeneeded = () => req.result.createObjectStore('files');
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
@@ -258,7 +258,7 @@ try {
   assert(/20 mm/.test(state.dimensions || ''), `Viewer dimensions did not render, got ${state.dimensions}`);
   assert(state.canvasWidth > 100 && state.canvasHeight > 100, 'Viewer canvas did not size correctly');
   assert(state.materialsDisabled === 'false', 'Quote should enable Materials nav once a model is loaded');
-  assert(/materials\.html\?shop=mahi3d$/.test(state.materialsHref), `Loaded quote Materials nav should link to materials, got ${state.materialsHref}`);
+  assert(/materials\.html\?shop=trennen$/.test(state.materialsHref), `Loaded quote Materials nav should link to materials, got ${state.materialsHref}`);
 
   await page.selectOption('#currencySelect', 'USD');
   await page.waitForFunction(() => document.querySelector('#currencyEstimateNote')?.classList.contains('show'), null, { timeout: 5000 });
@@ -283,7 +283,7 @@ try {
       previewModelId: 'qty-a',
     }));
     localStorage.setItem('form_selection', JSON.stringify({
-      shopSlug: 'mahi3d',
+      shopSlug: 'trennen',
       materialId: material.id,
       materialName: material.name,
       colorId: colour.id || null,
@@ -332,10 +332,10 @@ try {
 
   await page.evaluate(({ material, colour, finish, infill, shipping }) => {
     localStorage.setItem('cart', JSON.stringify({
-      shopSlug: 'mahi3d',
+      shopSlug: 'trennen',
       items: [{
         id: 'existing-cart-group',
-        shopSlug: 'mahi3d',
+        shopSlug: 'trennen',
         materialId: material.id,
         materialName: material.name,
         colorId: colour.id || null,
@@ -366,7 +366,7 @@ try {
       models: [{ id: 'current-model', name: 'Current group.stl', size: 1024, volumeCm3: 2, quantity: 1, dimensions: { xMm: 20, yMm: 20, zMm: 20 } }],
     }));
     localStorage.setItem('form_selection', JSON.stringify({
-      shopSlug: 'mahi3d',
+      shopSlug: 'trennen',
       materialId: material.id,
       materialName: material.name,
       colorId: colour.id || null,
@@ -382,9 +382,9 @@ try {
       requiredSelections: { material: true, colour: true, finish: true, infill: true, shipping: true },
     }));
   }, { material, colour, finish, infill, shipping });
-  await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/quote.html?shop=trennen`, { waitUntil: 'networkidle' });
   await page.click('#addAnotherBtn');
-  await page.waitForURL(/index\.html\?shop=mahi3d/, { timeout: 7000 });
+  await page.waitForURL(/index\.html\?shop=trennen/, { timeout: 7000 });
   await page.waitForSelector('#newUploadBanner.show', { timeout: 10000 });
   await page.waitForTimeout(250);
   const newGroupState = await page.evaluate(() => ({
@@ -420,9 +420,9 @@ try {
   }));
   assert(homeUploadState.cartCount === 2, `Home upload should preserve existing material groups, got ${homeUploadState.cartCount} items`);
   assert(homeUploadState.file?.models?.[0]?.name === 'Next material group.stl', 'Home upload did not save the new model group');
-  assert(homeUploadState.continueHref === 'materials.html?shop=mahi3d&newGroup=1', `Home upload should preserve new-group material link, got ${homeUploadState.continueHref}`);
+  assert(homeUploadState.continueHref === 'materials.html?shop=trennen&newGroup=1', `Home upload should preserve new-group material link, got ${homeUploadState.continueHref}`);
   await page.click('#continueBtn');
-  await page.waitForURL(/materials\.html\?shop=mahi3d&newGroup=1/, { timeout: 7000 });
+  await page.waitForURL(/materials\.html\?shop=trennen&newGroup=1/, { timeout: 7000 });
   await page.waitForFunction(() => /Next material group\.stl/.test(document.querySelector('#modelGroupPanel')?.innerText || ''), null, { timeout: 7000 });
   const materialArrival = await page.evaluate(() => ({
     cartCount: JSON.parse(localStorage.getItem('cart') || '{}').items?.length || 0,

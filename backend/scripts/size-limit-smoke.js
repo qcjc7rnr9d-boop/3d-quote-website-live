@@ -19,8 +19,8 @@ function firstEnabled(list = []) {
 let materialId = null;
 
 try {
-  const shop = db.prepare("SELECT * FROM shops WHERE slug = 'mahi3d'").get();
-  assert(shop, 'Mahi3D shop is missing; run npm run demo:seed:mahi3d first');
+  const shop = db.prepare("SELECT * FROM shops WHERE slug = 'trennen'").get();
+  assert(shop, 'Trennen shop is missing; run npm run demo:seed:trennen first');
 
   const reference = db.prepare(`
     SELECT *

@@ -25,8 +25,8 @@ try {
   assert(quoteHtml.includes('index.html?shop='), 'add-another flow must return to the home upload prompt');
   assert(quoteHtml.includes('&newGroup=1&promptUpload=1'), 'add-another flow must preserve prompt params');
 
-  const shop = db.prepare("SELECT * FROM shops WHERE slug = 'mahi3d'").get();
-  assert(shop, 'Mahi3D shop is missing; run npm run demo:seed:mahi3d first');
+  const shop = db.prepare("SELECT * FROM shops WHERE slug = 'trennen'").get();
+  assert(shop, 'Trennen shop is missing; run npm run demo:seed:trennen first');
   const materials = db.prepare(`
     SELECT id, name, colours, finishes
     FROM materials
@@ -38,8 +38,8 @@ try {
   const infill = parseInfillTiers(pricingRows.infill_tiers).find(t => t.active !== false);
   const shippingRows = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
   const shipping = (parseJson(shippingRows.shipping_zones, []) || []).find(s => s.active !== false);
-  assert(infill?.id, 'Mahi3D infill tier is missing');
-  assert(shipping?.id, 'Mahi3D shipping option is missing');
+  assert(infill?.id, 'Trennen infill tier is missing');
+  assert(shipping?.id, 'Trennen shipping option is missing');
 
   const itemFor = (material, name, volumeCm3) => {
     const colour = (parseJson(material.colours, []) || []).find(c => c.enabled !== false);

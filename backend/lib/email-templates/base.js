@@ -94,7 +94,7 @@ export function eyebrow(text) {
  *                                    { accentColor, logoUrl, footerNote, footerAddress }
  */
 export function renderEmail({
-  shopName = 'Mahi3d',
+  shopName = 'Trennen',
   eyebrowText = '',
   preheader = '',
   content = '',

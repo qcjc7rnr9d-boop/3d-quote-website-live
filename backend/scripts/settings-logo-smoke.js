@@ -78,8 +78,8 @@ try {
     body: formWithFile('logo', png1x1, 'image/png', 'logo.png'),
   }, 401);
 
-  const shop = db.prepare("SELECT id FROM shops WHERE slug = 'mahi3d'").get();
-  assert(shop, 'Mahi3D shop is missing; run npm run demo:seed:mahi3d first');
+  const shop = db.prepare("SELECT id FROM shops WHERE slug = 'trennen'").get();
+  assert(shop, 'Trennen shop is missing; run npm run demo:seed:trennen first');
   const settings = db.prepare('SELECT logo_url FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
   originalLogoUrl = settings.logo_url || null;
   const cookie = makeShopCookie(shop.id);
@@ -130,7 +130,7 @@ try {
   console.log('Settings logo smoke checks passed.');
 } finally {
   if (originalLogoUrl !== null) {
-    const shop = db.prepare("SELECT id FROM shops WHERE slug = 'mahi3d'").get();
+    const shop = db.prepare("SELECT id FROM shops WHERE slug = 'trennen'").get();
     if (shop) {
       db.prepare('UPDATE store_settings SET logo_url = ? WHERE shop_id = ?').run(originalLogoUrl, shop.id);
     }

@@ -14,6 +14,7 @@ import { normaliseCart, previewCartForShop } from '../lib/cart.js';
 import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
 import { getExchangeRates, normaliseQuoteCurrencies } from '../lib/exchange-rates.js';
 import { previewQuoteUsage, recordQuoteUsageEvent } from '../lib/billing-service.js';
+import { getShopBySlug, normaliseShopSlug } from '../lib/shop-lookup.js';
 
 const router = Router();
 const smokeRateLimitSkip = req => process.env.NODE_ENV !== 'production' && req.get('x-smoke-test') === '1';
@@ -148,7 +149,7 @@ function getCustomerShop(req, requestedSlugOverride = null) {
   if (!shop) throw new CustomerPortalError('Not authenticated', 401);
 
   const requestedSlug = String(requestedSlugOverride || req.query.shop || req.query.slug || '').trim();
-  if (requestedSlug && requestedSlug !== shop.slug) {
+  if (requestedSlug && normaliseShopSlug(requestedSlug) !== shop.slug) {
     throw new CustomerPortalError('This customer session belongs to another shop.', 403);
   }
   return shop;
@@ -371,12 +372,10 @@ function requireCustomerAuth(req, res, next) {
 // ── GET /api/customer/shop-info?slug=X  (public) ─────────────
 router.get('/shop-info', (req, res) => {
   ensureSupportEmailColumns();
-  // Accept ?slug=mahi3d  OR  ?shop=mahi3d (both used across customer pages)
+  // Accept ?slug=... OR ?shop=... (both are used across customer pages).
   const slug = req.query.slug || req.query.shop;
   if (!slug) return res.status(400).json({ error: 'slug required' });
-  const shop = db.prepare(
-    "SELECT id, name, slug, email FROM shops WHERE slug = ? AND plan != 'suspended'"
-  ).get(slug);
+  const shop = getShopBySlug(db, slug);
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
   // Pull branding fields from the shop's store_settings row (all optional)
@@ -403,9 +402,7 @@ router.get('/shop-info', (req, res) => {
 router.get('/pricing', (req, res) => {
   const { shop: slug } = req.query;
   if (!slug) return res.status(400).json({ error: 'shop required' });
-  const shop = db.prepare(
-    "SELECT id FROM shops WHERE slug = ? AND plan != 'suspended'"
-  ).get(slug);
+  const shop = getShopBySlug(db, slug);
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
   // Get pricing config (with sensible defaults if none set yet)
@@ -460,9 +457,7 @@ router.get('/exchange-rates', async (req, res) => {
 router.get('/catalog', (req, res) => {
   const { shop: slug } = req.query;
   if (!slug) return res.status(400).json({ error: 'shop required' });
-  const shop = db.prepare(
-    "SELECT id FROM shops WHERE slug = ? AND plan != 'suspended'"
-  ).get(slug);
+  const shop = getShopBySlug(db, slug);
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
   const settingsRow = db.prepare(
     'SELECT material_page_settings FROM store_settings WHERE shop_id = ?'
@@ -502,7 +497,8 @@ router.post('/quote-preview', customerQuoteLimiter, (req, res) => {
   try {
     const { shopSlug, shop, ...input } = req.body || {};
     const slug = shopSlug || shop;
-    const quote = calculateQuoteForShopSlug(db, slug, { ...input, shopSlug: slug });
+    const canonicalSlug = normaliseShopSlug(slug);
+    const quote = calculateQuoteForShopSlug(db, canonicalSlug, { ...input, shopSlug: canonicalSlug });
     res.json(quote);
   } catch (err) {
     if (err instanceof PricingError) {
@@ -523,13 +519,13 @@ router.post('/cart-preview', customerQuoteLimiter, (req, res) => {
   try {
     const { shopSlug, shop, items, shippingId, shipping } = req.body || {};
     const slug = shopSlug || shop;
-    const shopRow = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(slug);
+    const shopRow = getShopBySlug(db, slug);
     if (!shopRow) return res.status(404).json({ ok: false, code: 'SHOP_NOT_FOUND', error: 'Shop not found.' });
     const cart = previewCartForShop(db, shopRow, normaliseCart({
-      shopSlug: slug,
+      shopSlug: shopRow.slug,
       items: Array.isArray(items) ? items : [],
       shipping: shipping || (shippingId ? { id: shippingId } : null),
-    }, slug), { requireShipping: false });
+    }, shopRow.slug), { requireShipping: false });
     res.json({ ok: true, cart });
   } catch (err) {
     if (err instanceof PricingError) {
@@ -560,7 +556,7 @@ router.post('/register', customerRegisterLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
-    const shop = db.prepare('SELECT id FROM shops WHERE slug = ?').get(shopSlug);
+    const shop = getShopBySlug(db, shopSlug);
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -598,7 +594,7 @@ router.post('/login', customerLoginLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Incorrect email or password' });
     }
 
-    const shop = db.prepare('SELECT id FROM shops WHERE slug = ?').get(shopSlug);
+    const shop = getShopBySlug(db, shopSlug);
     if (!shop) return res.status(401).json({ error: 'Incorrect email or password' });
 
     const account = db.prepare(
@@ -630,9 +626,7 @@ router.post('/forgot-password', customerResetLimiter, async (req, res) => {
       return res.json({ ok: true, message });
     }
 
-    const shop = db.prepare(
-      "SELECT id, name, slug, email FROM shops WHERE slug = ? AND plan != 'suspended'"
-    ).get(shopSlug);
+    const shop = getShopBySlug(db, shopSlug);
     if (!shop) return res.json({ ok: true, message });
 
     const account = db.prepare(

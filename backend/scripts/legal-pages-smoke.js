@@ -54,10 +54,10 @@ assert(
 for (const [name, html] of [['catalog.html', catalogHtml]]) {
   assert(html.includes('terms.html?shop='), `${name} footer must link to terms.html with shop slug`);
   assert(html.includes('privacy.html?shop='), `${name} footer must link to privacy.html with shop slug`);
-  assert(!html.includes('customer/dashboard.html?shop=mahi3d#help" data-pv-tab="help">Terms'), `${name} must not route Terms to the Help tab`);
-  assert(!html.includes('customer/dashboard.html?shop=mahi3d#help" data-pv-tab="help">Privacy'), `${name} must not route Privacy to the Help tab`);
-  assert(!html.includes('customer/dashboard.html?shop=mahi3d#help">Terms'), `${name} must not route Terms to the Help tab`);
-  assert(!html.includes('customer/dashboard.html?shop=mahi3d#help">Privacy'), `${name} must not route Privacy to the Help tab`);
+  assert(!html.includes('customer/dashboard.html?shop=trennen#help" data-pv-tab="help">Terms'), `${name} must not route Terms to the Help tab`);
+  assert(!html.includes('customer/dashboard.html?shop=trennen#help" data-pv-tab="help">Privacy'), `${name} must not route Privacy to the Help tab`);
+  assert(!html.includes('customer/dashboard.html?shop=trennen#help">Terms'), `${name} must not route Terms to the Help tab`);
+  assert(!html.includes('customer/dashboard.html?shop=trennen#help">Privacy'), `${name} must not route Privacy to the Help tab`);
 }
 
 console.log('Legal page smoke checks passed.');

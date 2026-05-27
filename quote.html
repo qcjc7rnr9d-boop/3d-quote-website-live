@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Quote — mahi3d</title>
+  <title>Quote — trennen</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.stripe.com; frame-src https://js.stripe.com; connect-src 'self' https://api.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:;">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1024,7 +1024,7 @@
 <!-- ─── Top nav ────────────────────────────────────────────── -->
 <nav class="nav">
   <div class="nav-inner">
-    <a class="logo" href="index.html?shop=mahi3d" data-home-link>mahi<span class="logo-dot">3d</span></a>
+    <a class="logo" href="index.html?shop=trennen" data-home-link>trennen</a>
     <div class="quote-progress" aria-label="Quote progress">
       <div class="quote-progress-step active" data-progress-step="1" aria-current="step"><span>1</span>Upload</div>
       <div class="quote-progress-line" aria-hidden="true"></div>
@@ -1035,9 +1035,9 @@
       <div class="quote-progress-step" data-progress-step="4"><span>4</span>Quote</div>
     </div>
     <div class="nav-links">
-      <a href="materials.html?shop=mahi3d" class="nav-link" data-quote-nav="materials">Materials</a>
-      <a href="quote.html?shop=mahi3d" class="nav-link active" data-quote-nav="quote">Quote</a>
-      <a href="customer/dashboard.html?shop=mahi3d#overview" class="nav-link" data-quote-nav="portal">Portal</a>
+      <a href="materials.html?shop=trennen" class="nav-link" data-quote-nav="materials">Materials</a>
+      <a href="quote.html?shop=trennen" class="nav-link active" data-quote-nav="quote">Quote</a>
+      <a href="customer/dashboard.html?shop=trennen#overview" class="nav-link" data-quote-nav="portal">Portal</a>
     </div>
     <div class="nav-right">
       <select class="currency-select" id="navCurrency" aria-label="Currency">
@@ -1316,7 +1316,7 @@
   // ──────────────────────────────────────────────────────────────
 
   // ── Config ──────────────────────────────────────────────────
-  const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'mahi3d';
+  const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'trennen';
   document.querySelectorAll('[data-home-link]').forEach(link => {
     link.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
   });
@@ -2027,7 +2027,7 @@
     const input = $('fileInput');
     if (input) input.value = '';
     try {
-      const req = indexedDB.open('mahi3d-quote', 1);
+      const req = indexedDB.open('trennen-quote', 1);
       req.onupgradeneeded = () => req.result.createObjectStore('files');
       req.onsuccess = () => {
         try {
@@ -2663,7 +2663,7 @@
   // ── IndexedDB for the uploaded file blob ───────────────────
   function openIDB() {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('mahi3d-quote', 1);
+      const req = indexedDB.open('trennen-quote', 1);
       req.onupgradeneeded = () => req.result.createObjectStore('files');
       req.onsuccess = () => resolve(req.result);
       req.onerror   = () => reject(req.error);

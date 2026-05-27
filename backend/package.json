@@ -27,8 +27,10 @@
     "platform:smoke": "node scripts/platform-reporting-smoke.js",
     "materials:smoke": "node scripts/material-library-smoke.js",
     "materials:filter-smoke": "node scripts/material-filter-ranking-smoke.js",
-    "demo:seed:mahi3d": "ALLOW_MAHI3D_DEMO_SEED=1 node scripts/seed-mahi3d-demo.js",
+    "demo:seed:trennen": "ALLOW_TRENNEN_DEMO_SEED=1 node scripts/seed-trennen-demo.js",
+    "demo:seed:mahi3d": "ALLOW_TRENNEN_DEMO_SEED=1 node scripts/seed-trennen-demo.js",
     "demo:seed:smoke": "node scripts/mahi3d-demo-seed-smoke.js",
+    "demo:alias-smoke": "node scripts/trennen-demo-alias-smoke.js",
     "demo:materials:smoke": "node scripts/mahi3d-demo-materials-smoke.js",
     "customer:smoke": "node scripts/customer-portal-smoke.js",
     "auth-email:smoke": "node scripts/auth-email-smoke.js",
@@ -46,7 +48,7 @@
     "saas-launch:smoke": "node scripts/saas-launch-smoke.js",
     "exchange-rates:smoke": "node scripts/exchange-rates-smoke.js",
     "admin-orders:smoke": "node scripts/admin-orders-smoke.js",
-    "qa:full": "npm run check && npm run frontend:smoke && npm run homepage:smoke && npm run security:smoke && npm run csrf:smoke && npm run platform-secrets:smoke && npm run business-billing:smoke && npm run pricing-billing:smoke && npm run size-limit:smoke && npm run mailer:smoke && npm run reliable-email:smoke && npm run ops:smoke && npm run production-pilot:smoke && npm run auth-email:smoke && npm run exchange-rates:smoke && npm run customer:password-reset-smoke && npm run customer:smoke && npm run customer:quotes-smoke && npm run platform:smoke && npm run settings:logo-smoke && npm run materials:smoke && npm run materials:filter-smoke && npm run demo:materials:smoke && npm run multi-model:smoke && npm run multi-line-cart:smoke && npm run checkout:smoke && npm run saas-launch:smoke && npm run explicit-selection:smoke && npm run quote:ui-smoke && npm run admin-orders:smoke && npm run legal:smoke && npm run visual:smoke"
+    "qa:full": "npm run check && npm run frontend:smoke && npm run homepage:smoke && npm run security:smoke && npm run csrf:smoke && npm run platform-secrets:smoke && npm run business-billing:smoke && npm run pricing-billing:smoke && npm run size-limit:smoke && npm run mailer:smoke && npm run reliable-email:smoke && npm run ops:smoke && npm run production-pilot:smoke && npm run auth-email:smoke && npm run exchange-rates:smoke && npm run customer:password-reset-smoke && npm run customer:smoke && npm run customer:quotes-smoke && npm run platform:smoke && npm run settings:logo-smoke && npm run materials:smoke && npm run materials:filter-smoke && npm run demo:materials:smoke && npm run demo:alias-smoke && npm run multi-model:smoke && npm run multi-line-cart:smoke && npm run checkout:smoke && npm run saas-launch:smoke && npm run explicit-selection:smoke && npm run quote:ui-smoke && npm run admin-orders:smoke && npm run legal:smoke && npm run visual:smoke"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1048.0",

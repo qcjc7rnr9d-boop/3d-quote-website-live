@@ -51,8 +51,8 @@ function makeShopCookie(shopId) {
 try {
   await api('/api/orders', null, 401);
 
-  const shop = db.prepare("SELECT id FROM shops WHERE slug = 'mahi3d'").get();
-  assert(shop, 'Mahi3D shop is missing; run npm run demo:seed:mahi3d first');
+  const shop = db.prepare("SELECT id FROM shops WHERE slug = 'trennen'").get();
+  assert(shop, 'Trennen shop is missing; run npm run demo:seed:trennen first');
   const cookie = makeShopCookie(shop.id);
 
   const list = await api('/api/orders?limit=10', cookie);
@@ -60,7 +60,7 @@ try {
   assert(list.orders.length >= 5, `Expected at least 5 demo orders, got ${list.orders.length}`);
 
   const expected = new Set(['PETG', 'PLA', 'ASA', 'TPU', 'Nylon']);
-  for (const order of list.orders.filter(o => o.customer_email === 'alex@mahi3d-demo.test')) {
+  for (const order of list.orders.filter(o => o.customer_email === 'alex@trennen-demo.test')) {
     assert(order.material_name, `Order #${order.id} missing material_name`);
     assert(order.material, `Order #${order.id} missing material compatibility alias`);
     assert(order.material === order.material_name, `Order #${order.id} material alias mismatch`);

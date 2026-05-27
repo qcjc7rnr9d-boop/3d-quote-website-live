@@ -87,7 +87,7 @@ Date: 2026-05-15
 ### 2. Quote quantity input had no accessible label
 
 - Impact: screen-reader and keyboard users could encounter an unlabeled numeric control.
-- Reproduce: frontend page smoke on `quote.html?shop=mahi3d` reported `input#qtyVal` as unlabeled.
+- Reproduce: frontend page smoke on `quote.html?shop=trennen` reported `input#qtyVal` as unlabeled.
 - Fix: added `aria-label="Quantity"` to the quote quantity input.
 - Regression test: `backend/scripts/frontend-pages-smoke.js`.
 

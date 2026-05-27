@@ -1,5 +1,6 @@
 import { parseInfillTiers } from './infill-tiers.js';
 import { VISIBLE_MATERIAL_CATEGORY, parseMaterialRow, safeJson } from './material-config.js';
+import { getShopBySlug as lookupShopBySlug } from './shop-lookup.js';
 
 export class PricingError extends Error {
   constructor(message, status = 400, code = 'PRICING_ERROR', quote = null) {
@@ -223,7 +224,7 @@ function selectVolumeRate(material, volumeCm3) {
 
 function getShopBySlug(db, slug) {
   if (!slug) throw new PricingError('shopSlug is required.', 400, 'SHOP_REQUIRED');
-  const shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(slug);
+  const shop = lookupShopBySlug(db, slug);
   if (!shop) throw new PricingError('Shop not found.', 404, 'SHOP_NOT_FOUND');
   return shop;
 }

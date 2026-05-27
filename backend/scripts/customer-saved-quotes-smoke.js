@@ -69,15 +69,15 @@ function firstEnabled(values) {
 }
 
 try {
-  await api('/api/customer/quotes?shop=mahi3d', {}, 401);
+  await api('/api/customer/quotes?shop=trennen', {}, 401);
 
   const account = db.prepare(`
     SELECT ca.id, ca.shop_id
     FROM customer_accounts ca
     JOIN shops s ON s.id = ca.shop_id
-    WHERE s.slug = 'mahi3d' AND ca.email = 'alex@mahi3d-demo.test'
+    WHERE s.slug = 'trennen' AND ca.email = 'alex@trennen-demo.test'
   `).get();
-  assert(account, 'Demo customer account is missing; run npm run demo:seed:mahi3d first');
+  assert(account, 'Demo customer account is missing; run npm run demo:seed:trennen first');
   const cookie = makeCustomerCookie(account);
   const csrfHeaders = await csrfHeader(cookie);
 
@@ -86,7 +86,7 @@ try {
     FROM materials
     WHERE shop_id = ? AND active = 1 AND name = 'PETG'
   `).get(account.shop_id);
-  assert(material, 'PETG material is missing from Mahi3D');
+  assert(material, 'PETG material is missing from Trennen');
   const colour = firstEnabled(parseJson(material.colours, []));
   const finish = firstEnabled(parseJson(material.finishes, []));
   assert(colour?.id, 'PETG colour is missing');
@@ -95,11 +95,11 @@ try {
   const shipping = firstEnabled(parseJson(shippingRows.shipping_zones, []));
   const pricingRows = db.prepare('SELECT infill_tiers FROM pricing_config WHERE shop_id = ?').get(account.shop_id) || {};
   const infill = firstEnabled(parseInfillTiers(pricingRows.infill_tiers));
-  assert(shipping?.id, 'Mahi3D shipping zone is missing');
-  assert(infill?.id, 'Mahi3D infill tier is missing');
+  assert(shipping?.id, 'Trennen shipping zone is missing');
+  assert(infill?.id, 'Trennen infill tier is missing');
 
   const quoteRequest = {
-    shopSlug: 'mahi3d',
+    shopSlug: 'trennen',
     materialId: material.id,
     volumeCm3: 12.5,
     colourId: colour.id,
@@ -111,7 +111,7 @@ try {
   };
 
   const forged = {
-    shopSlug: 'mahi3d',
+    shopSlug: 'trennen',
     quoteRequest,
     file: { name: 'Saved Quote Smoke.stl', size: 2048, volumeCm3: 12.5, dimensions: quoteRequest.dimensions },
     selection: { materialName: 'Fake Material', totalCents: 1 },
@@ -128,18 +128,18 @@ try {
   assert(created.quote.material_name === 'PETG', `Saved quote material mismatch: ${created.quote.material_name}`);
   assert(created.quote.file_name === 'Saved Quote Smoke.stl', 'Saved quote file name missing');
 
-  const { data: quotes } = await api('/api/customer/quotes?shop=mahi3d', { headers: { Cookie: cookie } });
+  const { data: quotes } = await api('/api/customer/quotes?shop=trennen', { headers: { Cookie: cookie } });
   assert(Array.isArray(quotes), 'Quotes endpoint did not return an array');
   assert(quotes.some(quote => quote.id === savedQuoteId), 'Saved quote did not appear in list');
 
   await api('/api/customer/quotes?shop=portal-smoke-other', { headers: { Cookie: cookie } }, 403);
-  await api(`/api/customer/quotes/${savedQuoteId}?shop=mahi3d`, {
+  await api(`/api/customer/quotes/${savedQuoteId}?shop=trennen`, {
     method: 'DELETE',
     headers: csrfHeaders,
   });
   savedQuoteId = null;
 
-  const { data: afterDelete } = await api('/api/customer/quotes?shop=mahi3d', { headers: { Cookie: cookie } });
+  const { data: afterDelete } = await api('/api/customer/quotes?shop=trennen', { headers: { Cookie: cookie } });
   assert(!afterDelete.some(quote => quote.id === created.quote.id), 'Deleted quote still appears in list');
 
   console.log('Customer saved quotes smoke checks passed.');

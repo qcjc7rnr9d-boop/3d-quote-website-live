@@ -144,7 +144,7 @@ Before taking live money, test these states in Stripe test mode:
 
 ## First Pilot Shop
 
-Keep `mahi3d` as the internal demo shop. Create one real **pilot shop** with its own slug, support email, materials, pricing, shipping methods, and allowed embed domain. The pilot storefront URL should be:
+Keep `trennen` as the internal demo shop. Create one real **pilot shop** with its own slug, support email, materials, pricing, shipping methods, and allowed embed domain. The pilot storefront URL should be:
 
 ```text
 https://app.trennen.co.nz/?shop=PILOT_SHOP_SLUG

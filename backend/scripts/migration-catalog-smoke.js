@@ -63,7 +63,7 @@ function createDemoShop() {
   try {
     db.prepare(`
       INSERT OR IGNORE INTO shops (name, slug, email, password_hash, plan)
-      VALUES ('Mahi3D', 'mahi3d', 'owner@mahi3d-demo.test', 'migration-smoke-password-hash', 'starter')
+      VALUES ('Trennen', 'trennen', 'owner@trennen-demo.test', 'migration-smoke-password-hash', 'starter')
     `).run();
   } finally {
     db.close();
@@ -90,7 +90,7 @@ try {
   copyBackend();
   run('node', ['db/migrate.js']);
   createDemoShop();
-  run('node', ['scripts/seed-mahi3d-demo.js'], { ALLOW_MAHI3D_DEMO_SEED: '1' });
+  run('node', ['scripts/seed-trennen-demo.js'], { ALLOW_TRENNEN_DEMO_SEED: '1' });
 
   const port = 3620 + Math.floor(Math.random() * 1000);
   const logs = [];
@@ -112,10 +112,10 @@ try {
   const baseUrl = `http://127.0.0.1:${port}`;
   await waitForServer(baseUrl);
 
-  const res = await fetch(`${baseUrl}/api/customer/catalog?shop=mahi3d`);
+  const res = await fetch(`${baseUrl}/api/customer/catalog?shop=trennen`);
   const body = await res.text();
   if (!res.ok) {
-    throw new Error(`/api/customer/catalog?shop=mahi3d returned ${res.status}: ${body}\n${logs.join('')}`);
+    throw new Error(`/api/customer/catalog?shop=trennen returned ${res.status}: ${body}\n${logs.join('')}`);
   }
   const catalog = JSON.parse(body);
   if (!Array.isArray(catalog.materials) || catalog.materials.length < 1) {

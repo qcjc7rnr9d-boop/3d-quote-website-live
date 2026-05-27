@@ -8,7 +8,7 @@ try {
   const { randomUUID } = await import('node:crypto');
   db = new DatabaseSync('data/rfdewi.db');
   existingOrderId = db.prepare('SELECT id FROM orders ORDER BY id LIMIT 1').get()?.id || null;
-  const shop = db.prepare("SELECT id FROM shops WHERE slug = 'mahi3d'").get();
+  const shop = db.prepare("SELECT id FROM shops WHERE slug = 'trennen'").get();
   if (shop) {
     const cols = db.prepare('PRAGMA table_info(orders)').all().map(c => c.name);
     if (!cols.includes('public_token')) {
@@ -81,8 +81,8 @@ async function expectPublicOrderTokenBoundary() {
 }
 
 async function expectOversizeRejectedIfConfigured() {
-  const res = await fetch(`${base}/api/customer/catalog?shop=mahi3d`);
-  if (!res.ok) throw new Error(`/api/customer/catalog?shop=mahi3d returned ${res.status}`);
+  const res = await fetch(`${base}/api/customer/catalog?shop=trennen`);
+  if (!res.ok) throw new Error(`/api/customer/catalog?shop=trennen returned ${res.status}`);
   const catalog = await res.json();
   const material = (catalog.materials || []).find(m =>
     Number(m.max_x_mm) > 0 || Number(m.max_y_mm) > 0 || Number(m.max_z_mm) > 0
@@ -98,7 +98,7 @@ async function expectOversizeRejectedIfConfigured() {
     zMm: Number(material.max_z_mm) > 0 ? Number(material.max_z_mm) + 1 : 1,
   };
   const body = {
-    shopSlug: 'mahi3d',
+    shopSlug: 'trennen',
     materialId: material.id,
     volumeCm3: 1,
     dimensions,
@@ -155,9 +155,9 @@ await expectStatus('/api/pricing', [401]);
 await expectStatus('/api/materials', [401]);
 await expectStatus('/api/customer/me', [401]);
 await expectStatus('/api/customer/orders', [401]);
-await expectJson('/api/customer/catalog?shop=mahi3d', ['materials', 'settings']);
+await expectJson('/api/customer/catalog?shop=trennen', ['materials', 'settings']);
 await expectJson('/api/customer/exchange-rates?base=NZD&quotes=AUD,USD,GBP,EUR,CAD,JPY,SGD,HKD,CHF,CNY', ['base', 'rates', 'provider', 'stale']);
-await expectPostJson('/api/customer/quote-preview', { shopSlug: 'mahi3d' }, [400]);
+await expectPostJson('/api/customer/quote-preview', { shopSlug: 'trennen' }, [400]);
 await expectPostJson('/api/materials/assets', {}, [401]);
 await expectPostJson('/api/stripe/create-payment-intent', {}, [400, 429]);
 await expectPostJson('/api/customer/change-password', {}, [401, 429]);

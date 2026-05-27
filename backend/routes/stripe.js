@@ -33,6 +33,7 @@ import { normaliseCart, validateCartForShop } from '../lib/cart.js';
 import { saveOrderItems } from '../lib/order-files.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate } from '../lib/email-templates/index.js';
+import { getShopBySlug } from '../lib/shop-lookup.js';
 
 const router = Router();
 const paymentIntentLimiter = rateLimit({
@@ -300,10 +301,7 @@ router.get('/public-key', (req, res) => {
   const slug = req.query.shop;
   if (!slug) return res.status(400).json({ error: 'shop required' });
 
-  const shop = db.prepare(
-    `SELECT *
-     FROM shops WHERE slug = ? AND plan != 'suspended'`
-  ).get(slug);
+  const shop = getShopBySlug(db, slug);
 
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
@@ -349,7 +347,7 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       });
     }
 
-    const shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
+    const shop = getShopBySlug(db, shopSlug);
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
     const platform = getEffectivePlatformStripeConfig();

@@ -1,6 +1,10 @@
 import {
+  DEMO_SHOP_SLUG,
+  DEMO_LEGACY_SHOP_SLUG,
   DEMO_CUSTOMER_EMAIL,
   DEMO_OWNER_EMAIL,
+  DEMO_OWNER_PASSWORD,
+  DEMO_CUSTOMER_PASSWORD,
   buildDemoOrders,
   buildDemoShippingZones,
   assertDemoSeedAllowed,
@@ -17,8 +21,12 @@ function expect(condition, message) {
   console.log(`✓ ${message}`);
 }
 
-expect(DEMO_OWNER_EMAIL === 'owner@mahi3d-demo.test', 'demo owner email is stable');
-expect(DEMO_CUSTOMER_EMAIL === 'alex@mahi3d-demo.test', 'demo customer email is stable');
+expect(DEMO_SHOP_SLUG === 'trennen', 'canonical demo slug is trennen');
+expect(DEMO_LEGACY_SHOP_SLUG === 'mahi3d', 'legacy Mahi3D slug remains an alias');
+expect(DEMO_OWNER_EMAIL === 'owner@trennen-demo.test', 'demo owner email is Trennen-branded');
+expect(DEMO_CUSTOMER_EMAIL === 'alex@trennen-demo.test', 'demo customer email is Trennen-branded');
+expect(DEMO_OWNER_PASSWORD === 'TrennenAdmin!2026', 'demo owner password is Trennen-branded');
+expect(DEMO_CUSTOMER_PASSWORD === 'TrennenCustomer!2026', 'demo customer password is Trennen-branded');
 
 const zones = buildDemoShippingZones();
 expect(zones.length === 3, 'demo has three shipping zones');
@@ -54,7 +62,7 @@ expect(blocked, 'seed refuses to run without explicit demo flag');
 let productionBlocked = false;
 try {
   assertDemoSeedAllowed({
-    env: { NODE_ENV: 'production', ALLOW_MAHI3D_DEMO_SEED: '1' },
+    env: { NODE_ENV: 'production', ALLOW_TRENNEN_DEMO_SEED: '1' },
     argv: ['--yes'],
   });
 } catch {
@@ -63,4 +71,4 @@ try {
 expect(productionBlocked, 'seed refuses to run in production');
 
 if (failures) process.exit(1);
-console.log('Mahi3D demo seed smoke checks passed.');
+console.log('Trennen demo seed smoke checks passed.');

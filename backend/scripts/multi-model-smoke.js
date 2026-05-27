@@ -39,8 +39,8 @@ try {
   assert(checkoutJs.includes('modelVolumeText'), 'checkout must show model volume when available');
   assert(customerDashboard.includes('quoteFilesMarkup'), 'customer dashboard must show saved quote files');
 
-  const shop = db.prepare("SELECT id FROM shops WHERE slug = 'mahi3d'").get();
-  assert(shop, 'Mahi3D shop is missing; run npm run demo:seed:mahi3d first');
+  const shop = db.prepare("SELECT id FROM shops WHERE slug = 'trennen'").get();
+  assert(shop, 'Trennen shop is missing; run npm run demo:seed:trennen first');
   const material = db.prepare(`
     SELECT id, name, colours, finishes
     FROM materials
@@ -53,10 +53,10 @@ try {
   const infill = parseInfillTiers(pricingRows.infill_tiers).find(t => t.active !== false);
   const shippingRows = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
   const shipping = (parseJson(shippingRows.shipping_zones, []) || []).find(s => s.active !== false);
-  assert(infill?.id, 'Mahi3D infill tier is missing');
-  assert(shipping?.id, 'Mahi3D shipping option is missing');
+  assert(infill?.id, 'Trennen infill tier is missing');
+  assert(shipping?.id, 'Trennen shipping option is missing');
 
-  const single = calculateQuoteForShopSlug(db, 'mahi3d', {
+  const single = calculateQuoteForShopSlug(db, 'trennen', {
     materialId: material.id,
     volumeCm3: 10,
     dimensions: { xMm: 20, yMm: 20, zMm: 20 },
@@ -67,7 +67,7 @@ try {
     shippingId: shipping?.id,
   });
 
-  const bundle = calculateQuoteForShopSlug(db, 'mahi3d', {
+  const bundle = calculateQuoteForShopSlug(db, 'trennen', {
     materialId: material.id,
     models: [
       { name: 'Bracket.stl', size: 1024, volumeCm3: 4, quantity: 3, dimensions: { xMm: 20, yMm: 12, zMm: 8 } },
@@ -87,7 +87,7 @@ try {
   assert(bundle.selected.volumeCm3 === 24, `bundle volume should be weighted to 24, got ${bundle.selected.volumeCm3}`);
   assert(bundle.lineItems.itemSubtotal > single.lineItems.itemSubtotal, 'bundle should price by quantity-weighted summed volume');
 
-  const oneEachBundle = calculateQuoteForShopSlug(db, 'mahi3d', {
+  const oneEachBundle = calculateQuoteForShopSlug(db, 'trennen', {
     materialId: material.id,
     models: [
       { name: 'Small A.stl', size: 1024, volumeCm3: 1, quantity: 1, dimensions: { xMm: 10, yMm: 10, zMm: 5 } },
@@ -98,7 +98,7 @@ try {
     infillTierId: infill?.id,
     shippingId: shipping?.id,
   });
-  const copiedBundle = calculateQuoteForShopSlug(db, 'mahi3d', {
+  const copiedBundle = calculateQuoteForShopSlug(db, 'trennen', {
     materialId: material.id,
     models: [
       { name: 'Small A.stl', size: 1024, volumeCm3: 1, quantity: 2, dimensions: { xMm: 10, yMm: 10, zMm: 5 } },
@@ -112,7 +112,7 @@ try {
   assert(copiedBundle.lineItems.itemSubtotal > oneEachBundle.lineItems.itemSubtotal, 'increasing a model quantity must increase the final item subtotal');
 
   try {
-    calculateQuoteForShopSlug(db, 'mahi3d', {
+    calculateQuoteForShopSlug(db, 'trennen', {
       materialId: material.id,
       models: Array.from({ length: 21 }, (_, index) => ({
         name: `Extra ${index + 1}.stl`,
@@ -135,7 +135,7 @@ try {
   db.prepare('INSERT OR IGNORE INTO pricing_config (shop_id) VALUES (?)').run(shop.id);
   db.prepare('UPDATE pricing_config SET max_model_quantity = 2 WHERE shop_id = ?').run(shop.id);
   try {
-    calculateQuoteForShopSlug(db, 'mahi3d', {
+    calculateQuoteForShopSlug(db, 'trennen', {
       materialId: material.id,
       models: [
         { name: 'Too Many Copies.stl', size: 100, volumeCm3: 1, quantity: 3, dimensions: { xMm: 5, yMm: 5, zMm: 5 } },
@@ -159,7 +159,7 @@ try {
     VALUES (?, 'Bundle Smoke Limit', 1, 1, 30, 30, 10, ?, ?)
   `).run(shop.id, material.colours, material.finishes).lastInsertRowid;
   try {
-    calculateQuoteForShopSlug(db, 'mahi3d', {
+    calculateQuoteForShopSlug(db, 'trennen', {
       materialId: tempMaterial,
       models: [
         { name: 'Too Tall.stl', size: 100, volumeCm3: 1, dimensions: { xMm: 5, yMm: 5, zMm: 25 } },

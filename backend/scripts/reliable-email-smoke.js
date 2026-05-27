@@ -40,7 +40,7 @@ try {
   delete process.env.EMAIL_FROM;
   process.env.RESEND_API_KEY = 're_reliable_email_smoke';
   process.env.APP_EMAIL_DOMAIN = 'mail.platform.test';
-  process.env.APP_EMAIL_FALLBACK = 'Mahi3D <hello@mail.platform.test>';
+  process.env.APP_EMAIL_FALLBACK = 'Trennen <hello@mail.platform.test>';
   process.env.RESEND_WEBHOOK_SECRET = `whsec_${Buffer.from('reliable-email-webhook-secret').toString('base64')}`;
 
   const hash = await bcrypt.hash('ReliableEmail!2026', 4);
