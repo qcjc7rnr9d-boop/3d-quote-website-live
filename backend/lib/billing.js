@@ -13,7 +13,7 @@ export const BILLING_STATUSES = new Set([
 export const BILLING_ACTIVE_STATUSES = new Set(['active', 'trialing']);
 
 export const FREE_BILLING_PLANS = new Set(['community']);
-export const PAID_BILLING_PLANS = new Set(['starter', 'growth', 'scale']);
+export const PAID_BILLING_PLANS = new Set();
 
 export const BILLING_STATUS_LABELS = {
   pending_subscription: 'Pending subscription',
@@ -47,34 +47,30 @@ export function normaliseBillingStatus(status) {
 }
 
 export function isFreeBillingPlan(plan) {
-  return FREE_BILLING_PLANS.has(String(plan || 'starter').trim().toLowerCase());
+  return FREE_BILLING_PLANS.has(normalisePlanId(plan));
 }
 
 export function isPaidBillingPlan(plan) {
-  return PAID_BILLING_PLANS.has(String(plan || '').trim().toLowerCase());
+  return PAID_BILLING_PLANS.has(normalisePlanId(plan));
 }
 
 export function billingStatusIsActive(status, plan = null) {
+  if (normalisePlanId(plan) === 'suspended') return false;
   if (normaliseBillingStatus(status) === 'suspended') return false;
   if (plan && isFreeBillingPlan(plan)) return true;
   return BILLING_ACTIVE_STATUSES.has(normaliseBillingStatus(status));
 }
 
 export function getBillingPriceIdForPlan(plan, env = process.env) {
-  const planId = normalisePlanId(plan);
-  return {
-    starter: env.STRIPE_BILLING_STARTER_PRICE_ID || env.STRIPE_BILLING_PRICE_ID || '',
-    growth: env.STRIPE_BILLING_GROWTH_PRICE_ID || '',
-    scale: env.STRIPE_BILLING_SCALE_PRICE_ID || '',
-  }[planId] || '';
+  void plan;
+  void env;
+  return '';
 }
 
 export function getBillingPriceSetupStatus(env = process.env) {
+  void env;
   return {
     community: true,
-    starter: !!getBillingPriceIdForPlan('starter', env),
-    growth: !!getBillingPriceIdForPlan('growth', env),
-    scale: !!getBillingPriceIdForPlan('scale', env),
   };
 }
 
@@ -92,7 +88,7 @@ export function liveOrderReadiness(shop = {}, platformConfig = {}) {
   if (!platformStripeReady(platformConfig)) {
     code = 'PLATFORM_STRIPE_NOT_CONFIGURED';
     error = 'Stripe is not configured on the platform yet.';
-  } else if (!billingActive) {
+  } else if (isPaidBillingPlan(shop.plan) && !billingActive) {
     code = 'SUBSCRIPTION_INACTIVE';
     error = 'This store subscription is not active yet.';
   } else if (!connectedAccountId) {
@@ -128,67 +124,11 @@ export async function createBusinessBillingSession({
   if (!shop?.id) throw new Error('Shop is required');
   if (!baseUrl) throw new Error('Base URL is required');
   const planId = normalisePlanId(shop.plan);
-  if (isFreeBillingPlan(planId)) {
-    const err = new Error('Community is free; no monthly billing checkout is required.');
-    err.code = 'FREE_PLAN_NO_BILLING_REQUIRED';
-    throw err;
-  }
-  if (!stripe) {
-    const err = new Error('Stripe Billing is not configured.');
-    err.code = 'BILLING_STRIPE_NOT_CONFIGURED';
-    throw err;
-  }
-  if (!priceId) {
-    const err = new Error(`Stripe Billing price is not configured for ${defaultPlanById(planId).name}.`);
-    err.code = 'BILLING_PRICE_NOT_CONFIGURED';
-    throw err;
-  }
-
-  const subscription = ensureMerchantSubscription(db, shop.id);
-  const plan = defaultPlanById(planId);
-  const hasUsedTrial = !!subscription?.trial_start;
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    customer_email: shop.email,
-    client_reference_id: String(shop.id),
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${baseUrl}/platform/admin.html?billing=success&shop=${shop.id}`,
-    cancel_url: `${baseUrl}/platform/admin.html?billing=cancelled&shop=${shop.id}`,
-    subscription_data: {
-      metadata: {
-        shopId: String(shop.id),
-        shopSlug: shop.slug || '',
-        plan: planId,
-      },
-      ...(plan.trial_days && !hasUsedTrial ? { trial_period_days: plan.trial_days } : {}),
-    },
-    metadata: {
-      shopId: String(shop.id),
-      shopSlug: shop.slug || '',
-      plan: planId,
-    },
-  });
-
-  db.prepare(`
-    UPDATE shops
-    SET billing_checkout_session_id = ?,
-        billing_checkout_status = ?,
-        billing_price_id = ?,
-        billing_status = CASE
-          WHEN billing_status = 'suspended' THEN 'suspended'
-          ELSE 'pending_subscription'
-        END,
-        billing_updated_at = datetime('now'),
-        updated_at = datetime('now')
-    WHERE id = ?
-  `).run(session.id, session.status || 'open', priceId, shop.id);
-
-  return {
-    billing_checkout_url: session.url,
-    billing_setup_status: 'checkout_created',
-    billing_setup_error: null,
-  };
+  void stripe;
+  void priceId;
+  const err = new Error(`${defaultPlanById(planId).name} is free during the pilot; no monthly billing checkout is required.`);
+  err.code = 'FREE_PLAN_NO_BILLING_REQUIRED';
+  throw err;
 }
 
 export function updateShopBillingFromCheckoutSession(db, session = {}) {

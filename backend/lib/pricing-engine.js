@@ -1,5 +1,5 @@
 import { parseInfillTiers } from './infill-tiers.js';
-import { parseMaterialRow, safeJson } from './material-config.js';
+import { VISIBLE_MATERIAL_CATEGORY, parseMaterialRow, safeJson } from './material-config.js';
 
 export class PricingError extends Error {
   constructor(message, status = 400, code = 'PRICING_ERROR', quote = null) {
@@ -12,6 +12,7 @@ export class PricingError extends Error {
 }
 
 const DEFAULT_CURRENCY = 'NZD';
+const DEFAULT_PLATFORM_FEE_PERCENT = 5;
 export const MAX_MODELS_PER_QUOTE = 20;
 export const MAX_MODEL_QUANTITY_SAFETY = 9999;
 
@@ -38,7 +39,7 @@ function money(value) {
   return fromCents(toCents(value));
 }
 
-function normaliseTaxRate(value) {
+export function normaliseTaxRate(value) {
   const n = toNumber(value, 0);
   if (n <= 0) return 0;
   return n > 1 ? n / 100 : n;
@@ -98,6 +99,9 @@ function publicShipping(shipping) {
   if (!shipping) return null;
   return {
     id: shipping.id,
+    methodId: shipping.methodId || shipping.id,
+    bandId: shipping.bandId || null,
+    bandLabel: shipping.bandLabel || null,
     label: shipping.label,
     price: shipping.originalPrice,
     finalPrice: shipping.price,
@@ -123,7 +127,33 @@ function publicModel(model) {
   };
 }
 
-export function normaliseShippingZones(rawZones = []) {
+function optionalPositiveNumber(value) {
+  const n = toNumber(value, NaN);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function normaliseShippingBand(raw = {}, index = 0, fallbackPrice = 0) {
+  const label = String(raw.label || raw.name || (index === 0 ? 'Standard parcel' : `Band ${index + 1}`)).trim();
+  const price = Math.max(0, money(raw.price ?? raw.rate ?? fallbackPrice));
+  return {
+    id: String(raw.id || `band_${index + 1}`),
+    label,
+    price,
+    maxWeightKg: optionalPositiveNumber(raw.maxWeightKg ?? raw.max_weight_kg ?? raw.weight_kg),
+    maxLongestMm: optionalPositiveNumber(raw.maxLongestMm ?? raw.max_longest_mm ?? raw.longest_mm),
+    maxVolumeCm3: optionalPositiveNumber(raw.maxVolumeCm3 ?? raw.max_volume_cm3 ?? raw.volume_cm3),
+  };
+}
+
+function shippingBandMatches(band, pkg = null) {
+  if (!pkg) return true;
+  if (band.maxWeightKg && toNumber(pkg.estimatedWeightKg, 0) > band.maxWeightKg) return false;
+  if (band.maxLongestMm && toNumber(pkg.maxLongestSideMm, 0) > band.maxLongestMm) return false;
+  if (band.maxVolumeCm3 && toNumber(pkg.packageVolumeCm3, 0) > band.maxVolumeCm3) return false;
+  return true;
+}
+
+export function normaliseShippingZones(rawZones = [], packageMetrics = null) {
   return (Array.isArray(rawZones) ? rawZones : [])
     .filter(o => o && o.active !== false)
     .map((o, index) => {
@@ -135,18 +165,38 @@ export function normaliseShippingZones(rawZones = []) {
         : (carrier || service || 'Shipping');
       const minDays = toNumber(o.days_min ?? o.est_days_min, null);
       const maxDays = toNumber(o.days_max ?? o.est_days_max, minDays);
+      const basePrice = Math.max(0, money(o.price ?? o.rate ?? 0));
+      const bands = (Array.isArray(o.bands) ? o.bands : [])
+        .filter(b => b && b.active !== false)
+        .map((b, bandIndex) => normaliseShippingBand(b, bandIndex, basePrice))
+        .sort((a, b) => {
+          if (a.maxWeightKg !== b.maxWeightKg) return toNumber(a.maxWeightKg, 999999) - toNumber(b.maxWeightKg, 999999);
+          if (a.maxLongestMm !== b.maxLongestMm) return toNumber(a.maxLongestMm, 999999) - toNumber(b.maxLongestMm, 999999);
+          if (a.maxVolumeCm3 !== b.maxVolumeCm3) return toNumber(a.maxVolumeCm3, 999999) - toNumber(b.maxVolumeCm3, 999999);
+          return a.price - b.price;
+        });
+      const selectedBand = bands.length
+        ? (packageMetrics ? bands.find(b => shippingBandMatches(b, packageMetrics)) : bands[0])
+        : null;
+      if (bands.length && packageMetrics && !selectedBand) return null;
+      const price = selectedBand ? selectedBand.price : basePrice;
       return {
         id,
+        methodId: id,
+        bandId: selectedBand?.id || null,
+        bandLabel: selectedBand?.label || null,
         label,
         carrier,
         service,
-        price: Math.max(0, money(o.price ?? o.rate ?? 0)),
-        originalPrice: Math.max(0, money(o.price ?? o.rate ?? 0)),
+        price,
+        originalPrice: price,
         est_days_min: minDays,
         est_days_max: maxDays,
         recommended: !!o.recommended,
+        bands,
       };
     })
+    .filter(Boolean)
     .sort((a, b) => {
       if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
       if (a.price !== b.price) return a.price - b.price;
@@ -187,8 +237,8 @@ function resolveMaterial(db, shop, input = {}) {
     const byId = parseMaterialRow(db.prepare(`
       SELECT *
       FROM materials
-      WHERE id = ? AND shop_id = ? AND active = 1
-    `).get(input.materialId, shop.id), { stableIds: true, publicOnly: true });
+      WHERE id = ? AND shop_id = ? AND active = 1 AND category = ?
+    `).get(input.materialId, shop.id, VISIBLE_MATERIAL_CATEGORY), { stableIds: true, publicOnly: true });
     if (byId) return byId;
   }
 
@@ -203,8 +253,8 @@ function resolveMaterial(db, shop, input = {}) {
   const rows = db.prepare(`
     SELECT *
     FROM materials
-    WHERE shop_id = ? AND active = 1
-  `).all(shop.id);
+    WHERE shop_id = ? AND active = 1 AND category = ?
+  `).all(shop.id, VISIBLE_MATERIAL_CATEGORY);
   const matches = rows.filter(row => normaliseLookupText(row.name) === materialName);
   if (matches.length !== 1) return null;
   return parseMaterialRow(matches[0], { stableIds: true, publicOnly: true });
@@ -223,7 +273,19 @@ function loadPricingInputs(db, shop, input = {}) {
 
   const cfg = db.prepare('SELECT * FROM pricing_config WHERE shop_id = ?').get(shop.id) || {};
   const settings = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
-  return { material, cfg, shippingZones: normaliseShippingZones(safeJson(settings.shipping_zones, [])) };
+  let platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT;
+  try {
+    const platformSettings = db.prepare('SELECT platform_fee_percent FROM platform_settings WHERE id = 1').get() || {};
+    platformFeePercent = toNumber(platformSettings.platform_fee_percent, DEFAULT_PLATFORM_FEE_PERCENT);
+  } catch {
+    platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT;
+  }
+  return {
+    material,
+    cfg,
+    shippingZones: normaliseShippingZones(safeJson(settings.shipping_zones, [])),
+    platformFeePercent,
+  };
 }
 
 export function buildQuoteRequestFromCart(cart = {}) {
@@ -359,7 +421,32 @@ function checkMaterialSize(material, input = {}, models = null) {
   return dimensions;
 }
 
-export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], input = {} }) {
+function includedPlatformFeeCents(customerTotalCents, platformFeePercent) {
+  const percent = Math.max(0, Math.min(50, toNumber(platformFeePercent, 0)));
+  if (percent <= 0 || customerTotalCents <= 0) return 0;
+  return Math.max(0, customerTotalCents - Math.floor(customerTotalCents * (1 - percent / 100)));
+}
+
+export function grossUpForIncludedPlatformFee(sellerNetTotalCents, platformFeePercent) {
+  const percent = Math.max(0, Math.min(50, toNumber(platformFeePercent, 0)));
+  if (percent <= 0 || sellerNetTotalCents <= 0) {
+    return {
+      sellerNetTotalCents,
+      platformFeeIncludedCents: 0,
+      customerTotalCents: sellerNetTotalCents,
+      platformFeePercent: percent,
+    };
+  }
+  const customerTotalCents = Math.ceil(sellerNetTotalCents / (1 - percent / 100));
+  return {
+    sellerNetTotalCents,
+    platformFeeIncludedCents: includedPlatformFeeCents(customerTotalCents, percent),
+    customerTotalCents,
+    platformFeePercent: percent,
+  };
+}
+
+export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], input = {}, platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT }) {
   const warnings = [];
   const currency = String(cfg.currency || DEFAULT_CURRENCY).toUpperCase();
   if (currency !== DEFAULT_CURRENCY) {
@@ -491,7 +578,8 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
   const totalBeforeRounding = money(taxInclusive ? taxableSubtotal : taxableSubtotal + tax);
   const roundedTotal = money(ceilToStep(totalBeforeRounding, toNumber(cfg.quote_rounding, 0)));
   const roundingAdjustment = money(roundedTotal - totalBeforeRounding);
-  const totalCents = toCents(roundedTotal);
+  const sellerNet = grossUpForIncludedPlatformFee(toCents(roundedTotal), platformFeePercent);
+  const totalCents = sellerNet.customerTotalCents;
 
   return {
     ok: true,
@@ -522,6 +610,11 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
       shipping: shippingAmount,
       tax,
       roundingAdjustment,
+      sellerNetTotal: fromCents(sellerNet.sellerNetTotalCents),
+      sellerNetTotalCents: sellerNet.sellerNetTotalCents,
+      platformFeeIncluded: fromCents(sellerNet.platformFeeIncludedCents),
+      platformFeeIncludedCents: sellerNet.platformFeeIncludedCents,
+      platformFeePercent: sellerNet.platformFeePercent,
       total: fromCents(totalCents),
     },
     discounts: {

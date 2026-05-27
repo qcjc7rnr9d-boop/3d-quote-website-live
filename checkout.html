@@ -22,13 +22,36 @@
       grid-template-columns: minmax(0, 1fr) 400px;
       gap: 32px;
       padding-top: 32px;
+      align-items: start;
     }
 
     /* ── Left column: Order Review ───────────────────────── */
     .review-heading {
       font-size: 28px;
       font-weight: 400;
-      margin-bottom: 24px;
+      margin-bottom: 8px;
+    }
+
+    .review-helper {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .review-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 22px;
+      padding: 7px 11px;
+      border: 1px solid rgba(90,138,94,0.18);
+      border-radius: 999px;
+      background: rgba(90,138,94,0.065);
+      color: var(--sage-dark);
+      font-size: 12px;
+      font-weight: 750;
+      line-height: 1.35;
     }
 
     .review-validation-error {
@@ -124,15 +147,36 @@
       font-size: 11px;
       font-variant-numeric: tabular-nums;
     }
-    .cart-items-review { display: grid; gap: 14px; margin-bottom: 22px; }
+    .cart-items-review { display: grid; gap: 12px; margin-bottom: 22px; }
     .cart-item-review {
       border: 1px solid var(--border);
       border-radius: 18px;
       background: #fffdf8;
-      padding: 16px;
+      overflow: hidden;
       box-shadow: 0 10px 26px rgba(32, 28, 20, 0.05);
     }
-    .cart-item-head { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+    .cart-item-review.is-collapsed {
+      background: rgba(255,253,248,0.72);
+      box-shadow: 0 6px 18px rgba(32, 28, 20, 0.035);
+    }
+    .cart-item-toggle {
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 14px;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      padding: 16px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .cart-item-toggle:focus-visible {
+      outline: 3px solid rgba(90,138,94,0.24);
+      outline-offset: -4px;
+    }
+    .cart-item-head { min-width: 0; }
     .cart-item-kicker {
       display: block;
       margin-bottom: 3px;
@@ -143,8 +187,28 @@
       text-transform: uppercase;
     }
     .cart-item-head strong { display: block; font-family: var(--font-brand); font-size: 18px; line-height: 1.12; }
-    .cart-item-head span { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .cart-item-head span { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; line-height: 1.35; }
     .cart-item-total { color: var(--green); font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .cart-item-chevron {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      transition: transform 160ms ease-out, background 160ms ease-out;
+    }
+    .cart-item-toggle[aria-expanded="true"] .cart-item-chevron {
+      transform: rotate(180deg);
+      background: rgba(90,138,94,0.08);
+      color: var(--sage-dark);
+    }
+    .cart-item-panel {
+      padding: 0 16px 16px;
+      border-top: 1px solid rgba(41,36,27,0.08);
+    }
     .cart-item-section { margin-top: 13px; }
     .cart-item-section-title {
       display: block;
@@ -280,6 +344,95 @@
     }
     .remove-cart-item:hover { color: #9f2d2d; border-color: rgba(159,45,45,0.35); }
 
+    .checkout-payment-card {
+      position: sticky;
+      top: 96px;
+      align-self: start;
+    }
+
+    .checkout-shipping {
+      margin: 0 0 22px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fffdf8;
+    }
+    .checkout-shipping.invalid {
+      border-color: rgba(201,90,82,0.55);
+      background: #fff7f5;
+    }
+    .checkout-shipping-head {
+      display: block;
+      margin-bottom: 14px;
+    }
+    .checkout-shipping-head h3 {
+      margin: 0 0 4px;
+      font-family: var(--font-brand);
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+    .checkout-shipping-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .package-pill {
+      display: inline-flex;
+      margin-top: 9px;
+      border: 1px solid rgba(90,138,94,0.22);
+      background: rgba(90,138,94,0.08);
+      color: var(--sage-dark);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .checkout-shipping-options {
+      display: grid;
+      gap: 8px;
+    }
+    .checkout-ship-option {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .checkout-ship-option.selected {
+      border-color: var(--sage);
+      background: rgba(90,138,94,0.06);
+    }
+    .checkout-ship-option input { accent-color: var(--sage); margin: 0; }
+    .checkout-ship-option strong { display: block; font-size: 13px; }
+    .checkout-ship-option span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+    .checkout-ship-price { color: var(--ink); font-weight: 800; font-size: 13px; white-space: nowrap; }
+    .checkout-shipping-empty,
+    .checkout-shipping-error {
+      display: none;
+      padding: 12px;
+      border-radius: 14px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .checkout-shipping-empty {
+      background: rgba(25,27,25,0.04);
+      color: var(--muted);
+    }
+    .checkout-shipping-error {
+      margin-top: 10px;
+      background: #fff3f1;
+      color: #8a241a;
+      border: 1px solid #f1b7b0;
+    }
+    .checkout-shipping-empty.show,
+    .checkout-shipping-error.show { display: block; }
+
     /* ── Detail rows ─────────────────────────────────────── */
     .detail-rows {
       display: flex;
@@ -344,6 +497,7 @@
       display: flex;
       flex-direction: column;
       border-top: 1px solid var(--stone);
+      margin-bottom: 18px;
     }
 
     .price-row {
@@ -362,6 +516,7 @@
     .price-row.total {
       font-weight: 500;
       font-size: 15px;
+      padding-bottom: 0;
     }
 
     .price-row .price-label {
@@ -374,6 +529,12 @@
 
     .price-row .price-amount {
       color: var(--ink);
+    }
+
+    .checkout-payment-heading {
+      margin-top: 22px;
+      padding-top: 20px;
+      border-top: 1px solid var(--stone);
     }
 
     .edit-link {
@@ -424,38 +585,54 @@
       margin-bottom: 4px;
     }
 
-    .payment-methods {
+    .legal-certification {
       display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
       gap: 10px;
-      margin-bottom: 18px;
-    }
-
-    .payment-method {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: rgba(255,255,255,0.72);
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    .payment-method input { margin-top: 3px; }
-    .payment-method strong { display: block; color: var(--ink); }
-    .payment-method span { display: block; color: var(--muted); }
-
-    .bank-transfer-panel {
-      display: none;
-      margin-top: 16px;
-      padding: 16px;
-      border: 1px solid var(--border);
+      align-items: start;
+      padding: 12px;
+      border: 1px solid rgba(90,138,94,0.22);
       border-radius: 14px;
-      background: rgba(90,138,94,0.06);
+      background: rgba(90,138,94,0.055);
+    }
+    .legal-certification input {
+      width: 16px;
+      height: 16px;
+      margin: 2px 0 0;
+      accent-color: var(--sage);
+    }
+    .legal-certification span,
+    .legal-certification details {
+      display: block;
+      color: var(--ink);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .legal-certification-summary {
+      font-weight: 700;
+    }
+    .legal-certification details {
+      margin-top: 4px;
+      color: var(--muted);
+    }
+    .legal-certification summary {
+      color: var(--sage-dark);
+      cursor: pointer;
+      font-weight: 800;
+      text-underline-offset: 3px;
+    }
+    .legal-certification a {
+      color: var(--sage-dark);
+      font-weight: 800;
+      text-underline-offset: 3px;
     }
 
-    .bank-transfer-panel.show { display: block; }
+    .mobile-checkout-bar {
+      display: none;
+    }
+    .mobile-checkout-bar[hidden] {
+      display: none !important;
+    }
 
     .legal-certification {
       display: grid;
@@ -525,16 +702,67 @@
       }
 
       .page-wrap {
-        padding: 80px 24px 48px;
+        padding: 80px 24px 112px;
+      }
+
+      .checkout-payment-card {
+        position: static;
+      }
+
+      .mobile-checkout-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 40;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--border);
+        background: rgba(255,253,248,0.96);
+        box-shadow: 0 -10px 30px rgba(32, 28, 20, 0.08);
+        backdrop-filter: blur(14px);
+      }
+
+      .mobile-checkout-total span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .mobile-checkout-total strong {
+        display: block;
+        color: var(--ink);
+        font-family: var(--font-brand);
+        font-size: 20px;
+        line-height: 1.05;
+      }
+
+      .mobile-checkout-bar .btn {
+        min-width: 132px;
       }
     }
 
     @media (max-width: 640px) {
       .page-wrap {
-        padding: 80px 16px 40px;
+        padding: 80px 16px 112px;
       }
-      .cart-item-head { flex-direction: column; }
-      .cart-item-total { align-self: flex-start; }
+      .cart-item-toggle {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+      .cart-item-total {
+        justify-self: end;
+      }
+      .cart-item-chevron {
+        grid-column: 2;
+        grid-row: 2;
+        justify-self: end;
+      }
       .cart-item-options { grid-template-columns: 1fr; }
       .cart-item-file { flex-direction: column; gap: 4px; }
       .cart-item-file span { text-align: left; }
@@ -586,14 +814,16 @@
 
       <!-- LEFT COLUMN: Order Review -->
       <div class="card" id="orderReviewCard">
-        <h2 class="review-heading">Order Review</h2>
+        <h2 class="review-heading">Review your order</h2>
+        <p class="review-helper">Open a material group to review files and item pricing.</p>
+        <p class="review-meta" id="checkoutReviewMeta">Validating order summary</p>
         <div class="cart-items-review" id="cartItemsReview"></div>
-        <div class="review-validation-error" id="reviewValidationError" role="alert" aria-live="polite">
-          <span id="reviewValidationErrorText">This order needs to be reviewed before payment.</span>
-          <a href="quote.html" id="reviewValidationEditLink">Edit group</a>
-        </div>
+        <a href="quote.html" class="edit-link">← Edit order</a>
+      </div>
 
-        <!-- Price breakdown -->
+      <!-- RIGHT COLUMN: Payment -->
+      <div class="card checkout-payment-card">
+        <p class="overline" style="margin-bottom:8px;">Order total</p>
         <div class="price-table">
           <div class="price-row" id="priceUnitRow">
             <span class="price-label" id="priceUnitLabel">Unit price</span>
@@ -621,30 +851,36 @@
           </div>
         </div>
 
-        <a href="quote.html" class="edit-link">← Edit order</a>
-      </div>
+        <section class="checkout-shipping" id="checkoutShippingBlock">
+          <div class="checkout-shipping-head">
+            <div>
+              <h3>Shipping</h3>
+              <p>Choose one rate for the whole order.</p>
+            </div>
+            <span class="package-pill" id="packageSummary">Estimating package</span>
+          </div>
+          <div class="checkout-shipping-options" id="checkoutShippingOptions"></div>
+          <div class="checkout-shipping-empty" id="checkoutShippingEmpty">Shipping options will appear once the order has been validated.</div>
+          <div class="checkout-shipping-error" id="checkoutShippingError" role="alert">Choose a shipping option before payment.</div>
+        </section>
 
-      <!-- RIGHT COLUMN: Payment -->
-      <div class="card">
-        <p class="overline" style="margin-bottom:8px;">Payment</p>
-        <h2 style="font-family:var(--font-brand);font-size:24px;letter-spacing:-0.03em;margin-bottom:8px;">Secure card payment</h2>
-        <p class="security-caption" style="text-align:left;margin:0 0 18px;">Card payment is processed by Stripe. We never see or store your card number.</p>
+        <div class="review-validation-error" id="reviewValidationError" role="alert" aria-live="polite">
+          <span id="reviewValidationErrorText">This order needs to be reviewed before payment.</span>
+          <a href="quote.html" id="reviewValidationEditLink">Edit group</a>
+        </div>
+
+        <div class="checkout-payment-heading">
+          <p class="overline" style="margin-bottom:8px;">Payment</p>
+          <h2 style="font-family:var(--font-brand);font-size:24px;letter-spacing:-0.03em;margin-bottom:8px;">Secure card payment</h2>
+          <p class="security-caption" style="text-align:left;margin:0 0 18px;">Card payment is processed by Stripe. We never see or store your card number.</p>
+        </div>
 
         <div class="payment-setup-error" id="paymentSetupError" role="alert" aria-live="polite">
           <strong>Stripe payment is not ready</strong>
           <span id="paymentSetupErrorText">This store cannot accept card payments yet.</span>
         </div>
 
-        <div class="payment-methods" id="paymentMethods">
-          <label class="payment-method" id="bankTransferOption">
-            <input type="radio" name="paymentMethodChoice" value="bank_transfer">
-            <span><strong>Bank transfer — no processing fee</strong><span>Place the order now and pay the shop directly.</span></span>
-          </label>
-          <label class="payment-method" id="cardPaymentOption">
-            <input type="radio" name="paymentMethodChoice" value="card" checked>
-            <span><strong>Card</strong><span id="cardFeeSummary">Processing fee depends on merchant settings.</span></span>
-          </label>
-        </div>
+        <p class="security-caption" id="cardFeeSummary" style="text-align:left;margin:0 0 18px;">Stripe card checkout is the only live payment method.</p>
 
         <label class="legal-certification" for="restrictedItemsCertification">
           <input type="checkbox" id="restrictedItemsCertification" name="restrictedItemsCertification" required>
@@ -686,21 +922,20 @@
                 <div id="card-element"></div>
               </div>
             </div>
+            <label class="legal-certification" for="restrictedItemsCertification">
+              <input type="checkbox" id="restrictedItemsCertification" name="restrictedItemsCertification" required>
+              <div>
+                <span class="legal-certification-summary">I certify this order does not include restricted or unlawful items. <a href="terms.html?shop=mahi3d#prohibited-uploads" data-checkout-link="terms">Terms</a></span>
+                <details>
+                  <summary>Read prohibited upload details</summary>
+                  <span>I certify that the files, notes, and order I submit do not include, request, or relate to any firearm, firearm part, major firearm part, prohibited part, magazine, ammunition, suppressor, silencer, weapon, restricted weapon, pistol carbine conversion kit, conversion device, explosive, or other regulated, unlawful, unsafe, or controlled item. I am responsible for the legality and intended use of my design. I agree that Trennen and the participating store may refuse, cancel, delete files, retain records, refund where appropriate, and disclose information to authorities if they reasonably believe an order is unlawful, unsafe, or breaches these terms.</span>
+                </details>
+              </div>
+            </label>
+            <p class="security-caption" style="text-align:left;margin:-2px 0 14px;">Custom print orders are made to your files and selected options. Change-of-mind refunds are not automatic, and non-excludable NZ consumer rights still apply. <a href="terms.html?shop=mahi3d#cancellations" data-checkout-link="terms">Refund policy</a></p>
             <button class="btn btn-primary lg full" id="payBtn">Pay —</button>
           </div>
           <p class="security-caption">Your card details are processed securely by Stripe. We never see or store your card number.</p>
-        </div>
-
-        <div class="bank-transfer-panel" id="bankTransferPanel">
-          <div class="form-group">
-            <label class="form-label" for="bankCustomerEmail">Email for receipt</label>
-            <input class="form-input" type="email" id="bankCustomerEmail" placeholder="you@example.com" autocomplete="email">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="bankCustomerName">Customer name</label>
-            <input class="form-input" type="text" id="bankCustomerName" placeholder="Your name" autocomplete="name">
-          </div>
-          <button class="btn btn-primary lg full" id="bankTransferBtn" type="button">Place bank transfer order</button>
         </div>
 
         <!-- Trust badges -->
@@ -713,6 +948,14 @@
 
     </div><!-- /checkout-grid -->
   </div><!-- /page-wrap -->
+
+  <div class="mobile-checkout-bar" id="mobileCheckoutBar" aria-live="polite" hidden>
+    <div class="mobile-checkout-total">
+      <span>Total</span>
+      <strong id="mobileCheckoutTotal">—</strong>
+    </div>
+    <button class="btn btn-primary" id="mobilePayBtn" type="button">Pay</button>
+  </div>
 
   <script src="https://js.stripe.com/v3/"></script>
   <script src="assets/checkout.js" defer></script>

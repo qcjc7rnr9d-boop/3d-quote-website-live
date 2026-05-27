@@ -388,10 +388,14 @@
   let updating = false;
 
   const LIMIT = 20;
+  const nzdFormatter = new Intl.NumberFormat('en-NZ', {
+    style: 'currency',
+    currency: 'NZD',
+  });
 
   function fmtCurrency(val) {
     if (val == null) return '—';
-    return '£' + Number(val).toFixed(2);
+    return nzdFormatter.format(Number(val));
   }
   function fmtDate(val) {
     if (!val) return '—';

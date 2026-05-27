@@ -10,6 +10,7 @@ import { BCRYPT_ROUNDS, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MINUTES, MIN_PASSWORD_L
 import { parseInfillTiers } from '../lib/infill-tiers.js';
 import { parseMaterialRow, safeJson } from '../lib/material-config.js';
 import { calculateQuoteForShopSlug, PricingError } from '../lib/pricing-engine.js';
+import { normaliseCart, previewCartForShop } from '../lib/cart.js';
 import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
 import { getExchangeRates, normaliseQuoteCurrencies } from '../lib/exchange-rates.js';
 import { previewQuoteUsage, recordQuoteUsageEvent } from '../lib/billing-service.js';
@@ -256,6 +257,7 @@ function normaliseSavedQuoteRequest(input = {}, slug) {
     infillTierId: source.infillTierId ?? safeObject(source.infill).id ?? null,
     quantity: source.quantity,
     shippingId: source.shippingId ?? shipping.id ?? null,
+    previewWithoutShipping: source.previewWithoutShipping ?? !(source.shippingId ?? shipping.id),
     dimensions: source.dimensions ?? file.dimensions ?? null,
   };
 }
@@ -517,6 +519,33 @@ router.post('/quote-preview', customerQuoteLimiter, (req, res) => {
     }
     console.error('Quote preview error:', err);
     res.status(500).json({ ok: false, error: 'Could not calculate quote.' });
+  }
+});
+
+// ── POST /api/customer/cart-preview  (checkout cart pricing source) ──
+router.post('/cart-preview', customerQuoteLimiter, (req, res) => {
+  try {
+    const { shopSlug, shop, items, shippingId, shipping } = req.body || {};
+    const slug = shopSlug || shop;
+    const shopRow = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(slug);
+    if (!shopRow) return res.status(404).json({ ok: false, code: 'SHOP_NOT_FOUND', error: 'Shop not found.' });
+    const cart = previewCartForShop(db, shopRow, normaliseCart({
+      shopSlug: slug,
+      items: Array.isArray(items) ? items : [],
+      shipping: shipping || (shippingId ? { id: shippingId } : null),
+    }, slug), { requireShipping: false });
+    res.json({ ok: true, cart });
+  } catch (err) {
+    if (err instanceof PricingError) {
+      return res.status(err.status).json({
+        ok: false,
+        code: err.code,
+        error: err.message,
+        quote: err.quote || null,
+      });
+    }
+    console.error('Cart preview error:', err);
+    res.status(500).json({ ok: false, error: 'Could not calculate checkout cart.' });
   }
 });
 

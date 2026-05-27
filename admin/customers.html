@@ -352,9 +352,14 @@
   function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  const nzdFormatter = new Intl.NumberFormat('en-NZ', {
+    style: 'currency',
+    currency: 'NZD',
+  });
+
   function fmtCurrency(val) {
     if (val == null) return '—';
-    return '£' + Number(val).toFixed(2);
+    return nzdFormatter.format(Number(val));
   }
   function fmtDate(val) {
     if (!val) return '—';

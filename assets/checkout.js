@@ -143,10 +143,20 @@
     return /layer/i.test(text) ? text : `${text} layer height`;
   }
 
+  function finishLayerHeaderText(layerHeight) {
+    return String(layerHeight || '').trim().replace(/\s*layer height$/i, '');
+  }
+
   function modelVolumeText(model) {
     const volume = Number(model?.volumeCm3);
     if (!Number.isFinite(volume) || volume <= 0) return '';
     return `${Math.round(volume * 100) / 100} cm³`;
+  }
+
+  function fileCountText(count) {
+    const total = Math.max(0, Number(count) || 0);
+    if (total === 1) return '1 file';
+    return `${total} files`;
   }
 
   function swatchMarkup(hex) {
@@ -243,6 +253,9 @@
       quantity: Number(input.quantity ?? selected.quantity) || 1,
       shipping: input.shipping ?? (selected.shipping ? {
         id: selected.shipping.id,
+        methodId: selected.shipping.methodId || selected.shipping.id,
+        bandId: selected.shipping.bandId || null,
+        bandLabel: selected.shipping.bandLabel || null,
         label: selected.shipping.label || 'Shipping',
         price: Number(selected.shipping.finalPrice ?? selected.shipping.price) || 0,
       } : null),
@@ -257,25 +270,69 @@
     };
   }
 
+  function normaliseCartShipping(input = null) {
+    if (!input) return null;
+    const id = input.id ?? input.methodId ?? input.shippingId;
+    if (!id) return null;
+    return {
+      id: String(id),
+      methodId: String(input.methodId || id),
+      bandId: input.bandId || null,
+      bandLabel: input.bandLabel || null,
+      label: input.label || input.service || input.carrier || 'Shipping',
+      price: Number(input.finalPrice ?? input.price) || 0,
+      package: input.package || null,
+    };
+  }
+
   function normaliseCart(input, fallbackShopSlug) {
     if (!input) return { shopSlug: fallbackShopSlug, items: [], totalNzd: 0, totalCents: 0, currency: 'NZD' };
     const rawItems = Array.isArray(input.items) && input.items.length
       ? input.items
       : ((input.materialId || input.file || input.quoteSnapshot) ? [input] : []);
     const items = rawItems.map((item, index) => normaliseCartItem({ ...item, shopSlug: item.shopSlug || input.shopSlug || fallbackShopSlug }, index));
+    const rootShipping = normaliseCartShipping(input.shipping || (input.shippingId ? { id: input.shippingId } : null))
+      || rawItems.map(item => normaliseCartShipping(item.shipping || item.quoteSnapshot?.selected?.shipping || (item.shippingId ? { id: item.shippingId, price: item.shippingNzd } : null))).find(Boolean)
+      || null;
     return {
       shopSlug: input.shopSlug || fallbackShopSlug,
       items,
+      shipping: rootShipping,
+      shippingId: rootShipping?.id || null,
+      shippingOptions: Array.isArray(input.shippingOptions) ? input.shippingOptions : [],
+      package: input.package || rootShipping?.package || null,
       currency: input.currency || items[0]?.currency || 'NZD',
-      totalNzd: Number(input.totalNzd) || sum(items, 'totalNzd'),
+      itemsNzd: Number(input.itemsNzd) || sum(items, 'itemsNzd'),
+      shippingNzd: Number(input.shippingNzd ?? rootShipping?.price) || 0,
+      taxNzd: Number(input.taxNzd) || sum(items, 'taxNzd'),
+      totalNzd: Number(input.totalNzd) || (sum(items, 'totalNzd') + (Number(input.shippingNzd ?? rootShipping?.price) || 0)),
       totalCents: Number(input.totalCents) || items.reduce((total, item) => total + (Number(item.totalCents) || Math.round((Number(item.totalNzd) || 0) * 100)), 0),
+      checkoutIdempotencyKey: input.checkoutIdempotencyKey || input.checkout_idempotency_key || null,
       savedAt: input.savedAt || new Date().toISOString(),
     };
   }
 
+  function newCheckoutIdempotencyKey() {
+    const id = (window.crypto && typeof window.crypto.randomUUID === 'function')
+      ? window.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return `chk_${id}`;
+  }
+
+  function ensureCheckoutIdempotencyKey() {
+    if (!cart.checkoutIdempotencyKey) cart.checkoutIdempotencyKey = newCheckoutIdempotencyKey();
+  }
+
+  function rotateCheckoutIdempotencyKey() {
+    cart.checkoutIdempotencyKey = newCheckoutIdempotencyKey();
+  }
+
+  if (hasData) {
+    ensureCheckoutIdempotencyKey();
+    try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
+  }
+
   function persistCart() {
-    cart.totalNzd = sum(cart.items, 'totalNzd');
-    cart.totalCents = cart.items.reduce((total, item) => total + (Number(item.totalCents) || Math.round((Number(item.totalNzd) || 0) * 100)), 0);
     try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
   }
 
@@ -283,7 +340,6 @@
   let processingFeeCents = 0;
   let paymentFeeMode = 'merchant_absorbs';
   let checkoutSettings = null;
-  let selectedPaymentMethod = 'card';
   let quoteValidated = false;
   let stripeReady = false;
   let paymentUnavailable = false;
@@ -292,29 +348,23 @@
     return Boolean(document.getElementById('restrictedItemsCertification')?.checked);
   }
 
-  function restrictedItemsCertificationPayload() {
-    return {
-      accepted: true,
-      version: RESTRICTED_ITEMS_CERTIFICATION_VERSION,
-    };
-  }
-
-  function updateBankTransferButton() {
-    const bankBtn = document.getElementById('bankTransferBtn');
-    if (!bankBtn) return;
-    bankBtn.disabled = selectedPaymentMethod !== 'bank_transfer' || !quoteValidated || !restrictedItemsCertified();
-    bankBtn.style.opacity = bankBtn.disabled ? '0.7' : '';
-    bankBtn.style.cursor = bankBtn.disabled ? 'not-allowed' : '';
-  }
-
   function updatePayButton(message) {
     const payBtn = document.getElementById('payBtn');
-    if (payBtn && totalNzd > 0) {
+    const mobilePayBtn = document.getElementById('mobilePayBtn');
+    if (!payBtn) return;
+    const syncMobileButton = () => {
+      if (!mobilePayBtn) return;
+      mobilePayBtn.textContent = payBtn.textContent || 'Pay';
+      mobilePayBtn.disabled = payBtn.disabled;
+      mobilePayBtn.style.opacity = payBtn.style.opacity;
+      mobilePayBtn.style.cursor = payBtn.style.cursor;
+    };
+    if (totalNzd > 0) {
       const defaultLabel = 'Pay ' + fmtNzd(totalNzd + processingFeeCents / 100);
       const certificationMissing = !restrictedItemsCertified();
       const certBlocksPayment = quoteValidated && stripeReady && !paymentUnavailable && certificationMissing;
       payBtn.textContent = paymentUnavailable ? 'Payment unavailable' : (certBlocksPayment ? 'Review certification' : (message || defaultLabel));
-      payBtn.disabled = selectedPaymentMethod !== 'card' || !(quoteValidated && stripeReady) || paymentUnavailable || certificationMissing;
+      payBtn.disabled = !(quoteValidated && stripeReady) || paymentUnavailable || certificationMissing;
       payBtn.style.opacity = payBtn.disabled ? '0.7' : '';
       payBtn.style.cursor = payBtn.disabled ? 'not-allowed' : '';
       const errEl = document.getElementById('card-errors');
@@ -323,13 +373,13 @@
       } else if (errEl && restrictedItemsCertified() && errEl.textContent === CERTIFICATION_ERROR_MESSAGE) {
         errEl.textContent = '';
       }
-    } else if (payBtn) {
+    } else {
       payBtn.textContent = 'No price set - contact the shop';
       payBtn.disabled = true;
       payBtn.style.opacity = '0.6';
       payBtn.style.cursor = 'not-allowed';
     }
-    updateBankTransferButton();
+    syncMobileButton();
   }
 
   function setPaymentFieldsDisabled(disabled) {
@@ -371,27 +421,16 @@
 
   function renderPaymentOptions() {
     if (!checkoutSettings) return;
-    const bankOption = document.getElementById('bankTransferOption');
-    const cardOption = document.getElementById('cardPaymentOption');
-    const cardPanel = document.getElementById('cardPanel');
-    const bankPanel = document.getElementById('bankTransferPanel');
     const cardSummary = document.getElementById('cardFeeSummary');
-    const bankRadio = bankOption?.querySelector('input');
-    const cardRadio = cardOption?.querySelector('input');
 
-    if (bankOption) bankOption.style.display = checkoutSettings.bank_transfer_enabled ? '' : 'none';
-    if (cardOption) cardOption.style.display = checkoutSettings.card_enabled ? '' : 'none';
     if (cardSummary) {
       cardSummary.textContent = paymentFeeMode === 'pass_to_customer_at_cost'
-        ? 'Card — processing fee applies at cost and is shown before payment.'
-        : 'Card — no added card processing fee.';
+        ? 'Stripe card checkout is the only live payment method. Processing fees are shown before payment.'
+        : 'Stripe card checkout is the only live payment method.';
     }
-    if (!checkoutSettings.card_enabled) selectedPaymentMethod = 'bank_transfer';
-    if (!checkoutSettings.bank_transfer_enabled) selectedPaymentMethod = 'card';
-    if (bankRadio) bankRadio.checked = selectedPaymentMethod === 'bank_transfer';
-    if (cardRadio) cardRadio.checked = selectedPaymentMethod === 'card';
-    if (cardPanel) cardPanel.style.display = selectedPaymentMethod === 'card' ? '' : 'none';
-    if (bankPanel) bankPanel.classList.toggle('show', selectedPaymentMethod === 'bank_transfer');
+    if (!checkoutSettings.card_enabled) {
+      showPaymentSetupError('Stripe checkout is not enabled for this store plan yet.');
+    }
   }
 
   function showReviewValidationError(message) {
@@ -451,135 +490,208 @@
     }
   }
 
-  function quotePayload(item) {
-    const file = item.file || {};
+  function cartPreviewPayload() {
     return {
       shopSlug,
-      materialId: item.materialId,
-      materialName: item.materialName || (typeof item.material === 'string' ? item.material : item.material?.name) || item.quoteSnapshot?.selected?.material?.name || null,
-      models: item.models?.length ? item.models : file.models,
-      volumeCm3: file.volumeCm3 ?? item.volumeCm3 ?? item.quoteSnapshot?.selected?.volumeCm3,
-      dimensions: file.dimensions ?? item.dimensions ?? item.quoteSnapshot?.selected?.dimensions ?? null,
-      colourId: item.colorId || null,
-      colour: item.colorName || null,
-      finishId: item.finishId || null,
-      finish: item.finishLabel || item.finish || null,
-      infillTierId: item.infillTierId || null,
-      quantity: item.quantity,
-      shippingId: item.shipping?.id || null,
+      items: cart.items,
+      shippingId: cart.shipping?.methodId || cart.shipping?.id || null,
     };
+  }
+
+  function applyCartPreview(data) {
+    const next = data?.cart || data;
+    if (!next?.items) return;
+    cart = normaliseCart({
+      ...next,
+      checkoutIdempotencyKey: next.checkoutIdempotencyKey || cart.checkoutIdempotencyKey,
+    }, shopSlug);
+    ensureCheckoutIdempotencyKey();
+  }
+
+  function selectedShippingOption(id) {
+    return (cart.shippingOptions || []).find(option => {
+      const optionId = option.methodId || option.id;
+      return String(optionId) === String(id);
+    }) || null;
   }
 
   async function refreshCheckoutQuote() {
     quoteValidated = false;
     clearReviewValidationError();
     updatePayButton('Validating price...');
-    for (const item of cart.items) {
-      const res = await fetch('/api/customer/quote-preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(quotePayload(item)),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) {
-        if (data.code === 'MODEL_TOO_LARGE' || data.code === 'MODEL_DIMENSIONS_REQUIRED') {
-          redirectToMaterialSelection(data.error || 'This model is too large for the selected material.');
-          const err = new Error(data.error || 'This model is too large for the selected material.');
-          err.redirected = true;
-          throw err;
-        }
-        const err = new Error(data.error || 'Could not refresh checkout total.');
-        err.checkoutValidation = true;
+    const res = await fetch('/api/customer/cart-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cartPreviewPayload()),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      if (data.code === 'MODEL_TOO_LARGE' || data.code === 'MODEL_DIMENSIONS_REQUIRED') {
+        redirectToMaterialSelection(data.error || 'This model is too large for the selected material.');
+        const err = new Error(data.error || 'This model is too large for the selected material.');
+        err.redirected = true;
         throw err;
       }
-      applyQuoteSnapshotToItem(item, data);
+      if (data.quote?.cart) applyCartPreview(data.quote.cart);
+      const err = new Error(data.error || 'Could not refresh checkout total.');
+      err.checkoutValidation = true;
+      throw err;
     }
+    applyCartPreview(data);
     persistCart();
     await loadCheckoutSettings();
-    quoteValidated = true;
+    quoteValidated = Boolean(cart.shipping?.id);
     renderCart();
     return cart;
   }
 
+  function etaText(option) {
+    const min = Number(option?.est_days_min);
+    const max = Number(option?.est_days_max);
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return '';
+    if (min === max) return min === 1 ? 'Next business day' : `${min} business days`;
+    return `${min}-${max} business days`;
+  }
+
+  function packageSummaryText(pkg = cart.package || {}) {
+    const weight = Number(pkg.estimatedWeightKg);
+    const longest = Number(pkg.maxLongestSideMm);
+    const parts = [];
+    if (Number.isFinite(weight) && weight > 0) parts.push(`${weight.toFixed(weight < 1 ? 2 : 1)} kg est.`);
+    if (Number.isFinite(longest) && longest > 0) parts.push(`${Math.round(longest * 10) / 10} mm max side`);
+    return parts.length ? parts.join(' · ') : 'Package estimate';
+  }
+
+  function renderCheckoutShipping() {
+    const block = document.getElementById('checkoutShippingBlock');
+    const optionsEl = document.getElementById('checkoutShippingOptions');
+    const emptyEl = document.getElementById('checkoutShippingEmpty');
+    const errorEl = document.getElementById('checkoutShippingError');
+    const summaryEl = document.getElementById('packageSummary');
+    if (!block || !optionsEl) return;
+
+    const options = Array.isArray(cart.shippingOptions) ? cart.shippingOptions : [];
+    const selectedId = cart.shipping?.methodId || cart.shipping?.id || null;
+    if (summaryEl) summaryEl.textContent = packageSummaryText();
+    block.classList.toggle('invalid', !selectedId);
+    if (errorEl) {
+      errorEl.textContent = options.length
+        ? 'Choose one shipping option for the whole order before payment.'
+        : 'No shipping option supports this order size or weight.';
+      errorEl.classList.toggle('show', !selectedId);
+    }
+    if (emptyEl) emptyEl.classList.toggle('show', !options.length);
+
+    optionsEl.innerHTML = options.map(option => {
+      const id = option.methodId || option.id;
+      const selected = selectedId && String(selectedId) === String(id);
+      const name = option.label || [option.carrier, option.service].filter(Boolean).join(' · ') || 'Shipping';
+      const detail = [option.bandLabel, etaText(option), option.recommended ? 'Recommended' : ''].filter(Boolean).join(' · ');
+      const price = Number(option.price) > 0 ? fmtNzd(option.price) : 'Free';
+      return `<label class="checkout-ship-option${selected ? ' selected' : ''}">
+        <input type="radio" name="checkoutShipping" value="${escapeHtml(id)}" ${selected ? 'checked' : ''}>
+        <span><strong>${escapeHtml(name)}</strong>${detail ? `<span>${escapeHtml(detail)}</span>` : ''}</span>
+        <span class="checkout-ship-price">${escapeHtml(price)}</span>
+      </label>`;
+    }).join('');
+  }
+
   function renderCart() {
+    const reviewMeta = document.getElementById('checkoutReviewMeta');
+    if (reviewMeta) {
+      const groupCount = cart.items.length;
+      const modelCount = cart.items.reduce((total, item) => total + cartModels(item).length, 0);
+      const shippingStatus = cart.shipping?.id ? 'Shipping selected' : 'Shipping selected at checkout';
+      reviewMeta.textContent = `${groupCount === 1 ? '1 group' : `${groupCount} groups`} · ${fileCountText(modelCount)} · ${shippingStatus}`;
+    }
+
     const cartItemsReview = document.getElementById('cartItemsReview');
     if (cartItemsReview) {
       cartItemsReview.innerHTML = cart.items.map((item, index) => {
         const models = cartModels(item);
         const priceLines = modelPriceLines(item, models);
-        const finishDetails = [finishLayerText(item.finishLayerHeight), item.finishDescription || ''].filter(Boolean).join(' · ');
+        const finishLayer = finishLayerText(item.finishLayerHeight);
+        const finishLayerHeader = finishLayerHeaderText(item.finishLayerHeight);
+        const finishDetails = [finishLayer, item.finishDescription || ''].filter(Boolean).join(' · ');
         const colourText = item.colorName || 'No colour selected';
-        const finishText = [item.finishLabel || item.finish || 'Standard', finishDetails].filter(Boolean).join(' · ');
+        const finishLabel = item.finishLabel || item.finish || 'Standard';
+        const finishText = [finishLabel, finishDetails].filter(Boolean).join(' · ');
+        const headerFinishText = [finishLabel, finishLayerHeader].filter(Boolean).join(' · ');
         const infillText = item.infillLabel || 'Standard';
         const quantityText = models.length > 1 ? 'Per model' : `x ${Math.max(1, parseInt(item.quantity, 10) || 1)}`;
-        const shippingLabel = item.shipping?.label || (Number(item.shippingNzd) > 0 ? 'Shipping' : 'No shipping selected');
-        return `<section class="cart-item-review" data-cart-item-id="${escapeHtml(item.id)}">
-          <div class="cart-item-head">
-            <div>
-              <span class="cart-item-kicker">Material group ${index + 1}</span>
+        const panelId = `cart-item-panel-${index + 1}`;
+        const isOpen = cart.items.length === 1;
+        return `<section class="cart-item-review${isOpen ? ' is-open' : ' is-collapsed'}" data-cart-item-id="${escapeHtml(item.id)}">
+          <button class="cart-item-toggle" type="button" aria-expanded="${isOpen ? 'true' : 'false'}" aria-controls="${escapeHtml(panelId)}" data-cart-item-toggle="${escapeHtml(item.id)}">
+            <div class="cart-item-head">
+              <span class="cart-item-kicker">Material group ${index + 1} · ${escapeHtml(fileCountText(models.length))}</span>
               <strong>${escapeHtml(item.materialName || `Material group ${index + 1}`)}</strong>
-              <span>${escapeHtml([colourText, finishText].filter(Boolean).join(' · '))}</span>
+              <span>${escapeHtml([colourText, headerFinishText, infillText].filter(Boolean).join(' · '))}</span>
             </div>
             <div class="cart-item-total">${fmtNzd(item.totalNzd)}</div>
-          </div>
-          <div class="cart-item-section">
-            <span class="cart-item-section-title">Files</span>
-            <div class="cart-item-files">
-            ${models.map((model, modelIndex) => {
-              const dimsText = formatDimensions(normaliseDimensions(model.dimensions));
-              const quantity = Math.max(1, Math.floor(Number(model.quantity) || 1));
-              const qtyText = ` · Qty ${quantity}`;
-              const volumeText = modelVolumeText(model);
-              return `<div class="cart-item-file"><strong>${escapeHtml(model.name || 'Model')}</strong><span>${[formatBytes(model.size), dimsText, volumeText].filter(Boolean).join(' · ')}${qtyText}</span></div>`;
-            }).join('')}
-            </div>
-          </div>
-          <div class="cart-item-section">
-            <span class="cart-item-section-title">Per-item pricing</span>
-            <div class="cart-item-pricing">
+            <span class="cart-item-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="cart-item-panel" id="${escapeHtml(panelId)}" data-cart-item-panel ${isOpen ? '' : 'hidden'}>
+            <div class="cart-item-section">
+              <span class="cart-item-section-title">Files</span>
+              <div class="cart-item-files">
               ${models.map((model, modelIndex) => {
-                const priceLine = priceLineForModel(priceLines, model, modelIndex);
-                const quantity = Math.max(1, Math.floor(Number(priceLine?.quantity ?? model.quantity) || 1));
-                const unit = Number(priceLine?.unit) || 0;
-                const subtotal = Number(priceLine?.subtotal) || 0;
-                return `<div class="cart-item-price-row">
-                  <strong>${escapeHtml(model.name || priceLine?.name || `Model ${modelIndex + 1}`)}</strong>
-                  <span class="price-each">${fmtNzd(unit)} each × ${quantity}</span>
-                  <span class="price-total">${fmtNzd(subtotal)}</span>
-                </div>`;
+                const dimsText = formatDimensions(normaliseDimensions(model.dimensions));
+                const quantity = Math.max(1, Math.floor(Number(model.quantity) || 1));
+                const qtyText = ` · Qty ${quantity}`;
+                const volumeText = modelVolumeText(model);
+                return `<div class="cart-item-file"><strong>${escapeHtml(model.name || 'Model')}</strong><span>${[formatBytes(model.size), dimsText, volumeText].filter(Boolean).join(' · ')}${qtyText}</span></div>`;
               }).join('')}
-              ${Number(item.quoteSnapshot?.lineItems?.minOrderAdjustment) > 0 ? `<div class="cart-item-price-row">
-                <strong>Minimum order adjustment</strong>
-                <span class="price-each">Store minimum</span>
-                <span class="price-total">${fmtNzd(item.quoteSnapshot.lineItems.minOrderAdjustment)}</span>
-              </div>` : ''}
+              </div>
             </div>
-          </div>
-          <div class="cart-item-section">
-            <span class="cart-item-section-title">Options</span>
-            <div class="cart-item-options">
-              <div class="cart-option"><span class="label">Material</span><span class="value">${escapeHtml(item.materialName || '—')}</span></div>
-              <div class="cart-option"><span class="label">Colour</span><span class="value">${swatchMarkup(item.colorHex)}${escapeHtml(colourText)}</span></div>
-              <div class="cart-option cart-option-wide"><span class="label">Finish</span><span class="value">${escapeHtml(finishText)}</span></div>
-              <div class="cart-option"><span class="label">Infill</span><span class="value">${escapeHtml(infillText)}</span></div>
-              <div class="cart-option"><span class="label">Quantity</span><span class="value">${escapeHtml(quantityText)}</span></div>
+            <div class="cart-item-section">
+              <span class="cart-item-section-title">Per-item pricing</span>
+              <div class="cart-item-pricing">
+                ${models.map((model, modelIndex) => {
+                  const priceLine = priceLineForModel(priceLines, model, modelIndex);
+                  const quantity = Math.max(1, Math.floor(Number(priceLine?.quantity ?? model.quantity) || 1));
+                  const unit = Number(priceLine?.unit) || 0;
+                  const subtotal = Number(priceLine?.subtotal) || 0;
+                  return `<div class="cart-item-price-row">
+                    <strong>${escapeHtml(model.name || priceLine?.name || `Model ${modelIndex + 1}`)}</strong>
+                    <span class="price-each">${fmtNzd(unit)} each × ${quantity}</span>
+                    <span class="price-total">${fmtNzd(subtotal)}</span>
+                  </div>`;
+                }).join('')}
+                ${Number(item.quoteSnapshot?.lineItems?.minOrderAdjustment) > 0 ? `<div class="cart-item-price-row">
+                  <strong>Minimum order adjustment</strong>
+                  <span class="price-each">Store minimum</span>
+                  <span class="price-total">${fmtNzd(item.quoteSnapshot.lineItems.minOrderAdjustment)}</span>
+                </div>` : ''}
+              </div>
             </div>
+            <div class="cart-item-section">
+              <span class="cart-item-section-title">Options</span>
+              <div class="cart-item-options">
+                <div class="cart-option"><span class="label">Material</span><span class="value">${escapeHtml(item.materialName || '—')}</span></div>
+                <div class="cart-option"><span class="label">Colour</span><span class="value">${swatchMarkup(item.colorHex)}${escapeHtml(colourText)}</span></div>
+                <div class="cart-option cart-option-wide"><span class="label">Finish</span><span class="value">${escapeHtml(finishText)}</span></div>
+                <div class="cart-option"><span class="label">Infill</span><span class="value">${escapeHtml(infillText)}</span></div>
+                <div class="cart-option"><span class="label">Quantity</span><span class="value">${escapeHtml(quantityText)}</span></div>
+              </div>
+            </div>
+            <div class="cart-item-section cart-item-money">
+              <div class="cart-item-money-row"><span>Subtotal</span><strong>${fmtNzd(item.itemsNzd)}</strong></div>
+              ${Number(item.taxNzd) > 0 ? `<div class="cart-item-money-row"><span>Tax</span><strong>${fmtNzd(item.taxNzd)}</strong></div>` : ''}
+              <div class="cart-item-money-row"><span>Group total before shipping</span><strong>${fmtNzd(item.totalNzd)}</strong></div>
+            </div>
+            <div class="cart-item-actions"><button class="remove-cart-item" type="button" data-remove-cart-item="${escapeHtml(item.id)}">Remove group</button></div>
           </div>
-          <div class="cart-item-section cart-item-money">
-            <div class="cart-item-money-row"><span>Subtotal</span><strong>${fmtNzd(item.itemsNzd)}</strong></div>
-            <div class="cart-item-money-row"><span>${escapeHtml(shippingLabel)}</span><strong>${Number(item.shippingNzd) > 0 ? fmtNzd(item.shippingNzd) : 'Free'}</strong></div>
-            ${Number(item.taxNzd) > 0 ? `<div class="cart-item-money-row"><span>Tax</span><strong>${fmtNzd(item.taxNzd)}</strong></div>` : ''}
-            <div class="cart-item-money-row"><span>Group total</span><strong>${fmtNzd(item.totalNzd)}</strong></div>
-          </div>
-          <div class="cart-item-actions"><button class="remove-cart-item" type="button" data-remove-cart-item="${escapeHtml(item.id)}">Remove group</button></div>
         </section>`;
       }).join('');
     }
 
-    const subtotalNzd  = sum(cart.items, 'itemsNzd');
-    const shippingNzd  = sum(cart.items, 'shippingNzd');
-    const taxNzd       = sum(cart.items, 'taxNzd');
-    totalNzd           = sum(cart.items, 'totalNzd') || (subtotalNzd + shippingNzd + taxNzd);
+    renderCheckoutShipping();
+
+    const subtotalNzd  = Number(cart.itemsNzd) || sum(cart.items, 'itemsNzd');
+    const shippingNzd  = Number(cart.shippingNzd) || Number(cart.shipping?.price) || 0;
+    const taxNzd       = Number(cart.taxNzd) || sum(cart.items, 'taxNzd');
+    totalNzd           = Number(cart.totalNzd) || (sum(cart.items, 'totalNzd') + shippingNzd);
 
     const unitRow = document.getElementById('priceUnitRow');
     if (unitRow) unitRow.style.display = 'none';
@@ -587,7 +699,9 @@
     document.getElementById('priceSubtotal').textContent = fmtNzd(subtotalNzd);
 
     document.getElementById('priceShippingLabel').textContent = 'Shipping';
-    document.getElementById('priceShipping').textContent = shippingNzd > 0 ? fmtNzd(shippingNzd) : 'Free';
+    document.getElementById('priceShipping').textContent = cart.shipping?.id
+      ? (shippingNzd > 0 ? fmtNzd(shippingNzd) : 'Free')
+      : 'Choose shipping';
 
     const taxRow = document.getElementById('priceTaxRow');
     if (taxNzd > 0) {
@@ -599,7 +713,7 @@
 
     const feeRow = document.getElementById('priceProcessingFeeRow');
     if (feeRow) {
-      if (selectedPaymentMethod === 'card' && processingFeeCents > 0) {
+      if (processingFeeCents > 0) {
         document.getElementById('priceProcessingFee').textContent = fmtNzd(processingFeeCents / 100);
         feeRow.style.display = '';
       } else {
@@ -607,23 +721,33 @@
       }
     }
 
-    document.getElementById('priceTotal').textContent = fmtNzd(totalNzd + (selectedPaymentMethod === 'card' ? processingFeeCents / 100 : 0));
+    document.getElementById('priceTotal').textContent = fmtNzd(totalNzd + processingFeeCents / 100);
+    const mobileBar = document.getElementById('mobileCheckoutBar');
+    const mobileTotal = document.getElementById('mobileCheckoutTotal');
+    if (mobileTotal) mobileTotal.textContent = fmtNzd(totalNzd + processingFeeCents / 100);
+    if (mobileBar) mobileBar.hidden = !hasData;
 
     updatePayButton();
   }
 
-  document.querySelectorAll('input[name="paymentMethodChoice"]').forEach(input => {
-    input.addEventListener('change', e => {
-      selectedPaymentMethod = e.target.value;
-      renderPaymentOptions();
-      renderCart();
-    });
-  });
-
   document.getElementById('cartItemsReview')?.addEventListener('click', e => {
+    const toggle = e.target.closest('[data-cart-item-toggle]');
+    if (toggle) {
+      const review = toggle.closest('.cart-item-review');
+      const panel = review?.querySelector('[data-cart-item-panel]');
+      const nextOpen = toggle.getAttribute('aria-expanded') !== 'true';
+      toggle.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+      if (panel) panel.hidden = !nextOpen;
+      if (review) {
+        review.classList.toggle('is-open', nextOpen);
+        review.classList.toggle('is-collapsed', !nextOpen);
+      }
+      return;
+    }
     const btn = e.target.closest('[data-remove-cart-item]');
     if (!btn) return;
     cart.items = cart.items.filter(item => String(item.id) !== String(btn.dataset.removeCartItem));
+    rotateCheckoutIdempotencyKey();
     persistCart();
     if (!cart.items.length) {
       try { localStorage.removeItem('cart'); } catch {}
@@ -637,10 +761,38 @@
       document.getElementById('card-errors').textContent = err.message || 'Could not refresh checkout total.';
     });
   });
+
+  document.getElementById('checkoutShippingOptions')?.addEventListener('change', e => {
+    const radio = e.target.closest('input[name="checkoutShipping"]');
+    if (!radio) return;
+    const option = selectedShippingOption(radio.value);
+    if (!option) return;
+    cart.shipping = normaliseCartShipping({
+      ...option,
+      id: option.methodId || option.id,
+      label: option.label || [option.carrier, option.service].filter(Boolean).join(' · ') || 'Shipping',
+      package: cart.package || null,
+    });
+    cart.shippingId = cart.shipping.id;
+    quoteValidated = false;
+    rotateCheckoutIdempotencyKey();
+    persistCart();
+    renderCart();
+    refreshCheckoutQuote().catch(err => {
+      if (err.redirected) return;
+      if (err.checkoutValidation) showReviewValidationError(err.message);
+      document.getElementById('card-errors').textContent = err.message || 'Could not refresh checkout total.';
+    });
+  });
+
   document.getElementById('restrictedItemsCertification')?.addEventListener('change', () => {
     const errEl = document.getElementById('card-errors');
     if (restrictedItemsCertified() && errEl?.textContent === CERTIFICATION_ERROR_MESSAGE) errEl.textContent = '';
     updatePayButton();
+  });
+
+  document.getElementById('mobilePayBtn')?.addEventListener('click', () => {
+    document.getElementById('payBtn')?.click();
   });
 
   if (hasData) {
@@ -660,9 +812,8 @@
     if (!hasData) return;
     try {
       await loadCheckoutSettings();
-      if (selectedPaymentMethod === 'bank_transfer') {
-        stripeReady = false;
-        updatePayButton();
+      if (!checkoutSettings?.card_enabled) {
+        updatePayButton('Payment unavailable');
         return;
       }
       const r = await fetch('/api/stripe/public-key?shop=' + encodeURIComponent(shopSlug));
@@ -750,7 +901,11 @@
           customerEmail:   email,
           customerName:    name,
           orderData: cart,
-          restrictedItemsCertification: restrictedItemsCertificationPayload(),
+          checkoutIdempotencyKey: cart.checkoutIdempotencyKey,
+          restrictedItemsCertification: {
+            accepted: true,
+            version: RESTRICTED_ITEMS_CERTIFICATION_VERSION,
+          },
         }),
       });
       const data = await res.json();
@@ -778,61 +933,6 @@
       errEl.textContent = err.message || 'Payment failed. Please try again.';
       btn.disabled = false;
       btn.textContent = origLabel;
-    }
-  });
-
-  document.getElementById('bankTransferBtn')?.addEventListener('click', async () => {
-    if (!hasData) return;
-    const errEl = document.getElementById('card-errors');
-    if (errEl) errEl.textContent = '';
-    const email = document.getElementById('bankCustomerEmail').value.trim();
-    const name = document.getElementById('bankCustomerName').value.trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      if (errEl) errEl.textContent = 'Please enter a valid email address.';
-      return;
-    }
-    if (!name) {
-      if (errEl) errEl.textContent = 'Please enter your name.';
-      return;
-    }
-    if (!quoteValidated) {
-      if (errEl) errEl.textContent = 'Checkout total is still being validated. Please try again in a moment.';
-      return;
-    }
-    if (!restrictedItemsCertified()) {
-      if (errEl) errEl.textContent = CERTIFICATION_ERROR_MESSAGE;
-      updatePayButton();
-      return;
-    }
-
-    const btn = document.getElementById('bankTransferBtn');
-    const original = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'Placing order...';
-    try {
-      const res = await fetch('/api/stripe/create-bank-transfer-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shopSlug,
-          customerEmail: email,
-          customerName: name,
-          orderData: cart,
-          restrictedItemsCertification: restrictedItemsCertificationPayload(),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.error) throw new Error(data.error || 'Could not place bank transfer order.');
-      try { localStorage.removeItem('cart'); } catch {}
-      const confirmation = new URL('confirmation.html', window.location.href);
-      confirmation.searchParams.set('order', data.orderId);
-      if (data.orderToken) confirmation.searchParams.set('token', data.orderToken);
-      confirmation.searchParams.set('shop', shopSlug);
-      window.location.href = confirmation.pathname + confirmation.search;
-    } catch (err) {
-      if (errEl) errEl.textContent = err.message || 'Could not place bank transfer order.';
-      btn.disabled = false;
-      btn.textContent = original;
     }
   });
 

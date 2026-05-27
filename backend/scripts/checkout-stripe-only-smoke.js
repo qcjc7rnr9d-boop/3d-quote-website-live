@@ -22,6 +22,10 @@ const forbidden = [
   "checkoutProvider === 'shopify'",
   'Shopify checkout',
   'buy-button-storefront',
+  'Bank transfer',
+  'bankTransferBtn',
+  'bankTransferPanel',
+  'paymentMethodChoice',
 ];
 
 for (const term of forbidden) {
@@ -45,12 +49,12 @@ assert(
   'Checkout script must process payments through Stripe PaymentIntents'
 );
 assert(
-  checkoutHtml.includes('Bank transfer — no processing fee') && checkoutHtml.includes('Payment processing fee'),
-  'Checkout must clearly show bank transfer and payment processing fee rows'
+  checkoutHtml.includes('Payment processing fee'),
+  'Checkout must clearly show the payment processing fee row'
 );
 assert(
-  checkoutJs.includes('/api/billing/public-checkout-settings') && checkoutJs.includes('/api/stripe/create-bank-transfer-order'),
-  'Checkout script must load payment fee mode and support bank-transfer orders'
+  checkoutJs.includes('/api/billing/public-checkout-settings') && !checkoutJs.includes('/api/stripe/create-bank-transfer-order'),
+  'Checkout script must load payment fee mode without creating offline checkout orders'
 );
 assert(
   !checkoutJs.includes('shopify_shop') && !checkoutJs.includes('shopifyShopDomain'),
@@ -61,6 +65,36 @@ assert(
   'Checkout is missing the richer grouped order-review styles'
 );
 assert(
+  checkoutHtml.includes('Review your order') && checkoutHtml.includes('Open a material group to review files and item pricing.'),
+  'Checkout review copy must guide customers through the compact final page'
+);
+assert(
+  checkoutHtml.includes('id="checkoutReviewMeta"'),
+  'Checkout review must include a compact cart summary line above material groups'
+);
+assert(
+  checkoutHtml.includes('checkout-payment-card') && checkoutHtml.includes('mobileCheckoutBar'),
+  'Checkout must keep payment actions reachable with sticky desktop/mobile summary surfaces'
+);
+assert(
+  checkoutHtml.includes('legal-certification-summary') && checkoutHtml.includes('<details') && checkoutHtml.includes('prohibited upload details'),
+  'Checkout certification must use compact checkbox copy with a disclosure for the full legal wording'
+);
+assert(
+  checkoutHtml.includes('id="checkoutShippingBlock"') && checkoutHtml.includes('id="checkoutShippingOptions"'),
+  'Checkout is missing the cart-level shipping selector'
+);
+{
+  const paymentCardIndex = checkoutHtml.indexOf('<div class="card checkout-payment-card">');
+  const priceTableIndex = checkoutHtml.indexOf('<div class="price-table">');
+  const shippingIndex = checkoutHtml.indexOf('id="checkoutShippingBlock"');
+  const cardPanelIndex = checkoutHtml.indexOf('<div id="cardPanel">');
+  assert(
+    paymentCardIndex >= 0 && priceTableIndex > paymentCardIndex && shippingIndex > priceTableIndex && shippingIndex < cardPanelIndex,
+    'Checkout payment card must show totals first, then shipping, before payment fields'
+  );
+}
+assert(
   checkoutHtml.includes('id="reviewValidationError"'),
   'Checkout is missing the order-review validation error container'
 );
@@ -69,12 +103,32 @@ assert(
   'Checkout is missing the restricted-items certification checkbox'
 );
 assert(
-  checkoutHtml.includes('I certify that the files, notes, and order I submit do not include'),
-  'Checkout is missing the required restricted-items certification wording'
+  checkoutHtml.includes('I certify this order does not include restricted or unlawful items') && checkoutHtml.includes('I certify that the files, notes, and order I submit do not include'),
+  'Checkout is missing the compact and full restricted-items certification wording'
 );
 assert(
   checkoutJs.includes('Material group') && checkoutJs.includes('Group total') && checkoutJs.includes('modelVolumeText'),
   'Checkout script must render full material groups with file and total detail'
+);
+assert(
+  checkoutJs.includes('cart-item-toggle') && checkoutJs.includes('aria-expanded') && checkoutJs.includes('hidden') && checkoutJs.includes('data-cart-item-panel'),
+  'Checkout script must render material groups as accessible accordion sections'
+);
+assert(
+  checkoutJs.includes('cart.items.length === 1') && checkoutJs.includes('fileCountText'),
+  'Checkout accordion must collapse multi-group orders by default and summarize file counts'
+);
+assert(
+  checkoutJs.includes('checkoutReviewMeta') && checkoutJs.includes('Shipping selected at checkout'),
+  'Checkout script must render a compact top-level cart summary'
+);
+assert(
+  checkoutJs.includes('headerFinishText') && checkoutJs.includes('finishLayerHeaderText') && checkoutJs.includes('infillText'),
+  'Checkout group headers must use short finish/layer/infill summaries instead of long finish descriptions'
+);
+assert(
+  checkoutJs.includes('/api/customer/cart-preview') && checkoutJs.includes('cart.shippingOptions'),
+  'Checkout script must price the full cart and render one order-level shipping selector'
 );
 assert(
   checkoutJs.includes('showReviewValidationError'),
@@ -88,18 +142,14 @@ assert(
   checkoutJs.includes('restrictedItemsCertification') && checkoutJs.includes('Please certify that your order does not include restricted or unlawful items.'),
   'Checkout script must block payment and send the restricted-items certification payload'
 );
-assert(
-  (checkoutJs.match(/restrictedItemsCertification: restrictedItemsCertificationPayload/g) || []).length >= 2,
-  'Checkout script must send the restricted-items certification for card and bank-transfer checkout'
-);
 
+assert(
+  stripeRoute.includes('/create-bank-transfer-order') && stripeRoute.includes('BANK_TRANSFER_DISABLED'),
+  'Legacy bank-transfer route must remain as a rejecting compatibility endpoint'
+);
 assert(
   stripeRoute.includes('RESTRICTED_ITEMS_CERTIFICATION_VERSION') && stripeRoute.includes('RESTRICTED_ITEMS_CERTIFICATION_REQUIRED'),
   'Stripe payment route must reject missing restricted-items certification'
-);
-assert(
-  (stripeRoute.match(/validateRestrictedItemsCertification/g) || []).length >= 2,
-  'Stripe payment route must reject missing restricted-items certification for card and bank-transfer checkout'
 );
 assert(
   stripeRoute.includes('restrictedItemsCertification') && stripeRoute.includes('restricted_items_certification_version'),

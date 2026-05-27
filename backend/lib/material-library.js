@@ -17,6 +17,8 @@
  * not literal MPa / °C values.
  */
 
+import { isVisibleMaterialCategory } from './material-config.js';
+
 const BASE_MATERIAL_LIBRARY = [
   // ── FDM / FFF filaments ──────────────────────────────────────
   {
@@ -740,10 +742,11 @@ const EXPANDED_FDM_LIBRARY = [
 ];
 
 const EXPANDED_FDM_KEYS = new Set(EXPANDED_FDM_LIBRARY.map(m => m.key));
-export const MATERIAL_LIBRARY = [
+const FULL_MATERIAL_LIBRARY = [
   ...EXPANDED_FDM_LIBRARY,
   ...BASE_MATERIAL_LIBRARY.filter(m => !EXPANDED_FDM_KEYS.has(m.key)),
 ];
+export const MATERIAL_LIBRARY = FULL_MATERIAL_LIBRARY.filter(m => isVisibleMaterialCategory(m.category));
 
 const SEARCH_SYNONYM_REPLACEMENTS = [
   [/\badditive manufacturing\b/g, '3d printing'],
@@ -787,6 +790,11 @@ function normaliseSearchText(value) {
     .trim();
 }
 
+function includesNonFdmProcess(value) {
+  return /\b(?:resin|sla|dlp|msla|sls|mjf|powder bed fusion|selective laser sintering|multi jet fusion|multijet fusion|vat photopolymerization|vat photopolymerisation|photopolymerization|photopolymerisation)\b/
+    .test(normaliseSearchText(value));
+}
+
 /**
  * Expand and clean material search text so "additive manufacturing PA12 powder",
  * "AM nylon 12", and "3D printing PETG filament" still match the material.
@@ -827,6 +835,7 @@ export function materialSearchVariants(name) {
  */
 export function findMaterialMatch(name) {
   if (!name || typeof name !== 'string') return null;
+  if (includesNonFdmProcess(name)) return null;
   const variants = materialSearchVariants(name);
   if (!variants.length) return null;
 

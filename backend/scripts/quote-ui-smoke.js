@@ -6,6 +6,7 @@ const root = resolve(import.meta.dirname, '../..');
 const base = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const quoteHtml = readFileSync(resolve(root, 'quote.html'), 'utf8');
 const materialsHtml = readFileSync(resolve(root, 'materials.html'), 'utf8');
+const catalogHtml = readFileSync(resolve(root, 'catalog.html'), 'utf8');
 const optionsHtml = readFileSync(resolve(root, 'options.html'), 'utf8');
 
 function assert(condition, message) {
@@ -54,7 +55,7 @@ assert(quoteHtml.includes('previewModelById'), 'Quote page must expose clickable
 assert(quoteHtml.includes('aria-current'), 'Quote model rows must expose selected state');
 assert(quoteHtml.includes('promptUpload'), 'Quote page must support upload prompt routing');
 assert(quoteHtml.includes('newGroup=1&promptUpload=1'), 'Add another group must route back to an upload prompt with prompt params');
-assert(quoteHtml.includes('quote.html?shop='), 'Add another group must route back to the quote upload prompt');
+assert(quoteHtml.includes('index.html?shop='), 'Add another group must route back to the home upload prompt');
 assert(quoteHtml.includes('data-home-link'), 'Quote page logo should be wired as a home link');
 assert(materialsHtml.includes('data-home-link'), 'Materials page logo should be wired as a home link');
 assert(optionsHtml.includes('data-home-link'), 'Options page logo should be wired as a home link');
@@ -67,6 +68,40 @@ assert(!materialsHtml.includes('data-finish-id'), 'Material step should not rend
 assert(optionsHtml.includes('Colour'), 'Options step should render colour controls');
 assert(optionsHtml.includes('Print quality'), 'Options step should render finish controls');
 assert(optionsHtml.includes('Infill'), 'Options step should render infill controls');
+assert(
+  materialsHtml.includes('quality-summary-trigger') && materialsHtml.includes('quality-menu'),
+  'Material cards should preview print quality as a compact summary with an accessible preset dropdown',
+);
+assert(
+  catalogHtml.includes('quality-summary-trigger') && catalogHtml.includes('quality-menu'),
+  'Catalogue cards should use the same compact print quality summary dropdown',
+);
+assert(
+  !materialsHtml.includes('quality-pill')
+    && !materialsHtml.includes('quality-card')
+    && !materialsHtml.includes('finish-preview')
+    && !materialsHtml.includes('Scroll for more'),
+  'Material cards should not render cramped finish pills, large finish cards, preview graphics, or scroll overlays',
+);
+assert(
+  !catalogHtml.includes('quality-pill')
+    && !catalogHtml.includes('quality-card')
+    && !catalogHtml.includes('finish-preview')
+    && !catalogHtml.includes('Scroll for more'),
+  'Catalogue cards should not render cramped finish pills, large finish cards, preview graphics, or scroll overlays',
+);
+assert(
+  materialsHtml.includes('print-quality preset') && materialsHtml.includes('View presets'),
+  'Material cards should show count/range summary copy and a preset disclosure control',
+);
+assert(
+  catalogHtml.includes('print-quality preset') && catalogHtml.includes('View presets'),
+  'Catalogue cards should show count/range summary copy and a preset disclosure control',
+);
+assert(
+  optionsHtml.includes('f.description ||') && optionsHtml.includes('Configured print quality option.'),
+  'Options step should keep the full finish descriptions for actual selection',
+);
 assert(
   quoteHtml.includes('New uploads') && quoteHtml.includes('SHOULD_PROMPT_UPLOAD'),
   'Quote page must be the quote-first upload experience',
@@ -144,7 +179,7 @@ try {
   await page.waitForFunction(() => {
     const price = document.querySelector('#priceInt')?.textContent?.trim() || '';
     const helper = document.querySelector('#priceHelper')?.textContent || '';
-    return price && price !== '—' && /Shipping not included/.test(helper);
+    return price && price !== '—' && /Shipping calculated at checkout/.test(helper);
   }, null, { timeout: 7000 });
   const noShippingPreview = await page.evaluate(() => ({
     price: `${document.querySelector('#priceSymbol')?.textContent || ''}${document.querySelector('#priceInt')?.textContent || ''}${document.querySelector('#priceDec')?.textContent || ''}`,
@@ -152,18 +187,15 @@ try {
     checkoutDisabled: document.querySelector('#checkoutCartBtn')?.getAttribute('aria-disabled') || '',
     cartCount: JSON.parse(localStorage.getItem('cart') || '{}').items?.length || 0,
   }));
-  assert(noShippingPreview.price !== '$—', 'Quote review should show a backend price before shipping is selected');
-  assert(/Shipping not included/.test(noShippingPreview.helper), `Quote helper should say shipping is not included, got ${noShippingPreview.helper}`);
-  assert(noShippingPreview.checkoutDisabled === 'true', 'Checkout should remain disabled before explicit shipping selection');
-  assert(noShippingPreview.cartCount === 0, `Preview-only quote should not auto-save a checkout cart item, got ${noShippingPreview.cartCount}`);
+  assert(noShippingPreview.price !== '$—', 'Quote review should show a backend item price before checkout shipping is selected');
+  assert(/Shipping calculated at checkout/.test(noShippingPreview.helper), `Quote helper should say shipping is calculated at checkout, got ${noShippingPreview.helper}`);
+  assert(noShippingPreview.checkoutDisabled === 'false', 'Checkout should be enabled once item/material options are valid');
+  assert(noShippingPreview.cartCount === 1, `Valid quote group should auto-save to cart before checkout shipping, got ${noShippingPreview.cartCount}`);
   await page.click('#saveQuoteBtn');
-  await page.waitForTimeout(250);
-  const noShippingBlocked = await page.evaluate(() => ({
-    toast: document.querySelector('#toast')?.textContent || '',
-    shippingInvalid: document.querySelector('#shippingBlock')?.classList.contains('invalid') || false,
-  }));
-  assert(/shipping/i.test(noShippingBlocked.toast), `Checkout without shipping should show a shipping validation toast, got ${noShippingBlocked.toast}`);
-  assert(noShippingBlocked.shippingInvalid, 'Checkout without shipping should highlight the shipping section');
+  await page.waitForSelector('#saveQuoteAuthModal:not(.hidden)', { timeout: 5000 });
+  const saveModalText = await page.locator('#saveQuoteAuthModal').innerText();
+  assert(/Sign in or create account/.test(saveModalText), 'Save quote should prompt for account without requiring shipping first');
+  await page.click('#saveQuoteAuthCancel');
 
   const stlBase64 = makeStlBuffer().toString('base64');
   await page.evaluate(async ({ encoded, material, colour, finish, infill, shipping }) => {
@@ -352,16 +384,16 @@ try {
   }, { material, colour, finish, infill, shipping });
   await page.goto(`${base}/quote.html?shop=mahi3d`, { waitUntil: 'networkidle' });
   await page.click('#addAnotherBtn');
-  await page.waitForURL(/quote\.html\?shop=mahi3d/, { timeout: 7000 });
+  await page.waitForURL(/index\.html\?shop=mahi3d/, { timeout: 7000 });
   await page.waitForSelector('#newUploadBanner.show', { timeout: 10000 });
   await page.waitForTimeout(250);
   const newGroupState = await page.evaluate(() => ({
     cartCount: JSON.parse(localStorage.getItem('cart') || '{}').items?.length || 0,
     formFile: localStorage.getItem('form_file'),
     formSelection: localStorage.getItem('form_selection'),
-    uploadDisplay: getComputedStyle(document.querySelector('#viewerEmpty')).display,
-    emptyTitle: document.querySelector('#viewerEmptyTitle')?.textContent || '',
-    emptyCopy: document.querySelector('#viewerEmptyCopy')?.textContent || '',
+    uploadDisplay: getComputedStyle(document.querySelector('#uploadZone')).display,
+    fileCardVisible: document.querySelector('#fileCard')?.classList.contains('visible') || false,
+    headline: document.querySelector('.hero h1')?.textContent?.replace(/\s+/g, ' ').trim() || '',
     activeElementId: document.activeElement?.id || '',
     bannerText: document.querySelector('#newUploadBanner')?.innerText || '',
     url: location.href,
@@ -369,9 +401,9 @@ try {
   assert(newGroupState.cartCount === 2, `Add-another flow should preserve the existing cart and auto-saved current group, got ${newGroupState.cartCount} items`);
   assert(newGroupState.formFile === null, 'Add-another flow should clear active form_file');
   assert(newGroupState.formSelection === null, 'Add-another flow should clear active form_selection');
-  assert(newGroupState.uploadDisplay !== 'none', `Quote upload prompt should be visible, got ${newGroupState.uploadDisplay}`);
-  assert(newGroupState.emptyTitle === 'Upload the next model group', `Add-another flow should keep next-group title, got ${newGroupState.emptyTitle}`);
-  assert(/same model again/i.test(newGroupState.emptyCopy), 'Add-another flow should keep next-group helper copy');
+  assert(newGroupState.uploadDisplay !== 'none', `Home upload prompt should be visible, got ${newGroupState.uploadDisplay}`);
+  assert(newGroupState.fileCardVisible === false, 'Home upload prompt should not show the previous file card');
+  assert(/Your 3D file,\s*priced instantly/i.test(newGroupState.headline), `Add-another flow should land on the public upload home, got ${newGroupState.headline}`);
   assert(/New uploads/.test(newGroupState.bannerText), 'New uploads banner did not render');
 
   await page.setInputFiles('#fileInput', {
@@ -379,6 +411,17 @@ try {
     mimeType: 'model/stl',
     buffer: makeStlBuffer(),
   });
+  await page.waitForSelector('#fileCard.visible', { timeout: 7000 });
+  await page.waitForFunction(() => /Next material group\.stl/.test(document.querySelector('#uploadedModelList')?.innerText || ''), null, { timeout: 7000 });
+  const homeUploadState = await page.evaluate(() => ({
+    cartCount: JSON.parse(localStorage.getItem('cart') || '{}').items?.length || 0,
+    file: JSON.parse(localStorage.getItem('form_file') || 'null'),
+    continueHref: document.querySelector('#continueBtn')?.getAttribute('href') || '',
+  }));
+  assert(homeUploadState.cartCount === 2, `Home upload should preserve existing material groups, got ${homeUploadState.cartCount} items`);
+  assert(homeUploadState.file?.models?.[0]?.name === 'Next material group.stl', 'Home upload did not save the new model group');
+  assert(homeUploadState.continueHref === 'materials.html?shop=mahi3d&newGroup=1', `Home upload should preserve new-group material link, got ${homeUploadState.continueHref}`);
+  await page.click('#continueBtn');
   await page.waitForURL(/materials\.html\?shop=mahi3d&newGroup=1/, { timeout: 7000 });
   await page.waitForFunction(() => /Next material group\.stl/.test(document.querySelector('#modelGroupPanel')?.innerText || ''), null, { timeout: 7000 });
   const materialArrival = await page.evaluate(() => ({

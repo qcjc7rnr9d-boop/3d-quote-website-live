@@ -62,6 +62,21 @@ function ensurePlatformStripe() {
   return stripe;
 }
 
+function stripeErrorSummary(err) {
+  return {
+    type: err?.type || null,
+    code: err?.code || null,
+    message: err?.message || 'Stripe request failed.',
+    requestId: err?.requestId || err?.raw?.requestId || null,
+    statusCode: err?.statusCode || null,
+  };
+}
+
+function isConnectPlatformRegistrationError(err) {
+  const message = String(err?.message || err?.raw?.message || '');
+  return message.includes("signed up for Connect");
+}
+
 async function syncShopStripeAccount(shop) {
   if (!shop?.stripe_account_id) return null;
 
@@ -111,6 +126,19 @@ function merchantLegalErrorPayload(err) {
     can_accept_live_orders: false,
     legal: err.legal || null,
   };
+}
+
+function logRouteError(label, err) {
+  if (err instanceof PricingError) {
+    console.error(label, {
+      name: err.name,
+      code: err.code,
+      status: err.status,
+      message: err.message,
+    });
+    return;
+  }
+  console.error(label, stripeErrorSummary(err));
 }
 
 function validateEmail(email) {
@@ -245,7 +273,7 @@ export async function stripeWebhookHandler(req, res) {
       markShopBillingPastDue(db, event.data.object);
     }
   } catch (err) {
-    console.error('Webhook processing error:', err);
+    logRouteError('Webhook processing error:', err);
   }
 
   res.json({ received: true });
@@ -269,7 +297,7 @@ router.get('/keys-status', requireShopAuth, async (req, res) => {
       ...baseReadiness,
     });
   } catch (err) {
-    console.error('Stripe status error:', err);
+    logRouteError('Stripe status error:', err);
     res.status(500).json({ error: 'Failed to load Stripe status' });
   }
 });
@@ -291,7 +319,11 @@ router.get('/public-key', (req, res) => {
 
   try {
     assertCheckoutAllowed(db, shop.id, { method: 'card' });
+    assertMerchantCheckoutAllowed(db, shop.id);
   } catch (err) {
+    if (err.code === 'MERCHANT_LEGAL_AGREEMENT_REQUIRED') {
+      return res.status(err.status || 423).json(merchantLegalErrorPayload(err));
+    }
     return res.status(err.status || 409).json({
       error: err.message,
       code: err.code || 'CHECKOUT_UNAVAILABLE',
@@ -301,16 +333,11 @@ router.get('/public-key', (req, res) => {
 
   const platform = getEffectivePlatformStripeConfig();
   const readiness = liveOrderReadiness(shop, platform);
-    if (!readiness.can_accept_live_orders) {
-      return res.status(503).json(readinessErrorPayload(readiness));
-    }
-    try {
-      assertMerchantCheckoutAllowed(db, shop.id);
-    } catch (err) {
-      return res.status(err.status || 423).json(merchantLegalErrorPayload(err));
-    }
+  if (!readiness.can_accept_live_orders) {
+    return res.status(503).json(readinessErrorPayload(readiness));
+  }
 
-    res.json({
+  res.json({
     publishable_key: platform.publishableKey,
     has_connect: true,
     billing_status: readiness.billing_status,
@@ -344,8 +371,15 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
     if (!readiness.can_accept_live_orders) {
       return res.status(503).json(readinessErrorPayload(readiness));
     }
-    assertMerchantCheckoutAllowed(db, shop.id);
-    assertCheckoutAllowed(db, shop.id, { method: 'card' });
+    try {
+      assertCheckoutAllowed(db, shop.id, { method: 'card' });
+      assertMerchantCheckoutAllowed(db, shop.id);
+    } catch (err) {
+      if (err.code === 'MERCHANT_LEGAL_AGREEMENT_REQUIRED') {
+        return res.status(err.status || 423).json(merchantLegalErrorPayload(err));
+      }
+      throw err;
+    }
 
     const stripe = ensurePlatformStripe();
     const cart = validateCartForShop(db, shop, normaliseCart({
@@ -436,9 +470,9 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       cart.items.length > 1 ? 'Multiple' : firstItem?.colorName || null,
       cart.items.length > 1 ? 'Multiple' : firstItem?.finishLabel || null,
       cart.items.length > 1 ? 1 : firstItem?.quantity || 1,
-      cart.items.reduce((sum, item) => sum + Number(item.itemsNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.shippingNzd || 0), 0),
+      cart.itemsNzd ?? cart.items.reduce((sum, item) => sum + Number(item.itemsNzd || 0), 0),
+      cart.taxNzd ?? cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
+      cart.shippingNzd ?? 0,
       cart.totalNzd, intent.id, publicToken,
       certification.version, certification.certifiedAt,
       paymentProcessingFeeCents, feeCents, customerPayCents,
@@ -471,7 +505,7 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       usage: usagePreview,
     });
   } catch (err) {
-    console.error('Create payment intent error:', err);
+    logRouteError('Create payment intent error:', err);
     if (err instanceof PricingError) {
       return res.status(err.status).json({
         error: err.message || 'Payment failed',
@@ -483,101 +517,29 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
   }
 });
 
-router.post('/create-bank-transfer-order', paymentIntentLimiter, async (req, res) => {
+router.post('/create-bank-transfer-order', paymentIntentLimiter, (req, res) => {
+  res.status(410).json({
+    error: 'Offline checkout is no longer available. Please use Stripe card checkout.',
+    code: 'BANK_TRANSFER_DISABLED',
+  });
+});
+
+router.get('/dashboard-link', requireShopAuth, async (req, res) => {
   try {
-    const { shopSlug, customerEmail, customerName, orderData, restrictedItemsCertification } = req.body;
-    if (!shopSlug || !customerEmail || !orderData) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-    if (!validateEmail(customerEmail)) {
-      return res.status(400).json({ error: 'Enter a valid email address.' });
-    }
-    const certification = validateRestrictedItemsCertification(restrictedItemsCertification);
-    if (!certification.ok) {
-      return res.status(400).json({
-        error: certification.error,
-        code: certification.code,
-      });
+    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.shop.id);
+    if (!shop?.stripe_account_id) {
+      return res.status(400).json({ error: 'No Stripe account connected' });
     }
 
-    const shop = db.prepare("SELECT * FROM shops WHERE slug = ? AND plan != 'suspended'").get(shopSlug);
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
-    assertMerchantCheckoutAllowed(db, shop.id);
-    const paymentFeeMode = getPaymentFeeMode(db, shop.id);
-
-    const cart = validateCartForShop(db, shop, normaliseCart({
-      ...(orderData || {}),
-      shopSlug,
-      items: Array.isArray(orderData?.items) && orderData.items.length ? orderData.items : null,
-    }, shopSlug));
-    const usagePreview = previewQuoteUsage(db, shop.id);
-    if (usagePreview.limit_reached) {
-      return res.status(402).json({
-        error: 'You have used your included quotes for this billing period. Upgrade to keep sending quotes.',
-        code: 'QUOTE_LIMIT_REACHED',
-        usage: usagePreview,
-      });
-    }
-
-    db.prepare(`
-      INSERT INTO customers (shop_id, email, name) VALUES (?, ?, ?)
-      ON CONFLICT(shop_id, email) DO UPDATE SET name = excluded.name
-    `).run(shop.id, (customerEmail || '').toLowerCase(), customerName || null);
-
-    ensureOrderPublicTokenColumn();
-    ensureOrderRestrictedItemsCertificationColumns();
-    const publicToken = newPublicOrderToken();
-    const firstItem = cart.items[0];
-    const order = db.prepare(`
-      INSERT INTO orders
-        (shop_id, customer_email, customer_name, file_name, material_id,
-         colour, finish, quantity, subtotal, tax, shipping, total, public_token,
-         restricted_items_certification_version, restricted_items_certified_at,
-         payment_processing_fee_cents, checkout_platform_fee_cents, customer_total_cents)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
-    `).run(
-      shop.id,
-      (customerEmail || '').toLowerCase(),
-      customerName || '',
-      cart.items.length > 1 ? `${cart.items.length} material groups` : firstItem?.file?.name || null,
-      firstItem?.materialId || null,
-      cart.items.length > 1 ? 'Multiple' : firstItem?.colorName || null,
-      cart.items.length > 1 ? 'Multiple' : firstItem?.finishLabel || null,
-      cart.items.length > 1 ? 1 : firstItem?.quantity || 1,
-      cart.items.reduce((sum, item) => sum + Number(item.itemsNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.taxNzd || 0), 0),
-      cart.items.reduce((sum, item) => sum + Number(item.shippingNzd || 0), 0),
-      cart.totalNzd,
-      publicToken,
-      certification.version,
-      certification.certifiedAt,
-      cart.totalCents,
-    );
-    saveOrderItems(db, order.lastInsertRowid, cart.items);
-    recordQuoteUsageEvent(db, {
-      shopId: shop.id,
-      quoteId: `order:${order.lastInsertRowid}`,
-      eventType: 'bank_transfer_order_created',
-    });
-
-    res.status(201).json({
-      ok: true,
-      orderId: order.lastInsertRowid,
-      orderToken: publicToken,
-      payment_fee_mode: paymentFeeMode,
-      customer_total_cents: cart.totalCents,
-      usage: usagePreview,
-    });
+    const stripe = ensurePlatformStripe();
+    const loginLink = await stripe.accounts.createLoginLink(shop.stripe_account_id);
+    res.json({ url: loginLink.url });
   } catch (err) {
-    console.error('Create bank transfer order error:', err);
-    if (err instanceof PricingError) {
-      return res.status(err.status).json({
-        error: err.message || 'Order failed',
-        code: err.code,
-        quote: err.quote || null,
-      });
-    }
-    res.status(err.status || 500).json({ error: err.message || 'Order failed' });
+    console.error('Stripe dashboard-link error:', stripeErrorSummary(err));
+    res.status(500).json({
+      error: 'Stripe is connected. Dashboard access is temporarily unavailable.',
+      code: 'DASHBOARD_LINK_UNAVAILABLE',
+    });
   }
 });
 
@@ -625,7 +587,16 @@ router.get('/connect-url', requireShopAuth, async (req, res) => {
 
     res.json({ url: accountLink.url });
   } catch (err) {
-    console.error('Stripe connect-url error:', err);
+    const summary = stripeErrorSummary(err);
+    console.error('Stripe connect-url error:', summary);
+
+    if (isConnectPlatformRegistrationError(err)) {
+      return res.status(409).json({
+        error: 'Stripe Connect is not activated for this platform account yet. Finish Connect setup in the same Stripe dashboard/sandbox as the server API key, then run npm run stripe-connect:smoke on Lightsail.',
+        code: 'CONNECT_PLATFORM_NOT_REGISTERED',
+      });
+    }
+
     res.status(500).json({ error: err.message || 'Failed to start Stripe onboarding' });
   }
 });
@@ -642,7 +613,7 @@ router.post('/connect', requireShopAuth, async (req, res) => {
 
     res.json({ success: true, ...payload });
   } catch (err) {
-    console.error('Stripe connect completion error:', err);
+    logRouteError('Stripe connect completion error:', err);
     res.status(500).json({ error: err.message || 'Failed to complete Stripe connection' });
   }
 });
@@ -665,7 +636,7 @@ router.post('/disconnect', requireShopAuth, (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
-    console.error('Stripe disconnect error:', err);
+    logRouteError('Stripe disconnect error:', err);
     res.status(500).json({ error: err.message || 'Failed to disconnect Stripe' });
   }
 });
@@ -688,7 +659,7 @@ router.get('/payouts', requireShopAuth, async (req, res) => {
 
     res.json({ payouts });
   } catch (err) {
-    console.error('Payouts error:', err);
+    logRouteError('Payouts error:', err);
     res.status(500).json({ error: 'Failed to fetch payouts' });
   }
 });

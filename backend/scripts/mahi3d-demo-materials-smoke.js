@@ -4,6 +4,8 @@ import { MATERIAL_LIBRARY } from '../lib/material-library.js';
 import { getDefaultMaterialImage } from '../lib/material-default-images.js';
 import { DEMO_SHOP_SLUG } from './seed-mahi3d-demo.js';
 
+const FDM_LIBRARY = MATERIAL_LIBRARY.filter(material => material.category === 'FDM');
+
 const db = new DatabaseSync(join(import.meta.dirname, '..', 'data', 'rfdewi.db'));
 
 let failures = 0;
@@ -44,10 +46,11 @@ try {
       if (properties.libraryKey) byLibraryKey.set(properties.libraryKey, row);
     }
 
-    expect(activeRows.length === MATERIAL_LIBRARY.length, `Mahi3D has ${MATERIAL_LIBRARY.length} enabled library materials`);
-    expect(byLibraryKey.size === MATERIAL_LIBRARY.length, 'each enabled demo material has a stable library key');
+    expect(activeRows.length === FDM_LIBRARY.length, `Mahi3D has ${FDM_LIBRARY.length} enabled FDM library materials`);
+    expect(activeRows.every(row => row.category === 'FDM'), 'each enabled demo material is FDM');
+    expect(byLibraryKey.size === FDM_LIBRARY.length, 'each enabled demo FDM material has a stable library key');
 
-    for (const material of MATERIAL_LIBRARY) {
+    for (const material of FDM_LIBRARY) {
       const row = byLibraryKey.get(material.key);
       expect(Boolean(row), `Mahi3D demo includes ${material.displayName}`);
       if (!row) continue;
@@ -65,6 +68,9 @@ try {
 
     for (const key of ['tpu_83a', 'tpu_80a', 'tpu_75a', 'peba', 'peba_cf', 'petg_v0', 'recycled_pla']) {
       expect(byLibraryKey.has(key), `showcase material ${key} is published`);
+    }
+    for (const key of ['resin_standard', 'sls_pa12']) {
+      expect(!byLibraryKey.has(key), `non-FDM material ${key} is not published`);
     }
   }
 } finally {

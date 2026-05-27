@@ -8,7 +8,7 @@ const router = Router();
  * Manual shipping options.
  *
  * Storage: store_settings.shipping_zones (JSON column) holds an array of:
- *   { id, courier, service, price, days_min, days_max, recommended, active }
+ *   { id, courier, service, price, days_min, days_max, recommended, active, bands? }
  *
  * The admin "Shipping options" UI writes this format; the quote page reads it.
  * Sorted server-side so the recommended option comes first.
@@ -17,7 +17,7 @@ const router = Router();
 // ── POST /api/shipping/rates  (public — called from quote page) ─
 router.post('/rates', (req, res) => {
   try {
-    const { shopSlug } = req.body;
+    const { shopSlug, package: packageMetrics } = req.body;
     if (!shopSlug) {
       return res.status(400).json({ error: 'shopSlug is required' });
     }
@@ -29,8 +29,11 @@ router.post('/rates', (req, res) => {
 
     const s = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
     const raw = JSON.parse(s.shipping_zones || '[]');
-    const rates = normaliseShippingZones(raw).map(o => ({
+    const rates = normaliseShippingZones(raw, packageMetrics || null).map(o => ({
       id:           o.id,
+      methodId:     o.methodId || o.id,
+      bandId:       o.bandId || null,
+      bandLabel:    o.bandLabel || null,
       carrier:      o.carrier,
       service:      o.service,
       price:        o.price,

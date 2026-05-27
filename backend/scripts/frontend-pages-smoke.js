@@ -48,6 +48,19 @@ function sameOriginLocalHref(raw, currentUrl) {
   return url;
 }
 
+async function evalAfterSettling(page, selector, fn) {
+  try {
+    return await page.$$eval(selector, fn);
+  } catch (err) {
+    if (!/Execution context was destroyed/i.test(String(err?.message || err))) {
+      throw err;
+    }
+    await page.waitForLoadState('domcontentloaded').catch(() => {});
+    await page.waitForTimeout(250);
+    return page.$$eval(selector, fn);
+  }
+}
+
 const browser = await chromium.launch({ headless: true });
 try {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -56,16 +69,23 @@ try {
   for (const path of pages) {
     const page = await context.newPage();
     const pageErrors = [];
+    const cspErrors = [];
     page.on('pageerror', err => pageErrors.push(err.message));
+    page.on('console', msg => {
+      if (msg.type() === 'error' && /Content Security Policy/i.test(msg.text())) {
+        cspErrors.push(msg.text());
+      }
+    });
     const response = await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded' });
     assert(response && response.status() < 500, `${path} returned ${response?.status() || 'no response'}`);
     await page.waitForTimeout(250);
     assert(pageErrors.length === 0, `${path} runtime errors: ${pageErrors.join('; ')}`);
+    assert(cspErrors.length === 0, `${path} CSP errors: ${cspErrors.join('; ')}`);
 
     const title = await page.title();
     assert(title && title.trim().length > 0, `${path} is missing a document title`);
 
-    const unlabeledVisibleInputs = await page.$$eval('input, select, textarea', controls => controls
+    const unlabeledVisibleInputs = await evalAfterSettling(page, 'input, select, textarea', controls => controls
       .filter(el => {
         const style = window.getComputedStyle(el);
         if (style.display === 'none' || style.visibility === 'hidden') return false;
@@ -77,7 +97,7 @@ try {
       .map(el => `${el.tagName.toLowerCase()}#${el.id || '(no-id)'}`));
     assert(unlabeledVisibleInputs.length === 0, `${path} has unlabeled visible controls: ${unlabeledVisibleInputs.join(', ')}`);
 
-    const hrefs = await page.$$eval('a[href]', links => links.map(a => a.getAttribute('href')));
+    const hrefs = await evalAfterSettling(page, 'a[href]', links => links.map(a => a.getAttribute('href')));
     for (const href of hrefs) {
       const url = sameOriginLocalHref(href, page.url());
       if (!url) continue;

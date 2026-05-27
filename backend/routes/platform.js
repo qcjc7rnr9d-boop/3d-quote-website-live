@@ -158,7 +158,7 @@ async function createBillingActivationForShop(shop) {
     return {
       billing_checkout_url: null,
       billing_setup_status: 'free_plan',
-      billing_setup_error: 'Community is free; no monthly billing link is required.',
+      billing_setup_error: 'Free pilot mode does not require a monthly billing link.',
     };
   }
   try {
@@ -358,8 +358,8 @@ router.get('/overview', requirePlatformAuth, (req, res) => {
       billing_active_shops: db.prepare(`
         SELECT COUNT(*) as c
         FROM shops
-        WHERE billing_status IN ('active', 'trialing')
-           OR (plan = 'community' AND billing_status != 'suspended')
+        WHERE plan != 'suspended'
+          AND COALESCE(billing_status, 'active') != 'suspended'
       `).get().c,
     });
   } catch (err) {
@@ -372,10 +372,16 @@ router.get('/shops/:id/overview', requirePlatformAuth, (req, res) => {
   try {
     const shopId = parseInt(req.params.id, 10);
     const shop = db.prepare(`
-      SELECT id, name, slug, email, plan, stripe_account_id,
+      SELECT id, name, slug, email,
+             CASE WHEN plan = 'suspended' THEN 'suspended' ELSE 'community' END as plan,
+             stripe_account_id,
              stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted,
              billing_customer_id, billing_subscription_id, billing_price_id,
-             billing_status, billing_current_period_end, billing_checkout_session_id,
+             CASE
+               WHEN plan = 'suspended' OR billing_status = 'suspended' THEN 'suspended'
+               ELSE 'active'
+             END as billing_status,
+             billing_current_period_end, billing_checkout_session_id,
              billing_checkout_status, billing_updated_at,
              created_at, updated_at
       FROM shops
@@ -732,11 +738,16 @@ router.get('/shops', requirePlatformAuth, (req, res) => {
   try {
     const shops = db.prepare(`
       SELECT
-        s.id, s.name, s.slug, s.email, s.plan,
+        s.id, s.name, s.slug, s.email,
+        CASE WHEN s.plan = 'suspended' THEN 'suspended' ELSE 'community' END as plan,
         s.stripe_account_id, s.stripe_charges_enabled, s.stripe_payouts_enabled,
         s.stripe_details_submitted,
         s.billing_customer_id, s.billing_subscription_id, s.billing_price_id,
-        s.billing_status, s.billing_current_period_end, s.billing_checkout_session_id,
+        CASE
+          WHEN s.plan = 'suspended' OR s.billing_status = 'suspended' THEN 'suspended'
+          ELSE 'active'
+        END as billing_status,
+        s.billing_current_period_end, s.billing_checkout_session_id,
         s.billing_checkout_status, s.billing_updated_at,
         s.created_at,
         (SELECT COUNT(*) FROM orders o WHERE o.shop_id = s.id) as order_count,
@@ -891,8 +902,8 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    const selectedPlan = normalisePlanId(req.body?.plan || 'starter');
-    const initialBillingStatus = selectedPlan === 'community' ? 'active' : 'pending_subscription';
+    const selectedPlan = normalisePlanId(req.body?.plan || 'community');
+    const initialBillingStatus = selectedPlan === 'suspended' ? 'suspended' : 'active';
     const result = db.prepare(`
       INSERT INTO shops (name, slug, email, password_hash, plan, is_temp_password, billing_status)
       VALUES (?, ?, ?, ?, ?, 1, ?)
@@ -979,8 +990,8 @@ router.patch('/shops/:id', requirePlatformAuth, (req, res) => {
     }
 
     const newPlan = suspended === undefined
-      ? (shop.plan === 'suspended' ? 'suspended' : 'starter')
-      : (suspended ? 'suspended' : 'starter');
+      ? (shop.plan === 'suspended' ? 'suspended' : 'community')
+      : (suspended ? 'suspended' : 'community');
 
     const nextBillingStatus = newPlan === 'suspended'
       ? 'suspended'

@@ -339,7 +339,7 @@
       <div class="kpi-card"><div class="kpi-label">Completed checkouts</div><div class="kpi-value" id="kpiPaid">-</div><div class="kpi-sub">Paid orders</div></div>
       <div class="kpi-card"><div class="kpi-label">Deliveries</div><div class="kpi-value" id="kpiDelivered">-</div><div class="kpi-sub">Fulfilment complete</div></div>
       <div class="kpi-card"><div class="kpi-label">Revenue</div><div class="kpi-value" id="kpiRevenue">-</div><div class="kpi-sub">Paid order total</div></div>
-      <div class="kpi-card"><div class="kpi-label">Card checkout fees</div><div class="kpi-value" id="kpiFees">-</div><div class="kpi-sub" id="kpiFeeRate">Plan-capped</div></div>
+      <div class="kpi-card"><div class="kpi-label">Card checkout fees</div><div class="kpi-value" id="kpiFees">-</div><div class="kpi-sub" id="kpiFeeRate">5% included</div></div>
       <div class="kpi-card"><div class="kpi-label">Average order</div><div class="kpi-value" id="kpiAov">-</div><div class="kpi-sub">Paid orders</div></div>
       <div class="kpi-card"><div class="kpi-label">Stripe-ready stores</div><div class="kpi-value" id="kpiStripeReady">-</div><div class="kpi-sub">Connected and enabled</div></div>
     </div>
@@ -396,7 +396,7 @@
             <div class="form-group"><label class="form-label" for="newSlug">Slug</label><input class="form-input" type="text" id="newSlug" required></div>
             <div class="form-group"><label class="form-label" for="newEmail">Owner email</label><input class="form-input" type="email" id="newEmail" required></div>
             <div class="form-group"><label class="form-label" for="newPassword">Initial password</label><input class="form-input" type="text" id="newPassword" required></div>
-            <div class="form-group"><label class="form-label" for="newPlan">Plan</label><select class="form-input" id="newPlan"><option value="community">Community</option><option value="starter" selected>Starter</option><option value="growth">Growth</option><option value="scale">Scale</option><option value="enterprise">Enterprise</option></select></div>
+            <div class="form-group"><label class="form-label" for="newPlan">Plan</label><select class="form-input" id="newPlan"><option value="community" selected>Free pilot</option></select></div>
           </div>
           <button class="btn btn-primary" type="button" id="createShopBtn" onclick="submitCreateShop()">Create store</button>
         </form>
@@ -456,7 +456,7 @@
           <div class="form-group"><label class="form-label" for="platformPublishableKey">Publishable key</label><input class="form-input" type="text" id="platformPublishableKey" placeholder="pk_live_..."></div>
           <div class="form-group"><label class="form-label" for="platformClientId">Connect client ID</label><input class="form-input" type="text" id="platformClientId" placeholder="ca_..."></div>
           <div class="form-group"><label class="form-label" for="platformSecretKey">Secret key</label><input class="form-input" type="password" id="platformSecretKey" placeholder="sk_live_..."></div>
-          <div class="form-group"><label class="form-label" for="platformFeePercent">Legacy fee percent (unused)</label><input class="form-input" type="number" min="0" max="100" step="0.01" id="platformFeePercent"></div>
+          <div class="form-group"><label class="form-label" for="platformFeePercent">Included platform fee percent</label><input class="form-input" type="number" min="0" max="100" step="0.01" id="platformFeePercent"></div>
         </div>
         <button class="btn btn-primary" type="button" id="savePaymentsBtn">Save payments config</button>
         <div class="detail-grid" style="margin-top:18px">
@@ -625,7 +625,7 @@
     document.getElementById('kpiDelivered').textContent = data.delivered_orders || 0;
     document.getElementById('kpiRevenue').textContent = money(data.revenue);
     document.getElementById('kpiFees').textContent = money(data.estimated_platform_fees);
-    document.getElementById('kpiFeeRate').textContent = 'Plan-capped card fees';
+    document.getElementById('kpiFeeRate').textContent = '5% included platform fee';
     document.getElementById('kpiAov').textContent = money(data.average_order_value);
     document.getElementById('kpiStripeReady').textContent = data.stripe_ready_shops || 0;
     renderBreakdown('fulfilmentBreakdown', data.fulfilment_status_counts || {});
@@ -871,9 +871,7 @@
     document.getElementById('platformMaskedSk').textContent = data.secret_key_masked || '-';
     document.getElementById('platformMaskedClientId').textContent = data.client_id_masked || '-';
     document.getElementById('platformCardsStatus').innerHTML = data.can_accept_cards ? badge('Enabled', 'sage') : badge('Not ready', 'warm');
-    const prices = data.billing_prices_configured || {};
-    const configured = ['starter', 'growth', 'scale'].filter(id => prices[id]).length;
-    document.getElementById('platformBillingPriceStatus').innerHTML = configured ? badge(`${configured} paid price IDs`, 'sage') : badge('Needs paid plan price IDs', 'warm');
+    document.getElementById('platformBillingPriceStatus').innerHTML = badge('Free pilot only', 'sage');
   }
 
   async function loadPlans() {
@@ -1003,7 +1001,7 @@
         billingLink.style.display = '';
         copyBillingBtn.style.display = '';
         billingLink.href = data.billing_checkout_url;
-        billingNote.textContent = ' Send this to the owner to activate the paid Trennen subscription.';
+        billingNote.textContent = ' Send this to the owner to activate Trennen billing.';
       } else {
         billingWrap.style.display = '';
         billingLink.style.display = 'none';

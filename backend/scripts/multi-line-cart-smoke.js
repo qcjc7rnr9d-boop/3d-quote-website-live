@@ -22,7 +22,7 @@ try {
   const addAnotherHandler = quoteHtml.match(/\$\('addAnotherBtn'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*{([\s\S]*?)\n\s*}\);/)?.[1] || '';
   assert(addAnotherHandler, 'quote page must define add-another click handler');
   assert(!addAnotherHandler.includes("localStorage.removeItem('cart')"), 'add-another flow must not clear cart');
-  assert(quoteHtml.includes('quote.html?shop='), 'add-another flow must return to the quote upload prompt');
+  assert(quoteHtml.includes('index.html?shop='), 'add-another flow must return to the home upload prompt');
   assert(quoteHtml.includes('&newGroup=1&promptUpload=1'), 'add-another flow must preserve prompt params');
 
   const shop = db.prepare("SELECT * FROM shops WHERE slug = 'mahi3d'").get();
@@ -52,7 +52,6 @@ try {
       finishId: finish?.id,
       infillTierId: infill?.id,
       quantity: 1,
-      shipping: { id: shipping?.id, label: shipping?.service || shipping?.courier || 'Shipping', price: Number(shipping?.price) || 0 },
       file: {
         name,
         size: 2048,
@@ -66,6 +65,7 @@ try {
 
   const cart = normaliseCart({
     shopSlug: shop.slug,
+    shipping: { id: shipping?.id, label: shipping?.service || shipping?.courier || 'Shipping', price: Number(shipping?.price) || 0 },
     items: [
       itemFor(materials[0], 'Outdoor bracket.stl', 4),
       itemFor(materials[1], 'Sensor cover.stl', 6),
@@ -73,12 +73,27 @@ try {
   }, shop.slug);
 
   assert(cart.items.length === 2, 'normalised cart must keep two material groups');
+  assert(cart.shipping?.id === shipping.id, 'normalised cart must keep one root shipping choice');
   const validated = validateCartForShop(db, shop, cart);
   assert(validated.items.length === 2, 'validated cart must keep two material groups');
-  assert(validated.totalCents === validated.items.reduce((sum, item) => sum + item.totalCents, 0), 'cart total cents must equal item totals');
+  assert(validated.shipping?.id === shipping.id, 'validated cart must keep one order-level shipping choice');
+  assert(validated.shippingNzd === (Number(validated.shipping?.price) || 0), 'validated cart must charge shipping once at the order level');
+  assert(validated.items.every(item => Number(item.shippingNzd || 0) === 0), 'validated cart items must not keep per-group shipping charges');
+  assert(validated.totalCents >= validated.items.reduce((sum, item) => sum + item.totalCents, 0), 'cart total cents must not drop below item totals');
   assert(new Set(validated.items.map(item => item.materialId)).size === 2, 'cart items must preserve different materials');
   assert(validated.items.every(item => item.models.length === 1), 'cart items must preserve model metadata');
   assert(validated.items.every(item => item.models[0].quantity === 1), 'single-model cart items must keep group quantity behavior');
+
+  const legacyPerItemShippingCart = normaliseCart({
+    shopSlug: shop.slug,
+    items: [
+      { ...itemFor(materials[0], 'Legacy one.stl', 4), shipping: { id: shipping.id, label: shipping.service || shipping.courier || 'Shipping', price: Number(shipping.price) || 0 } },
+      { ...itemFor(materials[1], 'Legacy two.stl', 6), shipping: { id: shipping.id, label: shipping.service || shipping.courier || 'Shipping', price: Number(shipping.price) || 0 } },
+    ],
+  }, shop.slug);
+  const validatedLegacy = validateCartForShop(db, shop, legacyPerItemShippingCart);
+  assert(validatedLegacy.shipping?.id === shipping.id, 'legacy per-item shipping should be lifted to root cart shipping');
+  assert(validatedLegacy.items.every(item => Number(item.shippingNzd || 0) === 0), 'legacy per-item shipping must not double-charge each material group');
 
   console.log('Multi-line cart smoke checks passed.');
 } finally {
