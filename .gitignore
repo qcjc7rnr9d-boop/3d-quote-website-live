@@ -18,6 +18,7 @@ backend/.env.*
 *.db-shm
 *.db-wal
 backend/data/
+uploads/
 
 # Logs and temporary artifacts
 *.log
