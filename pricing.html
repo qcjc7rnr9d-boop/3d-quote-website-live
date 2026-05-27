@@ -7,21 +7,20 @@
   <link rel="stylesheet" href="assets/shared.css">
   <style>
     body { background:#fffaf0; color:#211d16; }
-    .pricing-wrap { max-width:1180px; margin:0 auto; padding:72px 24px 64px; }
-    .hero { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr); gap:36px; align-items:center; min-height:420px; }
+    .pricing-wrap { max-width:1040px; margin:0 auto; padding:72px 24px 64px; }
+    .hero { display:grid; grid-template-columns:minmax(0,1.08fr) minmax(280px,.92fr); gap:36px; align-items:center; min-height:420px; }
     .hero h1 { font-family:var(--font-brand, sans-serif); font-size:clamp(40px,7vw,76px); line-height:.94; margin:0 0 18px; letter-spacing:0; }
     .hero p { max-width:680px; font-size:18px; line-height:1.62; color:#5f594f; }
     .hero-visual { min-height:340px; border-radius:8px; background:linear-gradient(135deg,#f8f0dc,#dcebdc 52%,#f3c36f); border:1px solid rgba(33,29,22,.12); position:relative; overflow:hidden; }
     .hero-visual::before { content:""; position:absolute; width:210px; height:210px; left:68px; top:58px; background:#fffdf7; transform:skewY(-18deg) rotate(12deg); box-shadow:50px 44px 0 #24372a, 92px 86px 0 #6f945f; }
-    .hero-visual::after { content:"Capped card checkout fees"; position:absolute; right:28px; bottom:28px; padding:14px 16px; border-radius:8px; background:#211d16; color:#fffaf0; font-weight:700; }
+    .hero-visual::after { content:"5% included"; position:absolute; right:28px; bottom:28px; padding:14px 16px; border-radius:8px; background:#211d16; color:#fffaf0; font-weight:700; }
     .note { margin:26px 0 34px; font-weight:800; color:#211d16; }
-    .plans { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px; align-items:stretch; }
-    .plan-card { background:#fff; border:1px solid rgba(33,29,22,.14); border-radius:8px; padding:20px; display:flex; flex-direction:column; gap:13px; min-width:0; }
-    .plan-card.recommended { border:2px solid #5a8a5e; box-shadow:0 18px 40px rgba(42,65,39,.12); }
+    .plans { display:grid; grid-template-columns:minmax(0,1fr); gap:14px; align-items:stretch; max-width:680px; }
+    .plan-card { background:#fff; border:2px solid #5a8a5e; border-radius:8px; padding:24px; display:flex; flex-direction:column; gap:13px; min-width:0; box-shadow:0 18px 40px rgba(42,65,39,.12); }
     .badge { align-self:flex-start; padding:5px 8px; border-radius:999px; background:#e5f0e3; color:#2f6238; font-size:12px; font-weight:800; }
-    .plan-name { font-family:var(--font-brand, sans-serif); font-size:24px; font-weight:700; }
-    .price { font-size:26px; font-weight:850; }
-    .meta, li { color:#5f594f; line-height:1.48; font-size:14px; }
+    .plan-name { font-family:var(--font-brand, sans-serif); font-size:28px; font-weight:700; }
+    .price { font-size:30px; font-weight:850; }
+    .meta, li { color:#5f594f; line-height:1.48; font-size:15px; }
     ul { padding-left:18px; margin:0; display:grid; gap:8px; }
     .principles { margin-top:42px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
     .principle { padding:20px; border:1px solid rgba(33,29,22,.12); border-radius:8px; background:#fffdf8; }
@@ -31,8 +30,8 @@
     .legal-links { display:flex; flex-wrap:wrap; gap:12px; margin-top:10px; }
     .legal-links a { color:#2f6238; font-weight:800; text-decoration:none; }
     .legal-links a:hover { text-decoration:underline; }
-    @media (max-width:1000px) { .plans { grid-template-columns:repeat(2,minmax(0,1fr)); } .hero { grid-template-columns:1fr; } .hero-visual { min-height:260px; } }
-    @media (max-width:680px) { .plans, .principles { grid-template-columns:1fr; } .pricing-wrap { padding:48px 16px; } }
+    @media (max-width:900px) { .hero { grid-template-columns:1fr; } .hero-visual { min-height:260px; } }
+    @media (max-width:680px) { .principles { grid-template-columns:1fr; } .pricing-wrap { padding:48px 16px; } }
   </style>
 </head>
 <body>
@@ -40,88 +39,43 @@
     <section class="hero">
       <div>
         <p class="overline">Trennen pricing</p>
-        <h1>Start small without paying enterprise prices.</h1>
-        <p>Generous plans for makers and 3D printing businesses, with quote limits that make sense and capped card checkout fees so you are not punished for growing.</p>
-        <p class="note">All prices exclude GST.</p>
+        <h1>Free pilot while the platform proves itself.</h1>
+        <p>Early businesses can use the quote flow, admin tools, email, and Stripe Connect checkout without a monthly subscription while we test the launch workflow.</p>
+        <p class="note">Customer checkout includes the Trennen platform fee inside the final quote total.</p>
       </div>
       <div class="hero-visual" aria-hidden="true"></div>
     </section>
 
     <section class="plans" aria-label="Trennen pricing plans">
       <article class="plan-card">
-        <div class="plan-name">Community</div>
-        <div class="price">NZ$0</div>
-        <p class="meta">For hobbyists, students, and tiny makers trying the platform.</p>
+        <span class="badge">Pilot</span>
+        <div class="plan-name">Free pilot</div>
+        <div class="price">NZ$0/month</div>
+        <p class="meta">For controlled launch partners while Trennen validates the full quote-to-payment flow.</p>
         <ul>
-          <li>3 quotes per month</li>
-          <li>No overage billing</li>
-          <li>Checkout disabled or bank-transfer-only</li>
-          <li>Trennen branding enabled</li>
-        </ul>
-      </article>
-      <article class="plan-card recommended">
-        <span class="badge">Recommended</span>
-        <div class="plan-name">Starter</div>
-        <div class="price">NZ$29/mo + GST</div>
-        <p class="meta">For most small 3D printing businesses.</p>
-        <ul>
-          <li>14-day free trial</li>
-          <li>25 quotes per month</li>
-          <li>NZ$1 per extra quote</li>
-          <li>Optional card checkout fee: 0.5%, capped at NZ$29/month</li>
-          <li>Bank transfer has no processing fee</li>
-        </ul>
-      </article>
-      <article class="plan-card">
-        <div class="plan-name">Growth</div>
-        <div class="price">NZ$129/mo + GST</div>
-        <p class="meta">For active businesses quoting every week.</p>
-        <ul>
-          <li>14-day free trial if eligible</li>
-          <li>250 quotes per month</li>
-          <li>NZ$0.50 per extra quote</li>
-          <li>Optional card checkout fee: 0.5%, capped at NZ$79/month</li>
-          <li>Bank transfer has no processing fee</li>
-        </ul>
-      </article>
-      <article class="plan-card">
-        <div class="plan-name">Scale</div>
-        <div class="price">NZ$899/mo + GST</div>
-        <p class="meta">For large shops with configurable monthly or annual terms.</p>
-        <ul>
-          <li>1,000 quotes per month</li>
-          <li>NZ$0.25 per extra quote</li>
-          <li>No default card checkout fee unless configured</li>
-          <li>Stripe/payment fees are pass-through</li>
-        </ul>
-      </article>
-      <article class="plan-card">
-        <div class="plan-name">Enterprise</div>
-        <div class="price">Talk to us</div>
-        <p class="meta">Custom allowance and custom capped usage terms.</p>
-        <ul>
-          <li>No uncapped percentage-of-revenue model</li>
-          <li>Annual or custom contracts</li>
-          <li>Stripe/payment fees are pass-through</li>
-          <li>Managed terms for large teams</li>
+          <li>No monthly Stripe Billing subscription</li>
+          <li>Unlimited pilot quote usage</li>
+          <li>Stripe Connect checkout required before accepting customer payments</li>
+          <li>5% Trennen platform fee included in each customer quote</li>
+          <li>Stripe/payment processing fees are separate pass-through costs</li>
         </ul>
       </article>
     </section>
 
     <section class="principles" aria-label="Pricing principles">
-      <div class="principle"><strong>Payment processing fees are separate and passed through at cost.</strong><span class="meta">Stripe/card/payment costs are not part of the monthly Trennen subscription.</span></div>
-      <div class="principle"><strong>Card checkout fees are capped so you are not punished for growing.</strong><span class="meta">Trennen platform fees apply only to processed card checkout and respect the monthly cap.</span></div>
-      <div class="principle"><strong>No uncapped revenue-share by default.</strong><span class="meta">Meter customer-understandable events like sent quotes, not vague technical API calls.</span></div>
+      <div class="principle"><strong>Stripe Connect checkout</strong><span class="meta">Each business connects its own Stripe Express account before taking customer payments.</span></div>
+      <div class="principle"><strong>Fee included in the quote</strong><span class="meta">The customer sees one final quote total; Trennen collects its 5% with Stripe application fees.</span></div>
+      <div class="principle"><strong>Paid plans stay dormant</strong><span class="meta">Monthly subscriptions return only after pilot workflows are stable and proven.</span></div>
     </section>
 
     <section class="legal-note" aria-label="Legal and refund information">
       <strong>Legal, refunds, and restricted uploads</strong>
       <span>Customer orders are custom-made from uploaded files. Change-of-mind refunds are not automatic, restricted or unsafe uploads are not accepted, and non-excludable New Zealand consumer rights still apply.</span>
       <div class="legal-links">
-        <a href="terms.html?shop=mahi3d#cancellations">Refund policy</a>
-        <a href="terms.html?shop=mahi3d#prohibited-uploads">Prohibited uploads</a>
-        <a href="terms.html?shop=mahi3d">Terms</a>
-        <a href="privacy.html?shop=mahi3d">Privacy</a>
+        <a href="terms.html?shop=trennen#cancellations">Refund policy</a>
+        <a href="terms.html?shop=trennen#prohibited-uploads">Prohibited uploads</a>
+        <a href="terms.html?shop=trennen">Terms</a>
+        <a href="privacy.html?shop=trennen">Privacy</a>
       </div>
     </section>
   </main>

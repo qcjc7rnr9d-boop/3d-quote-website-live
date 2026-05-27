@@ -121,14 +121,14 @@ assert(
   'Checkout must include a browser storage privacy notice'
 );
 assert(
-  pricingHtml.includes('terms.html?shop=mahi3d#cancellations') &&
-    pricingHtml.includes('terms.html?shop=mahi3d#prohibited-uploads') &&
-    pricingHtml.includes('terms.html?shop=mahi3d') &&
-    pricingHtml.includes('privacy.html?shop=mahi3d'),
+  pricingHtml.includes('terms.html?shop=trennen#cancellations') &&
+    pricingHtml.includes('terms.html?shop=trennen#prohibited-uploads') &&
+    pricingHtml.includes('terms.html?shop=trennen') &&
+    pricingHtml.includes('privacy.html?shop=trennen'),
   'Pricing page must link to refund policy, prohibited uploads, terms, and privacy policy'
 );
 assert(
-  indexHtml.includes('terms.html?shop=mahi3d#cancellations') &&
+  indexHtml.includes('terms.html?shop=trennen#cancellations') &&
     indexHtml.includes('Refund policy') &&
     indexHtml.includes('data-pv-refund'),
   'Index footer must include a dynamic refund policy link'
