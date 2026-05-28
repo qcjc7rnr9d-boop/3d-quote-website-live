@@ -33,6 +33,14 @@
     return url.pathname + url.search;
   }
 
+  function homeHref() {
+    return shopHref('index.html');
+  }
+
+  function startQuoteHref() {
+    return `${homeHref()}#uploadZone`;
+  }
+
   function redirectToMaterialSelection(message) {
     try {
       localStorage.setItem(SIZE_WARNING_KEY, JSON.stringify({
@@ -50,8 +58,10 @@
   document.querySelectorAll('a[href="materials.html"]').forEach(link => { link.href = shopHref('materials.html'); });
   document.querySelectorAll('[data-checkout-link]').forEach(link => {
     const target = link.dataset.checkoutLink;
+    if (target === 'home') link.href = homeHref();
     if (target === 'materials') link.href = shopHref('catalog.html');
-    if (target === 'quote') link.href = shopHref('quote.html');
+    if (target === 'quote') link.href = startQuoteHref();
+    if (target === 'start-quote') link.href = startQuoteHref();
     if (target === 'portal') link.href = `customer/dashboard.html?shop=${encodeURIComponent(shopSlug)}#overview`;
     if (target === 'help') link.href = `customer/dashboard.html?shop=${encodeURIComponent(shopSlug)}#help`;
     if (target === 'terms') link.href = `${shopHref('terms.html')}#prohibited-uploads`;

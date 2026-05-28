@@ -51,6 +51,22 @@ assert(dashboardHtml.includes('function renderRecentOrders'), 'Customer dashboar
 assert(dashboardHtml.includes('recent-order-row'), 'Customer dashboard overview should use compact recent-order rows');
 assert(dashboardHtml.includes('order-detail-card'), 'Customer dashboard orders tab should use expandable detail cards');
 assert(dashboardHtml.includes('order-detail-toggle'), 'Customer dashboard orders tab should expose order detail toggles');
+assert(
+  dashboardHtml.includes('function homeHref(') && dashboardHtml.includes('function startQuoteHref('),
+  'Customer dashboard should use explicit home/start quote helpers'
+);
+assert(
+  !dashboardHtml.includes('href="../quote.html?shop=trennen" class="portal-wordmark"'),
+  'Customer dashboard wordmark must not route to the empty quote review page'
+);
+assert(
+  !dashboardHtml.includes('id="quickQuoteBtn" href="../quote.html"') && !dashboardHtml.includes('id="quotesStartBtn" href="../quote.html"'),
+  'Customer dashboard Start a Quote buttons must not route to the empty quote review page'
+);
+assert(
+  dashboardHtml.includes('quickQuoteBtn') && dashboardHtml.includes('startQuoteHref('),
+  'Customer dashboard Start a Quote buttons should route to the homepage upload card'
+);
 assert(homeHtml.includes('portal-overview-title'), 'Home customer portal drawer should use the refreshed portal overview heading');
 assert(!homeHtml.includes('pvWelcomeName">—</span> 👋'), 'Home customer portal drawer should not render the old greeting emoji');
 assert(!/[\u{1F300}-\u{1FAFF}]/u.test(homeHtml), 'Home customer portal drawer should not contain emoji glyphs');

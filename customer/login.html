@@ -28,7 +28,7 @@
 </head>
 <body class="admin-body">
   <div class="auth-page">
-    <a href="../quote.html?shop=trennen" class="auth-wordmark" id="shopWordmark">—</a>
+    <a href="../index.html?shop=trennen" class="auth-wordmark" id="shopWordmark">—</a>
 
     <div class="auth-card fade-up" style="width:min(420px,100%)">
       <div class="tab-row">
@@ -99,6 +99,12 @@
       if (nextPath && /^dashboard\.html(?:\?|#|$)/.test(nextPath)) return nextPath;
       return `dashboard.html?shop=${encodeURIComponent(slug)}#overview`;
     }
+
+    function homeTarget(slug) {
+      return `../index.html?shop=${encodeURIComponent(slug || 'trennen')}`;
+    }
+
+    document.getElementById('shopWordmark').href = homeTarget(shopSlug || 'trennen');
 
     // Populate wordmark with shop name if slug known
     if (shopSlug) {

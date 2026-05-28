@@ -285,7 +285,7 @@
 </head>
 <body>
   <nav class="portal-nav">
-    <a href="../quote.html?shop=trennen" class="portal-wordmark" id="portalWordmark">—</a>
+    <a href="../index.html?shop=trennen" class="portal-wordmark" id="portalWordmark">—</a>
     <div class="portal-user">
       <span id="navName">…</span>
       <button class="portal-signout" id="signoutBtn" type="button">Sign out</button>
@@ -299,7 +299,7 @@
         <h1 class="portal-greeting" id="greeting">Hi</h1>
         <p class="portal-subtitle" id="shopLabel">Loading your account…</p>
       </div>
-      <a class="quick-quote" id="quickQuoteBtn" href="../quote.html">Start a Quote</a>
+      <a class="quick-quote" id="quickQuoteBtn" href="../index.html?shop=trennen#uploadZone">Start a Quote</a>
     </header>
 
     <nav class="tabs" aria-label="Customer portal sections">
@@ -381,7 +381,7 @@
             <div class="card-title">Saved quotes</div>
             <div class="card-sub">Saved quotes are estimates. Expired quotes can be recalculated before ordering.</div>
           </div>
-          <a class="btn btn-dark" id="quotesStartBtn" href="../quote.html">Start a Quote</a>
+          <a class="btn btn-dark" id="quotesStartBtn" href="../index.html?shop=trennen#uploadZone">Start a Quote</a>
         </div>
         <div class="card-body" id="quotesMsg" style="display:none"></div>
         <div id="quotesList"></div>
@@ -513,6 +513,14 @@
 
     function activeShopSlug() {
       return shopSlug || me?.shop?.slug || '';
+    }
+
+    function homeHref(slug = activeShopSlug()) {
+      return `../index.html?shop=${encodeURIComponent(slug || 'trennen')}`;
+    }
+
+    function startQuoteHref(slug = activeShopSlug()) {
+      return `${homeHref(slug)}#uploadZone`;
     }
 
     function loginUrl() {
@@ -871,6 +879,7 @@
       const shopName = shopInfo?.name || me.shop?.name || 'Your store';
       const firstName = (me.name || 'there').split(' ')[0];
       document.getElementById('portalWordmark').textContent = shopName;
+      document.getElementById('portalWordmark').href = homeHref();
       document.getElementById('navName').textContent = me.name || me.email;
       document.getElementById('shopEyebrow').textContent = shopName;
       document.getElementById('greeting').textContent = `Welcome back, ${firstName}`;
@@ -878,8 +887,8 @@
       document.getElementById('profileName').value = me.name || '';
       document.getElementById('profileEmail').value = me.email || '';
       document.title = `Customer Portal · ${shopName}`;
-      document.getElementById('quickQuoteBtn').href = `../quote.html?shop=${encodeURIComponent(shopSlug || me.shop?.slug || '')}`;
-      document.getElementById('quotesStartBtn').href = `../quote.html?shop=${encodeURIComponent(shopSlug || me.shop?.slug || '')}`;
+      document.getElementById('quickQuoteBtn').href = startQuoteHref();
+      document.getElementById('quotesStartBtn').href = startQuoteHref();
       renderStats();
       renderOrders('ordersList', orders);
       renderRecentOrders('recentOrders', orders.slice(0, 4));

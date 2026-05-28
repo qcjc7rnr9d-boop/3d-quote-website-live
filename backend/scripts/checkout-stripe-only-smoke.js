@@ -37,6 +37,22 @@ assert(
   'Checkout is missing the prominent Stripe setup error container'
 );
 assert(
+  !checkoutHtml.includes('href="quote.html?shop=trennen" class="nav-wordmark"'),
+  'Checkout wordmark must not route to the empty quote review page'
+);
+assert(
+  checkoutHtml.includes('data-checkout-link="home"') && checkoutJs.includes("target === 'home'"),
+  'Checkout wordmark must use the shared home route'
+);
+assert(
+  checkoutJs.includes('function startQuoteHref(') && checkoutJs.includes("target === 'quote'") && checkoutJs.includes('startQuoteHref()'),
+  'Checkout generic Quote navigation should route to the homepage upload card'
+);
+assert(
+  checkoutHtml.includes('data-checkout-link="start-quote"') && checkoutJs.includes("target === 'start-quote'"),
+  'Checkout empty-state Start a quote must route to the homepage upload card'
+);
+assert(
   checkoutJs.includes('paymentSetupError'),
   'Checkout script does not control the Stripe setup error container'
 );
