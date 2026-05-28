@@ -1,10 +1,12 @@
 import { DatabaseSync } from 'node:sqlite';
-import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { DEMO_LEGACY_SHOP_SLUG, DEMO_SHOP_SLUG } from './seed-mahi3d-demo.js';
 import { getShopBySlug, normaliseShopSlug } from '../lib/shop-lookup.js';
 
 const db = new DatabaseSync(join(import.meta.dirname, '..', 'data', 'rfdewi.db'));
 const legacyOnlyDb = new DatabaseSync(':memory:');
+const root = resolve(import.meta.dirname, '../..');
 
 let failures = 0;
 
@@ -45,6 +47,23 @@ try {
   expect(canonical?.id === legacy?.id, 'legacy alias resolves to the canonical shop row');
   expect(legacy?.slug === DEMO_SHOP_SLUG, 'legacy alias returns canonical slug');
   expect(legacy?.name === 'Trennen', 'legacy alias returns Trennen branding');
+
+  if (canonical) {
+    const settings = db.prepare(`
+      SELECT support_email_mode, support_email, logo_url, about
+      FROM store_settings
+      WHERE shop_id = ?
+    `).get(canonical.id) || {};
+    expect(settings.support_email_mode === 'custom', 'Trennen demo uses custom support email mode');
+    expect(settings.support_email === 'support@trennen.co.nz', 'Trennen demo uses Trennen support email');
+    expect(!String(settings.logo_url || '').toLowerCase().includes('mahi3d'), 'Trennen demo does not use a Mahi3D logo URL');
+    expect(!String(settings.about || '').includes('Mahi3D'), 'Trennen demo about copy does not mention Mahi3D');
+  }
+
+  const quoteHtml = readFileSync(join(root, 'quote.html'), 'utf8');
+  const checkoutHtml = readFileSync(join(root, 'checkout.html'), 'utf8');
+  expect(!quoteHtml.includes('shop=mahi3d'), 'quote page static fallback links use canonical Trennen slug');
+  expect(!checkoutHtml.includes('shop=mahi3d'), 'checkout page static fallback links use canonical Trennen slug');
 } finally {
   db.close();
   legacyOnlyDb.close();
