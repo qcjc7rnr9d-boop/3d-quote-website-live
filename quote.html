@@ -1032,7 +1032,10 @@
       .auth-modal-actions { grid-template-columns: 1fr; }
     }
   </style>
+  <link rel="stylesheet" href="/assets/embed-frame.css">
+  <script>if(new URLSearchParams(location.search).get('embed')==='1'||location.pathname.startsWith('/embed/'))document.documentElement.classList.add('is-embedded');</script>
   <script src="assets/brand.js" defer></script>
+  <script src="/assets/embed-frame.js" defer></script>
   <script src="/assets/csrf.js"></script>
 </head>
 <body>
@@ -1335,17 +1338,27 @@
   // ──────────────────────────────────────────────────────────────
 
   // ── Config ──────────────────────────────────────────────────
-  const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'trennen';
+  const URL_PARAMS = new URLSearchParams(location.search);
+  const SHOP_SLUG = URL_PARAMS.get('shop') || 'trennen';
+  const IS_EMBED_FLOW = URL_PARAMS.get('embed') === '1' || location.pathname.startsWith('/embed/');
+  function flowHref(path, params = {}) {
+    const url = new URL(path, window.location.href);
+    url.searchParams.set('shop', SHOP_SLUG);
+    if (IS_EMBED_FLOW) url.searchParams.set('embed', '1');
+    Object.entries(params).forEach(([key, value]) => {
+      if (value != null && value !== false) url.searchParams.set(key, String(value));
+    });
+    return `${url.pathname.replace(/^\//, '')}${url.search}${url.hash}`;
+  }
   document.querySelectorAll('[data-home-link]').forEach(link => {
-    link.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    link.href = flowHref('index.html');
   });
   document.querySelectorAll('[data-quote-nav]').forEach(link => {
-    if (link.dataset.quoteNav === 'materials') link.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
-    if (link.dataset.quoteNav === 'quote') link.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    if (link.dataset.quoteNav === 'materials') link.href = flowHref('materials.html');
+    if (link.dataset.quoteNav === 'quote') link.href = flowHref('quote.html');
     if (link.dataset.quoteNav === 'portal') link.href = `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#overview`;
     if (link.dataset.quoteNav === 'terms') link.href = `terms.html?shop=${encodeURIComponent(SHOP_SLUG)}#uploads`;
   });
-  const URL_PARAMS = new URLSearchParams(location.search);
   const SHOULD_PROMPT_UPLOAD = URL_PARAMS.get('promptUpload') === '1' || URL_PARAMS.get('newGroup') === '1';
   const IS_NEW_GROUP_FLOW = URL_PARAMS.get('newGroup') === '1';
   const MAX_MODELS_PER_GROUP = 20;
@@ -1411,7 +1424,7 @@
     const hasModel = !!fileData;
     materialsLink.classList.toggle('disabled', !hasModel);
     materialsLink.setAttribute('aria-disabled', hasModel ? 'false' : 'true');
-    materialsLink.setAttribute('href', hasModel ? `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}` : '#upload');
+    materialsLink.setAttribute('href', hasModel ? flowHref('materials.html') : '#upload');
     materialsLink.title = hasModel ? '' : 'Upload your model before choosing materials.';
   }
 
@@ -1514,7 +1527,7 @@
         message: message || 'This model is too large for the selected material.',
       }));
     } catch {}
-    window.location.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    window.location.href = flowHref('materials.html');
   }
 
   function savedQuoteLoginUrl() {
@@ -1977,6 +1990,7 @@
       : `${count} material groups are ready. Add another group or checkout when ready.`;
     const checkoutUrl = new URL('checkout.html', window.location.href);
     checkoutUrl.searchParams.set('shop', SHOP_SLUG);
+    if (IS_EMBED_FLOW) checkoutUrl.searchParams.set('embed', '1');
     $('checkoutCartBtn').href = checkoutUrl.pathname + checkoutUrl.search;
     actions.classList.toggle('hidden', count === 0);
   }
@@ -2434,8 +2448,8 @@
       ? ([selectionData.finishLabel, selectionData.finishLayerHeight].filter(Boolean).join(' — ') || '—')
       : '—';
     $('reviewInfill').textContent = hasRequiredSelection('infill') ? (selectionData.infillLabel || currentInfill()?.label || '—') : '—';
-    $('editMaterialLink').href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
-    $('editOptionsLink').href = `options.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+    $('editMaterialLink').href = flowHref('materials.html');
+    $('editOptionsLink').href = flowHref('options.html');
   }
 
   function setQty(n) {
@@ -2901,7 +2915,7 @@
     applyFileMeta();
     refreshQuotePreview({ silent: true });
     if (SHOULD_PROMPT_UPLOAD) {
-      window.location.href = `materials.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1`;
+      window.location.href = flowHref('materials.html', { newGroup: '1' });
     }
   });
 
@@ -2985,7 +2999,7 @@
   // cart, so checkout can proceed without a separate manual cart step.
   $('addAnotherBtn')?.addEventListener('click', () => {
     clearCurrentQuoteGroup();
-    window.location.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`;
+    window.location.href = flowHref('index.html', { newGroup: '1', promptUpload: '1' });
   });
 
   $('checkoutCartBtn')?.addEventListener('click', e => {

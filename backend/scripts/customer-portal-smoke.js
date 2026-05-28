@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'crypto';
 import { createRequire } from 'module';
+import { readFileSync } from 'fs';
 import dotenv from 'dotenv';
 
 const base = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
@@ -38,6 +39,21 @@ function cookieFrom(res) {
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
+
+const dashboardHtml = readFileSync('../customer/dashboard.html', 'utf8');
+const homeHtml = readFileSync('../index.html', 'utf8');
+assert(dashboardHtml.includes('Welcome back,'), 'Customer dashboard should use the refreshed Welcome back greeting copy');
+assert(!dashboardHtml.includes('Hi, ${firstName}'), 'Customer dashboard should not use the old terse greeting copy');
+assert(!dashboardHtml.includes('→'), 'Customer dashboard should not use loose arrow glyphs for action rows');
+assert(!/[\u{1F300}-\u{1FAFF}]/u.test(dashboardHtml), 'Customer dashboard should not contain emoji glyphs');
+assert(dashboardHtml.includes('portal-chevron'), 'Customer dashboard action rows should use the styled chevron marker');
+assert(dashboardHtml.includes('function renderRecentOrders'), 'Customer dashboard overview should render compact recent-order rows separately from full order details');
+assert(dashboardHtml.includes('recent-order-row'), 'Customer dashboard overview should use compact recent-order rows');
+assert(dashboardHtml.includes('order-detail-card'), 'Customer dashboard orders tab should use expandable detail cards');
+assert(dashboardHtml.includes('order-detail-toggle'), 'Customer dashboard orders tab should expose order detail toggles');
+assert(homeHtml.includes('portal-overview-title'), 'Home customer portal drawer should use the refreshed portal overview heading');
+assert(!homeHtml.includes('pvWelcomeName">—</span> 👋'), 'Home customer portal drawer should not render the old greeting emoji');
+assert(!/[\u{1F300}-\u{1FAFF}]/u.test(homeHtml), 'Home customer portal drawer should not contain emoji glyphs');
 
 function roundMoney(value) {
   return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;

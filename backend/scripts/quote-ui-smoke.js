@@ -54,15 +54,15 @@ assert(quoteHtml.includes('previewModelId'), 'Quote page must persist the active
 assert(quoteHtml.includes('previewModelById'), 'Quote page must expose clickable model preview switching');
 assert(quoteHtml.includes('aria-current'), 'Quote model rows must expose selected state');
 assert(quoteHtml.includes('promptUpload'), 'Quote page must support upload prompt routing');
-assert(quoteHtml.includes('newGroup=1&promptUpload=1'), 'Add another group must route back to an upload prompt with prompt params');
-assert(quoteHtml.includes('index.html?shop='), 'Add another group must route back to the home upload prompt');
+assert(quoteHtml.includes("newGroup: '1'") && quoteHtml.includes("promptUpload: '1'"), 'Add another group must route back to an upload prompt with prompt params');
+assert(quoteHtml.includes("flowHref('index.html'"), 'Add another group must route back to the home upload prompt');
 assert(quoteHtml.includes('data-home-link'), 'Quote page logo should be wired as a home link');
 assert(materialsHtml.includes('data-home-link'), 'Materials page logo should be wired as a home link');
 assert(optionsHtml.includes('data-home-link'), 'Options page logo should be wired as a home link');
 assert(!quoteHtml.includes('id="colourSelect"'), 'Quote review should not duplicate colour selection controls');
 assert(!quoteHtml.includes('id="infillSelect"'), 'Quote review should not duplicate infill selection controls');
 assert(!quoteHtml.includes('aria-label="Finish"'), 'Quote review should not duplicate finish selection controls');
-assert(materialsHtml.includes('options.html?shop='), 'Material step should continue to the new Options step');
+assert(materialsHtml.includes("flowHref('options.html'"), 'Material step should continue to the new Options step');
 assert(!materialsHtml.includes('data-colour-id'), 'Material step should not render selectable colour buttons');
 assert(!materialsHtml.includes('data-finish-id'), 'Material step should not render selectable finish cards');
 assert(optionsHtml.includes('Colour'), 'Options step should render colour controls');

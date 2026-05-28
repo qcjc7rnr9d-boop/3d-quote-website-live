@@ -16,6 +16,7 @@ import { csrfProtection, csrfTokenHandler } from './lib/csrf.js';
 import { hasSecretEncryptionKey } from './lib/secret-vault.js';
 import { frameAncestorsForOrigins, parseEmbedAllowedOrigins } from './lib/embed.js';
 import { mailerStatus } from './lib/mailer.js';
+import { getShopBySlug } from './lib/shop-lookup.js';
 
 import authRouter from './routes/auth.js';
 import materialsRouter from './routes/materials.js';
@@ -37,6 +38,27 @@ const isProduction = process.env.NODE_ENV === 'production';
 const sessionStore = new SQLiteSessionStore(db);
 const startedAt = Date.now();
 const appVersion = process.env.npm_package_version || '1.0.0';
+const iframeQuoteFlowPages = new Set([
+  '/',
+  '/index.html',
+  '/materials.html',
+  '/options.html',
+  '/quote.html',
+  '/checkout.html',
+]);
+
+function embedFrameAncestorsForRequest(req) {
+  const slug = String(req.query.shop || req.query.slug || '').trim();
+  if (!slug) return "'self'";
+  const shop = getShopBySlug(db, slug);
+  if (!shop) return "'self'";
+  const settings = db.prepare('SELECT embed_allowed_origins FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
+  return frameAncestorsForOrigins(parseEmbedAllowedOrigins(settings.embed_allowed_origins));
+}
+
+function isIframeQuoteFlowRequest(req) {
+  return req.query.embed === '1' && iframeQuoteFlowPages.has(req.path);
+}
 
 function assertProductionConfig() {
   if (!isProduction) return;
@@ -62,9 +84,13 @@ if (isProduction || process.env.TRUST_PROXY === '1') {
 // ── Security headers ──────────────────────────────────────────
 app.use((req, res, next) => {
   const embedSurface = req.path.startsWith('/embed/');
+  const iframeQuoteFlow = isIframeQuoteFlowRequest(req);
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  if (!embedSurface) {
+  if (!embedSurface && !iframeQuoteFlow) {
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  }
+  if (iframeQuoteFlow) {
+    res.setHeader('Content-Security-Policy', `frame-ancestors ${embedFrameAncestorsForRequest(req)};`);
   }
   res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
@@ -217,15 +243,29 @@ app.get('/embed/v1/widget.js', (req, res) => {
   if (!shop) return;
   const scriptUrl = new URL(script.src, window.location.href);
   const baseUrl = (script.dataset.baseUrl || scriptUrl.origin).replace(/\\/$/, '');
+  const minHeight = Math.max(220, parseInt(script.dataset.minHeight || script.getAttribute('data-min-height') || script.dataset.height || '760', 10) || 760);
+  const maxHeight = Math.max(minHeight, parseInt(script.dataset.maxHeight || script.getAttribute('data-max-height') || '2400', 10) || 2400);
+  const clampHeight = value => Math.min(maxHeight, Math.max(minHeight, Math.ceil(Number(value) || minHeight)));
   const iframe = document.createElement('iframe');
-  iframe.src = baseUrl + '/embed/quote?shop=' + encodeURIComponent(shop);
+  iframe.src = baseUrl + '/embed/quote?shop=' + encodeURIComponent(shop) + '&embed=1';
   iframe.title = script.dataset.title || 'Instant 3D quote';
   iframe.loading = 'lazy';
   iframe.style.width = '100%';
-  iframe.style.minHeight = script.dataset.height || '760px';
+  iframe.style.minHeight = minHeight + 'px';
+  iframe.style.height = minHeight + 'px';
   iframe.style.border = '0';
   iframe.style.display = 'block';
+  iframe.style.overflow = 'hidden';
+  iframe.setAttribute('scrolling', 'no');
   iframe.setAttribute('allow', 'payment');
+  iframe.dataset.trennenQuoteFrame = 'true';
+  window.addEventListener('message', event => {
+    if (event.source !== iframe.contentWindow) return;
+    if (event.origin !== baseUrl) return;
+    const data = event.data || {};
+    if (data.type !== 'trennen:embed-resize') return;
+    iframe.style.height = clampHeight(data.height) + 'px';
+  });
   const mountSelector = script.dataset.mount;
   const mount = mountSelector ? document.querySelector(mountSelector) : null;
   (mount || script.parentNode).insertBefore(iframe, mount ? null : script.nextSibling);
@@ -235,7 +275,7 @@ app.get('/embed/v1/widget.js', (req, res) => {
 app.get('/embed/quote', (req, res) => {
   const slug = String(req.query.shop || req.query.slug || '').trim();
   if (!slug) return res.status(400).send('Shop is required.');
-  const shop = db.prepare("SELECT id, slug FROM shops WHERE slug = ? AND plan != 'suspended'").get(slug);
+  const shop = getShopBySlug(db, slug);
   if (!shop) return res.status(404).send('Shop not found.');
   const settings = db.prepare('SELECT embed_allowed_origins FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
   res.removeHeader('X-Frame-Options');

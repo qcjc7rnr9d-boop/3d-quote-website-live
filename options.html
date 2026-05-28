@@ -51,7 +51,10 @@
     @media(max-width:900px){.topbar{height:auto;grid-template-columns:1fr;padding:16px}.progress{order:3;overflow-x:auto;justify-content:flex-start}.progress-line{min-width:28px}.page{width:min(100% - 28px,560px);padding:18px 0 230px}.hero-row{display:grid;grid-template-columns:1fr}.helper{max-width:none}.context-strip{grid-template-columns:1fr}.material-panel{border-left:0;border-top:1px solid var(--line)}.model-panel{grid-template-columns:1fr}.model-row{flex-direction:column}.model-row span{white-space:normal}.options-grid{grid-template-columns:1fr}.option-card{min-height:0}.selected-pill{max-width:180px}.swatch-grid{grid-template-columns:repeat(auto-fit,minmax(132px,1fr))}.choice{grid-template-columns:1fr;min-height:0}.choice strong{white-space:normal}.choice .meta{white-space:normal;justify-self:start}.summary-bar{width:calc(100% - 24px);bottom:12px;grid-template-columns:1fr}.summary-item{border-right:0;border-bottom:1px solid var(--line);padding:8px 12px}.continue-btn{padding:15px}}
     @media(max-width:420px){.option-head{grid-template-columns:1fr}.selected-pill{justify-self:start;max-width:100%}}
   </style>
+  <link rel="stylesheet" href="/assets/embed-frame.css">
+  <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('is-embedded');</script>
   <script src="assets/brand.js" defer></script>
+  <script src="/assets/embed-frame.js" defer></script>
   <script src="/assets/csrf.js"></script>
 </head>
 <body>
@@ -104,8 +107,10 @@
   <div class="validation-toast" id="validationToast" role="alert" aria-live="assertive"></div>
 
   <script>
-    const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'trennen';
-    const IS_NEW_GROUP_FLOW = new URLSearchParams(location.search).get('newGroup') === '1';
+    const URL_PARAMS = new URLSearchParams(location.search);
+    const SHOP_SLUG = URL_PARAMS.get('shop') || 'trennen';
+    const IS_NEW_GROUP_FLOW = URL_PARAMS.get('newGroup') === '1';
+    const IS_EMBED_FLOW = URL_PARAMS.get('embed') === '1';
     const modelPanel = document.getElementById('modelPanel');
     const materialPanel = document.getElementById('materialPanel');
     const optionsGrid = document.getElementById('optionsGrid');
@@ -134,9 +139,19 @@
       validationToastTimer = setTimeout(() => toast.classList.remove('show'), 3400);
     }
 
-    document.querySelectorAll('[data-home-link]').forEach(link => link.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}`);
+    function flowHref(path, params = {}) {
+      const url = new URL(path, window.location.href);
+      url.searchParams.set('shop', SHOP_SLUG);
+      if (IS_EMBED_FLOW) url.searchParams.set('embed', '1');
+      Object.entries(params).forEach(([key, value]) => {
+        if (value != null && value !== false) url.searchParams.set(key, String(value));
+      });
+      return `${url.pathname.replace(/^\//, '')}${url.search}${url.hash}`;
+    }
+
+    document.querySelectorAll('[data-home-link]').forEach(link => link.href = flowHref('index.html'));
     document.querySelectorAll('[data-catalog-link]').forEach(link => link.href = `catalog.html?shop=${encodeURIComponent(SHOP_SLUG)}`);
-    document.querySelectorAll('[data-quote-link]').forEach(link => link.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`);
+    document.querySelectorAll('[data-quote-link]').forEach(link => link.href = flowHref('quote.html'));
     document.querySelectorAll('[data-portal-button]').forEach(button => {
       button.onclick = () => { window.location.href = `customer/dashboard.html?shop=${encodeURIComponent(SHOP_SLUG)}#overview`; };
     });
@@ -277,7 +292,7 @@
           <h2>${esc(count)}</h2>
           <p>These files will share the same material, colour, finish, and infill.</p>
         </div>
-        <a class="edit-link" href="quote.html?shop=${encodeURIComponent(SHOP_SLUG)}">Edit models</a>
+        <a class="edit-link" href="${flowHref('quote.html')}">Edit models</a>
         <div class="model-list">
           ${models.map(model => `<div class="model-row"><strong>${esc(model.name)}</strong><span>${esc(formatBytes(model.size))} · ${esc(dimensionsText(model.dimensions))} · Qty ${model.quantity}</span></div>`).join('')}
         </div>
@@ -290,7 +305,7 @@
           <div class="material-name">${esc(material.name)}</div>
           <div class="material-desc">${esc(material.description_short || 'Choose the options for this material group.')}</div>
         </div>
-        <a class="back-link" href="materials.html?shop=${encodeURIComponent(SHOP_SLUG)}${IS_NEW_GROUP_FLOW ? '&newGroup=1' : ''}">Change material</a>
+        <a class="back-link" href="${flowHref('materials.html', IS_NEW_GROUP_FLOW ? { newGroup: '1' } : {})}">Change material</a>
       `;
     }
     function renderOptions() {
@@ -390,7 +405,7 @@
       document.getElementById('summaryColourItem')?.classList.toggle('invalid', showOptionValidation && missing.colour);
       document.getElementById('summaryFinishItem')?.classList.toggle('invalid', showOptionValidation && missing.finish);
       document.getElementById('summaryInfillItem')?.classList.toggle('invalid', showOptionValidation && missing.infill);
-      continueBtn.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+      continueBtn.href = flowHref('quote.html');
       continueBtn.setAttribute('aria-disabled', material && missingOptionLabels().length === 0 ? 'false' : 'true');
     }
 
@@ -410,12 +425,12 @@
 
     async function init() {
       if (!readModelGroup().length) {
-        window.location.replace(`quote.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`);
+        window.location.replace(flowHref('quote.html', { newGroup: '1', promptUpload: '1' }));
         return;
       }
       try { selection = JSON.parse(localStorage.getItem('form_selection') || '{}') || {}; } catch { selection = {}; }
       if (!selection.materialId && !selection.materialName) {
-        window.location.replace(`materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`);
+        window.location.replace(flowHref('materials.html'));
         return;
       }
       const [catalogRes, pricingRes] = await Promise.all([
@@ -430,7 +445,7 @@
       const priceMap = new Map((pricing.materials || []).map(m => [String(m.id), m]));
       material = materials.find(m => String(m.id) === String(selection.materialId) || m.name === selection.materialName);
       if (!material) {
-        window.location.replace(`materials.html?shop=${encodeURIComponent(SHOP_SLUG)}`);
+        window.location.replace(flowHref('materials.html'));
         return;
       }
       const priceRow = priceMap.get(String(material.id)) || {};

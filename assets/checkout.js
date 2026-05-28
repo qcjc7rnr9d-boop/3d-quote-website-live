@@ -21,6 +21,7 @@
   try { savedSelection = JSON.parse(localStorage.getItem('form_selection') || 'null'); } catch {}
   const URL_PARAMS = new URLSearchParams(window.location.search);
   const urlShop = URL_PARAMS.get('shop');
+  const isEmbedFlow = URL_PARAMS.get('embed') === '1';
   const shopSlug = cart?.shopSlug || urlShop || savedSelection?.shopSlug || 'trennen';
   cart = normaliseCart(cart, shopSlug);
   const hasData = cart.items.length > 0;
@@ -28,6 +29,7 @@
   function shopHref(path) {
     const url = new URL(path, window.location.href);
     url.searchParams.set('shop', shopSlug);
+    if (isEmbedFlow) url.searchParams.set('embed', '1');
     return url.pathname + url.search;
   }
 
