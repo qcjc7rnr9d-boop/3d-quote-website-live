@@ -125,6 +125,8 @@ async function run() {
   const settingsHtml = readFileSync(resolve(root, 'admin/settings.html'), 'utf8');
   assert.match(settingsHtml, /embedAllowedOrigins/, 'admin settings should expose embed allowed origins control');
   assert.match(settingsHtml, /embed_allowed_origins/, 'admin settings should save embed_allowed_origins');
+  assert.match(settingsHtml, /app\.trennen\.co\.nz\/embed\/v1\/widget\.js/, 'admin settings should show the production embed script');
+  assert.doesNotMatch(settingsHtml, /cdn\.yourdomain\.com/, 'admin settings should not show a placeholder CDN embed domain');
 
   const nginxExample = resolve(root, 'deploy/lightsail-nginx.conf.example');
   assert.ok(existsSync(nginxExample), 'Lightsail Nginx example should exist');
@@ -221,8 +223,12 @@ async function run() {
   assert.match(widget.headers.get('content-type') || '', /javascript/i, 'widget should be JavaScript');
   const widgetJs = await widget.text();
   assert.match(widgetJs, /data-shop/, 'widget should read data-shop');
+  assert.match(widgetJs, /data-min-height/, 'widget should support configurable minimum height');
+  assert.match(widgetJs, /data-max-height/, 'widget should support configurable maximum height');
+  assert.match(widgetJs, /trennen:embed-resize/, 'widget should listen for embedded resize messages');
   assert.match(widgetJs, /iframe/, 'widget should render an iframe');
   assert.match(widgetJs, /\/embed\/quote/, 'widget should point at the embed quote route');
+  assert.match(widgetJs, /embed=1/, 'widget should enable embedded quote-flow mode');
 
   const embed = await api(`/embed/quote?shop=${encodeURIComponent(slug)}`, {
     headers: { Referer: 'https://example.com/page' },

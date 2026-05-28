@@ -8,7 +8,7 @@
   <iframe
     class="trennen-quote-block__frame"
     title="Instant 3D Quote"
-    src="/apps/3d-quote"
+    src="{{ block.settings.app_url | escape }}/embed/quote?shop={{ block.settings.shop_slug | escape }}&embed=1"
     loading="lazy"
   ></iframe>
 </div>
@@ -19,6 +19,18 @@
   "target": "section",
   "stylesheet": "instant-3d-quote.css",
   "settings": [
+    {
+      "type": "text",
+      "id": "app_url",
+      "label": "Trennen app URL",
+      "default": "https://app.trennen.co.nz"
+    },
+    {
+      "type": "text",
+      "id": "shop_slug",
+      "label": "Shop slug",
+      "default": "trennen"
+    },
     {
       "type": "text",
       "id": "heading",

@@ -897,8 +897,11 @@
     }
   </style>
   <script src="assets/brand.js" defer></script>
+  <link rel="stylesheet" href="/assets/embed-frame.css">
+  <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('is-embedded');</script>
   <script src="assets/material-filtering.js"></script>
   <script src="/assets/csrf.js"></script>
+  <script src="/assets/embed-frame.js" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -962,21 +965,33 @@
   <div class="validation-toast" id="validationToast" role="alert" aria-live="assertive"></div>
 
   <script>
-    const SHOP_SLUG = new URLSearchParams(location.search).get('shop') || 'trennen';
-    const IS_NEW_GROUP_FLOW = new URLSearchParams(location.search).get('newGroup') === '1';
+    const URL_PARAMS = new URLSearchParams(location.search);
+    const SHOP_SLUG = URL_PARAMS.get('shop') || 'trennen';
+    const IS_NEW_GROUP_FLOW = URL_PARAMS.get('newGroup') === '1';
+    const IS_EMBED_FLOW = URL_PARAMS.get('embed') === '1';
     const SIZE_WARNING_KEY = 'material_size_warning';
     const listEl = document.getElementById('materialsList');
     const filtersEl = document.getElementById('filters');
     const continueBtn = document.getElementById('continueBtn');
     const modelGroupPanel = document.getElementById('modelGroupPanel');
+    function flowHref(path, params = {}) {
+      const url = new URL(path, window.location.href);
+      url.searchParams.set('shop', SHOP_SLUG);
+      if (IS_EMBED_FLOW) url.searchParams.set('embed', '1');
+      Object.entries(params).forEach(([key, value]) => {
+        if (value != null && value !== false) url.searchParams.set(key, String(value));
+      });
+      return `${url.pathname.replace(/^\//, '')}${url.search}${url.hash}`;
+    }
+
     document.querySelectorAll('[data-home-link]').forEach(link => {
-      link.href = `index.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+      link.href = flowHref('index.html');
     });
     document.querySelectorAll('[data-catalog-link]').forEach(link => {
       link.href = `catalog.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
     });
     document.querySelectorAll('[data-quote-link]').forEach(link => {
-      link.href = `quote.html?shop=${encodeURIComponent(SHOP_SLUG)}`;
+      link.href = flowHref('quote.html');
     });
     document.querySelectorAll('[data-portal-button]').forEach(button => {
       button.onclick = () => {
@@ -1069,7 +1084,7 @@
           <p>Choose one shared material for this group.</p>
           <p class="model-group-note">Need different materials? Add this group to cart, then start another quote.</p>
         </div>
-        <a class="model-group-link" href="quote.html?shop=${encodeURIComponent(SHOP_SLUG)}">Edit models</a>
+        <a class="model-group-link" href="${flowHref('quote.html')}">Edit models</a>
         <div class="model-group-list">
           ${models.map(model => `<div class="model-group-item"><strong>${esc(model.name)}</strong><span>${esc(formatBytes(model.size))} · ${esc(dimensionsText(model.dimensions))} · Qty ${Math.max(1, Math.floor(Number(model.quantity) || 1))}</span></div>`).join('')}
         </div>
@@ -1495,7 +1510,7 @@
         summaryWarning.classList.toggle('show', !!missingMessage || !sizeStatus.ok);
       }
       document.getElementById('summaryMaterialItem')?.classList.toggle('invalid', showSelectionValidation && !mat);
-      continueBtn.href = `options.html?shop=${encodeURIComponent(SHOP_SLUG)}${IS_NEW_GROUP_FLOW ? '&newGroup=1' : ''}`;
+      continueBtn.href = flowHref('options.html', IS_NEW_GROUP_FLOW ? { newGroup: '1' } : {});
       continueBtn.setAttribute('aria-disabled', mat && sizeStatus.ok ? 'false' : 'true');
       continueBtn.title = !mat ? 'Choose a material before continuing.' : (!sizeStatus.ok ? sizeStatus.message : '');
     }
@@ -1522,7 +1537,7 @@
 
     async function init() {
       if (!hasActiveModelGroup()) {
-        window.location.replace(`index.html?shop=${encodeURIComponent(SHOP_SLUG)}&newGroup=1&promptUpload=1`);
+        window.location.replace(flowHref('index.html', { newGroup: '1', promptUpload: '1' }));
         return;
       }
       try {

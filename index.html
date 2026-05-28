@@ -1198,7 +1198,10 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="/assets/embed-frame.css">
+  <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('is-embedded');</script>
   <script src="assets/brand.js" defer></script>
+  <script src="/assets/embed-frame.js" defer></script>
 </head>
 <body>
 
@@ -1649,10 +1652,21 @@
   })();
   const SHOULD_PROMPT_UPLOAD = HOME_URL_PARAMS.get('promptUpload') === '1' || HOME_URL_PARAMS.get('newGroup') === '1';
   const IS_NEW_GROUP_FLOW = HOME_URL_PARAMS.get('newGroup') === '1';
+  const IS_EMBED_FLOW = HOME_URL_PARAMS.get('embed') === '1';
   const uploadZone = document.getElementById('uploadZone');
   const uploadInput = document.getElementById('fileInput');
   const newUploadBanner = document.getElementById('newUploadBanner');
   const continueBtn = document.getElementById('continueBtn');
+
+  function homeFlowHref(path, params = {}) {
+    const url = new URL(path, window.location.href);
+    url.searchParams.set('shop', HOME_SHOP_SLUG);
+    if (IS_EMBED_FLOW) url.searchParams.set('embed', '1');
+    Object.entries(params).forEach(([key, value]) => {
+      if (value != null && value !== false) url.searchParams.set(key, String(value));
+    });
+    return `${url.pathname.replace(/^\//, '')}${url.search}${url.hash}`;
+  }
   uploadZone.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -1856,7 +1870,7 @@
     uploadZone.style.display = 'none';
     document.getElementById('fileCard').classList.add('visible');
     document.getElementById('featuresStrip').style.borderTop = '1px solid var(--border)';
-    continueBtn.href = `materials.html?shop=${encodeURIComponent(HOME_SHOP_SLUG)}${IS_NEW_GROUP_FLOW ? '&newGroup=1' : ''}`;
+    continueBtn.href = homeFlowHref('materials.html', IS_NEW_GROUP_FLOW ? { newGroup: '1' } : {});
   }
 
   function resetUpload() {
@@ -1880,7 +1894,7 @@
     handleFiles(e.dataTransfer.files);
   });
 
-  continueBtn.href = `materials.html?shop=${encodeURIComponent(HOME_SHOP_SLUG)}${IS_NEW_GROUP_FLOW ? '&newGroup=1' : ''}`;
+  continueBtn.href = homeFlowHref('materials.html', IS_NEW_GROUP_FLOW ? { newGroup: '1' } : {});
   window.addEventListener('load', showNewUploadPrompt);
 
   // ── Scroll-triggered animation for How it works ───────────────

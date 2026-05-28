@@ -43,6 +43,14 @@ import {
   recentEmailEventsForShop,
   updateShopEmailDomainSettings,
 } from '../lib/email-delivery.js';
+import {
+  buildShopInstallPackage,
+  normaliseProvisioningOrigins,
+  normaliseShopSlug,
+  readShopEmbedOrigins,
+  saveShopEmbedOrigins,
+  sendShopInstallEmail,
+} from '../lib/shop-provisioning.js';
 
 const router = Router();
 
@@ -899,6 +907,13 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
     if (!name || !slug || !email || !password) {
       return res.status(400).json({ error: 'Name, slug, email and password are required' });
     }
+    const safeSlug = normaliseShopSlug(slug);
+    if (!safeSlug) {
+      return res.status(400).json({ error: 'Slug must contain at least one letter or number' });
+    }
+    const embedOrigins = normaliseProvisioningOrigins(
+      req.body?.embed_allowed_origins ?? req.body?.website_origin ?? req.body?.website_url ?? []
+    );
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
@@ -907,17 +922,41 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
     const result = db.prepare(`
       INSERT INTO shops (name, slug, email, password_hash, plan, is_temp_password, billing_status)
       VALUES (?, ?, ?, ?, ?, 1, ?)
-    `).run(name, slug.toLowerCase(), email.toLowerCase(), hash, selectedPlan, initialBillingStatus);
+    `).run(name, safeSlug, normaliseEmail(email), hash, selectedPlan, initialBillingStatus);
 
     const shopId = result.lastInsertRowid;
 
     // Create default pricing config and store settings
     db.prepare('INSERT OR IGNORE INTO pricing_config (shop_id) VALUES (?)').run(shopId);
     db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shopId);
+    saveShopEmbedOrigins(db, shopId, embedOrigins);
     getBillingUsageSummary(db, shopId);
 
     const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId);
     const billing = await createBillingActivationForShop(shop);
+    const install = buildShopInstallPackage(shop, {
+      baseUrl: process.env.BASE_URL,
+      allowedOrigins: embedOrigins,
+    });
+    let installEmail = { sent: false, provider: null, error: null };
+    if (req.body?.send_install_email !== false) {
+      try {
+        const sent = await sendShopInstallEmail(shop, install);
+        installEmail = {
+          sent: true,
+          provider: sent.provider || null,
+          preview_url: sent.previewUrl || null,
+          deduped: !!sent.deduped,
+        };
+      } catch (err) {
+        installEmail = {
+          sent: false,
+          provider: null,
+          error: err.code || err.message || 'INSTALL_EMAIL_FAILED',
+        };
+        console.error('Shop install email error:', err);
+      }
+    }
     const publicShop = db.prepare(`
       SELECT id, name, slug, email, plan, is_temp_password,
              billing_customer_id, billing_subscription_id, billing_price_id,
@@ -933,13 +972,16 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
       targetType: 'shop',
       targetId: shopId,
       shopId,
-      metadata: { plan: shop.plan },
+      metadata: { plan: shop.plan, install_email_sent: installEmail.sent, embed_origins: embedOrigins.length },
     });
 
     res.status(201).json({
       ...publicShop,
       ...billing,
       billing_active: billingStatusIsActive(publicShop.billing_status, publicShop.plan),
+      install,
+      install_email_sent: installEmail.sent,
+      install_email: installEmail,
     });
   } catch (err) {
     if (err.message && err.message.includes('UNIQUE')) {
@@ -947,6 +989,37 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
     }
     console.error('Create shop error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/shops/:id/install-email', requirePlatformAuth, async (req, res) => {
+  try {
+    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(req.params.id);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    const origins = readShopEmbedOrigins(db, shop.id);
+    const install = buildShopInstallPackage(shop, {
+      baseUrl: process.env.BASE_URL,
+      allowedOrigins: origins,
+    });
+    const sent = await sendShopInstallEmail(shop, install);
+    logPlatformAudit(req, {
+      action: 'send_shop_install_email',
+      targetType: 'shop',
+      targetId: shop.id,
+      shopId: shop.id,
+      metadata: { provider: sent.provider || null, deduped: !!sent.deduped },
+    });
+    res.json({
+      ok: true,
+      install,
+      install_email_sent: true,
+      provider: sent.provider || null,
+      preview_url: sent.previewUrl || null,
+      deduped: !!sent.deduped,
+    });
+  } catch (err) {
+    console.error('Send shop install email error:', err);
+    res.status(500).json({ error: 'Failed to send store install email' });
   }
 });
 

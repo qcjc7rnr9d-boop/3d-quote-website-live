@@ -1,0 +1,167 @@
+html.is-embedded,
+html.is-embedded body {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  background: var(--bg, var(--off-white, #F7F5F0));
+}
+
+html.is-embedded * {
+  max-width: 100%;
+}
+
+html.is-embedded .nav,
+html.is-embedded .topbar {
+  position: relative;
+  top: auto;
+}
+
+html.is-embedded .nav-inner {
+  min-height: 58px;
+  padding: 0 16px;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 12px;
+}
+
+html.is-embedded .logo,
+html.is-embedded .brand,
+html.is-embedded .wordmark,
+html.is-embedded .nav-wordmark {
+  font-size: clamp(18px, 4vw, 22px);
+  min-width: 0;
+}
+
+html.is-embedded .nav-links,
+html.is-embedded .nav-actions,
+html.is-embedded .nav-center,
+html.is-embedded .nav-right,
+html.is-embedded .nav-toggle,
+html.is-embedded .btn-portal,
+html.is-embedded .btn-quote {
+  display: none !important;
+}
+
+html.is-embedded .quote-progress,
+html.is-embedded .progress {
+  justify-content: flex-start;
+  overflow-x: auto;
+  scrollbar-width: none;
+  gap: 8px;
+}
+
+html.is-embedded .quote-progress::-webkit-scrollbar,
+html.is-embedded .progress::-webkit-scrollbar {
+  display: none;
+}
+
+html.is-embedded .quote-progress-line,
+html.is-embedded .progress-line {
+  min-width: 28px;
+}
+
+html.is-embedded .page,
+html.is-embedded .page-wrap,
+html.is-embedded .page-head,
+html.is-embedded .main-grid,
+html.is-embedded .trust,
+html.is-embedded main,
+html.is-embedded .hero {
+  width: 100%;
+  max-width: 100%;
+}
+
+html.is-embedded .page-wrap {
+  padding: 28px 16px 88px;
+}
+
+html.is-embedded .page-head,
+html.is-embedded .main-grid,
+html.is-embedded .trust {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+html.is-embedded .main-grid,
+html.is-embedded .checkout-grid,
+html.is-embedded .options-grid {
+  grid-template-columns: 1fr;
+}
+
+html.is-embedded .summary,
+html.is-embedded .checkout-payment-card {
+  position: static;
+}
+
+html.is-embedded .viewer-wrap {
+  padding: 16px 16px 0;
+}
+
+html.is-embedded .viewer {
+  min-height: 360px;
+}
+
+html.is-embedded .hero {
+  padding: 44px 16px 40px;
+}
+
+html.is-embedded .hero-heading {
+  font-size: clamp(44px, 12vw, 68px);
+}
+
+html.is-embedded .upload-card {
+  width: min(100%, 620px);
+}
+
+html.is-embedded .hero-row {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+html.is-embedded .material-card {
+  grid-template-columns: 140px minmax(0, 1fr);
+}
+
+html.is-embedded .material-card .material-meta,
+html.is-embedded .material-card .material-performance,
+html.is-embedded .material-card .material-actions {
+  min-width: 0;
+}
+
+html.is-embedded .summary-bar,
+html.is-embedded .mobile-checkout-bar {
+  left: 12px;
+  right: 12px;
+  width: auto;
+}
+
+@media (max-width: 720px) {
+  html.is-embedded .nav-inner,
+  html.is-embedded .topbar {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
+    padding: 14px 16px;
+  }
+
+  html.is-embedded .quote-progress,
+  html.is-embedded .progress {
+    width: 100%;
+  }
+
+  html.is-embedded .page,
+  html.is-embedded .page-wrap {
+    width: 100%;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  html.is-embedded .material-card {
+    grid-template-columns: 1fr;
+  }
+
+  html.is-embedded .card,
+  html.is-embedded .section-card,
+  html.is-embedded .option-card {
+    border-radius: 18px;
+  }
+}

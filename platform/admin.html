@@ -383,6 +383,10 @@
           <span class="password-reveal" id="revealPassword"></span>
           <button class="table-action" type="button" id="copyPasswordBtn">Copy</button>
           <div class="mini-text">The owner will be prompted to change this on first login.</div>
+          <div class="mini-text" id="installEmailStatus" style="margin-top:8px"></div>
+          <div class="mini-text" style="margin-top:10px">Website install code:</div>
+          <textarea class="form-input" id="installCode" readonly style="height:86px;margin-top:6px;font-family:var(--font-mono);font-size:11px;line-height:1.5"></textarea>
+          <button class="table-action" type="button" id="copyInstallCodeBtn">Copy install code</button>
           <div class="mini-text" id="billingLinkWrap" style="display:none;margin-top:8px">
             Billing activation:
             <a href="#" target="_blank" rel="noopener" id="billingLink">Open checkout</a>
@@ -397,7 +401,12 @@
             <div class="form-group"><label class="form-label" for="newEmail">Owner email</label><input class="form-input" type="email" id="newEmail" required></div>
             <div class="form-group"><label class="form-label" for="newPassword">Initial password</label><input class="form-input" type="text" id="newPassword" required></div>
             <div class="form-group"><label class="form-label" for="newPlan">Plan</label><select class="form-input" id="newPlan"><option value="community" selected>Free pilot</option></select></div>
+            <div class="form-group"><label class="form-label" for="newWebsiteOrigin">Website origin</label><input class="form-input" type="url" id="newWebsiteOrigin" placeholder="https://example.co.nz"><div class="mini-text">Optional now, required before the iframe can be embedded on their public site.</div></div>
           </div>
+          <label class="mini-text" style="display:flex;gap:8px;align-items:flex-start;margin:12px 0 16px">
+            <input type="checkbox" id="newSendInstallEmail" checked>
+            <span>Send the owner the Trennen install email with their widget code. Passwords and Stripe keys are never included.</span>
+          </label>
           <button class="btn btn-primary" type="button" id="createShopBtn" onclick="submitCreateShop()">Create store</button>
         </form>
       </div>
@@ -978,6 +987,8 @@
       email: document.getElementById('newEmail').value.trim(),
       password: document.getElementById('newPassword').value,
       plan: document.getElementById('newPlan').value,
+      website_origin: document.getElementById('newWebsiteOrigin').value.trim(),
+      send_install_email: document.getElementById('newSendInstallEmail').checked,
     };
     if (!payload.name || !payload.slug || !payload.email || !payload.password) {
       showBox('createError', 'All fields are required.');
@@ -992,6 +1003,10 @@
         body: JSON.stringify(payload)
       });
       document.getElementById('revealPassword').textContent = payload.password;
+      document.getElementById('installCode').value = data.install?.embed?.script || '';
+      document.getElementById('installEmailStatus').textContent = data.install_email_sent
+        ? 'Install email sent to the store owner.'
+        : `Install email was not sent${data.install_email?.error ? ` (${data.install_email.error})` : ''}. Copy the code below manually.`;
       const billingWrap = document.getElementById('billingLinkWrap');
       const billingLink = document.getElementById('billingLink');
       const billingNote = document.getElementById('billingLinkNote');
@@ -1009,6 +1024,7 @@
         billingNote.textContent = ` ${data.billing_setup_error || 'Billing activation is not required for this plan.'}`;
       }
       document.getElementById('createShopForm').reset();
+      document.getElementById('newSendInstallEmail').checked = true;
       showBox('createSuccess');
       await Promise.all([loadShops(), loadOverview(), loadAudit()]);
     } catch (err) {
@@ -1017,6 +1033,12 @@
       btn.disabled = false;
     }
   }
+
+  document.getElementById('copyInstallCodeBtn')?.addEventListener('click', async () => {
+    const value = document.getElementById('installCode').value;
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+  });
 
   async function createBillingSession(shopId) {
     try {
