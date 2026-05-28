@@ -748,11 +748,11 @@
       top: 0;
       right: 0;
       bottom: 0;
-      width: clamp(420px, 34vw, 520px);
+      width: clamp(440px, 36vw, 560px);
       z-index: 200;
       background: var(--white);
       border-left: 1px solid #e5e5e0;
-      border-radius: 32px 0 0 32px;
+      border-radius: 28px 0 0 28px;
       box-shadow: -6px 0 40px rgba(16,20,16,0.06), -1px 0 0 rgba(16,20,16,0.04);
       display: flex;
       flex-direction: column;
@@ -766,17 +766,18 @@
 
     /* ── Drawer header ────────────────────────────────────────────── */
     .portal-header {
-      height: 72px;
-      display: flex;
+      min-height: 76px;
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) auto;
       align-items: center;
       padding: 0 24px;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
-      gap: 0;
+      gap: 16px;
     }
     .portal-close {
-      width: 36px;
-      height: 36px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       background: none;
       border: 1px solid var(--border);
@@ -790,23 +791,22 @@
     }
     .portal-close:hover { background: var(--bg); color: var(--ink); border-color: var(--border-2); }
     .portal-title {
-      flex: 1;
       text-align: center;
-      font-family: var(--font-ui);
-      font-size: 14px;
-      font-weight: 600;
+      font-family: var(--font-brand);
+      font-size: 18px;
+      font-weight: 700;
       color: var(--ink);
-      letter-spacing: -0.01em;
+      letter-spacing: -0.03em;
     }
     .portal-signout {
       font-family: var(--font-ui);
-      font-size: 11px;
-      font-weight: 500;
+      font-size: 13px;
+      font-weight: 600;
       color: var(--muted);
       background: none;
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 5px 11px;
+      border-radius: 14px;
+      padding: 10px 15px;
       cursor: pointer;
       white-space: nowrap;
       flex-shrink: 0;
@@ -818,10 +818,10 @@
     .portal-body {
       flex: 1;
       overflow-y: auto;
-      padding: 28px 32px 32px;
+      padding: 24px 28px 28px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
       scrollbar-width: thin;
       scrollbar-color: var(--border) transparent;
     }
@@ -829,18 +829,28 @@
     .portal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
     /* ── Welcome ──────────────────────────────────────────────────── */
-    .portal-welcome {}
-    .portal-welcome h2 {
-      font-family: var(--font-ui);
+    .portal-welcome {
+      padding: 4px 0 2px;
+    }
+    .portal-kicker {
+      color: var(--sage-dark);
+      font-size: 11px;
       font-weight: 700;
-      font-size: 22px;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .portal-welcome h2 {
+      font-family: var(--font-brand);
+      font-weight: 700;
+      font-size: clamp(30px, 5vw, 38px);
       color: var(--ink);
-      letter-spacing: -0.02em;
-      line-height: 1.2;
-      margin-bottom: 5px;
+      letter-spacing: -0.045em;
+      line-height: 1.02;
+      margin-bottom: 8px;
     }
     .portal-welcome p {
-      font-size: 13px;
+      font-size: 14px;
       color: var(--muted);
       line-height: 1.5;
     }
@@ -848,44 +858,55 @@
     /* ── Stat cards row ───────────────────────────────────────────── */
     .portal-stats {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
     }
     .stat-card {
       background: var(--white);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px 12px 12px;
+      border-radius: 18px;
+      padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 0;
+      min-height: 112px;
     }
     .stat-label {
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.07em;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--muted);
-      line-height: 1.3;
+      line-height: 1.35;
     }
     .stat-value {
       font-family: var(--font-brand);
-      font-size: 22px;
+      font-size: 31px;
       font-weight: 700;
       color: var(--ink);
       letter-spacing: -0.03em;
       line-height: 1;
-      margin: 7px 0 6px;
+      margin: 11px 0 9px;
+      font-variant-numeric: tabular-nums;
     }
     .stat-link {
-      font-size: 10px;
-      font-weight: 500;
+      font-size: 12px;
+      font-weight: 600;
       color: var(--sage);
       text-decoration: none;
       transition: color 120ms;
       display: inline-flex;
       align-items: center;
-      gap: 2px;
+      gap: 6px;
+      margin-top: auto;
+    }
+    .stat-link::after,
+    .portal-card-link::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-top: 1.5px solid currentColor;
+      border-right: 1.5px solid currentColor;
+      transform: rotate(45deg);
     }
     .stat-link:hover { color: var(--sage-dark); }
 
@@ -893,38 +914,41 @@
     .portal-card {
       background: var(--white);
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 20px;
       overflow: hidden;
     }
     .portal-card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 18px;
+      padding: 18px 20px;
       border-bottom: 1px solid var(--border);
     }
     .portal-card-title {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 16px;
+      font-weight: 700;
       color: var(--ink);
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
     }
     .portal-card-link {
-      font-size: 11px;
-      font-weight: 500;
+      font-size: 13px;
+      font-weight: 600;
       color: var(--sage);
       text-decoration: none;
       transition: color 120ms;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
     }
     .portal-card-link:hover { color: var(--sage-dark); }
 
     /* ── Orders ───────────────────────────────────────────────────── */
     .order-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto 58px 74px 10px;
+      grid-template-columns: 44px minmax(0, 1fr) auto 10px;
       align-items: center;
-      gap: 10px;
-      padding: 11px 18px;
+      gap: 12px;
+      padding: 15px 20px;
       border-bottom: 1px solid var(--border);
       cursor: pointer;
       transition: background 120ms;
@@ -934,15 +958,12 @@
     .order-row:hover { background: #fafaf8; }
 
     .order-item-cell {
-      display: flex;
-      align-items: center;
-      gap: 10px;
       min-width: 0;
     }
     .order-thumb {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
       background: var(--bg);
       border: 1px solid var(--border);
       display: flex;
@@ -951,28 +972,40 @@
       flex-shrink: 0;
       color: var(--sage);
     }
+    .order-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      margin-bottom: 4px;
+    }
     .order-num {
-      font-size: 12px;
-      font-weight: 600;
+      font-family: var(--font-code);
+      font-size: 13px;
+      font-weight: 700;
       color: var(--ink);
       white-space: nowrap;
     }
     .order-mat {
-      font-size: 10px;
+      font-size: 12px;
       color: var(--muted);
-      margin-top: 1px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .order-side {
+      display: grid;
+      gap: 4px;
+      justify-items: end;
+    }
     .order-date {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--muted);
       white-space: nowrap;
     }
     .order-total {
-      font-size: 12px;
-      font-weight: 500;
+      font-size: 15px;
+      font-weight: 700;
       color: var(--ink);
       white-space: nowrap;
       text-align: right;
@@ -1000,8 +1033,8 @@
     .account-row {
       display: flex;
       align-items: center;
-      gap: 13px;
-      padding: 13px 18px;
+      gap: 14px;
+      padding: 16px 20px;
       border-bottom: 1px solid var(--border);
       cursor: pointer;
       transition: background 120ms;
@@ -1010,9 +1043,9 @@
     .account-row:last-child { border-bottom: none; }
     .account-row:hover { background: #fafaf8; }
     .account-row-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
       background: var(--bg);
       border: 1px solid var(--border);
       display: flex;
@@ -1023,27 +1056,31 @@
     }
     .account-row-text { flex: 1; min-width: 0; }
     .account-row-title {
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 15px;
+      font-weight: 700;
       color: var(--ink);
       line-height: 1.2;
     }
     .account-row-desc {
-      font-size: 11px;
+      font-size: 13px;
       color: var(--muted);
-      margin-top: 1px;
+      margin-top: 3px;
     }
     .account-row-arrow { color: var(--border-2); flex-shrink: 0; }
 
     /* ── Help strip ───────────────────────────────────────────────── */
     .portal-help {
-      text-align: center;
-      padding: 4px 0 8px;
+      text-align: left;
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--bg);
     }
     .portal-help-main {
-      font-size: 12px;
+      font-size: 13px;
       color: var(--muted);
-      margin-bottom: 2px;
+      margin-bottom: 4px;
+      line-height: 1.45;
     }
     .portal-help-main a {
       color: var(--sage);
@@ -1053,7 +1090,7 @@
     }
     .portal-help-main a:hover { color: var(--sage-dark); }
     .portal-help-sub {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--muted-2);
     }
 
@@ -1186,14 +1223,37 @@
         width: 100%;
         border-radius: 0;
       }
-      .portal-stats {
-        grid-template-columns: repeat(2, 1fr);
-      }
       .order-row {
-        grid-template-columns: minmax(0, 1fr) auto 10px;
+        grid-template-columns: 42px minmax(0, 1fr) auto 10px;
       }
-      .order-date,
-      .order-total {
+      .portal-body {
+        padding: 22px 20px 28px;
+      }
+    }
+    @media (max-width: 420px) {
+      .portal-header {
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        padding: 0 16px;
+        gap: 10px;
+      }
+      .portal-close {
+        width: 40px;
+        height: 40px;
+      }
+      .portal-signout {
+        padding: 9px 12px;
+      }
+      .portal-stats {
+        gap: 10px;
+      }
+      .stat-card {
+        padding: 14px;
+        min-height: 104px;
+      }
+      .stat-value {
+        font-size: 27px;
+      }
+      .order-side {
         display: none;
       }
     }
@@ -1504,7 +1564,7 @@
 
         <p class="pv-auth-foot">
           Don't have an account?
-          <a href="customer/login.html?shop=trennen&next=dashboard.html%3Fshop%3Dtrennen%23overview" class="pv-link" data-pv-login>Create one →</a>
+          <a href="customer/login.html?shop=trennen&next=dashboard.html%3Fshop%3Dtrennen%23overview" class="pv-link" data-pv-login>Create one</a>
         </p>
       </div>
     </div>
@@ -1514,8 +1574,9 @@
 
       <!-- Welcome -->
       <div class="portal-welcome">
-        <h2>Welcome back, <span id="pvWelcomeName">—</span> 👋</h2>
-        <p>Here's an overview of your account.</p>
+        <div class="portal-kicker">Customer overview</div>
+        <h2 class="portal-overview-title">Welcome back, <span id="pvWelcomeName">—</span></h2>
+        <p>Review recent orders, saved details, and account options.</p>
       </div>
 
       <!-- Stat cards -->
@@ -1523,22 +1584,22 @@
         <div class="stat-card" role="listitem">
           <span class="stat-label">Total Orders</span>
           <span class="stat-value" id="pvStatTotal">—</span>
-          <a href="customer/dashboard.html?shop=trennen#orders" class="stat-link" data-pv-tab="orders">View all →</a>
+          <a href="customer/dashboard.html?shop=trennen#orders" class="stat-link" data-pv-tab="orders">View orders</a>
         </div>
         <div class="stat-card" role="listitem">
           <span class="stat-label">In Progress</span>
           <span class="stat-value" id="pvStatProgress">—</span>
-          <a href="customer/dashboard.html?shop=trennen#orders" class="stat-link" data-pv-tab="orders">View all →</a>
+          <a href="customer/dashboard.html?shop=trennen#orders" class="stat-link" data-pv-tab="orders">Track orders</a>
         </div>
         <div class="stat-card" role="listitem">
           <span class="stat-label">Delivered</span>
           <span class="stat-value" id="pvStatDone">—</span>
-          <a href="customer/dashboard.html?shop=trennen#orders" class="stat-link" data-pv-tab="orders">View all →</a>
+          <a href="customer/dashboard.html?shop=trennen#orders" class="stat-link" data-pv-tab="orders">View history</a>
         </div>
         <div class="stat-card" role="listitem">
           <span class="stat-label">Total Spent</span>
-          <span class="stat-value" id="pvStatSpent" style="font-size:17px;letter-spacing:-0.02em">—</span>
-          <a href="customer/dashboard.html?shop=trennen#orders" class="stat-link" data-pv-tab="orders">View all →</a>
+          <span class="stat-value" id="pvStatSpent">—</span>
+          <a href="customer/dashboard.html?shop=trennen#orders" class="stat-link" data-pv-tab="orders">View orders</a>
         </div>
       </div>
 
@@ -1546,7 +1607,7 @@
       <div class="portal-card" role="region" aria-label="Recent orders">
         <div class="portal-card-header">
           <span class="portal-card-title">Recent Orders</span>
-          <a href="customer/dashboard.html?shop=trennen#orders" class="portal-card-link" data-pv-tab="orders">View all →</a>
+          <a href="customer/dashboard.html?shop=trennen#orders" class="portal-card-link" data-pv-tab="orders">View all</a>
         </div>
         <div id="pvOrdersList" aria-live="polite"></div>
       </div>
@@ -2064,16 +2125,18 @@
         const sub = [o.material_name, o.colour, o.quantity > 1 ? `×${o.quantity}` : null]
           .filter(Boolean).join(' · ');
         return `<a class="order-row" href="${pvPortalHref('orders')}" role="row">
+          <div class="order-thumb" aria-hidden="true">${pvCubeIcon()}</div>
           <div class="order-item-cell">
-            <div class="order-thumb" aria-hidden="true">${pvCubeIcon()}</div>
-            <div>
+            <div class="order-line">
               <div class="order-num">#TRN-${o.id}</div>
-              <div class="order-mat">${sub || '—'}</div>
+              ${pvPill(o.fulfilment_status)}
             </div>
+            <div class="order-mat">${sub || '—'}</div>
           </div>
-          ${pvPill(o.fulfilment_status)}
-          <span class="order-date">${pvFmtDate(o.created_at)}</span>
-          <span class="order-total">${pvFmtMoney(o.total)}</span>
+          <div class="order-side">
+            <span class="order-total">${pvFmtMoney(o.total)}</span>
+            <span class="order-date">${pvFmtDate(o.created_at)}</span>
+          </div>
           ${pvChevron()}
         </a>`;
       }).join('');
