@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db, requireShopAuth } from '../middleware/auth.js';
 import { DEFAULT_GST } from '../config.js';
 import { parseInfillTiers, sanitiseTierList } from '../lib/infill-tiers.js';
+import { LIVE_PRICING_SCHEME } from '../lib/pricing-engine.js';
 
 const router = Router();
 
@@ -30,7 +31,13 @@ router.get('/', requireShopAuth, (req, res) => {
     const config = ensurePricingConfig(req.shop.id);
     res.json({
       ...config,
-      surcharges:   JSON.parse(config.surcharges || '[]'),
+      pricing_mode: LIVE_PRICING_SCHEME.adminPricingMode,
+      mat_include_support: 0,
+      time_rate_per_hour: 0,
+      time_rate_per_gram: 0,
+      time_include_support: 0,
+      live_pricing_scheme: LIVE_PRICING_SCHEME,
+      surcharges: [],
       infill_tiers: parseInfillTiers(config.infill_tiers),
     });
   } catch (err) {
@@ -45,19 +52,12 @@ router.put('/', requireShopAuth, (req, res) => {
     const {
       currency, tax_rate, tax_inclusive, min_order_value,
       free_shipping_above, quote_rounding, quote_valid_hours, max_model_quantity,
-      show_breakdown, surcharges,
-      // Pricing scheme
-      pricing_mode,
-      mat_include_support,
-      time_rate_per_hour, time_rate_per_gram, time_include_support,
+      show_breakdown,
       // Infill tier config (optional — falls back to existing value if absent)
       infill_tiers
     } = req.body;
 
     const prev = ensurePricingConfig(req.shop.id);
-
-    const validModes = ['material', 'time_material'];
-    const mode = validModes.includes(pricing_mode) ? pricing_mode : 'material';
 
     // Only update infill_tiers if explicitly sent. Otherwise keep the existing row.
     const nextInfillTiers = (infill_tiers !== undefined)
@@ -85,19 +85,25 @@ router.put('/', requireShopAuth, (req, res) => {
       quote_valid_hours ?? 24,
       Number.isFinite(Number(max_model_quantity)) && Number(max_model_quantity) > 0 ? Math.floor(Number(max_model_quantity)) : null,
       show_breakdown ? 1 : 0,
-      JSON.stringify(Array.isArray(surcharges) ? surcharges : []),
-      mode,
-      mat_include_support ? 1 : 0,
-      parseFloat(time_rate_per_hour) || 0,
-      parseFloat(time_rate_per_gram) || 0,
-      time_include_support ? 1 : 0,
+      JSON.stringify([]),
+      LIVE_PRICING_SCHEME.adminPricingMode,
+      0,
+      0,
+      0,
+      0,
       nextInfillTiers
     );
 
     const updated = db.prepare('SELECT * FROM pricing_config WHERE shop_id = ?').get(req.shop.id);
     res.json({
       ...updated,
-      surcharges:   JSON.parse(updated.surcharges || '[]'),
+      pricing_mode: LIVE_PRICING_SCHEME.adminPricingMode,
+      mat_include_support: 0,
+      time_rate_per_hour: 0,
+      time_rate_per_gram: 0,
+      time_include_support: 0,
+      live_pricing_scheme: LIVE_PRICING_SCHEME,
+      surcharges: [],
       infill_tiers: parseInfillTiers(updated.infill_tiers),
     });
   } catch (err) {

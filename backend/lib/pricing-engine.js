@@ -14,6 +14,12 @@ export class PricingError extends Error {
 
 const DEFAULT_CURRENCY = 'NZD';
 const DEFAULT_PLATFORM_FEE_PERCENT = 5;
+export const LIVE_PRICING_SCHEME = Object.freeze({
+  id: 'pricing-v1-per-volume',
+  cartId: 'pricing-v1-per-volume-cart',
+  adminPricingMode: 'material',
+  description: 'Per-cm3 material pricing with volume tiers, minimums, finish/infill multipliers, cart-level shipping, tax, rounding, and included platform fee.',
+});
 export const MAX_MODELS_PER_QUOTE = 20;
 export const MAX_MODEL_QUANTITY_SAFETY = 9999;
 
@@ -584,7 +590,7 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
 
   return {
     ok: true,
-    pricingVersion: 'pricing-v1-per-volume',
+    pricingVersion: LIVE_PRICING_SCHEME.id,
     shop: shop ? { id: shop.id, slug: shop.slug, name: shop.name } : null,
     currency,
     selected: {

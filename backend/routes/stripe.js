@@ -27,6 +27,7 @@ import {
   recordStripePaymentFeeFromIntent,
 } from '../lib/billing-service.js';
 import {
+  LIVE_PRICING_SCHEME,
   PricingError,
 } from '../lib/pricing-engine.js';
 import { normaliseCart, validateCartForShop } from '../lib/cart.js';
@@ -433,7 +434,7 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
         customerEmail: customerEmail || '',
         customerName: customerName || '',
         materialId: String(firstItem?.materialId || ''),
-        pricingVersion: 'pricing-v1-per-volume-cart',
+        pricingVersion: LIVE_PRICING_SCHEME.cartId,
         cartItems: String(cart.items.length),
         paymentFeeMode,
         restrictedItemsCertificationVersion: certification.version,

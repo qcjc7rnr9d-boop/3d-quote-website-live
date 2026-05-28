@@ -261,8 +261,9 @@
             <div style="background:rgba(122,158,126,0.08);border:1px solid var(--sage-light);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--muted);line-height:1.55">
               <strong style="color:var(--sage-dark)">Live checkout uses Pricing V1:</strong>
               per-cm³ material pricing, volume tiers, minimums, finish/infill multipliers,
-              shipping, tax, and rounding. Other pricing modes are saved here but are not
-              used for live customer payments yet.
+              cart-level shipping, tax, rounding, and the included Trennen platform fee.
+              This calculation method is locked for launch; adjust rates on each material
+              and the settings below instead of switching pricing models.
             </div>
 
             <!-- Mode selector -->
@@ -278,12 +279,12 @@
                 </span>
               </label>
 
-              <label class="radio-card" id="modeTimeCard" style="align-items:flex-start;gap:12px;cursor:pointer">
-                <input type="radio" name="pricing_mode" value="time_material" style="margin-top:3px;flex-shrink:0">
+              <label class="radio-card" id="modeTimeCard" style="align-items:flex-start;gap:12px;cursor:not-allowed;opacity:.62">
+                <input type="radio" name="pricing_mode" value="time_material" disabled style="margin-top:3px;flex-shrink:0">
                 <span>
                   <div style="font-weight:500;font-size:13px">Print time + material</div>
                   <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
-                    Saved for future pricing-model expansion. Not used by live checkout in Pricing V1.
+                    Locked off for launch so customer checkout always uses one verified formula.
                   </div>
                 </span>
               </label>
@@ -297,9 +298,9 @@
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
                   <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">Material options</div>
                   <div class="form-group-toggle" style="flex-direction:row;align-items:center;gap:10px;margin:0">
-                    <label class="form-label" style="margin:0;white-space:nowrap">Include support material</label>
+                    <label class="form-label" style="margin:0;white-space:nowrap">Support handling</label>
                     <label class="toggle">
-                      <input type="checkbox" id="pMatIncludeSupport" checked>
+                      <input type="checkbox" id="pMatIncludeSupport" disabled>
                       <span class="toggle-track"></span>
                     </label>
                   </div>
@@ -307,7 +308,7 @@
 
                 <!-- Per-material rates table -->
                 <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
-                  Set the rate and minimum charge for each material. Volume tiers let you offer lower prices for larger prints.
+                  Set the rate and minimum charge for each material. FDM support filaments are priced as their own materials for now.
                 </div>
                 <div id="matRatesBody" style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
                   <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Loading materials…</div>
@@ -527,7 +528,7 @@
         <div class="section-card">
           <div class="section-card-header">
             <span class="section-card-title">Surcharges</span>
-            <button class="btn btn-outline" id="addSurchargeBtn" style="height:34px;padding:0 14px;font-size:12px">+ Add surcharge</button>
+            <button class="btn btn-outline" id="addSurchargeBtn" style="height:34px;padding:0 14px;font-size:12px" disabled>Locked</button>
           </div>
           <div id="surchargesError" class="inline-error" style="margin:12px 24px;"></div>
           <!-- Inline add row -->
@@ -738,6 +739,7 @@
 
   // ── Calculation mode switcher ─────────────────────────────────
   function setPricingMode(mode) {
+    mode = 'material';
     document.querySelectorAll('[name="pricing_mode"]').forEach(r => {
       r.checked = r.value === mode;
     });
@@ -749,12 +751,12 @@
   }
 
   document.querySelectorAll('[name="pricing_mode"]').forEach(radio => {
-    radio.addEventListener('change', () => setPricingMode(radio.value));
+    radio.addEventListener('change', () => setPricingMode('material'));
   });
   document.querySelectorAll('.radio-card[id^="mode"]').forEach(card => {
     card.addEventListener('click', () => {
       const radio = card.querySelector('input[type="radio"]');
-      if (radio) setPricingMode(radio.value);
+      if (radio && !radio.disabled) setPricingMode('material');
     });
   });
 
@@ -1068,14 +1070,13 @@
       document.getElementById('pShowBreakdown').checked = !!p.show_breakdown;
 
       // Pricing scheme
-      const mode = p.pricing_mode || 'material';
-      setPricingMode(mode);
-      document.getElementById('pMatIncludeSupport').checked  = p.mat_include_support !== 0;
+      setPricingMode('material');
+      document.getElementById('pMatIncludeSupport').checked = false;
       if (p.time_rate_per_hour) document.getElementById('pTimeRateHour').value = p.time_rate_per_hour;
       if (p.time_rate_per_gram) document.getElementById('pTimeRateGram').value = p.time_rate_per_gram;
-      document.getElementById('pTimeIncludeSupport').checked = p.time_include_support !== 0;
+      document.getElementById('pTimeIncludeSupport').checked = false;
 
-      surcharges = Array.isArray(p.surcharges) ? p.surcharges : [];
+      surcharges = [];
       renderSurcharges();
 
       infillTiers = Array.isArray(p.infill_tiers) && p.infill_tiers.length
@@ -1107,8 +1108,6 @@
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
-    const mode = document.querySelector('[name="pricing_mode"]:checked')?.value || 'material';
-
     const payload = {
       currency:            document.getElementById('pCurrency').value,
       tax_rate:            parseFloat(document.getElementById('pTaxRate').value) || 0,
@@ -1119,13 +1118,13 @@
       quote_valid_hours:   parseInt(document.getElementById('pQuoteHours').value) || 72,
       max_model_quantity:  parseInt(document.getElementById('pMaxModelQty').value) || null,
       show_breakdown:      document.getElementById('pShowBreakdown').checked,
-      surcharges,
+      surcharges: [],
       // Pricing scheme
-      pricing_mode:          mode,
-      mat_include_support:   document.getElementById('pMatIncludeSupport').checked,
-      time_rate_per_hour:    parseFloat(document.getElementById('pTimeRateHour').value) || 0,
-      time_rate_per_gram:    parseFloat(document.getElementById('pTimeRateGram').value) || 0,
-      time_include_support:  document.getElementById('pTimeIncludeSupport').checked,
+      pricing_mode:          'material',
+      mat_include_support:   false,
+      time_rate_per_hour:    0,
+      time_rate_per_gram:    0,
+      time_include_support:  false,
       // Infill tier config (validated server-side)
       infill_tiers: infillTiers,
     };
@@ -1172,7 +1171,7 @@
     const body = document.getElementById('surchargesBody');
     if (!surcharges.length) {
       body.innerHTML = `<div class="empty-state" style="padding:40px 24px">
-        <p style="font-size:13px;color:var(--muted)">No surcharges configured. Add fees like rush charges or handling.</p>
+        <p style="font-size:13px;color:var(--muted)">Surcharges are locked off for launch so the live checkout formula stays consistent. Use material rates, finish multipliers, infill multipliers, minimum order value, tax, and shipping bands instead.</p>
       </div>`;
       return;
     }
@@ -1217,6 +1216,7 @@
 
   // Add surcharge inline
   document.getElementById('addSurchargeBtn').addEventListener('click', () => {
+    if (document.getElementById('addSurchargeBtn').disabled) return;
     document.getElementById('surchargeAddRow').classList.add('visible');
     document.getElementById('surchargeName').focus();
   });
