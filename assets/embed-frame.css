@@ -87,9 +87,28 @@ html.is-embedded .options-grid {
   grid-template-columns: 1fr;
 }
 
+html.is-embedded .options-grid {
+  gap: 14px;
+}
+
 html.is-embedded .summary,
 html.is-embedded .checkout-payment-card {
   position: static;
+}
+
+html.is-embedded .option-card {
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+}
+
+html.is-embedded .option-card.has-more {
+  padding-bottom: 16px;
+}
+
+html.is-embedded .option-card.has-more::after,
+html.is-embedded .option-card .scroll-hint {
+  display: none !important;
 }
 
 html.is-embedded .viewer-wrap {
@@ -164,9 +183,30 @@ html.is-embedded .material-card .quality-preview {
 
 html.is-embedded .summary-bar,
 html.is-embedded .mobile-checkout-bar {
-  left: 12px;
-  right: 12px;
-  width: auto;
+  position: static;
+  inset: auto;
+  transform: none;
+  width: 100%;
+  margin: 16px 0 0;
+  box-shadow: var(--shadow-sm, 0 2px 6px rgba(16,20,16,0.04));
+}
+
+html.is-embedded .summary-bar {
+  grid-template-columns: 1fr;
+}
+
+html.is-embedded .summary-bar .summary-item {
+  border-right: 0;
+  border-bottom: 1px solid var(--line, var(--border, #E4E6E0));
+  padding: 8px 12px;
+}
+
+html.is-embedded .summary-bar .summary-item:last-of-type {
+  border-bottom: 0;
+}
+
+html.is-embedded .summary-bar .continue-btn {
+  width: 100%;
 }
 
 @media (max-width: 720px) {

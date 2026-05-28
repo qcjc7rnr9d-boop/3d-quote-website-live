@@ -281,6 +281,69 @@ async function run() {
       materialLayout.columnPlacements.every(value => value === '1 / -1'),
       `embedded material detail columns should span the card instead of auto-placing into a cramped grid, got ${materialLayout.columnPlacements.join(', ')}`
     );
+
+    const demoCatalogRes = await fetch(`${base}/api/customer/catalog?shop=trennen`);
+    assert.equal(demoCatalogRes.status, 200, 'demo catalog should load for embedded options layout check');
+    const demoCatalog = await demoCatalogRes.json();
+    const firstDemoMaterial = (demoCatalog.materials || []).find(material => String(material.category || '').toLowerCase() === 'fdm');
+    assert(firstDemoMaterial?.id, 'demo catalog should expose an FDM material for embedded options layout check');
+
+    const optionPage = await context.newPage();
+    await optionPage.addInitScript(({ materialId, materialName }) => {
+      localStorage.setItem('form_file', JSON.stringify({
+        name: 'embed-options-test.stl',
+        size: 4096,
+        volumeCm3: 18.5,
+        dimensions: { x: 52, y: 44, z: 31 },
+        models: [{
+          id: 'embed-options-model-1',
+          name: 'embed-options-test.stl',
+          size: 4096,
+          volumeCm3: 18.5,
+          dimensions: { x: 52, y: 44, z: 31 },
+          quantity: 1,
+        }],
+      }));
+      localStorage.setItem('form_selection', JSON.stringify({
+        materialId,
+        materialName,
+        requiredSelections: { material: true },
+      }));
+    }, { materialId: firstDemoMaterial.id, materialName: firstDemoMaterial.name });
+    await optionPage.goto(`${base}/options.html?shop=trennen&embed=1`, { waitUntil: 'networkidle' });
+    await optionPage.locator('.option-card').first().waitFor({ state: 'visible', timeout: 7000 });
+    const optionLayout = await optionPage.evaluate(() => {
+      const cards = [...document.querySelectorAll('.option-card')].map(card => {
+        const rect = card.getBoundingClientRect();
+        const style = getComputedStyle(card);
+        return {
+          top: rect.top,
+          bottom: rect.bottom,
+          overflowY: style.overflowY,
+          maxHeight: style.maxHeight,
+        };
+      });
+      const summary = document.querySelector('.summary-bar');
+      const summaryRect = summary?.getBoundingClientRect();
+      const summaryStyle = summary ? getComputedStyle(summary) : null;
+      const overlap = cards.some(card => summaryRect && summaryRect.top < card.bottom && summaryRect.bottom > card.top);
+      return {
+        summaryPosition: summaryStyle?.position || '',
+        summaryTop: summaryRect?.top || 0,
+        cardBottom: Math.max(...cards.map(card => card.bottom)),
+        overlap,
+        cardOverflowModes: cards.map(card => card.overflowY),
+        cardMaxHeights: cards.map(card => card.maxHeight),
+        docWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+      };
+    });
+    assert.notEqual(optionLayout.summaryPosition, 'fixed', 'embedded options summary should be in normal document flow, not fixed over choices');
+    assert(optionLayout.summaryTop >= optionLayout.cardBottom, `embedded options summary should render below option cards, got summary top ${optionLayout.summaryTop} before card bottom ${optionLayout.cardBottom}`);
+    assert.equal(optionLayout.overlap, false, 'embedded options summary must not overlap option choices');
+    assert(optionLayout.cardOverflowModes.every(value => value === 'visible'), `embedded option cards should expand instead of trapping scroll, got ${optionLayout.cardOverflowModes.join(', ')}`);
+    assert(optionLayout.cardMaxHeights.every(value => value === 'none'), `embedded option cards should not use viewport-based max-height, got ${optionLayout.cardMaxHeights.join(', ')}`);
+    assert(optionLayout.docWidth <= optionLayout.viewportWidth + 1, `embedded options page should not horizontally overflow (${optionLayout.docWidth} > ${optionLayout.viewportWidth})`);
     await context.close();
   } finally {
     await browser.close();

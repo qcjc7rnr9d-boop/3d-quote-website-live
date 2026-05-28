@@ -244,7 +244,7 @@ app.get('/embed/v1/widget.js', (req, res) => {
   const scriptUrl = new URL(script.src, window.location.href);
   const baseUrl = (script.dataset.baseUrl || scriptUrl.origin).replace(/\\/$/, '');
   const minHeight = Math.max(220, parseInt(script.dataset.minHeight || script.getAttribute('data-min-height') || script.dataset.height || '760', 10) || 760);
-  const maxHeight = Math.max(minHeight, parseInt(script.dataset.maxHeight || script.getAttribute('data-max-height') || '2400', 10) || 2400);
+  const maxHeight = Math.max(minHeight, parseInt(script.dataset.maxHeight || script.getAttribute('data-max-height') || '8000', 10) || 8000);
   const clampHeight = value => Math.min(maxHeight, Math.max(minHeight, Math.ceil(Number(value) || minHeight)));
   const iframe = document.createElement('iframe');
   iframe.src = baseUrl + '/index.html?shop=' + encodeURIComponent(shop) + '&embed=1';
