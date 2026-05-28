@@ -209,7 +209,7 @@ async function run() {
     });
     assert.match(frameState.src, /\/index\.html\?/, 'widget iframe should use the upload homepage route');
     assert.match(frameState.src, /embed=1/, 'widget iframe should include embed=1');
-    assert.match(frameState.src, /#uploadZone$/, 'widget iframe should focus the upload card');
+    assert.doesNotMatch(frameState.src, /#uploadZone$/, 'widget iframe should start at the top of the software, not jump down to the upload card');
     assert(frameState.height > 320, `iframe should auto-size above fallback height, got ${frameState.height}`);
     assert(frameState.docWidth <= frameState.viewportWidth + 1, `parent page should not horizontally overflow (${frameState.docWidth} > ${frameState.viewportWidth})`);
 
@@ -218,10 +218,15 @@ async function run() {
     const childState = await child.evaluate(() => {
       const uploadZone = document.querySelector('#uploadZone');
       const continueLink = document.querySelector('#continueBtn')?.getAttribute('href') || '';
+      const navRect = document.querySelector('.nav')?.getBoundingClientRect();
+      const heroRect = document.querySelector('.hero')?.getBoundingClientRect();
       return {
         embeddedClass: document.documentElement.classList.contains('is-embedded') || document.body.classList.contains('is-embedded'),
         uploadText: uploadZone?.textContent || '',
         continueLink,
+        scrollY: window.scrollY,
+        navHeight: navRect?.height || 0,
+        heroTop: heroRect?.top ?? 9999,
         scrollWidth: document.documentElement.scrollWidth,
         clientWidth: document.documentElement.clientWidth,
       };
@@ -229,8 +234,53 @@ async function run() {
     assert(childState.embeddedClass, 'embedded quote page should expose an embedded-mode class');
     assert.match(childState.uploadText, /Drop your STL or OBJ files here/i, 'embedded first screen should show the upload homepage');
     assert.match(childState.continueLink, /embed=1/, 'quote-flow links should preserve embed=1');
+    assert(childState.scrollY < 20, `embedded first screen should not auto-scroll past the top, got scrollY ${childState.scrollY}`);
+    assert(childState.navHeight >= 44, `embedded first screen should keep the top navigation visible, got ${childState.navHeight}px`);
+    assert(childState.heroTop < 120, `embedded first screen should start with the homepage hero/top area, got hero top ${childState.heroTop}`);
     assert(childState.scrollWidth <= childState.clientWidth + 1, `embedded child should not horizontally overflow (${childState.scrollWidth} > ${childState.clientWidth})`);
     assert.equal(errors.length, 0, `embed parent runtime errors: ${errors.join('; ')}`);
+
+    const materialPage = await context.newPage();
+    await materialPage.addInitScript(() => {
+      localStorage.setItem('form_file', JSON.stringify({
+        name: 'embed-layout-test.stl',
+        size: 2048,
+        volumeCm3: 12.5,
+        dimensions: { x: 42, y: 36, z: 28 },
+        models: [{
+          id: 'embed-model-1',
+          name: 'embed-layout-test.stl',
+          size: 2048,
+          volumeCm3: 12.5,
+          dimensions: { x: 42, y: 36, z: 28 },
+          quantity: 1,
+        }],
+      }));
+    });
+    await materialPage.goto(`${base}/materials.html?shop=trennen&embed=1`, { waitUntil: 'networkidle' });
+    await materialPage.locator('.material-card').first().waitFor({ state: 'visible', timeout: 7000 });
+    const materialLayout = await materialPage.evaluate(() => {
+      const card = document.querySelector('.material-card');
+      const columns = [...document.querySelectorAll('.material-card .column')].slice(0, 3).map(el => {
+        const style = getComputedStyle(el);
+        return `${style.gridColumnStart} / ${style.gridColumnEnd}`;
+      });
+      const topbar = document.querySelector('.topbar')?.getBoundingClientRect();
+      return {
+        topbarHeight: topbar?.height || 0,
+        cardWidth: card?.getBoundingClientRect().width || 0,
+        docWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+        columnPlacements: columns,
+      };
+    });
+    assert(materialLayout.topbarHeight >= 54, `embedded materials page should keep the top progress header visible, got ${materialLayout.topbarHeight}px`);
+    assert(materialLayout.cardWidth > 0, 'embedded materials page should render material cards');
+    assert(materialLayout.docWidth <= materialLayout.viewportWidth + 1, `embedded materials page should not horizontally overflow (${materialLayout.docWidth} > ${materialLayout.viewportWidth})`);
+    assert(
+      materialLayout.columnPlacements.every(value => value === '1 / -1'),
+      `embedded material detail columns should span the card instead of auto-placing into a cramped grid, got ${materialLayout.columnPlacements.join(', ')}`
+    );
     await context.close();
   } finally {
     await browser.close();

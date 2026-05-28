@@ -118,13 +118,48 @@ html.is-embedded .hero-row {
 }
 
 html.is-embedded .material-card {
-  grid-template-columns: 140px minmax(0, 1fr);
+  grid-template-columns: minmax(118px, 160px) minmax(0, 1fr);
+  align-items: start;
 }
 
 html.is-embedded .material-card .material-meta,
 html.is-embedded .material-card .material-performance,
 html.is-embedded .material-card .material-actions {
   min-width: 0;
+}
+
+html.is-embedded .material-card .material-image {
+  min-height: 132px;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+html.is-embedded .material-card .material-main {
+  grid-column: 2;
+}
+
+html.is-embedded .material-card .column,
+html.is-embedded .material-card .card-actions,
+html.is-embedded .material-card .material-size-warning,
+html.is-embedded .material-card .specs-panel {
+  grid-column: 1 / -1;
+}
+
+html.is-embedded .material-card .column {
+  border-left: 0;
+  border-top: 1px solid var(--line, var(--border, #E4E6E0));
+  padding: 12px 0 0;
+}
+
+html.is-embedded .material-card .card-actions {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  padding-left: 0;
+}
+
+html.is-embedded .material-card .quality-preview {
+  max-width: 100%;
 }
 
 html.is-embedded .summary-bar,
@@ -157,6 +192,24 @@ html.is-embedded .mobile-checkout-bar {
 
   html.is-embedded .material-card {
     grid-template-columns: 1fr;
+  }
+
+  html.is-embedded .material-card .material-image,
+  html.is-embedded .material-card .material-main,
+  html.is-embedded .material-card .column,
+  html.is-embedded .material-card .card-actions,
+  html.is-embedded .material-card .material-size-warning,
+  html.is-embedded .material-card .specs-panel {
+    grid-column: 1 / -1;
+  }
+
+  html.is-embedded .material-card .material-image {
+    grid-row: auto;
+  }
+
+  html.is-embedded .material-card .card-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   html.is-embedded .card,

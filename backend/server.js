@@ -247,7 +247,7 @@ app.get('/embed/v1/widget.js', (req, res) => {
   const maxHeight = Math.max(minHeight, parseInt(script.dataset.maxHeight || script.getAttribute('data-max-height') || '2400', 10) || 2400);
   const clampHeight = value => Math.min(maxHeight, Math.max(minHeight, Math.ceil(Number(value) || minHeight)));
   const iframe = document.createElement('iframe');
-  iframe.src = baseUrl + '/index.html?shop=' + encodeURIComponent(shop) + '&embed=1#uploadZone';
+  iframe.src = baseUrl + '/index.html?shop=' + encodeURIComponent(shop) + '&embed=1';
   iframe.title = script.dataset.title || 'Instant 3D quote';
   iframe.loading = 'lazy';
   iframe.style.width = '100%';
