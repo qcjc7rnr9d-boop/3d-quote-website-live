@@ -161,6 +161,8 @@ async function run() {
   assert.match(widgetJs, /data-min-height/, 'widget should support data-min-height');
   assert.match(widgetJs, /data-max-height/, 'widget should support data-max-height');
   assert.match(widgetJs, /embed=1/, 'widget iframe src should enable embedded mode');
+  assert.match(widgetJs, /\/index\.html\?shop=/, 'widget iframe should start on the upload homepage');
+  assert.doesNotMatch(widgetJs, /iframe\.src = baseUrl \+ '\/embed\/quote/, 'widget iframe must not start on the empty quote review page');
 
   const normalQuote = await fetch(`${base}/quote.html?shop=${slug}`);
   assert.equal(normalQuote.headers.get('x-frame-options'), 'SAMEORIGIN', 'normal quote page should keep frame protection');
@@ -171,6 +173,9 @@ async function run() {
   assert.equal(embedQuote.status, 200, 'embed quote should load');
   assert.equal(embedQuote.headers.get('x-frame-options'), null, 'embed route should not set X-Frame-Options');
   assert.match(embedQuote.headers.get('content-security-policy') || '', new RegExp(parentBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'embed route should allow the approved parent origin');
+  const embedQuoteHtml = await embedQuote.text();
+  assert.match(embedQuoteHtml, /Your 3D file,\s*priced instantly|Drop your STL or OBJ files here/i, 'legacy embed route should serve the upload homepage');
+  assert.doesNotMatch(embedQuoteHtml, /id="quotePageTitle"|id="viewerEmptyTitle"/i, 'legacy embed route must not serve the empty quote review page');
 
   const demoShop = db.prepare("SELECT id FROM shops WHERE slug = 'trennen'").get();
   if (demoShop) {
@@ -202,27 +207,28 @@ async function run() {
         viewportWidth: window.innerWidth,
       };
     });
-    assert.match(frameState.src, /\/embed\/quote\?/, 'widget iframe should use the embed quote route');
+    assert.match(frameState.src, /\/index\.html\?/, 'widget iframe should use the upload homepage route');
     assert.match(frameState.src, /embed=1/, 'widget iframe should include embed=1');
+    assert.match(frameState.src, /#uploadZone$/, 'widget iframe should focus the upload card');
     assert(frameState.height > 320, `iframe should auto-size above fallback height, got ${frameState.height}`);
     assert(frameState.docWidth <= frameState.viewportWidth + 1, `parent page should not horizontally overflow (${frameState.docWidth} > ${frameState.viewportWidth})`);
 
-    const child = page.frame({ url: /\/embed\/quote/ });
+    const child = page.frame({ url: /\/index\.html/ });
     assert(child, 'embedded quote frame should be accessible');
     const childState = await child.evaluate(() => {
-      const materialLink = document.querySelector('[data-quote-nav="materials"]')?.getAttribute('href') || '';
-      const homeLink = document.querySelector('[data-home-link]')?.getAttribute('href') || '';
+      const uploadZone = document.querySelector('#uploadZone');
+      const continueLink = document.querySelector('#continueBtn')?.getAttribute('href') || '';
       return {
         embeddedClass: document.documentElement.classList.contains('is-embedded') || document.body.classList.contains('is-embedded'),
-        materialLink,
-        homeLink,
+        uploadText: uploadZone?.textContent || '',
+        continueLink,
         scrollWidth: document.documentElement.scrollWidth,
         clientWidth: document.documentElement.clientWidth,
       };
     });
     assert(childState.embeddedClass, 'embedded quote page should expose an embedded-mode class');
-    assert.match(childState.materialLink, /embed=1/, 'quote-flow links should preserve embed=1');
-    assert.match(childState.homeLink, /embed=1/, 'home links should preserve embed=1 inside iframe');
+    assert.match(childState.uploadText, /Drop your STL or OBJ files here/i, 'embedded first screen should show the upload homepage');
+    assert.match(childState.continueLink, /embed=1/, 'quote-flow links should preserve embed=1');
     assert(childState.scrollWidth <= childState.clientWidth + 1, `embedded child should not horizontally overflow (${childState.scrollWidth} > ${childState.clientWidth})`);
     assert.equal(errors.length, 0, `embed parent runtime errors: ${errors.join('; ')}`);
     await context.close();

@@ -227,7 +227,8 @@ async function run() {
   assert.match(widgetJs, /data-max-height/, 'widget should support configurable maximum height');
   assert.match(widgetJs, /trennen:embed-resize/, 'widget should listen for embedded resize messages');
   assert.match(widgetJs, /iframe/, 'widget should render an iframe');
-  assert.match(widgetJs, /\/embed\/quote/, 'widget should point at the embed quote route');
+  assert.match(widgetJs, /\/index\.html\?shop=/, 'widget should point at the upload homepage route');
+  assert.doesNotMatch(widgetJs, /\/embed\/quote/, 'widget must not point new embeds at the empty quote review route');
   assert.match(widgetJs, /embed=1/, 'widget should enable embedded quote-flow mode');
 
   const embed = await api(`/embed/quote?shop=${encodeURIComponent(slug)}`, {
@@ -239,7 +240,9 @@ async function run() {
   assert.match(csp, /frame-ancestors/, 'embed route should set frame-ancestors');
   assert.match(csp, /https:\/\/example\.com/, 'embed CSP should include approved origin');
   assert.doesNotMatch(csp, /https:\/\/evil\.example/, 'embed CSP should not include unapproved origins');
-  assert.match(await embed.text(), /Drop your STL or OBJ files here|New uploads|Instant/i, 'embed route should serve quote content');
+  const embedHtml = await embed.text();
+  assert.match(embedHtml, /Your 3D file,\s*priced instantly|Drop your STL or OBJ files here/i, 'legacy embed route should serve the upload homepage');
+  assert.doesNotMatch(embedHtml, /id="quotePageTitle"|id="viewerEmptyTitle"/i, 'legacy embed route must not serve the empty quote review page');
 
   const normalQuote = await api('/quote.html?shop=trennen');
   assertStatus(normalQuote, 200, '/quote.html');

@@ -145,7 +145,8 @@ const secret = 'shpss_test_secret';
   assert.ok(appConfig.includes('write_app_proxy'), 'Shopify app config should request app proxy scope');
   assert.ok(appConfig.includes('subpath = "3d-quote"'), 'Shopify app config should configure /apps/3d-quote proxy');
   const block = readFileSync(resolve('..', 'extensions', 'instant-3d-quote', 'blocks', 'instant-3d-quote.liquid'), 'utf8');
-  assert.ok(block.includes('/apps/3d-quote'), 'theme app block should point at the app proxy route');
+  assert.ok(block.includes('/index.html?shop=') && block.includes('embed=1#uploadZone'), 'theme app block should point at the upload homepage embed route');
+  assert.ok(!block.includes('/embed/quote'), 'theme app block must not start at the empty quote review embed route');
 }
 
 {

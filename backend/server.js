@@ -247,7 +247,7 @@ app.get('/embed/v1/widget.js', (req, res) => {
   const maxHeight = Math.max(minHeight, parseInt(script.dataset.maxHeight || script.getAttribute('data-max-height') || '2400', 10) || 2400);
   const clampHeight = value => Math.min(maxHeight, Math.max(minHeight, Math.ceil(Number(value) || minHeight)));
   const iframe = document.createElement('iframe');
-  iframe.src = baseUrl + '/embed/quote?shop=' + encodeURIComponent(shop) + '&embed=1';
+  iframe.src = baseUrl + '/index.html?shop=' + encodeURIComponent(shop) + '&embed=1#uploadZone';
   iframe.title = script.dataset.title || 'Instant 3D quote';
   iframe.loading = 'lazy';
   iframe.style.width = '100%';
@@ -280,7 +280,7 @@ app.get('/embed/quote', (req, res) => {
   const settings = db.prepare('SELECT embed_allowed_origins FROM store_settings WHERE shop_id = ?').get(shop.id) || {};
   res.removeHeader('X-Frame-Options');
   res.setHeader('Content-Security-Policy', `frame-ancestors ${frameAncestorsForOrigins(parseEmbedAllowedOrigins(settings.embed_allowed_origins))};`);
-  res.sendFile(join(ROOT_DIR, 'quote.html'));
+  res.sendFile(join(ROOT_DIR, 'index.html'));
 });
 
 app.get([...publicRootPages], (req, res) => {
