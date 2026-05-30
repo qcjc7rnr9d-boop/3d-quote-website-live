@@ -122,7 +122,7 @@
             password: document.getElementById('password').value,
           }),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (data.ok) {
           if (data.is_temp_password) {
             window.location.href = 'change-password.html';
@@ -130,11 +130,15 @@
             window.location.href = 'dashboard.html';
           }
         } else {
+          errEl.textContent = res.status === 429
+            ? 'Too many login attempts. Wait 15 minutes or ask the platform owner to reset the login window.'
+            : (data.error || 'Incorrect email or password');
           errEl.classList.add('visible');
           btn.disabled = false;
           btn.textContent = 'Sign in';
         }
       } catch (err) {
+        errEl.textContent = 'Network error. Please check your connection and try again.';
         errEl.classList.add('visible');
         btn.disabled = false;
         btn.textContent = 'Sign in';

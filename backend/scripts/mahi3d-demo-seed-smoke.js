@@ -9,6 +9,7 @@ import {
   buildDemoShippingZones,
   assertDemoSeedAllowed,
 } from './seed-mahi3d-demo.js';
+import { readFileSync } from 'node:fs';
 
 let failures = 0;
 
@@ -27,6 +28,16 @@ expect(DEMO_OWNER_EMAIL === 'owner@trennen-demo.test', 'demo owner email is Tren
 expect(DEMO_CUSTOMER_EMAIL === 'alex@trennen-demo.test', 'demo customer email is Trennen-branded');
 expect(DEMO_OWNER_PASSWORD === 'TrennenAdmin!2026', 'demo owner password is Trennen-branded');
 expect(DEMO_CUSTOMER_PASSWORD === 'TrennenCustomer!2026', 'demo customer password is Trennen-branded');
+
+const resetScript = readFileSync('scripts/reset-demo-admin-credentials.js', 'utf8');
+expect(resetScript.includes('DEMO_OWNER_EMAIL'), 'demo admin reset script uses the documented owner email constant');
+expect(resetScript.includes('DEMO_OWNER_PASSWORD'), 'demo admin reset script uses the documented owner password constant');
+expect(resetScript.includes('is_temp_password = 0'), 'demo admin reset script clears temporary password state');
+
+const loginPage = readFileSync('../admin/login.html', 'utf8');
+expect(loginPage.includes('data.error ||'), 'admin login page displays safe backend error messages');
+expect(loginPage.includes('res.status === 429'), 'admin login page has a specific rate-limit message');
+expect(loginPage.includes('Too many login attempts. Wait 15 minutes'), 'admin login page explains login rate limiting');
 
 const zones = buildDemoShippingZones();
 expect(zones.length === 3, 'demo has three shipping zones');
