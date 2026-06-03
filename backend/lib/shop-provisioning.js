@@ -1,5 +1,5 @@
 import { btn, detailTable, divider, esc, heading, infoBox, paragraph, renderEmail } from './email-templates/base.js';
-import { normaliseEmbedAllowedOrigins, parseEmbedAllowedOrigins } from './embed.js';
+import { EMBED_DNS_TARGET, EMBED_SCRIPT_HOST, ensureShopTenantId, normaliseEmbedAllowedOrigins, parseEmbedAllowedOrigins } from './embed.js';
 import { sendMail } from './mailer.js';
 
 function appBaseUrl(baseUrl = process.env.BASE_URL || 'https://app.trennen.co.nz') {
@@ -49,12 +49,18 @@ export function buildShopInstallPackage(shop, options = {}) {
   if (!shop?.slug) throw new Error('buildShopInstallPackage requires a shop with slug');
   const base = appBaseUrl(options.baseUrl);
   const slug = normaliseShopSlug(shop.slug);
+  const tenantId = shop.public_tenant_id || (options.db && shop.id ? ensureShopTenantId(options.db, shop.id) : '');
   const title = `${shop.name || 'Trennen'} quote widget`;
   const allowedOrigins = normaliseEmbedAllowedOrigins(options.allowedOrigins || []);
   const quoteUrl = `${base}/index.html?shop=${encodeURIComponent(slug)}`;
   const embedUrl = `${base}/index.html?shop=${encodeURIComponent(slug)}&embed=1`;
-  const script = `<script src="${base}/embed/v1/widget.js" data-shop="${esc(slug)}" data-title="${esc(title)}"></script>`;
-  const iframe = `<iframe src="${embedUrl}" title="${esc(title)}" style="width:100%;border:0;min-height:760px;"></iframe>`;
+  const scriptSrc = options.embedScriptHost || EMBED_SCRIPT_HOST;
+  const script = tenantId
+    ? `<div id="trennen-quote-widget"></div>\n<script src="${scriptSrc}/widget.js" data-tenant-id="${esc(tenantId)}" data-title="${esc(title)}"></script>`
+    : `<div id="trennen-quote-widget"></div>\n<script src="${base}/embed/v1/widget.js" data-shop="${esc(slug)}" data-title="${esc(title)}"></script>`;
+  const iframe = tenantId
+    ? `<iframe src="${base}/embed/quote?tenant=${encodeURIComponent(tenantId)}&embed=1" title="${esc(title)}" style="width:100%;border:0;min-height:760px;"></iframe>`
+    : `<iframe src="${embedUrl}" title="${esc(title)}" style="width:100%;border:0;min-height:760px;"></iframe>`;
 
   return {
     shop: {
@@ -62,6 +68,7 @@ export function buildShopInstallPackage(shop, options = {}) {
       name: shop.name,
       slug,
       owner_email: shop.email,
+      public_tenant_id: tenantId || null,
     },
     links: {
       quote: quoteUrl,
@@ -75,10 +82,12 @@ export function buildShopInstallPackage(shop, options = {}) {
       script,
       iframe,
       allowed_origins: allowedOrigins,
+      dns_target: EMBED_DNS_TARGET,
       notes: [
         'Use the script snippet as the recommended install method.',
         'Use the iframe fallback only when the website cannot load third-party scripts.',
         'Add the website origin in Admin > Settings before embedding on a public site.',
+        `For a custom quote subdomain, add a CNAME pointing to ${EMBED_DNS_TARGET}.`,
       ],
     },
   };

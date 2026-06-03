@@ -16,6 +16,7 @@ const base = `http://127.0.0.1:${appPort}`;
 const parentBase = `http://127.0.0.1:${parentPort}`;
 const sessionSecret = 'embed-sizing-smoke-session-secret';
 const slug = `embed-sizing-${randomUUID().slice(0, 8)}`;
+const tenantId = `ten_${randomUUID().replace(/-/g, '').slice(0, 20)}`;
 const legacyDemoSlug = 'mahi3d';
 const db = new DatabaseSync('data/rfdewi.db');
 
@@ -46,9 +47,9 @@ process.on('SIGINT', () => {
 
 function seedShop() {
   const result = db.prepare(`
-    INSERT INTO shops (name, slug, email, password_hash, is_temp_password, plan)
-    VALUES (?, ?, ?, ?, 0, 'starter')
-  `).run('Embed Sizing Smoke', slug, `${slug}@example.test`, 'not-a-real-hash');
+    INSERT INTO shops (name, slug, public_tenant_id, email, password_hash, is_temp_password, plan)
+    VALUES (?, ?, ?, ?, ?, 0, 'starter')
+  `).run('Embed Sizing Smoke', slug, tenantId, `${slug}@example.test`, 'not-a-real-hash');
   shopId = result.lastInsertRowid;
   db.prepare('INSERT INTO pricing_config (shop_id) VALUES (?)').run(shopId);
   db.prepare(`
@@ -113,10 +114,12 @@ function startParentServer() {
     <div id="mount"></div>
     <script
       src="${base}/embed/v1/widget.js"
-      data-shop="${slug}"
+      data-tenant-id="${tenantId}"
       data-mount="#mount"
       data-min-height="320"
       data-max-height="1800"
+      data-theme-primary="#5f8b62"
+      data-theme-font="Inter"
       data-title="Smoke quote">
     </script>
   </body>
@@ -158,11 +161,14 @@ async function run() {
   assert.equal(widgetRes.status, 200, 'widget should load');
   const widgetJs = await widgetRes.text();
   assert.match(widgetJs, /postMessage|message/, 'widget should listen for iframe resize messages');
+  assert.match(widgetJs, /data-tenant-id|tenantId/, 'widget should support data-tenant-id');
+  assert.match(widgetJs, /data-shop/, 'widget should keep legacy data-shop support');
+  assert.match(widgetJs, /data-theme-primary/, 'widget should support theme primary');
+  assert.match(widgetJs, /data-theme-font/, 'widget should support theme font');
   assert.match(widgetJs, /data-min-height/, 'widget should support data-min-height');
   assert.match(widgetJs, /data-max-height/, 'widget should support data-max-height');
-  assert.match(widgetJs, /embed=1/, 'widget iframe src should enable embedded mode');
-  assert.match(widgetJs, /\/index\.html\?shop=/, 'widget iframe should start on the upload homepage');
-  assert.doesNotMatch(widgetJs, /iframe\.src = baseUrl \+ '\/embed\/quote/, 'widget iframe must not start on the empty quote review page');
+  assert.match(widgetJs, /embed:\s*'1'|searchParams\.set\(['"]embed['"],\s*['"]1['"]\)/, 'widget iframe src should enable embedded mode');
+  assert.doesNotMatch(widgetJs, /quote\.html/, 'widget iframe must not start on the empty quote review page');
 
   const normalQuote = await fetch(`${base}/quote.html?shop=${slug}`);
   assert.equal(normalQuote.headers.get('x-frame-options'), 'SAMEORIGIN', 'normal quote page should keep frame protection');
@@ -176,6 +182,18 @@ async function run() {
   const embedQuoteHtml = await embedQuote.text();
   assert.match(embedQuoteHtml, /Your 3D file,\s*priced instantly|Drop your STL or OBJ files here/i, 'legacy embed route should serve the upload homepage');
   assert.doesNotMatch(embedQuoteHtml, /id="quotePageTitle"|id="viewerEmptyTitle"/i, 'legacy embed route must not serve the empty quote review page');
+
+  const tenantConfig = await fetch(`${base}/api/embed/config?tenant=${tenantId}`);
+  assert.equal(tenantConfig.status, 200, 'tenant embed config should load');
+  const tenantConfigData = await tenantConfig.json();
+  assert.equal(tenantConfigData.tenant_id, tenantId, 'tenant embed config should return tenant ID');
+  assert.equal(tenantConfigData.shop_slug, slug, 'tenant embed config should resolve the correct shop slug');
+
+  const tenantEmbedQuote = await fetch(`${base}/embed/quote?tenant=${tenantId}&embed=1`, {
+    headers: { Referer: `${parentBase}/` },
+  });
+  assert.equal(tenantEmbedQuote.status, 200, 'tenant embed quote should load');
+  assert.match(await tenantEmbedQuote.text(), /Drop your STL or OBJ files here/i, 'tenant embed quote should serve upload homepage');
 
   const demoShop = db.prepare("SELECT id FROM shops WHERE slug = 'trennen'").get();
   if (demoShop) {
@@ -207,8 +225,10 @@ async function run() {
         viewportWidth: window.innerWidth,
       };
     });
-    assert.match(frameState.src, /\/index\.html\?/, 'widget iframe should use the upload homepage route');
+    assert.match(frameState.src, /\/index\.html\?/, 'widget iframe should use the upload homepage route after tenant resolution');
     assert.match(frameState.src, /embed=1/, 'widget iframe should include embed=1');
+    assert.match(frameState.src, new RegExp(tenantId), 'widget iframe should preserve tenant context');
+    assert.match(frameState.src, new RegExp(`shop=${slug}`), 'tenant-only widget iframe should include the backend-resolved shop context');
     assert.doesNotMatch(frameState.src, /#uploadZone$/, 'widget iframe should start at the top of the software, not jump down to the upload card');
     assert(frameState.height > 320, `iframe should auto-size above fallback height, got ${frameState.height}`);
     assert(frameState.docWidth <= frameState.viewportWidth + 1, `parent page should not horizontally overflow (${frameState.docWidth} > ${frameState.viewportWidth})`);
@@ -353,7 +373,9 @@ async function run() {
   const settings = await fetch(`${base}/api/settings`, { headers: { Cookie: cookie } });
   assert.equal(settings.status, 200, 'settings should load for shop admin');
   const settingsHtml = await fetch(`${base}/admin/settings.html`).then(res => res.text());
-  assert.match(settingsHtml, /app\.trennen\.co\.nz\/embed\/v1\/widget\.js/, 'settings page should show the production embed script');
+  assert.match(settingsHtml, /embed\.trennen\.co\.nz\/widget\.js/, 'settings page should show the production tenant embed script');
+  assert.match(settingsHtml, /data-tenant-id/, 'settings page should show tenant ID embed attribute');
+  assert.match(settingsHtml, /quotes\.trennen\.co\.nz/, 'settings page should show custom-domain CNAME target');
   assert.doesNotMatch(settingsHtml, /cdn\.yourdomain\.com/, 'settings page should not show placeholder CDN embed code');
 
   console.log('Embed sizing smoke checks passed.');

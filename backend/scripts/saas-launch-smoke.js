@@ -14,6 +14,8 @@ const port = 4410 + Math.floor(Math.random() * 200);
 const base = `http://127.0.0.1:${port}`;
 const sessionSecret = 'saas-launch-smoke-session-secret';
 const slug = `embed-smoke-${randomUUID().slice(0, 8)}`;
+const tenantId = `ten_${randomUUID().replace(/-/g, '').slice(0, 20)}`;
+const quoteCustomDomain = `${slug}.quote.example.com`;
 const allowedOrigins = ['https://example.com', 'https://quotes.example.net'];
 const db = new DatabaseSync('data/rfdewi.db');
 const root = resolve(import.meta.dirname, '../..');
@@ -91,15 +93,15 @@ function makeShopCookie() {
 
 function seedShop() {
   const result = db.prepare(`
-    INSERT INTO shops (name, slug, email, password_hash, is_temp_password, plan)
-    VALUES (?, ?, ?, ?, 0, 'starter')
-  `).run('Embed Smoke Shop', slug, `${slug}@example.test`, 'not-a-real-hash');
+    INSERT INTO shops (name, slug, public_tenant_id, email, password_hash, is_temp_password, plan)
+    VALUES (?, ?, ?, ?, ?, 0, 'starter')
+  `).run('Embed Smoke Shop', slug, tenantId, `${slug}@example.test`, 'not-a-real-hash');
   shopId = result.lastInsertRowid;
   db.prepare('INSERT INTO pricing_config (shop_id) VALUES (?)').run(shopId);
   db.prepare(`
-    INSERT INTO store_settings (shop_id, embed_allowed_origins)
-    VALUES (?, ?)
-  `).run(shopId, JSON.stringify(allowedOrigins));
+    INSERT INTO store_settings (shop_id, embed_allowed_origins, quote_custom_domain, quote_custom_domain_status)
+    VALUES (?, ?, ?, 'active')
+  `).run(shopId, JSON.stringify(allowedOrigins), quoteCustomDomain);
 }
 
 function htmlFilesUnder(relativeDir) {
@@ -125,7 +127,10 @@ async function run() {
   const settingsHtml = readFileSync(resolve(root, 'admin/settings.html'), 'utf8');
   assert.match(settingsHtml, /embedAllowedOrigins/, 'admin settings should expose embed allowed origins control');
   assert.match(settingsHtml, /embed_allowed_origins/, 'admin settings should save embed_allowed_origins');
-  assert.match(settingsHtml, /app\.trennen\.co\.nz\/embed\/v1\/widget\.js/, 'admin settings should show the production embed script');
+  assert.match(settingsHtml, /embed\.trennen\.co\.nz\/widget\.js/, 'admin settings should show the production tenant embed script');
+  assert.match(settingsHtml, /data-tenant-id/, 'admin settings should use tenant IDs in install snippets');
+  assert.match(settingsHtml, /quotes\.trennen\.co\.nz/, 'admin settings should show the CNAME target');
+  assert.match(settingsHtml, /quoteCustomDomain/, 'admin settings should expose custom quote domain configuration');
   assert.doesNotMatch(settingsHtml, /cdn\.yourdomain\.com/, 'admin settings should not show a placeholder CDN embed domain');
 
   const nginxExample = resolve(root, 'deploy/lightsail-nginx.conf.example');
@@ -222,14 +227,28 @@ async function run() {
   assertStatus(widget, 200, '/embed/v1/widget.js');
   assert.match(widget.headers.get('content-type') || '', /javascript/i, 'widget should be JavaScript');
   const widgetJs = await widget.text();
+  assert.match(widgetJs, /data-tenant-id|tenantId/, 'widget should read data-tenant-id');
   assert.match(widgetJs, /data-shop/, 'widget should read data-shop');
+  assert.match(widgetJs, /data-theme-primary/, 'widget should support theme primary');
+  assert.match(widgetJs, /data-theme-font/, 'widget should support theme font');
   assert.match(widgetJs, /data-min-height/, 'widget should support configurable minimum height');
   assert.match(widgetJs, /data-max-height/, 'widget should support configurable maximum height');
   assert.match(widgetJs, /trennen:embed-resize/, 'widget should listen for embedded resize messages');
   assert.match(widgetJs, /iframe/, 'widget should render an iframe');
-  assert.match(widgetJs, /\/index\.html\?shop=/, 'widget should point at the upload homepage route');
-  assert.doesNotMatch(widgetJs, /\/embed\/quote/, 'widget must not point new embeds at the empty quote review route');
-  assert.match(widgetJs, /embed=1/, 'widget should enable embedded quote-flow mode');
+  assert.match(widgetJs, /\/index\.html\?|\/embed\/quote\?/, 'widget should point at the upload homepage or compatible embed resolver');
+  assert.doesNotMatch(widgetJs, /quote\.html/, 'widget must not point embeds at the empty quote review page');
+  assert.match(widgetJs, /embed:\s*'1'|searchParams\.set\(['"]embed['"],\s*['"]1['"]\)/, 'widget should enable embedded quote-flow mode');
+
+  const widgetAlias = await api('/widget.js');
+  assertStatus(widgetAlias, 200, '/widget.js');
+
+  const embedConfig = await api(`/api/embed/config?tenant=${encodeURIComponent(tenantId)}`);
+  assertStatus(embedConfig, 200, '/api/embed/config');
+  const embedConfigData = await embedConfig.json();
+  assert.equal(embedConfigData.tenant_id, tenantId, 'embed config should return the requested tenant');
+  assert.equal(embedConfigData.custom_domain.domain, quoteCustomDomain, 'embed config should include active custom domain');
+  assert.equal(embedConfigData.custom_domain.dns_target, 'quotes.trennen.co.nz', 'embed config should expose CNAME target');
+  assert.match(embedConfigData.quote_url, new RegExp(`https://${quoteCustomDomain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/index\\.html`), 'active tenant should prefer custom quote domain');
 
   const embed = await api(`/embed/quote?shop=${encodeURIComponent(slug)}`, {
     headers: { Referer: 'https://example.com/page' },
@@ -244,6 +263,22 @@ async function run() {
   assert.match(embedHtml, /Your 3D file,\s*priced instantly|Drop your STL or OBJ files here/i, 'legacy embed route should serve the upload homepage');
   assert.doesNotMatch(embedHtml, /id="quotePageTitle"|id="viewerEmptyTitle"/i, 'legacy embed route must not serve the empty quote review page');
 
+  const tenantEmbed = await api(`/embed/quote?tenant=${encodeURIComponent(tenantId)}&embed=1`, {
+    headers: { Referer: 'https://example.com/page' },
+  });
+  assertStatus(tenantEmbed, 302, 'tenant embed route');
+  assert.match(tenantEmbed.headers.get('location') || '', /\/index\.html\?/, 'tenant embed route should redirect to upload homepage');
+  assert.match(tenantEmbed.headers.get('location') || '', new RegExp(tenantId), 'tenant embed route should preserve tenant context');
+
+  const customHostRoot = await api('/', { headers: { 'X-Forwarded-Host': quoteCustomDomain } });
+  assertStatus(customHostRoot, 302, 'active custom quote host');
+  assert.match(customHostRoot.headers.get('location') || '', /\/index\.html\?/, 'active custom host should route to the upload homepage');
+  assert.match(customHostRoot.headers.get('location') || '', new RegExp(tenantId), 'active custom host redirect should preserve tenant context');
+
+  const unknownHost = await api('/', { headers: { 'X-Forwarded-Host': 'unknown.quote.example.com' } });
+  assertStatus(unknownHost, 404, 'unknown custom quote host');
+  assert.match(await unknownHost.text(), /Quote domain setup required/i, 'unknown custom host should show safe setup page');
+
   const normalQuote = await api('/quote.html?shop=trennen');
   assertStatus(normalQuote, 200, '/quote.html');
   assert.equal(normalQuote.headers.get('x-frame-options'), 'SAMEORIGIN', 'normal quote page should keep frame protection');
@@ -256,6 +291,9 @@ async function run() {
   assertStatus(settings, 200, '/api/settings');
   const settingsData = await settings.json();
   assert.deepEqual(settingsData.embed_allowed_origins, allowedOrigins, 'settings should expose embed_allowed_origins as an array');
+  assert.equal(settingsData.public_tenant_id, tenantId, 'settings should expose public tenant ID');
+  assert.equal(settingsData.quote_custom_domain.domain, quoteCustomDomain, 'settings should expose quote custom domain');
+  assert.equal(settingsData.quote_custom_domain.dns_target, 'quotes.trennen.co.nz', 'settings should expose quote DNS target');
 
   const invalidUpdate = await api('/api/settings', {
     method: 'PUT',
@@ -268,11 +306,13 @@ async function run() {
   const update = await api('/api/settings', {
     method: 'PUT',
     headers: await csrfHeader(cookie, { 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ embed_allowed_origins: nextOrigins }),
+    body: JSON.stringify({ embed_allowed_origins: nextOrigins, quote_custom_domain: 'quote.customer-site.example' }),
   });
   assertStatus(update, 200, 'valid embed origin update');
   const updated = await update.json();
   assert.deepEqual(updated.embed_allowed_origins, nextOrigins, 'settings should persist normalised embed origins');
+  assert.equal(updated.quote_custom_domain.domain, 'quote.customer-site.example', 'settings should persist normalised quote domain');
+  assert.equal(updated.quote_custom_domain.status, 'pending_dns', 'merchant-entered quote domain should require DNS verification');
 
   console.log('SaaS launch smoke checks passed.');
 }

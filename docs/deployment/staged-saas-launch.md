@@ -183,10 +183,11 @@ To restore on a fresh server, clone from GitHub, install Node 24 and Nginx, copy
 Customers install:
 
 ```html
-<script src="https://app.trennen.co.nz/embed/v1/widget.js" data-shop="SHOP_SLUG"></script>
+<div id="trennen-quote-widget"></div>
+<script src="https://embed.trennen.co.nz/widget.js" data-tenant-id="TENANT_ID"></script>
 ```
 
-Each shop must list approved website origins in Admin Settings before the iframe can be embedded externally.
+Preferred custom-domain setup is a merchant CNAME such as `quote.example.com` pointing to `quotes.trennen.co.nz`. Each shop must list approved website origins in Admin Settings before the iframe can be embedded externally.
 
 ## Production Migration
 

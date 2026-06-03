@@ -51,6 +51,7 @@ import {
   saveShopEmbedOrigins,
   sendShopInstallEmail,
 } from '../lib/shop-provisioning.js';
+import { ensureShopTenantId } from '../lib/embed.js';
 
 const router = Router();
 
@@ -925,6 +926,7 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
     `).run(name, safeSlug, normaliseEmail(email), hash, selectedPlan, initialBillingStatus);
 
     const shopId = result.lastInsertRowid;
+    ensureShopTenantId(db, shopId);
 
     // Create default pricing config and store settings
     db.prepare('INSERT OR IGNORE INTO pricing_config (shop_id) VALUES (?)').run(shopId);
@@ -935,6 +937,7 @@ router.post('/shops', requirePlatformAuth, async (req, res) => {
     const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId);
     const billing = await createBillingActivationForShop(shop);
     const install = buildShopInstallPackage(shop, {
+      db,
       baseUrl: process.env.BASE_URL,
       allowedOrigins: embedOrigins,
     });
@@ -998,6 +1001,7 @@ router.post('/shops/:id/install-email', requirePlatformAuth, async (req, res) =>
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
     const origins = readShopEmbedOrigins(db, shop.id);
     const install = buildShopInstallPackage(shop, {
+      db,
       baseUrl: process.env.BASE_URL,
       allowedOrigins: origins,
     });
