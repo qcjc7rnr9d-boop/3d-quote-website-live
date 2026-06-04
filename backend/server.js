@@ -304,9 +304,8 @@ function sendEmbedWidget(req, res) {
   res.send(`(() => {
   const script = document.currentScript;
   if (!script) return;
-  const tenant = script.dataset.tenantId || script.getAttribute('data-tenant-id') || script.dataset.tenant || script.getAttribute('data-tenant');
+  const tenant = (script.dataset.tenantId || script.getAttribute('data-tenant-id') || script.dataset.tenant || script.getAttribute('data-tenant') || '').trim();
   const shop = script.dataset.shop || script.getAttribute('data-shop');
-  if (!tenant && !shop) return;
   const scriptUrl = new URL(script.src, window.location.href);
   const baseUrl = (script.dataset.baseUrl || scriptUrl.origin).replace(/\\/$/, '');
   const quoteBaseUrl = (script.dataset.quoteBaseUrl || baseUrl).replace(/\\/$/, '');
@@ -336,53 +335,96 @@ function sendEmbedWidget(req, res) {
     'color:#354037',
     'font:14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'
   ].join(';');
-  const iframe = document.createElement('iframe');
-  iframe.src = quoteBaseUrl + '/index.html?' + query.toString();
-  iframe.title = script.dataset.title || 'Instant 3D quote';
-  iframe.loading = 'eager';
-  iframe.style.width = '100%';
-  iframe.style.minHeight = minHeight + 'px';
-  iframe.style.height = minHeight + 'px';
-  iframe.style.border = '0';
-  iframe.style.display = 'block';
-  iframe.style.overflow = 'hidden';
-  iframe.setAttribute('scrolling', 'no');
-  iframe.setAttribute('allow', 'payment');
-  iframe.dataset.trennenQuoteFrame = 'true';
+  let iframe = null;
+  let loadTimer = null;
   let frameReady = false;
+  const setStatus = (kind, message) => {
+    status.hidden = false;
+    status.dataset.trennenQuoteStatus = kind;
+    status.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    status.textContent = message;
+  };
+  const showConfigError = () => {
+    setStatus('error', 'Quote widget is not configured. Replace YOUR_TENANT_ID with the tenant ID from Trennen admin.');
+  };
+  const isPlaceholderTenant = value => !value || /^(your[_-]?tenant[_-]?id|tenant123|tenant[_-]?id)$/i.test(value);
   const markFrameReady = () => {
     frameReady = true;
     status.hidden = true;
     if (loadTimer) window.clearTimeout(loadTimer);
   };
-  const loadTimer = window.setTimeout(() => {
-    if (frameReady) return;
-    const link = document.createElement('a');
-    link.href = iframe.src || quoteBaseUrl;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.textContent = 'Open the quote page';
-    status.dataset.trennenQuoteStatus = 'error';
-    status.setAttribute('role', 'alert');
-    status.textContent = 'The quote tool did not finish loading. ';
-    status.appendChild(link);
-    status.appendChild(document.createTextNode('.'));
-  }, 9000);
-  if (tenant) {
-    fetch(baseUrl + '/api/embed/config?tenant=' + encodeURIComponent(tenant), { credentials: 'omit' })
-      .then(res => res.ok ? res.json() : null)
-      .then(config => {
-        if (!config || !config.quote_url) return;
-        const target = new URL(config.quote_url, baseUrl);
-        query.forEach((value, key) => target.searchParams.set(key, value));
-        if (!target.searchParams.get('shop') && config.shop_slug) {
-          target.searchParams.set('shop', config.shop_slug);
-        }
-        iframe.src = target.toString();
-      })
-      .catch(() => {});
+  const startLoadTimer = () => {
+    if (loadTimer) window.clearTimeout(loadTimer);
+    loadTimer = window.setTimeout(() => {
+      if (frameReady) return;
+      status.hidden = false;
+      status.dataset.trennenQuoteStatus = 'frame-timeout';
+      status.setAttribute('role', 'alert');
+      status.textContent = 'The quote tool did not finish loading. Check that this page allows frames from Trennen, or ';
+      const link = document.createElement('a');
+      link.href = iframe?.src || quoteBaseUrl;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = 'open the quote page';
+      status.appendChild(link);
+      status.appendChild(document.createTextNode('.'));
+    }, 9000);
+  };
+  const buildIframe = src => {
+    const frame = document.createElement('iframe');
+    frame.src = src;
+    frame.title = script.dataset.title || 'Instant 3D quote';
+    frame.loading = 'eager';
+    frame.style.width = '100%';
+    frame.style.minHeight = minHeight + 'px';
+    frame.style.height = minHeight + 'px';
+    frame.style.border = '0';
+    frame.style.display = 'block';
+    frame.style.overflow = 'hidden';
+    frame.setAttribute('scrolling', 'no');
+    frame.setAttribute('allow', 'payment');
+    frame.dataset.trennenQuoteFrame = 'true';
+    frame.addEventListener('load', () => {
+      try {
+        const loaded = new URL(frame.src);
+        if (!loaded.pathname.endsWith('/index.html')) return;
+      } catch {}
+      markFrameReady();
+    });
+    return frame;
+  };
+  const appendIframe = src => {
+    iframe = buildIframe(src);
+    if (mount) {
+      mount.appendChild(iframe);
+    } else if (script.parentNode) {
+      script.parentNode.insertBefore(iframe, status.nextSibling);
+    }
+    startLoadTimer();
+  };
+  const configureTenantFrame = config => {
+    if (!config || !config.quote_url) {
+      showConfigError();
+      return;
+    }
+    const target = new URL(config.quote_url, quoteBaseUrl);
+    query.forEach((value, key) => target.searchParams.set(key, value));
+    if (!target.searchParams.get('shop') && config.shop_slug) {
+      target.searchParams.set('shop', config.shop_slug);
+    }
+    appendIframe(target.toString());
+  };
+  const mountSelector = script.dataset.mount;
+  const explicitMount = mountSelector ? document.querySelector(mountSelector) : null;
+  const defaultMount = document.getElementById('trennen-quote-widget');
+  const mount = explicitMount || defaultMount;
+  if (mount) {
+    mount.appendChild(status);
+  } else if (script.parentNode) {
+    script.parentNode.insertBefore(status, script.nextSibling);
   }
   window.addEventListener('message', event => {
+    if (!iframe) return;
     if (event.source !== iframe.contentWindow) return;
     try {
       const frameOrigin = new URL(iframe.src).origin;
@@ -395,16 +437,21 @@ function sendEmbedWidget(req, res) {
     markFrameReady();
     iframe.style.height = clampHeight(data.height) + 'px';
   });
-  const mountSelector = script.dataset.mount;
-  const explicitMount = mountSelector ? document.querySelector(mountSelector) : null;
-  const defaultMount = document.getElementById('trennen-quote-widget');
-  const mount = explicitMount || defaultMount;
-  if (mount) {
-    mount.appendChild(status);
-    mount.appendChild(iframe);
-  } else if (script.parentNode) {
-    script.parentNode.insertBefore(status, script.nextSibling);
-    script.parentNode.insertBefore(iframe, status.nextSibling);
+  if (!tenant && !shop) {
+    showConfigError();
+    return;
+  }
+  if (tenant && isPlaceholderTenant(tenant)) {
+    showConfigError();
+    return;
+  }
+  if (shop && !tenant) {
+    appendIframe(quoteBaseUrl + '/index.html?' + query.toString());
+  } else if (tenant) {
+    fetch(baseUrl + '/api/embed/config?tenant=' + encodeURIComponent(tenant), { credentials: 'omit' })
+      .then(res => res.ok ? res.json() : null)
+      .then(configureTenantFrame)
+      .catch(showConfigError);
   }
 })();`);
 }

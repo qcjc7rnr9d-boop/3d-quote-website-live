@@ -85,6 +85,7 @@
   if (!embedded) return;
 
   document.documentElement.classList.add('is-embedded');
+  postResize(true);
   window.addEventListener('DOMContentLoaded', () => {
     document.body?.classList.add('is-embedded');
     rewriteQuoteFlowLinks();

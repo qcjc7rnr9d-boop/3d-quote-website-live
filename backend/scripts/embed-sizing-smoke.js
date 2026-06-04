@@ -95,10 +95,26 @@ async function waitForServer() {
 
 function startParentServer() {
   parentServer = http.createServer((req, res) => {
-    if (req.url !== '/') {
+    const requestUrl = new URL(req.url || '/', parentBase);
+    if (requestUrl.pathname === '/plain/index.html') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(`<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>Plain iframe load target</title></head>
+  <body><main><h1>Plain iframe loaded</h1></main></body>
+</html>`);
+      return;
+    }
+    if (!['/', '/placeholder', '/invalid', '/load-only'].includes(requestUrl.pathname)) {
       res.writeHead(404).end('Not found');
       return;
     }
+    const scriptAttrs = (() => {
+      if (requestUrl.pathname === '/placeholder') return 'data-tenant-id="YOUR_TENANT_ID"';
+      if (requestUrl.pathname === '/invalid') return 'data-tenant-id="ten_missing_embed_smoke"';
+      if (requestUrl.pathname === '/load-only') return `data-shop="${slug}" data-quote-base-url="${parentBase}/plain"`;
+      return `data-tenant-id="${tenantId}"`;
+    })();
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(`<!doctype html>
 <html>
@@ -114,7 +130,7 @@ function startParentServer() {
     <div id="mount"></div>
     <script
       src="${base}/embed/v1/widget.js"
-      data-tenant-id="${tenantId}"
+      ${scriptAttrs}
       data-mount="#mount"
       data-min-height="320"
       data-max-height="1800"
@@ -168,7 +184,7 @@ async function run() {
   assert.match(widgetJs, /data-min-height/, 'widget should support data-min-height');
   assert.match(widgetJs, /data-max-height/, 'widget should support data-max-height');
   assert.match(widgetJs, /embed:\s*'1'|searchParams\.set\(['"]embed['"],\s*['"]1['"]\)/, 'widget iframe src should enable embedded mode');
-  assert.match(widgetJs, /iframe\.loading\s*=\s*['"]eager['"]/, 'widget iframe should load eagerly once inserted');
+  assert.match(widgetJs, /\b(?:iframe|frame)\.loading\s*=\s*['"]eager['"]/, 'widget iframe should load eagerly once inserted');
   assert.match(widgetJs, /data-trennen-quote-status|dataset\.trennenQuoteStatus/, 'widget should expose a visible loading/error status');
   assert.match(widgetJs, /The quote tool did not finish loading/, 'widget should show a safe error fallback if the iframe never becomes ready');
   assert.doesNotMatch(widgetJs, /quote\.html/, 'widget iframe must not start on the empty quote review page');
@@ -368,6 +384,37 @@ async function run() {
     assert(optionLayout.cardOverflowModes.every(value => value === 'visible'), `embedded option cards should expand instead of trapping scroll, got ${optionLayout.cardOverflowModes.join(', ')}`);
     assert(optionLayout.cardMaxHeights.every(value => value === 'none'), `embedded option cards should not use viewport-based max-height, got ${optionLayout.cardMaxHeights.join(', ')}`);
     assert(optionLayout.docWidth <= optionLayout.viewportWidth + 1, `embedded options page should not horizontally overflow (${optionLayout.docWidth} > ${optionLayout.viewportWidth})`);
+
+    const placeholderPage = await context.newPage();
+    await placeholderPage.goto(`${parentBase}/placeholder`, { waitUntil: 'domcontentloaded' });
+    await placeholderPage.getByText(/Quote widget is not configured/i).waitFor({ state: 'visible', timeout: 4000 });
+    const placeholderState = await placeholderPage.evaluate(() => ({
+      iframeCount: document.querySelectorAll('iframe').length,
+      statusText: document.querySelector('[data-trennen-quote-status]')?.textContent || '',
+    }));
+    assert.equal(placeholderState.iframeCount, 0, 'placeholder tenant should not render a blank iframe');
+    assert.match(placeholderState.statusText, /Replace YOUR_TENANT_ID with the tenant ID from Trennen admin/i, 'placeholder tenant should show a specific setup message');
+
+    const invalidPage = await context.newPage();
+    await invalidPage.goto(`${parentBase}/invalid`, { waitUntil: 'domcontentloaded' });
+    await invalidPage.getByText(/Quote widget is not configured/i).waitFor({ state: 'visible', timeout: 5000 });
+    const invalidState = await invalidPage.evaluate(() => ({
+      iframeCount: document.querySelectorAll('iframe').length,
+      statusText: document.querySelector('[data-trennen-quote-status]')?.textContent || '',
+    }));
+    assert.equal(invalidState.iframeCount, 0, 'invalid tenant should not render a blank iframe');
+    assert.match(invalidState.statusText, /tenant ID from Trennen admin/i, 'invalid tenant should show a tenant configuration message');
+
+    const loadOnlyPage = await context.newPage();
+    await loadOnlyPage.goto(`${parentBase}/load-only`, { waitUntil: 'domcontentloaded' });
+    await loadOnlyPage.frameLocator('iframe[title="Smoke quote"]').getByText('Plain iframe loaded').waitFor({ state: 'visible', timeout: 5000 });
+    await loadOnlyPage.waitForFunction(() => document.querySelector('[data-trennen-quote-status]')?.hidden === true, null, { timeout: 5000 });
+    const loadOnlyState = await loadOnlyPage.evaluate(() => ({
+      statusHidden: document.querySelector('[data-trennen-quote-status]')?.hidden === true,
+      iframeSrc: document.querySelector('iframe')?.getAttribute('src') || '',
+    }));
+    assert.equal(loadOnlyState.statusHidden, true, 'iframe load event should mark the widget ready even without resize postMessage');
+    assert.match(loadOnlyState.iframeSrc, /\/plain\/index\.html\?/, 'load-only iframe should use the configured quote base URL');
     await context.close();
   } finally {
     await browser.close();
