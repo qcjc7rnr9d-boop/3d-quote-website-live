@@ -97,16 +97,20 @@ try {
 
   const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId);
   const install = buildShopInstallPackage(shop, {
+    db,
     baseUrl: 'https://app.trennen.co.nz',
     allowedOrigins: origins,
   });
 
+  const tenantId = db.prepare('SELECT public_tenant_id FROM shops WHERE id = ?').get(shopId).public_tenant_id;
   assert.equal(install.shop.slug, slug);
+  assert.equal(install.shop.public_tenant_id, tenantId);
   assert.equal(install.embed.allowed_origins.length, 2);
-  assert.ok(install.embed.script.includes('https://app.trennen.co.nz/embed/v1/widget.js'));
-  assert.ok(install.embed.script.includes(`data-shop="${slug}"`));
-  assert.ok(install.embed.iframe.includes(`shop=${slug}`));
+  assert.ok(install.embed.script.includes('https://embed.trennen.co.nz/widget.js'));
+  assert.ok(install.embed.script.includes(`data-tenant-id="${tenantId}"`));
+  assert.ok(install.embed.iframe.includes(`tenant=${tenantId}`));
   assert.ok(install.embed.iframe.includes('embed=1'));
+  assert.equal(install.embed.dns_target, 'quotes.trennen.co.nz');
   assert.ok(install.links.quote.includes(`/index.html?shop=${slug}`));
   assert.ok(install.links.admin.includes('/admin/login.html'));
   assert.ok(!install.embed.script.includes('sk_'), 'install code must not expose Stripe secrets');
@@ -115,9 +119,9 @@ try {
   const emailMessage = renderShopInstallEmail(shop, install);
   assert.equal(emailMessage.to, email);
   assert.match(emailMessage.subject, /Trennen quote widget/i);
-  assert.match(emailMessage.text, /data-shop=/);
+  assert.match(emailMessage.text, /data-tenant-id=/);
   assert.match(emailMessage.text, /Approved website origins/);
-  assert.match(emailMessage.html, /embed\/v1\/widget\.js/);
+  assert.match(emailMessage.html, /embed\.trennen\.co\.nz\/widget\.js/);
   assert.doesNotMatch(emailMessage.text, /password_hash|sk_test|sk_live/i);
   assert.doesNotMatch(emailMessage.html, /password_hash|sk_test|sk_live/i);
 
@@ -173,8 +177,9 @@ try {
   apiShopId = createData.id;
   assert.equal(createData.slug, apiSlug);
   assert.equal(createData.install_email_sent, false);
-  assert.ok(createData.install?.embed?.script?.includes(`data-shop="${apiSlug}"`), 'create response should include shop-specific script code');
-  assert.ok(createData.install?.embed?.iframe?.includes(`shop=${apiSlug}`), 'create response should include shop-specific iframe code');
+  assert.ok(createData.install?.shop?.public_tenant_id, 'create response should include public tenant ID');
+  assert.ok(createData.install?.embed?.script?.includes('data-tenant-id='), 'create response should include tenant-specific script code');
+  assert.ok(createData.install?.embed?.iframe?.includes(`tenant=${createData.install.shop.public_tenant_id}`), 'create response should include tenant-specific iframe code');
   assert.deepEqual(createData.install?.embed?.allowed_origins, ['https://client-api.example']);
   assert.ok(!JSON.stringify(createData).includes('password_hash'), 'platform create response must not expose password_hash');
   assert.ok(!JSON.stringify(createData).includes('sk_test'), 'platform create response must not expose Stripe secrets');

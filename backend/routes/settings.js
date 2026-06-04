@@ -7,9 +7,14 @@ import { db, requireShopAuth } from '../middleware/auth.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate, DEFAULTS as EMAIL_TEMPLATE_DEFAULTS } from '../lib/email-templates/index.js';
 import {
+  EMBED_DNS_TARGET,
+  EMBED_SCRIPT_HOST,
   ensureEmbedSettingsColumns,
+  ensureShopTenantId,
+  normaliseQuoteCustomDomain,
   normaliseEmbedAllowedOrigins,
   parseEmbedAllowedOrigins,
+  quoteDomainSettingsPayload,
 } from '../lib/embed.js';
 import {
   ensureEmailDeliverySchema,
@@ -93,6 +98,9 @@ function parseSettings(row) {
     email_thank_you: thankYou,
     shipping_zones:  JSON.parse(row.shipping_zones || '[]'),
     embed_allowed_origins: parseEmbedAllowedOrigins(row.embed_allowed_origins),
+    quote_custom_domain: quoteDomainSettingsPayload(row),
+    quote_domain_dns_target: EMBED_DNS_TARGET,
+    embed_script_host: EMBED_SCRIPT_HOST,
     email_domain: {
       domain: row.email_sending_domain || '',
       status: row.email_sending_domain_status || 'not_configured',
@@ -114,8 +122,9 @@ function parseJsonSetting(value, fallback) {
 router.get('/', requireShopAuth, (req, res) => {
   try {
     const settings = ensureSettings(req.shop.id);
-    const shop = db.prepare('SELECT name FROM shops WHERE id = ?').get(req.shop.id) || {};
-    res.json({ ...parseSettings(settings), name: shop.name || '' });
+    const shop = db.prepare('SELECT name, slug, public_tenant_id FROM shops WHERE id = ?').get(req.shop.id) || {};
+    const tenantId = shop.public_tenant_id || ensureShopTenantId(db, req.shop.id);
+    res.json({ ...parseSettings(settings), name: shop.name || '', slug: shop.slug || req.shop.slug, public_tenant_id: tenantId });
   } catch (err) {
     console.error('Get settings error:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -154,6 +163,7 @@ router.put('/', requireShopAuth, (req, res) => {
       tagline, about, phone, address, support_email_mode, support_email, logo_url, gst_number,
       invoice_footer, invoice_logo, notifications, email_templates, shipping_zones,
       embed_allowed_origins,
+      quote_custom_domain,
       email_sending_domain,
       email_use_platform_fallback
     } = req.body;
@@ -174,6 +184,16 @@ router.put('/', requireShopAuth, (req, res) => {
         : parseEmbedAllowedOrigins(existing.embed_allowed_origins);
     } catch (err) {
       return res.status(400).json({ error: err.message || 'Enter valid embed website origins.' });
+    }
+    let quoteDomain = existing.quote_custom_domain || '';
+    let quoteDomainStatus = existing.quote_custom_domain_status || 'not_configured';
+    if (quote_custom_domain !== undefined) {
+      try {
+        quoteDomain = normaliseQuoteCustomDomain(quote_custom_domain);
+        quoteDomainStatus = quoteDomain ? 'pending_dns' : 'not_configured';
+      } catch (err) {
+        return res.status(400).json({ error: err.message || 'Enter a valid quote subdomain.' });
+      }
     }
 
     // Update shop display name if supplied — slug stays stable for URLs
@@ -198,6 +218,9 @@ router.put('/', requireShopAuth, (req, res) => {
         email_templates = ?,
         shipping_zones = ?,
         embed_allowed_origins = ?,
+        quote_custom_domain = ?,
+        quote_custom_domain_status = ?,
+        quote_custom_domain_last_checked_at = ?,
         updated_at = datetime('now')
       WHERE shop_id = ?
     `).run(
@@ -215,6 +238,9 @@ router.put('/', requireShopAuth, (req, res) => {
       JSON.stringify(email_templates !== undefined ? (email_templates || {}) : parseJsonSetting(existing.email_templates, {})),
       JSON.stringify(shipping_zones !== undefined ? (Array.isArray(shipping_zones) ? shipping_zones : []) : parseJsonSetting(existing.shipping_zones, [])),
       JSON.stringify(embedAllowedOrigins),
+      quoteDomain || null,
+      quoteDomainStatus,
+      quote_custom_domain !== undefined ? null : existing.quote_custom_domain_last_checked_at,
       req.shop.id
     );
     if (shouldUpdateEmailDomain) {
@@ -225,8 +251,8 @@ router.put('/', requireShopAuth, (req, res) => {
     }
 
     const updated = db.prepare('SELECT * FROM store_settings WHERE shop_id = ?').get(req.shop.id);
-    const shop    = db.prepare('SELECT name FROM shops WHERE id = ?').get(req.shop.id) || {};
-    res.json({ ...parseSettings(updated), name: shop.name || '' });
+    const shop    = db.prepare('SELECT name, slug, public_tenant_id FROM shops WHERE id = ?').get(req.shop.id) || {};
+    res.json({ ...parseSettings(updated), name: shop.name || '', slug: shop.slug || req.shop.slug, public_tenant_id: shop.public_tenant_id || ensureShopTenantId(db, req.shop.id) });
   } catch (err) {
     console.error('Update settings error:', err);
     res.status(500).json({ error: 'Internal server error' });

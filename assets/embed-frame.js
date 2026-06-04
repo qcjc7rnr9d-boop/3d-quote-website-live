@@ -25,7 +25,7 @@
     if (!quoteFlowPaths.has(url.pathname)) return rawHref;
     if (!url.searchParams.get('shop')) url.searchParams.set('shop', shop);
     url.searchParams.set('embed', '1');
-    return `${url.pathname.replace(/^\//, '') || 'index.html'}${url.search}${url.hash}`;
+    return `${url.pathname || '/index.html'}${url.search}${url.hash}`;
   }
 
   function rewriteQuoteFlowLinks(root = document) {

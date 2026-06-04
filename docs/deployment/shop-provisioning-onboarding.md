@@ -34,41 +34,40 @@ The install email intentionally excludes:
 Use this script on the store website:
 
 ```html
-<script src="https://app.trennen.co.nz/embed/v1/widget.js" data-shop="SHOP_SLUG"></script>
+<div id="trennen-quote-widget"></div>
+<script src="https://embed.trennen.co.nz/widget.js" data-tenant-id="TENANT_ID"></script>
 ```
 
-For the Trennen demo shop:
+Optional theme attributes:
 
 ```html
-<script src="https://app.trennen.co.nz/embed/v1/widget.js" data-shop="trennen"></script>
+<script src="https://embed.trennen.co.nz/widget.js" data-tenant-id="TENANT_ID" data-theme-primary="#5f8b62" data-theme-font="Inter"></script>
 ```
 
-For older Mahi3D demo installs, this legacy alias still resolves to the same Trennen demo shop:
+Legacy shop-slug snippets still work for old installs, but new merchant snippets should use `data-tenant-id`:
 
 ```html
 <script src="https://app.trennen.co.nz/embed/v1/widget.js" data-shop="mahi3d"></script>
 ```
 
-The widget injects the full upload -> material -> options -> quote -> checkout flow and automatically resizes the iframe height.
+The widget injects the full upload -> material -> options -> quote -> checkout flow and automatically resizes the iframe height. If a shop has an active custom quote domain, the widget loads the iframe from that domain.
+
+## Custom Quote Subdomain
+
+Preferred setup:
+
+```text
+quote.example.com CNAME quotes.trennen.co.nz
+```
+
+Keep the custom domain in `pending_dns` until DNS and TLS are configured. Mark it `active` only when the hostname serves the Trennen quote flow over HTTPS.
 
 ## Iframe Fallback
 
 Use this only if the website builder blocks third-party scripts:
 
 ```html
-<iframe src="https://app.trennen.co.nz/index.html?shop=SHOP_SLUG&embed=1" style="width:100%;border:0;min-height:760px;"></iframe>
-```
-
-For the Trennen demo shop:
-
-```html
-<iframe src="https://app.trennen.co.nz/index.html?shop=trennen&embed=1" style="width:100%;border:0;min-height:760px;"></iframe>
-```
-
-Legacy Mahi3D alias fallback:
-
-```html
-<iframe src="https://app.trennen.co.nz/index.html?shop=mahi3d&embed=1" style="width:100%;border:0;min-height:760px;"></iframe>
+<iframe src="https://app.trennen.co.nz/embed/quote?tenant=TENANT_ID&embed=1" style="width:100%;border:0;min-height:760px;"></iframe>
 ```
 
 ## Security Requirements Before Public Launch

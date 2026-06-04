@@ -52,7 +52,9 @@ assert.doesNotMatch(envExample, /yourdomain/i, '.env.example should not contain 
 assertNoSecretLikeValue('backend/.env.example', envExample);
 
 const nginxExample = read('deploy/lightsail-nginx.conf.example');
-assert.match(nginxExample, /server_name app\.trennen\.co\.nz;/, 'Nginx example should target app.trennen.co.nz');
+assert.match(nginxExample, /server_name\s+[^;]*app\.trennen\.co\.nz[^;]*;/, 'Nginx example should target app.trennen.co.nz');
+assert.match(nginxExample, /server_name\s+[^;]*embed\.trennen\.co\.nz[^;]*;/, 'Nginx example should target embed.trennen.co.nz');
+assert.match(nginxExample, /server_name\s+[^;]*quotes\.trennen\.co\.nz[^;]*;/, 'Nginx example should target quotes.trennen.co.nz');
 assert.match(nginxExample, /proxy_pass http:\/\/127\.0\.0\.1:3001;/, 'Nginx example should proxy only to local Node');
 assert.match(nginxExample, /client_max_body_size 260m;/, 'Nginx example should support large model uploads');
 assert.match(nginxExample, /X-Forwarded-Proto \$scheme;/, 'Nginx example should preserve forwarded protocol');
@@ -84,7 +86,8 @@ for (const expected of [
   'application_fee_amount',
   'transfer_data',
   'pilot shop',
-  'https://app.trennen.co.nz/embed/v1/widget.js',
+  'https://embed.trennen.co.nz/widget.js',
+  'quotes.trennen.co.nz',
 ]) {
   assert.match(
     runbook,

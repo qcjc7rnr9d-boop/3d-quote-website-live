@@ -1,0 +1,61 @@
+name: PR smoke checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: Backend and embed smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Install browser smoke dependencies
+        run: npm ci
+        working-directory: research
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: research
+
+      - name: Run smoke checks
+        run: |
+          npm run migrate
+          node --input-type=module <<'NODE'
+          import { DatabaseSync } from 'node:sqlite';
+          const db = new DatabaseSync('data/rfdewi.db');
+          let shop = db.prepare("SELECT id FROM shops WHERE slug = 'trennen'").get();
+          if (!shop) {
+            const result = db.prepare(`
+              INSERT INTO shops (name, slug, email, password_hash, is_temp_password, plan)
+              VALUES ('Trennen', 'trennen', 'owner@trennen-demo.test', 'ci-placeholder', 0, 'starter')
+            `).run();
+            shop = { id: result.lastInsertRowid };
+          }
+          db.prepare('INSERT OR IGNORE INTO pricing_config (shop_id) VALUES (?)').run(shop.id);
+          db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shop.id);
+          db.close();
+          NODE
+          npm run demo:seed:trennen
+          npm run check
+          npm run embed:smoke
+          npm run saas-launch:smoke
+          npm run shop:provisioning-smoke
+          npm run checkout:smoke
+          npm run production-pilot:smoke
+        working-directory: backend
+        env:
+          ALLOW_TRENNEN_DEMO_SEED: '1'

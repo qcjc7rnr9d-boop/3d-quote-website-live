@@ -19,6 +19,7 @@ import {
   exportCustomerPrivacyData,
 } from '../lib/customer-privacy.js';
 import { getShopBySlug, normaliseShopSlug } from '../lib/shop-lookup.js';
+import { resolveShopForEmbed } from '../lib/embed.js';
 
 const router = Router();
 const smokeRateLimitSkip = req => process.env.NODE_ENV !== 'production' && req.get('x-smoke-test') === '1';
@@ -157,6 +158,22 @@ function getCustomerShop(req, requestedSlugOverride = null) {
     throw new CustomerPortalError('This customer session belongs to another shop.', 403);
   }
   return shop;
+}
+
+function getPublicShopFromRequest(req) {
+  const shop = resolveShopForEmbed(db, {
+    tenant: req.query.tenant || req.query.tenant_id,
+    shop: req.query.shop || req.query.slug,
+    host: req.headers.host,
+  });
+  return shop;
+}
+
+function getPublicShopFromBody(body = {}) {
+  return resolveShopForEmbed(db, {
+    tenant: body.tenantId || body.tenant_id || body.tenant,
+    shop: body.shopSlug || body.shop || body.slug,
+  });
 }
 
 function buildCustomerStats(shopId, email) {
@@ -376,10 +393,11 @@ function requireCustomerAuth(req, res, next) {
 // ── GET /api/customer/shop-info?slug=X  (public) ─────────────
 router.get('/shop-info', (req, res) => {
   ensureSupportEmailColumns();
-  // Accept ?slug=... OR ?shop=... (both are used across customer pages).
-  const slug = req.query.slug || req.query.shop;
-  if (!slug) return res.status(400).json({ error: 'slug required' });
-  const shop = getShopBySlug(db, slug);
+  // Accept ?tenant=..., ?slug=... OR ?shop=... (used across customer pages and embeds).
+  if (!req.query.tenant && !req.query.tenant_id && !req.query.slug && !req.query.shop) {
+    return res.status(400).json({ error: 'shop or tenant required' });
+  }
+  const shop = getPublicShopFromRequest(req);
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
   // Pull branding fields from the shop's store_settings row (all optional)
@@ -392,6 +410,7 @@ router.get('/shop-info', (req, res) => {
   res.json({
     name:     shop.name,
     slug:     shop.slug,
+    public_tenant_id: shop.public_tenant_id || null,
     tagline:  s.tagline  || null,
     about:    s.about    || null,
     logo_url: s.logo_url || null,
@@ -404,9 +423,10 @@ router.get('/shop-info', (req, res) => {
 
 // ── GET /api/customer/pricing?shop=X  (public pricing) ───────
 router.get('/pricing', (req, res) => {
-  const { shop: slug } = req.query;
-  if (!slug) return res.status(400).json({ error: 'shop required' });
-  const shop = getShopBySlug(db, slug);
+  if (!req.query.shop && !req.query.slug && !req.query.tenant && !req.query.tenant_id) {
+    return res.status(400).json({ error: 'shop or tenant required' });
+  }
+  const shop = getPublicShopFromRequest(req);
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
   // Get pricing config (with sensible defaults if none set yet)
@@ -459,9 +479,10 @@ router.get('/exchange-rates', async (req, res) => {
 
 // ── GET /api/customer/catalog?shop=X  (public materials) ─────
 router.get('/catalog', (req, res) => {
-  const { shop: slug } = req.query;
-  if (!slug) return res.status(400).json({ error: 'shop required' });
-  const shop = getShopBySlug(db, slug);
+  if (!req.query.shop && !req.query.slug && !req.query.tenant && !req.query.tenant_id) {
+    return res.status(400).json({ error: 'shop or tenant required' });
+  }
+  const shop = getPublicShopFromRequest(req);
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
   const settingsRow = db.prepare(
     'SELECT material_page_settings FROM store_settings WHERE shop_id = ?'
@@ -499,10 +520,10 @@ router.get('/catalog', (req, res) => {
 // ── POST /api/customer/quote-preview  (public pricing source) ──
 router.post('/quote-preview', customerQuoteLimiter, (req, res) => {
   try {
-    const { shopSlug, shop, ...input } = req.body || {};
-    const slug = shopSlug || shop;
-    const canonicalSlug = normaliseShopSlug(slug);
-    const quote = calculateQuoteForShopSlug(db, canonicalSlug, { ...input, shopSlug: canonicalSlug });
+    const input = req.body || {};
+    const shopRow = getPublicShopFromBody(input);
+    if (!shopRow) return res.status(404).json({ ok: false, code: 'SHOP_NOT_FOUND', error: 'Shop not found.' });
+    const quote = calculateQuoteForShopSlug(db, shopRow.slug, { ...input, shopSlug: shopRow.slug });
     res.json(quote);
   } catch (err) {
     if (err instanceof PricingError) {
@@ -521,9 +542,8 @@ router.post('/quote-preview', customerQuoteLimiter, (req, res) => {
 // ── POST /api/customer/cart-preview  (checkout cart pricing source) ──
 router.post('/cart-preview', customerQuoteLimiter, (req, res) => {
   try {
-    const { shopSlug, shop, items, shippingId, shipping } = req.body || {};
-    const slug = shopSlug || shop;
-    const shopRow = getShopBySlug(db, slug);
+    const { items, shippingId, shipping } = req.body || {};
+    const shopRow = getPublicShopFromBody(req.body || {});
     if (!shopRow) return res.status(404).json({ ok: false, code: 'SHOP_NOT_FOUND', error: 'Shop not found.' });
     const cart = previewCartForShop(db, shopRow, normaliseCart({
       shopSlug: shopRow.slug,
@@ -548,8 +568,8 @@ router.post('/cart-preview', customerQuoteLimiter, (req, res) => {
 // ── POST /api/customer/register ───────────────────────────────
 router.post('/register', customerRegisterLimiter, async (req, res) => {
   try {
-    const { shopSlug, name, email, password } = req.body;
-    if (!shopSlug || !name || !email || !password) {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
     const normalisedEmail = normaliseCustomerEmail(email);
@@ -560,7 +580,7 @@ router.post('/register', customerRegisterLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
-    const shop = getShopBySlug(db, shopSlug);
+    const shop = getPublicShopFromBody(req.body || {});
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -589,8 +609,8 @@ router.post('/register', customerRegisterLimiter, async (req, res) => {
 // ── POST /api/customer/login ──────────────────────────────────
 router.post('/login', customerLoginLimiter, async (req, res) => {
   try {
-    const { shopSlug, email, password } = req.body;
-    if (!shopSlug || !email || !password) {
+    const { email, password } = req.body;
+    if (!email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
     const normalisedEmail = normaliseCustomerEmail(email);
@@ -598,7 +618,7 @@ router.post('/login', customerLoginLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Incorrect email or password' });
     }
 
-    const shop = getShopBySlug(db, shopSlug);
+    const shop = getPublicShopFromBody(req.body || {});
     if (!shop) return res.status(401).json({ error: 'Incorrect email or password' });
 
     const account = db.prepare(
@@ -624,13 +644,12 @@ router.post('/forgot-password', customerResetLimiter, async (req, res) => {
   const message = customerResetMessage();
   try {
     ensureCustomerResetTokensTable();
-    const shopSlug = String(req.body?.shopSlug || req.body?.shop || '').trim();
     const email = normaliseCustomerEmail(req.body?.email);
-    if (!shopSlug || !email || !isValidCustomerEmail(email)) {
+    if (!email || !isValidCustomerEmail(email)) {
       return res.json({ ok: true, message });
     }
 
-    const shop = getShopBySlug(db, shopSlug);
+    const shop = getPublicShopFromBody(req.body || {});
     if (!shop) return res.json({ ok: true, message });
 
     const account = db.prepare(
