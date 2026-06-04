@@ -1,0 +1,38 @@
+name: PR smoke checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: Backend and embed smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Install browser smoke dependencies
+        run: npm ci
+        working-directory: research
+
+      - name: Run smoke checks
+        run: |
+          npm run check
+          npm run embed:smoke
+          npm run saas-launch:smoke
+          npm run shop:provisioning-smoke
+          npm run checkout:smoke
+          npm run production-pilot:smoke
+        working-directory: backend
