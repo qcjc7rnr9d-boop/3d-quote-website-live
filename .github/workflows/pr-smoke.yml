@@ -29,6 +29,7 @@ jobs:
 
       - name: Run smoke checks
         run: |
+          npm run migrate
           npm run check
           npm run embed:smoke
           npm run saas-launch:smoke
