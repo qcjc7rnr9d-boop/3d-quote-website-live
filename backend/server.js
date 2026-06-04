@@ -337,9 +337,7 @@ function sendEmbedWidget(req, res) {
     'font:14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'
   ].join(';');
   const iframe = document.createElement('iframe');
-  iframe.src = shop
-    ? quoteBaseUrl + '/index.html?' + query.toString()
-    : quoteBaseUrl + '/embed/quote?' + query.toString();
+  iframe.src = quoteBaseUrl + '/index.html?' + query.toString();
   iframe.title = script.dataset.title || 'Instant 3D quote';
   iframe.loading = 'eager';
   iframe.style.width = '100%';

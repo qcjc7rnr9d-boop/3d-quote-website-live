@@ -172,6 +172,7 @@ async function run() {
   assert.match(widgetJs, /data-trennen-quote-status|dataset\.trennenQuoteStatus/, 'widget should expose a visible loading/error status');
   assert.match(widgetJs, /The quote tool did not finish loading/, 'widget should show a safe error fallback if the iframe never becomes ready');
   assert.doesNotMatch(widgetJs, /quote\.html/, 'widget iframe must not start on the empty quote review page');
+  assert.doesNotMatch(widgetJs, /iframe\.src[\s\S]{0,180}\/embed\/quote\?/, 'widget iframe must start on the upload homepage, not the legacy embed route');
 
   const normalQuote = await fetch(`${base}/quote.html?shop=${slug}`);
   assert.equal(normalQuote.headers.get('x-frame-options'), 'SAMEORIGIN', 'normal quote page should keep frame protection');
