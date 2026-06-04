@@ -34,6 +34,21 @@ jobs:
       - name: Run smoke checks
         run: |
           npm run migrate
+          node --input-type=module <<'NODE'
+          import { DatabaseSync } from 'node:sqlite';
+          const db = new DatabaseSync('data/rfdewi.db');
+          let shop = db.prepare("SELECT id FROM shops WHERE slug = 'trennen'").get();
+          if (!shop) {
+            const result = db.prepare(`
+              INSERT INTO shops (name, slug, email, password_hash, is_temp_password, plan)
+              VALUES ('Trennen', 'trennen', 'owner@trennen-demo.test', 'ci-placeholder', 0, 'starter')
+            `).run();
+            shop = { id: result.lastInsertRowid };
+          }
+          db.prepare('INSERT OR IGNORE INTO pricing_config (shop_id) VALUES (?)').run(shop.id);
+          db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(shop.id);
+          db.close();
+          NODE
           npm run demo:seed:trennen
           npm run check
           npm run embed:smoke
