@@ -34,6 +34,7 @@ jobs:
       - name: Run smoke checks
         run: |
           npm run migrate
+          npm run demo:seed:trennen
           npm run check
           npm run embed:smoke
           npm run saas-launch:smoke
@@ -41,3 +42,5 @@ jobs:
           npm run checkout:smoke
           npm run production-pilot:smoke
         working-directory: backend
+        env:
+          ALLOW_TRENNEN_DEMO_SEED: '1'
