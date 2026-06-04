@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /404.html
+Disallow: /signup-success.html
+
+Sitemap: https://trennen.co.nz/sitemap.xml

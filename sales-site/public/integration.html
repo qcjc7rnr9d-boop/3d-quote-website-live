@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self';">
+  <title>Merchant Quote Widget Setup Guide | Trennen</title>
+  <meta name="description" content="Set up the Trennen merchant quote widget with one embed snippet, optional CNAME custom domain quoting, CMS instructions, styling controls, and QA steps.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://trennen.co.nz/integration.html">
+  <meta name="theme-color" content="#090b0a">
+  <meta property="og:title" content="Merchant Quote Widget Setup Guide | Trennen">
+  <meta property="og:description" content="Embed Trennen on WordPress, Wix, Squarespace, Shopify, or a custom site, or point quote.yourdomain.com to quotes.trennen.co.nz.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://trennen.co.nz/integration.html">
+  <meta property="og:site_name" content="Trennen">
+  <meta property="og:locale" content="en_NZ">
+  <meta property="og:image" content="https://trennen.co.nz/assets/social-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Trennen merchant quote widget setup guide">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Merchant Quote Widget Setup Guide | Trennen">
+  <meta name="twitter:description" content="Embed Trennen with a snippet or use a CNAME custom quote domain. Includes CMS setup and QA steps.">
+  <meta name="twitter:image" content="https://trennen.co.nz/assets/social-card.png">
+  <meta name="twitter:image:alt" content="Trennen merchant quote widget setup guide">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="stylesheet" href="assets/sales.css">
+  <script src="assets/sales.js" defer></script>
+  <script type="application/ld+json">
+    [{
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "@id": "https://trennen.co.nz/integration.html#article",
+      "headline": "Merchant quote widget setup guide",
+      "description": "How to embed the Trennen quote widget, configure custom quote domains, style the widget, and test a merchant quote page.",
+      "url": "https://trennen.co.nz/integration.html",
+      "inLanguage": "en-NZ",
+      "publisher": {
+        "@id": "https://trennen.co.nz/#organization"
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://trennen.co.nz/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Integration",
+          "item": "https://trennen.co.nz/integration.html"
+        }
+      ]
+    }]
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <span class="page-anchor" id="top" aria-hidden="true"></span>
+  <div class="texture-grain" aria-hidden="true"></div>
+
+  <header class="site-header" data-site-header>
+    <a class="brand" href="index.html#top" aria-label="Trennen home">
+      <img class="brand-wordmark" src="assets/trennen-wordmark.svg" width="236" height="40" alt="Trennen">
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation">
+      <span></span>
+      <span></span>
+    </button>
+    <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+      <a href="product.html">Product</a>
+      <a href="pricing.html">Pricing</a>
+      <a class="nav-link-secondary" href="index.html#demo">Demo</a>
+      <a href="faq.html">FAQ</a>
+      <a class="nav-cta" href="index.html#pricing">Start free</a>
+    </nav>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <section class="subpage-hero integration-page-hero" aria-labelledby="integration-title">
+      <div class="subpage-hero-copy reveal">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="index.html">Home</a>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">Integration</span>
+        </nav>
+        <p class="eyebrow">Merchant setup guide</p>
+        <h1 id="integration-title">Add instant 3D-printing quotes to your website.</h1>
+        <p>Use the hosted quote subdomain when you control DNS, or paste the widget snippet into a quote page when you do not.</p>
+        <div class="hero-actions" aria-label="Integration page actions">
+          <a class="button button-primary" href="#snippet">Copy snippet</a>
+          <a class="button button-secondary" href="#dns">Set up CNAME</a>
+        </div>
+      </div>
+      <div class="faq-decision-card reveal" aria-label="Integration decision guide">
+        <div class="faq-decision-head">
+          <span>Decision guide</span>
+          <strong>Pick the install path that fits access.</strong>
+        </div>
+        <ol class="faq-decision-map">
+          <li class="faq-decision-step">
+            <span>01</span>
+            <div>
+              <strong>Can edit DNS</strong>
+              <small>Use quote.yourdomain.com for the hosted quote portal.</small>
+            </div>
+          </li>
+          <li class="faq-decision-step">
+            <span>02</span>
+            <div>
+              <strong>Can edit CMS</strong>
+              <small>Create /quote and paste the widget snippet.</small>
+            </div>
+          </li>
+          <li class="faq-decision-step">
+            <span>03</span>
+            <div>
+              <strong>Ready to test</strong>
+              <small>Test uploads, pricing, checkout, and dashboard visibility.</small>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="product-surfaces section-pad" id="snippet" aria-labelledby="snippet-title">
+      <div class="section-heading reveal">
+        <p class="eyebrow">Embed snippet</p>
+        <h2 id="snippet-title">Paste this into your quote page.</h2>
+        <p>Replace YOUR_TENANT_ID with the public tenant ID shown in Trennen admin settings.</p>
+      </div>
+      <div class="technical-panel reveal" aria-label="Trennen widget embed snippet">
+        <pre class="integration-snippet"><code>&lt;div id="trennen-quote-widget"&gt;&lt;/div&gt;
+&lt;script
+  src="https://embed.trennen.co.nz/widget.js"
+  data-tenant-id="YOUR_TENANT_ID"
+  data-theme-primary="#0077c8"
+  data-theme-font="Inter, system-ui, sans-serif"&gt;
+&lt;/script&gt;</code></pre>
+        <div class="widget-preview-card">
+          <span>Theme options</span>
+          <strong>Match the quote path to the merchant brand.</strong>
+          <p>Use data attributes or scoped CSS variables for colors, fonts, radius, and wording support.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="pricing-rules section-pad" id="dns" aria-labelledby="dns-title">
+      <div class="pricing-rules-shell reveal">
+        <div class="pricing-rules-copy">
+          <p class="eyebrow">Custom quote domain</p>
+          <h2 id="dns-title">Point a quote subdomain at Trennen.</h2>
+          <p>Use this path when the merchant can edit DNS. It keeps the quote portal on the merchant domain and helps avoid third-party-cookie issues.</p>
+        </div>
+        <div class="pricing-fee-map" aria-label="CNAME record details">
+          <article class="pricing-fee-node">
+            <span>Type</span>
+            <strong>CNAME</strong>
+            <p>Use a CNAME record rather than an A record.</p>
+          </article>
+          <article class="pricing-fee-node">
+            <span>Name</span>
+            <strong>quote</strong>
+            <p>This creates quote.theirdomain.com.</p>
+          </article>
+          <article class="pricing-fee-node">
+            <span>Target</span>
+            <strong>quotes.trennen.co.nz</strong>
+            <p>Leave TTL automatic or default.</p>
+          </article>
+          <p class="pricing-fee-note">For Cloudflare, use DNS-only at first. Turn proxying on only after the quote page has been tested.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="product-surfaces section-pad" aria-labelledby="cms-title">
+      <div class="section-heading reveal">
+        <p class="eyebrow">CMS setup</p>
+        <h2 id="cms-title">Works with common website builders.</h2>
+        <p>The widget is lightweight and can be added without a custom app build.</p>
+      </div>
+      <div class="guide-grid" aria-label="CMS and registrar setup steps">
+        <article class="surface-card reveal">
+          <span>WordPress</span>
+          <h3>Custom HTML block</h3>
+          <p>Create /quote, add a Custom HTML block, paste the snippet, then publish and test.</p>
+        </article>
+        <article class="surface-card reveal">
+          <span>Wix</span>
+          <h3>Embed HTML</h3>
+          <p>Add an Embed HTML element, paste the snippet, and give the frame enough height.</p>
+        </article>
+        <article class="surface-card reveal">
+          <span>Squarespace</span>
+          <h3>Code Block</h3>
+          <p>Add a Code Block, set it to HTML, paste the snippet, and keep Display Source off.</p>
+        </article>
+        <article class="surface-card reveal">
+          <span>Shopify</span>
+          <h3>Page or theme section</h3>
+          <p>Add a quote page or theme section, paste the snippet, then link Get a Quote in navigation.</p>
+        </article>
+        <article class="surface-card reveal">
+          <span>Cloudflare</span>
+          <h3>CNAME record</h3>
+          <p>DNS &gt; Records &gt; Add CNAME. Name quote, target quotes.trennen.co.nz, DNS-only first.</p>
+        </article>
+        <article class="surface-card reveal">
+          <span>GoDaddy and Namecheap</span>
+          <h3>Advanced DNS</h3>
+          <p>Add a CNAME with host quote and value quotes.trennen.co.nz. Do not use @.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="pricing-rules section-pad" aria-labelledby="qa-title">
+      <div class="pricing-rules-shell reveal">
+        <div class="pricing-rules-copy">
+          <p class="eyebrow">Launch QA</p>
+          <h2 id="qa-title">Test before the quote page goes public.</h2>
+          <p>Use these checks before handing the quote page to customers. The guide stays public so merchants can prepare setup at any time.</p>
+        </div>
+        <div class="pricing-fee-map" aria-label="Integration test checklist">
+          <article class="pricing-fee-node">
+            <span>Script</span>
+            <strong>embed.trennen.co.nz/widget.js</strong>
+            <p>Confirm it resolves and returns JavaScript.</p>
+          </article>
+          <article class="pricing-fee-node">
+            <span>Quote page</span>
+            <strong>Upload, price, pay</strong>
+            <p>Test in Chrome, Firefox, and Safari with restrictive cookie settings.</p>
+          </article>
+          <article class="pricing-fee-node">
+            <span>Dashboard</span>
+            <strong>Order visible</strong>
+            <p>Confirm the merchant sees the quote and order after submission.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-summary">
+      <a class="brand footer-brand" href="index.html#top" aria-label="Trennen home">
+        <img class="brand-wordmark" src="assets/trennen-wordmark.svg" width="236" height="40" alt="Trennen">
+      </a>
+      <p>Instant 3D-printing quote widget, custom quote domains, material pricing, checkout, and dashboard tracking.</p>
+    </div>
+    <nav aria-label="Footer navigation">
+      <a class="footer-link-button" href="index.html#pricing">Start free</a>
+      <a href="product.html">Product</a>
+      <a href="pricing.html">Pricing details</a>
+      <a href="faq.html">FAQ</a>
+      <a href="changelog.html">Changelog</a>
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+    <p class="footer-meta">&copy; 2026 Trennen. Built for print shops that quote real work.</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self';">
+  <title>How 3D Print Quoting Works | Trennen Workflow</title>
+  <meta name="description" content="See how Trennen turns a 3D print quote request into one connected quote record for upload, pricing, customer review, approval, and job tracking.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://trennen.co.nz/how-it-works.html">
+  <meta name="theme-color" content="#090b0a">
+  <meta property="og:title" content="How 3D Print Quoting Works - Trennen Workflow">
+  <meta property="og:description" content="See how Trennen turns a 3D print quote request into one connected quote record for upload, pricing, customer review, approval, and job tracking.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://trennen.co.nz/how-it-works.html">
+  <meta property="og:site_name" content="Trennen">
+  <meta property="og:locale" content="en_NZ">
+  <meta property="og:image" content="https://trennen.co.nz/assets/social-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Trennen 3D print quoting workflow map">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How 3D Print Quoting Works - Trennen Workflow">
+  <meta name="twitter:description" content="See how Trennen turns a 3D print quote request into one connected quote record for upload, pricing, customer review, approval, and job tracking.">
+  <meta name="twitter:image" content="https://trennen.co.nz/assets/social-card.png">
+  <meta name="twitter:image:alt" content="Trennen 3D print quoting workflow map">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="stylesheet" href="assets/sales.css">
+  <script src="assets/sales.js" defer></script>
+  <script type="application/ld+json">
+    [{
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      "name": "How Trennen turns a 3D print request into one quote record",
+      "description": "A five-step workflow for turning a customer 3D print quote request into a priced, approved, trackable quote record.",
+      "totalTime": "PT5M",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "Capture the request",
+          "text": "The buyer uploads STL files, notes, and basic job details through the quote flow."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Apply shop pricing",
+          "text": "The shop applies materials, quantities, minimums, and internal quote rules."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Send the quote",
+          "text": "The buyer receives a customer-ready quote with price, order details, and next action."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Confirm approval and payment",
+          "text": "The customer approves the quote and sees the next action the shop has enabled."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Track the job",
+          "text": "The shop keeps files, quote, approval, and production status connected."
+        }
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://trennen.co.nz/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "How it works",
+          "item": "https://trennen.co.nz/how-it-works.html"
+        }
+      ]
+    }]
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <span class="page-anchor" id="top" aria-hidden="true"></span>
+  <div class="texture-grain" aria-hidden="true"></div>
+
+  <header class="site-header" data-site-header>
+    <a class="brand" href="index.html#top" aria-label="Trennen home">
+      <img class="brand-wordmark" src="assets/trennen-wordmark.svg" width="236" height="40" alt="Trennen">
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation">
+      <span></span>
+      <span></span>
+    </button>
+    <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+      <a href="product.html">Product</a>
+      <a href="pricing.html">Pricing</a>
+      <a class="nav-link-secondary" href="index.html#demo">Demo</a>
+      <a href="faq.html">FAQ</a>
+      <a class="nav-cta" href="index.html#pricing">Start free</a>
+    </nav>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <section class="subpage-hero workflow-page-hero" aria-labelledby="how-title">
+      <div class="subpage-hero-copy reveal">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="index.html">Home</a>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">How it works</span>
+        </nav>
+        <p class="eyebrow">How Trennen works</p>
+        <h1 id="how-title">From upload to one approved quote record.</h1>
+        <p>Trennen keeps the customer request, shop pricing rules, quote review, approval, and production handoff attached to one record.</p>
+        <div class="hero-actions" aria-label="Workflow page actions">
+          <a class="button button-primary" href="index.html#pricing">Start free</a>
+          <a class="button button-secondary" href="#workflow">See the steps</a>
+        </div>
+      </div>
+      <div class="workflow-route-card reveal" aria-label="3D print quote workflow route">
+        <div class="workflow-route-step">
+          <span>01</span>
+          <strong>Buyer request</strong>
+          <small>Files, notes, material intent.</small>
+        </div>
+        <div class="workflow-route-step is-record">
+          <span>02</span>
+          <strong>Trennen quote record</strong>
+          <small>Files, pricing rules, quote, approval, and status stay attached.</small>
+        </div>
+        <div class="workflow-route-step">
+          <span>03</span>
+          <strong>Shop quote</strong>
+          <small>Price, options, and next action.</small>
+        </div>
+        <div class="workflow-route-step">
+          <span>04</span>
+          <strong>Approved job</strong>
+          <small>Approval and production handoff.</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="handoff-map section-pad" aria-labelledby="handoff-map-title">
+      <div class="handoff-shell reveal">
+        <div class="handoff-copy">
+          <p class="eyebrow">Connected quote record</p>
+          <h2 id="handoff-map-title">The buyer path and shop path meet in one record.</h2>
+          <p>Trennen gives both sides a clear route without splitting files, pricing, approvals, and status across different tools.</p>
+          <div class="handoff-legend" aria-label="Workflow map legend">
+            <span>Buyer-facing</span>
+            <span>Shared record</span>
+            <span>Shop-facing</span>
+          </div>
+        </div>
+        <div class="handoff-board" aria-label="How buyer actions and shop actions connect through one Trennen quote record">
+          <div class="handoff-lane handoff-buyer">
+            <span class="handoff-label">Buyer path</span>
+            <article class="handoff-node">
+              <span>01</span>
+              <strong>Uploads files</strong>
+              <p>STL files, notes, and job basics arrive together.</p>
+            </article>
+            <article class="handoff-node">
+              <span>03</span>
+              <strong>Reviews quote</strong>
+              <p>The customer sees price, details, and next action.</p>
+            </article>
+            <article class="handoff-node">
+              <span>05</span>
+              <strong>Approves next step</strong>
+              <p>Approval and next steps stay attached to the quote.</p>
+            </article>
+          </div>
+
+          <div class="handoff-spine" aria-label="Shared Trennen quote record">
+            <span class="handoff-label">Shared quote record</span>
+            <strong>One source for the job</strong>
+            <div class="handoff-record-chips">
+              <span class="handoff-record-chip">Files</span>
+              <span class="handoff-record-chip">Rules</span>
+              <span class="handoff-record-chip">Quote</span>
+              <span class="handoff-record-chip">Approval</span>
+              <span class="handoff-record-chip">Status</span>
+            </div>
+          </div>
+
+          <div class="handoff-lane handoff-shop">
+            <span class="handoff-label">Shop path</span>
+            <article class="handoff-node">
+              <span>02</span>
+              <strong>Applies rules</strong>
+              <p>Materials, minimums, and shop logic stay controlled.</p>
+            </article>
+            <article class="handoff-node">
+              <span>04</span>
+              <strong>Sends quote</strong>
+              <p>The quote leaves with the right context.</p>
+            </article>
+            <article class="handoff-node">
+              <span>06</span>
+              <strong>Tracks the job</strong>
+              <p>Active work keeps its quote and approval history.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="workflow-overview section-pad" aria-labelledby="workflow-overview-title">
+      <div class="section-heading reveal">
+        <p class="eyebrow">Workflow overview</p>
+        <h2 id="workflow-overview-title">A quote request in five steps.</h2>
+        <p>Use this as the high-level map before the detailed visual walkthrough below.</p>
+      </div>
+      <div class="workflow-overview-grid reveal" aria-label="Five-step Trennen workflow">
+        <article class="workflow-overview-card">
+          <span>01</span>
+          <strong>Capture the request</strong>
+          <p>Customers upload STL files, notes, material choices, and job basics in one place.</p>
+        </article>
+        <article class="workflow-overview-card">
+          <span>02</span>
+          <strong>Apply shop pricing</strong>
+          <p>Your materials, quantities, minimums, and shop rules stay controlled.</p>
+        </article>
+        <article class="workflow-overview-card">
+          <span>03</span>
+          <strong>Send the quote</strong>
+          <p>The buyer gets a clean quote with price, order details, and the next action.</p>
+        </article>
+        <article class="workflow-overview-card">
+          <span>04</span>
+          <strong>Confirm approval</strong>
+          <p>Offer bank transfer or checkout when it fits the job. No Trennen checkout fee on standard plans.</p>
+        </article>
+        <article class="workflow-overview-card">
+          <span>05</span>
+          <strong>Track the job</strong>
+          <p>The shop keeps files, quote, approval, and production status connected.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="story" id="workflow" data-story aria-labelledby="workflow-title">
+      <div class="story-pin">
+        <div class="story-copy">
+          <p class="eyebrow">One connected quote record</p>
+          <h2 id="workflow-title">See where every step lands.</h2>
+          <p>The request carries through intake, pricing, quote review, approval, and tracking.</p>
+          <div class="story-steps" role="list" aria-label="Trennen workflow steps">
+            <button class="story-step is-active" type="button" data-step="0">
+              <span>Request intake</span>
+              Customers start on the file upload page.
+            </button>
+            <button class="story-step" type="button" data-step="1">
+              <span>Pricing control</span>
+              Materials, minimums, quantities, and shop rules stay controlled.
+            </button>
+            <button class="story-step" type="button" data-step="2">
+              <span>Customer quote</span>
+              The buyer sees price, order details, and next action.
+            </button>
+            <button class="story-step" type="button" data-step="3">
+              <span>Approval and checkout</span>
+              Offer payment without a Trennen checkout fee.
+            </button>
+            <button class="story-step" type="button" data-step="4">
+              <span>Progress updates</span>
+              The shop sees active work and next actions.
+            </button>
+          </div>
+        </div>
+
+        <div class="depth-stage" aria-label="Scroll-controlled Trennen product story">
+          <div class="stage-light" aria-hidden="true"></div>
+          <figure class="workflow-visual" data-workflow-visual="0">
+            <img src="assets/workflow/request-intake.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Upload-first quote start screen with Trennen branding and the customer file drop area.">
+            <figcaption>Request intake: the customer starts from the file upload page.</figcaption>
+          </figure>
+          <figure class="workflow-visual" data-workflow-visual="1">
+            <img src="assets/workflow/pricing-control.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Pricing rules and material controls shown inside the operator workspace.">
+            <figcaption>Pricing control: shop rules stay visible before the buyer sees a price.</figcaption>
+          </figure>
+          <figure class="workflow-visual" data-workflow-visual="2">
+            <img src="assets/workflow/customer-quote.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Customer quote summary with price, material, quantity, and shipping context.">
+            <figcaption>Customer quote: the buyer sees price, order details, and next action.</figcaption>
+          </figure>
+          <figure class="workflow-visual" data-workflow-visual="3">
+            <img src="assets/workflow/approval-checkout.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Approval and checkout options with bank transfer, card payment, and no Trennen checkout fee.">
+            <figcaption>Approval and checkout: payment options appear only after the quote is ready.</figcaption>
+          </figure>
+          <figure class="workflow-visual" data-workflow-visual="4">
+            <img src="assets/workflow/progress-updates.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Operator queue with active orders, approved quotes, and production progress.">
+            <figcaption>Progress updates: the shop sees active work and next actions.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="operating-model section-pad" aria-labelledby="operating-model-title">
+      <div class="operating-shell reveal">
+        <div class="operating-copy">
+          <p class="eyebrow">Built for 3D print shops</p>
+          <h2 id="operating-model-title">One quote record replaces five handoffs.</h2>
+          <p>Every request keeps the files, pricing rules, quote, approval, and production status connected.</p>
+        </div>
+        <div class="operating-board" aria-label="How Trennen connects quote request inputs to job outputs">
+          <article class="operating-column operating-column-before">
+            <span class="operating-label">Inputs</span>
+            <h3>What arrives</h3>
+            <ul>
+              <li>STL files</li>
+              <li>Buyer notes</li>
+              <li>Material choice</li>
+            </ul>
+          </article>
+
+          <div class="operating-record" aria-label="One Trennen quote record">
+            <span class="operating-label">Trennen quote record</span>
+            <strong>Everything stays attached</strong>
+            <div class="record-grid" aria-label="Connected quote details">
+              <span>Files</span>
+              <span>Rules</span>
+              <span>Quote</span>
+              <span>Approval</span>
+              <span>Status</span>
+            </div>
+          </div>
+
+          <article class="operating-column operating-column-after">
+            <span class="operating-label">Outputs</span>
+            <h3>What the shop gets</h3>
+            <ul>
+              <li>Ready quote</li>
+              <li>Payment choice</li>
+              <li>Production handoff</li>
+            </ul>
+          </article>
+        </div>
+        <div class="operating-chips" aria-label="Core Trennen use cases">
+          <span>Less email chasing</span>
+          <span>Shop-controlled pricing</span>
+          <span>Clear buyer approval</span>
+          <span>Current job status</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-cta" aria-labelledby="workflow-final-title">
+      <div class="final-panel reveal">
+        <div class="final-copy">
+          <p class="eyebrow">Ready to choose a plan?</p>
+          <h2 id="workflow-final-title">Start with the quote volume you need.</h2>
+          <p>Community gives you 5 free quotes/month. Starter and Growth add higher limits with card-upfront trials.</p>
+        </div>
+        <div class="final-launch-card" aria-label="Workflow page next step">
+          <a class="button button-primary" href="pricing.html">View pricing</a>
+          <p>Compare quote limits, extra quote charges, and trial details before choosing from the homepage cards.</p>
+          <div class="final-secondary-actions" aria-label="Workflow secondary actions">
+            <a class="button button-secondary" href="index.html#demo">Try the live quote flow</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-summary">
+      <a class="brand footer-brand" href="index.html#top" aria-label="Trennen home">
+        <img class="brand-wordmark" src="assets/trennen-wordmark.svg" width="236" height="40" alt="Trennen">
+      </a>
+      <p>3D print quote software for STL intake, material pricing, customer-ready quotes, and job tracking.</p>
+    </div>
+    <nav aria-label="Footer navigation">
+      <a class="footer-link-button" href="index.html#pricing">Start free</a>
+      <a href="product.html">Product</a>
+      <a href="pricing.html">Pricing details</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="index.html#demo">Live quote flow</a>
+      <a href="faq.html">FAQ</a>
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+    <p class="footer-meta">&copy; 2026 Trennen. Built for print shops that quote real work.</p>
+  </footer>
+</body>
+</html>

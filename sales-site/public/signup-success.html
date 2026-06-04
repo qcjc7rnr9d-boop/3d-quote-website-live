@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self';">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Your Trennen signup is being confirmed. Check your email for the secure setup link.">
+  <meta name="theme-color" content="#090b0a">
+  <title>Signup Confirmed | Trennen</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="stylesheet" href="assets/legal.css">
+  <script src="assets/csrf.js" defer></script>
+  <script src="assets/signup-success.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <main id="main-content" class="success-page" tabindex="-1" aria-labelledby="signupSuccessTitle">
+    <a class="success-brand" href="index.html" aria-label="Trennen home">
+      <img src="assets/trennen-wordmark.svg" width="236" height="40" alt="Trennen">
+    </a>
+
+    <section class="success-card success-layout" aria-labelledby="signupSuccessTitle">
+      <div class="success-main">
+        <p class="eyebrow">Signup confirmation</p>
+        <div class="success-status-pill" aria-label="Signup confirmation status">
+          <span>Confirmation pending</span>
+          <strong>Email is the handoff</strong>
+        </div>
+        <h1 id="signupSuccessTitle">Your setup link is on its way.</h1>
+        <p data-signup-success-copy>We are confirming your Stripe trial and sending your secure Trennen setup link.</p>
+
+        <div class="success-context">
+          <span>Sales site status</span>
+          <strong>You are still on the sales site</strong>
+          <p>The setup link opens the software after confirmation.</p>
+        </div>
+
+        <div class="support-route" aria-label="Signup route">
+          <span>Sales signup</span>
+          <span>Email setup link</span>
+          <span>Software setup</span>
+        </div>
+
+        <div class="setup-handoff-card" aria-label="Setup handoff">
+          <article class="setup-handoff-item">
+            <span>01</span>
+            <strong>Keep the setup email</strong>
+            <p>It contains the secure link for opening your Trennen software setup.</p>
+          </article>
+          <article class="setup-handoff-item">
+            <span>02</span>
+            <strong>Use the link once</strong>
+            <p>The setup link is intentionally limited so your shop account stays protected.</p>
+          </article>
+        </div>
+
+        <div class="form-status success" id="signup-success-status" role="status" aria-live="polite" hidden>Stripe confirmed your trial. Check your email for the setup link.</div>
+        <div class="form-status failure" id="signup-failure-status" role="alert" hidden>We could not finish confirmation yet. Try again or contact hello@trennen.co.nz.</div>
+
+        <div class="success-actions">
+          <button class="button button-secondary" type="button" data-retry-sales-confirmation hidden>Retry confirmation</button>
+          <a class="button button-primary" href="pricing.html">Back to pricing</a>
+          <a class="button button-plain" href="mailto:hello@trennen.co.nz">Contact support</a>
+        </div>
+      </div>
+
+      <aside class="success-side" aria-label="What happens next">
+        <span class="success-side-label">What happens next</span>
+        <div class="success-steps">
+          <article>
+            <span>01</span>
+            <strong>Payment setup is checked</strong>
+            <p>Stripe confirms the trial or subscription setup.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <strong>Your setup link is emailed</strong>
+            <p>The secure link takes you to the software setup step.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <strong>You finish inside Trennen</strong>
+            <p>Add shop basics, pricing, and the quoting path.</p>
+          </article>
+        </div>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self';">
+  <title>Trennen FAQ | Quote Widget and Custom Domain Setup</title>
+  <meta name="description" content="Answers about embedding the Trennen instant 3D printing quote widget, custom quote domains, WordPress, Wix, Squarespace, Shopify, pricing, and payment setup.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://trennen.co.nz/faq.html">
+  <meta name="theme-color" content="#090b0a">
+  <meta property="og:title" content="Trennen FAQ | Quote Widget and Custom Domain Setup">
+  <meta property="og:description" content="Answers about embedding the Trennen quote widget, custom quote domains, CMS setup, pricing, and payment setup.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://trennen.co.nz/faq.html">
+  <meta property="og:site_name" content="Trennen">
+  <meta property="og:locale" content="en_NZ">
+  <meta property="og:image" content="https://trennen.co.nz/assets/social-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Trennen quote widget FAQ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Trennen FAQ | Quote Widget and Custom Domain Setup">
+  <meta name="twitter:description" content="Answers about embedding the Trennen quote widget, custom quote domains, CMS setup, pricing, and payment setup.">
+  <meta name="twitter:image" content="https://trennen.co.nz/assets/social-card.png">
+  <meta name="twitter:image:alt" content="Trennen quote widget FAQ">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="stylesheet" href="assets/sales.css">
+  <script src="assets/sales.js" defer></script>
+  <script type="application/ld+json">
+    [{
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "@id": "https://trennen.co.nz/faq.html#faq",
+      "name": "Trennen quote widget FAQ",
+      "url": "https://trennen.co.nz/faq.html",
+      "inLanguage": "en-NZ",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I embed the quote widget?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Create a quote page, add the Trennen mount div, and paste the widget script from https://embed.trennen.co.nz/widget.js with your public tenant ID. The widget loads the quote tool from Trennen."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I host the quote tool on my own domain?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Add a CNAME for quote.yourdomain.com pointing to quotes.trennen.co.nz. Trennen can then serve the hosted quote portal under that subdomain."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What if I use WordPress, Wix, Squarespace, or Shopify?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Use a Custom HTML, Embed HTML, Code Block, or theme/custom content area. Paste the widget snippet into a quote page and test the customer path."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need coding skills?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Most setups only require creating a page and pasting the snippet. DNS-based custom domains may need access to your domain records."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I change the widget colors and fonts?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Use theme attributes such as data-theme-primary and data-theme-font, or scoped CSS variables on the widget container."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does the widget support different 3D printing technologies?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Trennen supports configurable categories for FDM, SLA, SLS, MJF, resin, and custom processes, depending on the shop setup."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does checkout work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "When checkout is enabled, customers can approve a quote and pay through Stripe. Stripe/card processing fees stay separate from Trennen."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Will third-party cookies block the widget?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The custom subdomain path avoids common third-party cookie problems. Embedded pages should still be tested in Chrome, Firefox, and Safari."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What plan should I start with?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Community includes 5 quotes/month with no card. Starter is for small shops quoting weekly, and Growth is for busier quote desks."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Trennen add a checkout fee?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Standard plans have no Trennen checkout fee. Stripe or card processing fees stay separate and are not marked up by Trennen."
+          }
+        }
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://trennen.co.nz/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "FAQ",
+          "item": "https://trennen.co.nz/faq.html"
+        }
+      ]
+    }]
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <span class="page-anchor" id="top" aria-hidden="true"></span>
+  <div class="texture-grain" aria-hidden="true"></div>
+
+  <header class="site-header" data-site-header>
+    <a class="brand" href="index.html#top" aria-label="Trennen home">
+      <img class="brand-wordmark" src="assets/trennen-wordmark.svg" width="236" height="40" alt="Trennen">
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation">
+      <span></span>
+      <span></span>
+    </button>
+    <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+      <a href="product.html">Product</a>
+      <a href="pricing.html">Pricing</a>
+      <a class="nav-link-secondary" href="index.html#demo">Demo</a>
+      <a href="faq.html" aria-current="page">FAQ</a>
+      <a class="nav-cta" href="index.html#pricing">Start free</a>
+    </nav>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <section class="subpage-hero faq-page-hero" aria-labelledby="faq-page-title">
+      <div class="subpage-hero-copy reveal">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="index.html">Home</a>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">FAQ</span>
+        </nav>
+        <p class="eyebrow">Common questions</p>
+        <h1 id="faq-page-title">Quote widget setup questions.</h1>
+        <p>Answers for embedding the widget, setting up quote.yourdomain.com, choosing a plan, and testing the customer quote path.</p>
+        <div class="hero-actions" aria-label="FAQ page actions">
+          <a class="button button-primary" href="index.html#pricing">Start free</a>
+          <a class="button button-secondary" href="integration.html">Read setup guide</a>
+        </div>
+      </div>
+      <div class="faq-decision-card reveal" aria-label="FAQ decision map">
+        <div class="faq-decision-head">
+          <span>Start here</span>
+          <strong>Choose the right install path.</strong>
+        </div>
+        <ol class="faq-decision-map">
+          <li class="faq-decision-step">
+            <span>01</span>
+            <div>
+              <strong>Embed page</strong>
+              <small>Paste the widget into WordPress, Wix, Squarespace, Shopify, or a static page.</small>
+            </div>
+          </li>
+          <li class="faq-decision-step">
+            <span>02</span>
+            <div>
+              <strong>Custom domain</strong>
+              <small>Point quote.yourdomain.com to quotes.trennen.co.nz.</small>
+            </div>
+          </li>
+          <li class="faq-decision-step">
+            <span>03</span>
+            <div>
+              <strong>Test checkout</strong>
+              <small>Confirm uploads, pricing, payment, and dashboard visibility.</small>
+            </div>
+          </li>
+        </ol>
+        <p>The detailed steps live in the <a href="integration.html">merchant integration guide</a>.</p>
+      </div>
+    </section>
+
+    <section class="faq section-pad" aria-labelledby="faq-page-list-title">
+      <div class="faq-page-list">
+        <div class="faq-shell" aria-label="Trennen quote widget FAQ">
+          <div class="faq-intro reveal">
+            <p class="eyebrow">Full FAQ</p>
+            <h2 id="faq-page-list-title">Setup answers for print shops.</h2>
+            <p>Use these answers when adding the widget, changing DNS, or testing a customer quote path.</p>
+            <div class="faq-topics" aria-label="FAQ topic guide">
+              <span class="faq-topic">Embed</span>
+              <span class="faq-topic">Domain</span>
+              <span class="faq-topic">Checkout</span>
+            </div>
+          </div>
+          <div class="faq-list reveal" data-faq-list>
+            <article class="faq-item">
+              <button class="faq-question" type="button" aria-expanded="false">How do I embed the quote widget?</button>
+              <div class="faq-answer">
+                <p>Create a quote page, add the Trennen mount div, and paste the widget script from <code>https://embed.trennen.co.nz/widget.js</code> with your public tenant ID. The widget loads the quote tool from Trennen.</p>
+              </div>
+            </article>
+            <article class="faq-item">
+              <button class="faq-question" type="button" aria-expanded="false">Can I host the quote tool on my own domain?</button>
+              <div class="faq-answer">
+                <p>Yes. Add a CNAME for quote.yourdomain.com pointing to quotes.trennen.co.nz. Trennen can then serve the hosted quote portal under that subdomain.</p>
+              </div>
+            </article>
+            <article class="faq-item">
+              <button class="faq-question" type="button" aria-expanded="false">What if I use WordPress, Wix, Squarespace, or Shopify?</button>
+              <div class="faq-answer">
+                <p>Use a Custom HTML, Embed HTML, Code Block, or theme/custom content area. Paste the widget snippet into a quote page and test the customer path.</p>
+              </div>
+            </article>
+            <article class="faq-item">
+              <button class="faq-question" type="button" aria-expanded="false">Do I need coding skills?</button>
+              <div class="faq-answer">
+                <p>No. Most setups only require creating a page and pasting the snippet. DNS-based custom domains may need access to your domain records.</p>
+              </div>
+            </article>
+            <article class="faq-item">
+              <button class="faq-question" type="button" aria-expanded="false">Can I change the widget colors and fonts?</button>
+              <div class="faq-answer">
+                <p>Yes. Use theme attributes such as data-theme-primary and data-theme-font, or scoped CSS variables on the widget container.</p>
+              </div>
+            </article>
+            <article class="faq-item">
+              <button class="faq-question" type="button" aria-expanded="false">Does the widget support different 3D printing technologies?</button>
+              <div class="faq-answer">
+                <p>Trennen supports configurable categories for FDM, SLA, SLS, MJF, resin, and custom processes, depending on the shop setup.</p>
+              </div>
+            </article>
+            <article class="faq-item">
+              <button class="faq-question" type="button" aria-expanded="false">How does checkout work?</button>
+              <div class="faq-answer">
+                <p>When checkout is enabled, customers can approve a quote and pay through Stripe. Stripe/card processing fees stay separate from Trennen.</p>
+              </div>
+            </article>
+            <article class="faq-item">
+              <button class="faq-question" type="button" aria-expanded="false">Will third-party cookies block the widget?</button>
+              <div class="faq-answer">
+                <p>The custom subdomain path avoids common third-party cookie problems. Embedded pages should still be tested in Chrome, Firefox, and Safari.</p>
+              </div>
+            </article>
+            <article class="faq-item">
+              <button class="faq-question" type="button" aria-expanded="false">What plan should I start with?</button>
+              <div class="faq-answer">
+                <p>Community includes 5 quotes/month with no card. Starter is for small shops quoting weekly, and Growth is for busier quote desks.</p>
+              </div>
+            </article>
+            <article class="faq-item">
+              <button class="faq-question" type="button" aria-expanded="false">Does Trennen add a checkout fee?</button>
+              <div class="faq-answer">
+                <p>No. Standard plans have no Trennen checkout fee. Stripe or card processing fees stay separate and are not marked up by Trennen.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="product-next section-pad" aria-labelledby="faq-next-title">
+      <div class="final-panel reveal">
+        <div class="final-copy">
+          <p class="eyebrow">Next step</p>
+          <h2 id="faq-next-title">Use the setup guide next.</h2>
+          <p>The guide has the snippet, DNS records, CMS steps, and QA checklist in one place.</p>
+        </div>
+        <div class="final-launch-card" aria-label="FAQ next step">
+          <a class="button button-primary" href="integration.html">Open integration guide</a>
+          <p>Prefer pricing first? Community starts with 5 free quotes/month and no card.</p>
+          <div class="final-secondary-actions" aria-label="FAQ secondary actions">
+            <a class="button button-secondary" href="pricing.html">Compare plans</a>
+            <a href="index.html#demo">Try demo</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-summary">
+      <a class="brand footer-brand" href="index.html#top" aria-label="Trennen home">
+        <img class="brand-wordmark" src="assets/trennen-wordmark.svg" width="236" height="40" alt="Trennen">
+      </a>
+      <p>Instant 3D-printing quote widget, custom quote domains, material pricing, checkout, and dashboard tracking.</p>
+    </div>
+    <nav aria-label="Footer navigation">
+      <a class="footer-link-button" href="index.html#pricing">Start free</a>
+      <a href="product.html">Product</a>
+      <a href="pricing.html">Pricing details</a>
+      <a href="integration.html">Integration guide</a>
+      <a href="changelog.html">Changelog</a>
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+    <p class="footer-meta">&copy; 2026 Trennen. Built for print shops that quote real work.</p>
+  </footer>
+</body>
+</html>
