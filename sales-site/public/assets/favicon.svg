@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Trennen">
+  <rect width="64" height="64" rx="14" fill="#090B0A"/>
+  <path d="M18 17h28v8H36v25h-8V25H18z" fill="#F7F1E7"/>
+  <path d="M18 52h28" stroke="#54B98D" stroke-width="4" stroke-linecap="round"/>
+</svg>

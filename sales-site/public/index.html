@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://embed.trennen.co.nz; style-src 'self' 'unsafe-inline' https://embed.trennen.co.nz; img-src 'self' data: https://embed.trennen.co.nz https://quotes.trennen.co.nz; media-src 'self' https://embed.trennen.co.nz https://quotes.trennen.co.nz; connect-src 'self' https://embed.trennen.co.nz https://quotes.trennen.co.nz; frame-src https://quotes.trennen.co.nz https://app.trennen.co.nz; child-src https://quotes.trennen.co.nz https://app.trennen.co.nz; form-action 'self';">
+  <title>Trennen &mdash; Instant 3D Printing Quote Widget</title>
+  <meta name="description" content="Embed instant 3D-printing quotes on your own website. Trennen lets customers upload CAD/STL files, choose options, see pricing, and pay online 24/7.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://trennen.co.nz/">
+  <link rel="preconnect" href="https://embed.trennen.co.nz">
+  <link rel="dns-prefetch" href="//embed.trennen.co.nz">
+  <meta name="theme-color" content="#090b0a">
+  <meta name="application-name" content="Trennen">
+  <meta property="og:title" content="Trennen - Instant 3D Printing Quote Widget">
+  <meta property="og:description" content="Add an embed quote tool to your website with custom domain quoting, instant CAD/STL upload, online payment, and shop-controlled pricing.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://trennen.co.nz/">
+  <meta property="og:site_name" content="Trennen">
+  <meta property="og:locale" content="en_NZ">
+  <meta property="og:image" content="https://trennen.co.nz/assets/social-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Trennen instant 3D printing quote widget preview">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Trennen - Instant 3D Printing Quote Widget">
+  <meta name="twitter:description" content="Embed custom domain quoting on your site so customers can upload CAD/STL files, choose options, see pricing, and pay online.">
+  <meta name="twitter:image" content="https://trennen.co.nz/assets/social-card.png">
+  <meta name="twitter:image:alt" content="Trennen instant 3D printing quote widget preview">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="stylesheet" href="assets/sales.css">
+  <script src="assets/csrf.js" defer></script>
+  <script src="assets/sales.js" defer></script>
+  <script type="application/ld+json">
+    [{
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": "https://trennen.co.nz/#organization",
+      "name": "Trennen",
+      "url": "https://trennen.co.nz/",
+      "sameAs": [
+        "https://app.trennen.co.nz/"
+      ],
+      "logo": "https://trennen.co.nz/assets/trennen-wordmark.svg"
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "@id": "https://trennen.co.nz/#website",
+      "name": "Trennen",
+      "url": "https://trennen.co.nz/",
+      "inLanguage": "en-NZ",
+      "publisher": {
+        "@id": "https://trennen.co.nz/#organization"
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "@id": "https://trennen.co.nz/#software",
+      "name": "Trennen",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "An instant 3D-printing quote widget for print shops that embeds on merchant websites, supports custom quote domains, accepts CAD and STL uploads, applies shop pricing rules, and hands off Stripe payment.",
+      "url": "https://trennen.co.nz/",
+      "inLanguage": "en-NZ",
+      "featureList": [
+        "Embeddable quote widget",
+        "Custom quote domains",
+        "CAD and STL file intake",
+        "Material and pricing rules",
+        "Stripe payment handoff"
+      ],
+      "publisher": {
+        "@id": "https://trennen.co.nz/#organization"
+      },
+      "audience": {
+        "@type": "Audience",
+        "audienceType": "3D print shops"
+      },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Community",
+          "price": "0",
+          "priceCurrency": "NZD",
+          "url": "https://trennen.co.nz/pricing.html",
+          "description": "Includes 5 quotes/month."
+        },
+        {
+          "@type": "Offer",
+          "name": "Starter",
+          "price": "29",
+          "priceCurrency": "NZD",
+          "url": "https://trennen.co.nz/pricing.html",
+          "description": "Includes 25 quotes/month. GST applies."
+        },
+        {
+          "@type": "Offer",
+          "name": "Growth",
+          "price": "129",
+          "priceCurrency": "NZD",
+          "url": "https://trennen.co.nz/pricing.html",
+          "description": "Includes 250 quotes/month. GST applies."
+        },
+        {
+          "@type": "Offer",
+          "name": "Scale",
+          "price": "899",
+          "priceCurrency": "NZD",
+          "url": "https://trennen.co.nz/pricing.html",
+          "description": "Includes 1,000 quotes/month. GST applies."
+        }
+      ]
+    }
+    ]
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <span class="page-anchor" id="top" aria-hidden="true"></span>
+  <div class="texture-grain" aria-hidden="true"></div>
+
+  <header class="site-header" data-site-header>
+    <a class="brand" href="#top" aria-label="Trennen home">
+      <img class="brand-wordmark" src="assets/trennen-wordmark.svg" width="236" height="40" alt="Trennen">
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation">
+      <span></span>
+      <span></span>
+    </button>
+    <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+      <a href="product.html">Product</a>
+      <a href="pricing.html">Pricing</a>
+      <a class="nav-link-secondary" href="#demo" data-event="hero_demo_click">Demo</a>
+      <a href="faq.html">FAQ</a>
+      <a class="nav-cta" href="#pricing" data-pricing-scroll data-event="hero_start_free_click">Start free</a>
+    </nav>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <section class="hero" id="product" aria-labelledby="hero-title">
+      <div class="hero-copy reveal">
+        <p class="eyebrow">Instant quote widget for 3D print shops</p>
+        <h1 id="hero-title">Turn visitors into orders with instant 3D-printing quotes, right on your site.</h1>
+        <p class="hero-subtitle">Customers upload CAD/STL files, choose material, quantity, and options, then see pricing and pay online 24/7.</p>
+        <div class="hero-actions" aria-label="Hero actions">
+          <a class="button button-primary" href="#pricing" data-pricing-scroll data-event="hero_start_free_click">Start free trial</a>
+          <a class="button button-secondary" href="#demo" data-event="hero_demo_click">Try the demo</a>
+        </div>
+      </div>
+
+      <div class="product-desk reveal" aria-label="Trennen quote widget preview">
+        <figure class="hero-product-frame widget-site-card" aria-label="Quote widget shown on a merchant website">
+          <div class="hero-product-topbar">
+            <span>merchant-site.example/quote</span>
+            <strong>Get a Quote</strong>
+          </div>
+          <div class="hero-product-media">
+            <img src="assets/workflow/request-intake.webp" width="1440" height="900" alt="Trennen quote widget upload screen on a merchant quote page" fetchpriority="high" decoding="async">
+          </div>
+          <figcaption class="hero-product-caption">A hosted quote page or embedded widget that keeps visitors on the merchant path.</figcaption>
+        </figure>
+        <div class="hero-product-stats" aria-label="Widget benefits">
+          <span class="hero-product-stat"><strong>Upload</strong><small>CAD and STL files</small></span>
+          <span class="hero-product-stat"><strong>Price</strong><small>Rules run instantly</small></span>
+          <span class="hero-product-stat"><strong>Order</strong><small>Checkout when ready</small></span>
+        </div>
+        <div class="hero-product-callout" aria-label="Custom quote domain">
+          <span>Custom domain quoting</span>
+          <strong>quote.yourdomain.com</strong>
+          <p>Use a hosted quote subdomain or paste the widget into a CMS page.</p>
+        </div>
+      </div>
+    </section>
+
+    <aside class="launch-proof-strip reveal" aria-label="Key widget details">
+      <div class="hero-proof-grid">
+        <span class="hero-proof-item"><strong>Embed quote tool</strong><small>One pasteable snippet for most sites.</small></span>
+        <span class="hero-proof-item"><strong>Custom domain quoting</strong><small>Point quote.yourdomain.com at Trennen.</small></span>
+        <span class="hero-proof-item"><strong>No Trennen checkout fee</strong><small>Stripe/card processing stays separate.</small></span>
+      </div>
+    </aside>
+
+    <section class="process-map studio-intro" id="process" aria-labelledby="process-title">
+      <div class="process-copy">
+        <p class="eyebrow">How it works</p>
+        <h2 id="process-title">Configure once, quote all day.</h2>
+        <p>Automated quoting for 3D printing starts with your pricing rules, then gives customers a clean quote path on your website.</p>
+      </div>
+      <div class="route-diagram integration-steps" aria-label="Three-step Trennen widget setup">
+        <div class="route-signal" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <article class="route-step is-shop" data-flow-stage="pricing" data-flow-lane="shop">
+          <span class="route-index">01</span>
+          <div>
+            <span class="route-kicker">Setup</span>
+            <h3>Configure pricing</h3>
+            <p>Add materials, machines, minimums, quantities, and shop rules.</p>
+          </div>
+        </article>
+        <article class="route-step is-customer" data-flow-stage="intake" data-flow-lane="customer">
+          <span class="route-index">02</span>
+          <div>
+            <span class="route-kicker">Install</span>
+            <h3>Embed on your site</h3>
+            <p>Paste the widget snippet or use a custom quote subdomain.</p>
+          </div>
+        </article>
+        <article class="route-step is-customer" data-flow-stage="quote" data-flow-lane="customer">
+          <span class="route-index">03</span>
+          <div>
+            <span class="route-kicker">Orders</span>
+            <h3>Receive orders</h3>
+            <p>Visitors upload files, get pricing, and move to payment.</p>
+          </div>
+        </article>
+        <div class="route-hub" aria-label="What Trennen handles">
+          <span>Trennen handles</span>
+          <strong>File intake, instant pricing, checkout, and dashboard tracking.</strong>
+          <div aria-label="Connected widget details">
+            <small>Files</small>
+            <small>Rules</small>
+            <small>Payment</small>
+            <small>Orders</small>
+          </div>
+        </div>
+        <div class="route-outcomes" aria-label="Widget outcomes">
+          <span class="route-outcome">Less email</span>
+          <span class="route-outcome">Faster quotes</span>
+          <span class="route-outcome">24/7 intake</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="product-surfaces section-pad" id="features" aria-labelledby="features-title">
+      <div class="section-heading reveal">
+        <p class="eyebrow">Feature highlights</p>
+        <h2 id="features-title">Built for quote pages, not generic forms.</h2>
+        <p>Trennen gives print shops a customer-facing quote tool with shop-controlled pricing, payment handoff, and a dashboard behind it.</p>
+      </div>
+      <div class="surface-grid" aria-label="Trennen quote widget feature highlights">
+        <article class="surface-card reveal">
+          <span>01</span>
+          <h3>Instant quotes</h3>
+          <p>Customers upload CAD/STL files and get real-time pricing from your materials, quantities, and rules.</p>
+        </article>
+        <article class="surface-card reveal">
+          <span>02</span>
+          <h3>Custom domain and branding</h3>
+          <p>Use quote.yourdomain.com or an embedded page with your colors, fonts, and terminology.</p>
+        </article>
+        <article class="surface-card reveal">
+          <span>03</span>
+          <h3>All major print processes</h3>
+          <p>Configure FDM, SLA, SLS, MJF, resin, and custom process categories around your shop setup.</p>
+        </article>
+        <article class="surface-card reveal">
+          <span>04</span>
+          <h3>Integrated payments</h3>
+          <p>Let buyers approve and pay online through Stripe when checkout is enabled for the shop.</p>
+        </article>
+        <article class="surface-card reveal">
+          <span>05</span>
+          <h3>Analytics and dashboard</h3>
+          <p>Track quote requests, orders, customer details, and production handoff from one admin view.</p>
+        </article>
+        <article class="surface-card reveal">
+          <span>06</span>
+          <h3>Fast setup</h3>
+          <p>Works with WordPress, Wix, Squarespace, Shopify, static sites, and custom builds.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="pricing section-pad" id="pricing" aria-labelledby="pricing-title">
+      <div class="section-heading reveal">
+        <p class="eyebrow">Fair pricing, made readable</p>
+        <h2 id="pricing-title">Pick the plan by quote volume.</h2>
+        <p>Start with the quote volume you need now. Community has no card. Starter and Growth use a card-upfront trial through Stripe.</p>
+      </div>
+      <div class="pricing-choice-board">
+        <div class="pricing-decider reveal" aria-label="Choose a plan by monthly quote volume">
+          <a class="pricing-decider-item" href="#plan-community">
+            <span class="pricing-volume-count">5</span>
+            <strong>Community</strong>
+            <small>quotes/month</small>
+            <em>No card. Bank transfer only.</em>
+          </a>
+          <a class="pricing-decider-item" href="#plan-starter">
+            <span class="pricing-volume-count">25</span>
+            <strong>Starter</strong>
+            <small>quotes/month</small>
+            <em>Small shops quoting weekly.</em>
+          </a>
+          <a class="pricing-decider-item" href="#plan-growth">
+            <span class="pricing-volume-count">250</span>
+            <strong>Growth</strong>
+            <small>quotes/month</small>
+            <em>Busier monthly volume.</em>
+          </a>
+          <a class="pricing-decider-item" href="#plan-scale">
+            <span class="pricing-volume-count">1,000</span>
+            <strong>Scale</strong>
+            <small>quotes/month</small>
+            <em>Custom setup and support.</em>
+          </a>
+        </div>
+        <div class="pricing-grid" aria-label="Pricing plans">
+          <article class="pricing-card reveal" id="plan-community" data-plan="community">
+            <div class="plan-header">
+              <span class="badge">No card</span>
+              <h3>Community</h3>
+              <p class="plan-price"><strong>NZ$0</strong><small>/month</small></p>
+            </div>
+            <div class="plan-metrics" aria-label="Community key facts">
+              <div class="plan-metric"><span>Included</span><strong>5 quotes/month</strong></div>
+              <div class="plan-metric"><span>Extra quotes</span><strong>Upgrade when ready</strong></div>
+              <div class="plan-metric"><span>Payment</span><strong>Bank transfer only</strong></div>
+            </div>
+            <button class="button button-on-light" type="button" data-plan-select="community" data-pricing-plan="community">Start free</button>
+          </article>
+
+          <article class="pricing-card is-featured reveal" id="plan-starter" data-plan="starter">
+            <div class="plan-header">
+              <span class="badge">Most shops start here</span>
+              <h3>Starter</h3>
+              <p class="plan-price"><strong>NZ$29</strong><small>/month + GST</small></p>
+            </div>
+            <div class="plan-metrics" aria-label="Starter key facts">
+              <div class="plan-metric"><span>Included</span><strong>25 quotes/month</strong></div>
+              <div class="plan-metric"><span>Extra quotes</span><strong>NZ$1 per extra quote</strong></div>
+              <div class="plan-metric"><span>Trial</span><strong>14 days, card upfront</strong></div>
+            </div>
+            <button class="button button-primary" type="button" data-plan-select="starter" data-pricing-plan="starter">Start Starter trial</button>
+          </article>
+
+          <article class="pricing-card reveal" id="plan-growth" data-plan="growth">
+            <div class="plan-header">
+              <span class="badge">Higher volume</span>
+              <h3>Growth</h3>
+              <p class="plan-price"><strong>NZ$129</strong><small>/month + GST</small></p>
+            </div>
+            <div class="plan-metrics" aria-label="Growth key facts">
+              <div class="plan-metric"><span>Included</span><strong>250 quotes/month</strong></div>
+              <div class="plan-metric"><span>Extra quotes</span><strong>NZ$0.50 per extra quote</strong></div>
+              <div class="plan-metric"><span>Trial</span><strong>14 days, card upfront</strong></div>
+            </div>
+            <button class="button button-on-light" type="button" data-plan-select="growth" data-pricing-plan="growth">Start Growth trial</button>
+          </article>
+
+          <article class="pricing-card reveal" id="plan-scale" data-plan="scale">
+            <div class="plan-header">
+              <span class="badge">Custom setup</span>
+              <h3>Scale</h3>
+              <p class="plan-price"><strong>NZ$899</strong><small>/month + GST</small></p>
+            </div>
+            <div class="plan-metrics" aria-label="Scale key facts">
+              <div class="plan-metric"><span>Included</span><strong>1,000 quotes/month</strong></div>
+              <div class="plan-metric"><span>Extra quotes</span><strong>NZ$0.25 per extra quote</strong></div>
+              <div class="plan-metric"><span>Setup</span><strong>Custom terms</strong></div>
+            </div>
+            <button class="button button-on-light" type="button" data-plan-select="scale" data-pricing-plan="scale">Talk to us</button>
+          </article>
+        </div>
+      </div>
+      <div class="pricing-notes reveal" aria-label="Pricing notes">
+        <span>Community starts with no card.</span>
+        <span>Extra quote charges stay visible before you upgrade.</span>
+        <span>No Trennen checkout fee on standard plans.</span>
+        <span>Stripe/card processing stays separate.</span>
+      </div>
+      <div class="pricing-detail-link reveal">
+        <p>Need every plan rule in one place?</p>
+        <a class="button button-on-light" href="pricing.html">View full pricing details</a>
+      </div>
+    </section>
+
+    <section class="showcase section-pad" id="demo" aria-labelledby="showcase-title">
+      <div class="section-heading reveal">
+        <p class="eyebrow">Live widget demo</p>
+        <h2 id="showcase-title">Install it like a real customer.</h2>
+        <p>Paste the widget snippet into a quote page, or point a custom subdomain at Trennen for a hosted quote portal.</p>
+      </div>
+      <div class="demo-console reveal" aria-label="Live Trennen quote widget and customer path">
+        <aside class="demo-brief" aria-label="Live demo context">
+          <div class="demo-brief-copy">
+            <span>Embed quote tool</span>
+            <strong>One snippet adds the customer quote path.</strong>
+            <p>The widget can sit on WordPress, Wix, Squarespace, Shopify, or a custom site.</p>
+          </div>
+          <div class="demo-path" aria-label="Buyer path in the live widget">
+            <span class="demo-path-step"><strong>1</strong>Upload files</span>
+            <span class="demo-path-step"><strong>2</strong>Choose options</span>
+            <span class="demo-path-step"><strong>3</strong>Get price</span>
+          </div>
+          <div class="demo-proof" aria-label="What the live widget keeps connected">
+            <span class="demo-proof-item">
+              <strong>Hosted portal</strong>
+              <small>quotes.trennen.co.nz</small>
+            </span>
+            <span class="demo-proof-item">
+              <strong>Custom domain</strong>
+              <small>quote.yourdomain.com</small>
+            </span>
+          </div>
+        </aside>
+        <div class="live-software-frame technical-panel">
+          <div class="live-software-frame-head">
+            <div>
+              <span>Customer-style install</span>
+              <strong>Canonical widget snippet</strong>
+              <p>Use your public tenant ID. Theme attributes can match your brand.</p>
+            </div>
+            <a class="button button-secondary" href="integration.html">Setup guide</a>
+          </div>
+          <div class="live-software-widget-shell" data-live-software-widget-shell data-widget-state="loading" aria-label="Embedded Trennen sample quote flow">
+            <div class="live-software-loader" data-live-software-loader role="status" aria-live="polite">
+              <span>Widget preview</span>
+              <strong>Loading the public embed script...</strong>
+              <p>The public embed script loads here using the same snippet merchants paste into their quote page.</p>
+              <a class="button button-secondary" href="integration.html" data-live-software-fallback>Open setup guide</a>
+            </div>
+            <div id="trennen-quote-widget"></div>
+            <script src="https://embed.trennen.co.nz/widget.js" data-tenant-id="YOUR_TENANT_ID" data-theme-primary="#0077c8"></script>
+            <noscript>
+              <p>JavaScript is required to preview the quote widget here.</p>
+              <a class="button button-secondary" href="integration.html" data-live-software-fallback>Open setup guide</a>
+            </noscript>
+          </div>
+          <pre class="integration-snippet" aria-label="Trennen widget embed code"><code>&lt;div id="trennen-quote-widget"&gt;&lt;/div&gt;
+<span class="widget-code-line">&lt;script src="https://embed.trennen.co.nz/widget.js" data-tenant-id="YOUR_TENANT_ID" data-theme-primary="#0077c8"&gt;&lt;/script&gt;</span></code></pre>
+          <p class="live-software-note">For custom domain quoting, add a CNAME record: <code>quote</code> to <code>quotes.trennen.co.nz</code>.</p>
+          <div class="widget-preview-card">
+            <span>Brand controls</span>
+            <strong>Colors, fonts, and wording can match the shop.</strong>
+            <p>Use theme attributes for launch, then refine terminology during setup.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="workflow-brief section-pad" id="workflow" aria-labelledby="workflow-brief-title">
+      <div class="workflow-brief-shell reveal">
+        <div class="workflow-brief-copy">
+          <p class="eyebrow">Quote handoff</p>
+          <h2 id="workflow-brief-title">The quote record continues after approval.</h2>
+          <p>See how intake, pricing, approval, and job status stay attached after the buyer says yes.</p>
+          <a class="button button-primary" href="how-it-works.html">View how Trennen works</a>
+        </div>
+        <div class="workflow-bridge-board" aria-label="Compact Trennen quote-record handoff">
+          <div class="workflow-bridge-node">
+            <span>01</span>
+            <strong>Intake</strong>
+            <small>Files and notes</small>
+          </div>
+          <div class="workflow-bridge-node">
+            <span>02</span>
+            <strong>Pricing</strong>
+            <small>Shop rules</small>
+          </div>
+          <div class="workflow-bridge-record">
+            <span>Shared quote record</span>
+            <strong>Quote, approval, and status stay attached.</strong>
+          </div>
+          <div class="workflow-bridge-node">
+            <span>03</span>
+            <strong>Approval</strong>
+            <small>Buyer decision</small>
+          </div>
+          <div class="workflow-bridge-node">
+            <span>04</span>
+            <strong>Tracking</strong>
+            <small>Job handoff</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="faq faq-preview section-pad" id="faq" aria-labelledby="faq-title">
+      <div class="faq-shell" aria-label="Common Trennen questions">
+        <div class="faq-intro reveal">
+          <p class="eyebrow">Questions before you start</p>
+          <h2 id="faq-title">Answers before you choose.</h2>
+          <p>The main decisions are fit, plan volume, and payment setup. Everything else can wait.</p>
+          <div class="faq-topics" aria-label="FAQ topic guide">
+            <span class="faq-topic">Embedding</span>
+            <span class="faq-topic">Custom domains</span>
+            <span class="faq-topic">CMS setup</span>
+          </div>
+        </div>
+        <div class="faq-list reveal" data-faq-list>
+          <article class="faq-item">
+            <button class="faq-question" type="button" aria-expanded="false">How do I embed the quote widget?</button>
+            <div class="faq-answer">
+              <p>Create a quote page and paste the Trennen widget snippet into the body. The script loads the quote tool using your public tenant ID.</p>
+            </div>
+          </article>
+          <article class="faq-item">
+            <button class="faq-question" type="button" aria-expanded="false">Can I host the quote tool on my own domain?</button>
+            <div class="faq-answer">
+              <p>Yes. Add a CNAME so quote.yourdomain.com points to quotes.trennen.co.nz, then Trennen can serve the quote portal under your domain.</p>
+            </div>
+          </article>
+          <article class="faq-item">
+            <button class="faq-question" type="button" aria-expanded="false">Do I need coding skills?</button>
+            <div class="faq-answer">
+              <p>No. Most site builders support a Custom HTML, Embed, or Code Block. The setup guide covers WordPress, Wix, Squarespace, Shopify, and static sites.</p>
+            </div>
+          </article>
+          <a class="button button-on-light" href="faq.html">View all questions</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-cta final-compact" id="final" aria-labelledby="final-title">
+      <div class="final-panel reveal">
+        <div class="final-copy">
+          <p class="eyebrow">Ready when you are</p>
+          <h2 id="final-title">Ready to quote real work?</h2>
+          <p>Choose the plan that fits this month's quote volume.</p>
+        </div>
+        <div class="final-launch-card" aria-label="Recommended launch path">
+          <a class="button button-primary" href="#pricing" data-pricing-scroll data-event="final_cta_click">Start free</a>
+          <p>Community includes 5 free quotes/month. Paid trials use Stripe, with no Trennen checkout fee on standard plans.</p>
+          <ol class="final-steps" aria-label="What happens after choosing a plan">
+            <li class="final-step"><span>01</span><strong>Choose plan</strong></li>
+            <li class="final-step"><span>02</span><strong>Create shop</strong></li>
+            <li class="final-step"><span>03</span><strong>Send first quote</strong></li>
+          </ol>
+          <div class="final-secondary-actions" aria-label="Secondary actions">
+            <button class="button button-secondary" type="button" data-demo-open aria-controls="demoWalkthroughModal" data-event="final_cta_click">Request walkthrough</button>
+            <a href="#demo" data-event="final_cta_click">View demo</a>
+          </div>
+          <small>Need help mapping the quoting desk?</small>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-summary">
+      <a class="brand footer-brand" href="#top" aria-label="Trennen home">
+        <img class="brand-wordmark" src="assets/trennen-wordmark.svg" width="236" height="40" alt="Trennen">
+      </a>
+      <p>Instant 3D-printing quote widget, custom quote domains, material pricing, checkout, and dashboard tracking.</p>
+    </div>
+    <nav aria-label="Footer navigation">
+      <a class="footer-link-button" href="#pricing" data-pricing-scroll data-event="final_cta_click">Start free</a>
+      <a href="product.html">Product</a>
+      <a href="pricing.html">Pricing details</a>
+      <a href="integration.html">Integration guide</a>
+      <a href="changelog.html">Changelog</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="#demo">Try demo</a>
+      <a href="faq.html">FAQ</a>
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+    <p class="footer-meta">&copy; 2026 Trennen. Built for print shops that quote real work.</p>
+  </footer>
+
+  <div class="demo-modal" id="demoWalkthroughModal" data-demo-modal hidden>
+    <div class="demo-backdrop" data-demo-close></div>
+    <section class="demo-panel" role="dialog" aria-modal="true" aria-labelledby="demoModalTitle" aria-describedby="demoModalCopy">
+      <button class="signup-close" type="button" aria-label="Close walkthrough request" data-demo-close>&times;</button>
+      <div class="demo-modal-intro">
+        <p class="eyebrow">Request a walkthrough</p>
+        <h2 id="demoModalTitle">Plan your quote workflow.</h2>
+        <p id="demoModalCopy">Tell us how requests work today. We will follow up with a focused walkthrough.</p>
+        <ul class="demo-modal-points" aria-label="Walkthrough topics">
+          <li>Intake</li>
+          <li>Pricing</li>
+          <li>Checkout</li>
+        </ul>
+      </div>
+      <form class="demo-form" id="demo-form" novalidate>
+        <div class="honeypot" aria-hidden="true">
+          <label for="demo-website">Website</label>
+          <input id="demo-website" name="website" type="text" tabindex="-1" autocomplete="off">
+        </div>
+        <div class="form-row">
+          <label for="demo-name">Name</label>
+          <input id="demo-name" name="name" type="text" autocomplete="name" required>
+          <p class="field-error" data-field-error="name" aria-live="polite"></p>
+        </div>
+        <div class="form-row">
+          <label for="demo-email">Work email</label>
+          <input id="demo-email" name="email" type="email" autocomplete="email" required>
+          <p class="field-error" data-field-error="email" aria-live="polite"></p>
+        </div>
+        <div class="form-row">
+          <label for="demo-company">Company</label>
+          <input id="demo-company" name="company" type="text" autocomplete="organization" required>
+          <p class="field-error" data-field-error="company" aria-live="polite"></p>
+        </div>
+        <div class="form-row">
+          <label for="demo-volume">Monthly quote volume</label>
+          <select id="demo-volume" name="monthlyQuoteVolume" required>
+            <option value="">Select a range</option>
+            <option value="1-25">1 to 25 quotes</option>
+            <option value="26-100">26 to 100 quotes</option>
+            <option value="101-300">101 to 300 quotes</option>
+            <option value="300+">300+ quotes</option>
+          </select>
+          <p class="field-error" data-field-error="volume" aria-live="polite"></p>
+        </div>
+        <div class="form-row">
+          <label for="demo-message">What should Trennen help with?</label>
+          <textarea id="demo-message" name="message" rows="4" required></textarea>
+          <p class="field-error" data-field-error="message" aria-live="polite"></p>
+        </div>
+        <button class="button button-primary form-submit" id="demoLeadSubmit" type="submit">Request a walkthrough</button>
+        <p class="form-success" id="demo-success" role="status" aria-live="polite" hidden>Request received. We will follow up with a focused walkthrough.</p>
+        <p class="form-failure" id="demo-failure" role="alert" hidden>We could not send the request. Please try again.</p>
+      </form>
+    </section>
+  </div>
+
+  <div class="signup-modal" data-signup-modal hidden>
+    <div class="signup-backdrop" data-signup-close></div>
+    <section class="signup-panel" role="dialog" aria-modal="true" aria-labelledby="signupPlanTitle" aria-describedby="signupPlanCopy signupBillingNote">
+      <button class="signup-close" type="button" aria-label="Close signup" data-signup-close>&times;</button>
+      <div class="signup-summary">
+        <p class="eyebrow">Selected plan</p>
+        <h2 id="signupPlanTitle" data-signup-plan-title>Starter</h2>
+        <p id="signupPlanCopy" data-signup-plan-copy>For small shops ready to quote faster.</p>
+        <div class="signup-plan-facts">
+          <span data-signup-price>NZ$29/month + GST</span>
+          <span data-signup-quotes>25 quotes/month</span>
+          <span data-signup-trial>14-day trial, card upfront</span>
+          <span data-signup-checkout>No Trennen checkout fee</span>
+        </div>
+        <div class="signup-billing-note" id="signupBillingNote" data-signup-billing-note>
+          <strong>Card required to start trial.</strong>
+          <span>No charge until the trial ends. Stripe/card fees stay separate from Trennen fees.</span>
+        </div>
+        <div class="signup-next-steps" aria-label="What happens after signup">
+          <article class="signup-next-step">
+            <span>01</span>
+            <strong>Choose plan</strong>
+            <p>Pick the quote volume that fits your shop today.</p>
+          </article>
+          <article class="signup-next-step">
+            <span>02</span>
+            <strong>Confirm details</strong>
+            <p>Community creates a free account. Starter and Growth continue to Stripe Checkout.</p>
+          </article>
+          <article class="signup-next-step">
+            <span>03</span>
+            <strong>Open setup link</strong>
+            <p>Your secure setup link is sent by email after confirmation.</p>
+          </article>
+        </div>
+      </div>
+
+      <form class="signup-form" id="sales-signup-form" novalidate>
+        <div class="signup-form-heading">
+          <span class="signup-form-kicker">Account details</span>
+          <p class="signup-form-intro">Use the same details your shop should receive setup instructions on.</p>
+        </div>
+        <input id="signup-plan" name="plan" type="hidden" value="starter">
+        <div class="honeypot" aria-hidden="true">
+          <label for="signup-website">Website</label>
+          <input id="signup-website" name="website" type="text" tabindex="-1" autocomplete="off">
+        </div>
+
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="signup-name">Name</label>
+            <input id="signup-name" name="name" type="text" autocomplete="name" required>
+            <p class="field-error" data-signup-error="name" role="alert"></p>
+          </div>
+          <div class="form-row">
+            <label for="signup-email">Work email</label>
+            <input id="signup-email" name="email" type="email" autocomplete="email" required>
+            <p class="field-error" data-signup-error="email" role="alert"></p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="signup-company">Shop or company</label>
+            <input id="signup-company" name="company" type="text" autocomplete="organization" required>
+            <p class="field-error" data-signup-error="company" role="alert"></p>
+          </div>
+          <div class="form-row" data-self-serve-field>
+            <label for="signup-shopSlug">Shop URL</label>
+            <input id="signup-shopSlug" name="shopSlug" type="text" autocomplete="off" placeholder="your-shop" required>
+            <p class="field-error" data-signup-error="shopSlug" role="alert"></p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-row" data-self-serve-field>
+            <label for="signup-password">Password</label>
+            <input id="signup-password" name="password" type="password" autocomplete="new-password" required>
+            <p class="field-error" data-signup-error="password" role="alert"></p>
+          </div>
+          <div class="form-row">
+            <label for="signup-volume">Monthly quote volume</label>
+            <select id="signup-volume" name="monthlyQuoteVolume" required>
+              <option value="">Select a range</option>
+              <option value="1-25">1 to 25 quotes</option>
+              <option value="26-100">26 to 100 quotes</option>
+              <option value="101-300">101 to 300 quotes</option>
+              <option value="300+">300+ quotes</option>
+            </select>
+            <p class="field-error" data-signup-error="monthlyQuoteVolume" role="alert"></p>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label for="signup-message">What should Trennen help with first?</label>
+          <textarea id="signup-message" name="message" rows="4" required placeholder="Example: file uploads, material pricing, bank transfer, checkout, or order tracking."></textarea>
+          <p class="field-error" data-signup-error="message" role="alert"></p>
+        </div>
+
+        <label class="terms-check" for="signup-acceptTerms">
+          <input id="signup-acceptTerms" name="acceptTerms" type="checkbox" required>
+          <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Trennen Terms</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+        </label>
+        <p class="field-error" data-signup-error="acceptTerms" role="alert"></p>
+
+        <button class="button button-primary signup-submit" type="submit">Continue</button>
+        <p class="form-success" id="signup-success" role="status" aria-live="polite" hidden>Your account is ready. Check your email for the setup link.</p>
+        <p class="form-failure" id="signup-failure" role="alert" hidden>Something went wrong. Check the fields and try again.</p>
+        <p class="signup-fine-print">Trennen never handles card numbers. Starter and Growth continue to Stripe Checkout.</p>
+      </form>
+    </section>
+  </div>
+</body>
+</html>
