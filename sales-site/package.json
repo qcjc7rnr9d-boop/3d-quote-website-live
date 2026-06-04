@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "smoke": "node scripts/static-server-smoke.mjs && node scripts/design-quality-smoke.mjs && node scripts/seo-structured-data-smoke.mjs && node scripts/accessibility-content-smoke.mjs && node scripts/link-integrity-smoke.mjs && node scripts/information-architecture-smoke.mjs && node scripts/brand-copy-smoke.mjs && node scripts/responsive-layout-smoke.mjs",
+    "smoke": "node scripts/static-server-smoke.mjs && node scripts/design-quality-smoke.mjs && node scripts/seo-structured-data-smoke.mjs && node scripts/accessibility-content-smoke.mjs && node scripts/link-integrity-smoke.mjs && node scripts/information-architecture-smoke.mjs && node scripts/brand-copy-smoke.mjs && node scripts/responsive-layout-smoke.mjs && node scripts/widget-runtime-smoke.mjs",
     "quality": "node scripts/design-quality-smoke.mjs && node scripts/seo-structured-data-smoke.mjs && node scripts/accessibility-content-smoke.mjs && node scripts/link-integrity-smoke.mjs && node scripts/information-architecture-smoke.mjs && node scripts/brand-copy-smoke.mjs && node scripts/responsive-layout-smoke.mjs"
   }
 }

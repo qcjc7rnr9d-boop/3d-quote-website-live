@@ -34,6 +34,8 @@ const js = readFileSync(new URL('assets/sales.js', root), 'utf8');
 const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
 
 assert.match(html, /<meta http-equiv="Content-Security-Policy" content="[^"]*https:\/\/embed\.trennen\.co\.nz[^"]*https:\/\/quotes\.trennen\.co\.nz/);
+assert.match(html, /frame-src[^"]*https:\/\/embed\.trennen\.co\.nz[^"]*https:\/\/quotes\.trennen\.co\.nz[^"]*https:\/\/app\.trennen\.co\.nz/, 'homepage CSP should allow the hosted widget iframe origin');
+assert.match(html, /child-src[^"]*https:\/\/embed\.trennen\.co\.nz[^"]*https:\/\/quotes\.trennen\.co\.nz[^"]*https:\/\/app\.trennen\.co\.nz/, 'homepage CSP should allow the hosted widget child origin');
 assert.match(html, /<title>Trennen &mdash; Instant 3D Printing Quote Widget<\/title>/);
 assert.match(html, /<meta name="description" content="Embed instant 3D-printing quotes on your own website/);
 assert.match(html, /<script src="https:\/\/embed\.trennen\.co\.nz\/widget\.js" data-tenant-id="ten_XtI4xnABbNGOdSUv6Uqm" data-theme-primary="#0077c8"><\/script>/);

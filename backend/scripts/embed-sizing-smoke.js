@@ -168,6 +168,9 @@ async function run() {
   assert.match(widgetJs, /data-min-height/, 'widget should support data-min-height');
   assert.match(widgetJs, /data-max-height/, 'widget should support data-max-height');
   assert.match(widgetJs, /embed:\s*'1'|searchParams\.set\(['"]embed['"],\s*['"]1['"]\)/, 'widget iframe src should enable embedded mode');
+  assert.match(widgetJs, /iframe\.loading\s*=\s*['"]eager['"]/, 'widget iframe should load eagerly once inserted');
+  assert.match(widgetJs, /data-trennen-quote-status|dataset\.trennenQuoteStatus/, 'widget should expose a visible loading/error status');
+  assert.match(widgetJs, /The quote tool did not finish loading/, 'widget should show a safe error fallback if the iframe never becomes ready');
   assert.doesNotMatch(widgetJs, /quote\.html/, 'widget iframe must not start on the empty quote review page');
 
   const normalQuote = await fetch(`${base}/quote.html?shop=${slug}`);

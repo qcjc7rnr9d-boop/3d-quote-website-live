@@ -320,12 +320,28 @@ function sendEmbedWidget(req, res) {
   if (shop) query.set('shop', shop);
   if (themePrimary) query.set('theme_primary', themePrimary);
   if (themeFont) query.set('theme_font', themeFont);
+  const status = document.createElement('div');
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  status.dataset.trennenQuoteStatus = 'loading';
+  status.textContent = 'Loading quote tool...';
+  status.style.cssText = [
+    'box-sizing:border-box',
+    'width:100%',
+    'padding:12px 14px',
+    'margin:0 0 10px',
+    'border:1px solid #dfe5db',
+    'border-radius:10px',
+    'background:#f7f4ee',
+    'color:#354037',
+    'font:14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'
+  ].join(';');
   const iframe = document.createElement('iframe');
   iframe.src = shop
     ? quoteBaseUrl + '/index.html?' + query.toString()
     : quoteBaseUrl + '/embed/quote?' + query.toString();
   iframe.title = script.dataset.title || 'Instant 3D quote';
-  iframe.loading = 'lazy';
+  iframe.loading = 'eager';
   iframe.style.width = '100%';
   iframe.style.minHeight = minHeight + 'px';
   iframe.style.height = minHeight + 'px';
@@ -335,6 +351,25 @@ function sendEmbedWidget(req, res) {
   iframe.setAttribute('scrolling', 'no');
   iframe.setAttribute('allow', 'payment');
   iframe.dataset.trennenQuoteFrame = 'true';
+  let frameReady = false;
+  const markFrameReady = () => {
+    frameReady = true;
+    status.hidden = true;
+    if (loadTimer) window.clearTimeout(loadTimer);
+  };
+  const loadTimer = window.setTimeout(() => {
+    if (frameReady) return;
+    const link = document.createElement('a');
+    link.href = iframe.src || quoteBaseUrl;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = 'Open the quote page';
+    status.dataset.trennenQuoteStatus = 'error';
+    status.setAttribute('role', 'alert');
+    status.textContent = 'The quote tool did not finish loading. ';
+    status.appendChild(link);
+    status.appendChild(document.createTextNode('.'));
+  }, 9000);
   if (tenant) {
     fetch(baseUrl + '/api/embed/config?tenant=' + encodeURIComponent(tenant), { credentials: 'omit' })
       .then(res => res.ok ? res.json() : null)
@@ -359,13 +394,20 @@ function sendEmbedWidget(req, res) {
     }
     const data = event.data || {};
     if (data.type !== 'trennen:embed-resize') return;
+    markFrameReady();
     iframe.style.height = clampHeight(data.height) + 'px';
   });
   const mountSelector = script.dataset.mount;
   const explicitMount = mountSelector ? document.querySelector(mountSelector) : null;
   const defaultMount = document.getElementById('trennen-quote-widget');
   const mount = explicitMount || defaultMount;
-  (mount || script.parentNode).insertBefore(iframe, mount ? null : script.nextSibling);
+  if (mount) {
+    mount.appendChild(status);
+    mount.appendChild(iframe);
+  } else if (script.parentNode) {
+    script.parentNode.insertBefore(status, script.nextSibling);
+    script.parentNode.insertBefore(iframe, status.nextSibling);
+  }
 })();`);
 }
 
