@@ -11,6 +11,7 @@ const email = 'alex@trennen-demo.test';
 const shopSlug = 'trennen';
 let originalHash = null;
 let token = null;
+const staleSessionId = 'customer-reset-stale-session';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -73,6 +74,28 @@ try {
   assert(tokenRow?.token, 'Forgot endpoint did not store a customer reset token');
   token = tokenRow.token;
 
+  db.prepare(`
+    INSERT OR REPLACE INTO app_sessions (sid, sess, expires_at)
+    VALUES (?, ?, ?)
+  `).run(staleSessionId, JSON.stringify({
+    cookie: {
+      originalMaxAge: 3600000,
+      expires: new Date(Date.now() + 3600000).toISOString(),
+      secure: false,
+      httpOnly: true,
+      path: '/',
+      sameSite: 'strict',
+    },
+    customerId: account.id,
+    customerShopId: account.shop_id,
+  }), Date.now() + 3600000);
+  db.prepare(`
+    INSERT OR REPLACE INTO customer_sessions (
+      shop_id, customer_account_id, token, ip, user_agent, expires_at
+    )
+    VALUES (?, ?, ?, '127.0.0.1', 'Smoke', datetime('now', '+1 hour'))
+  `).run(account.shop_id, account.id, staleSessionId);
+
   const verified = await api(`/api/customer/reset-password/verify?token=${encodeURIComponent(token)}`);
   assert(verified.valid === true, 'Reset token should verify before use');
 
@@ -84,6 +107,8 @@ try {
 
   const updated = db.prepare('SELECT password_hash FROM customer_accounts WHERE id = ?').get(account.id);
   assert(await bcrypt.compare(newPassword, updated.password_hash), 'Reset password did not update customer hash');
+  assert(!db.prepare('SELECT sid FROM app_sessions WHERE sid = ?').get(staleSessionId), 'Password reset must remove active app sessions');
+  assert(!db.prepare('SELECT token FROM customer_sessions WHERE token = ?').get(staleSessionId), 'Password reset must remove customer session records');
 
   await api(`/api/customer/reset-password/verify?token=${encodeURIComponent(token)}`, {}, 400);
   console.log('Customer password reset smoke checks passed.');
@@ -94,5 +119,7 @@ try {
   if (token) {
     db.prepare('DELETE FROM customer_reset_tokens WHERE token = ?').run(token);
   }
+  db.prepare('DELETE FROM app_sessions WHERE sid = ?').run(staleSessionId);
+  db.prepare('DELETE FROM customer_sessions WHERE token = ?').run(staleSessionId);
   db.close();
 }

@@ -215,6 +215,20 @@
     .inline-message { min-height: 18px; font-size: 12px; color: var(--muted); }
     .inline-message.error { color: #b42318; }
     .inline-message.success { color: var(--sage-dark); }
+    .session-list { display: grid; gap: 10px; }
+    .session-row {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--off-white);
+      padding: 13px 14px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+    .session-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+    .session-meta { margin-top: 4px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .session-current { color: var(--sage-dark); font-weight: 700; }
 
     .help-lines { display: grid; gap: 14px; }
     .help-intro {
@@ -419,7 +433,7 @@
           <div class="card-head">
             <div>
               <div class="card-title">Password</div>
-              <div class="card-sub">Change the password for your customer account.</div>
+              <div class="card-sub">Use at least 12 characters with a number and symbol.</div>
             </div>
           </div>
           <div class="card-body">
@@ -437,6 +451,24 @@
                 <span class="inline-message" id="passwordMsg"></span>
               </div>
             </form>
+          </div>
+        </div>
+        <div class="portal-card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Active sessions</div>
+              <div class="card-sub">Review browsers signed in to this customer account.</div>
+            </div>
+            <button class="btn btn-light" type="button" id="refreshSessionsBtn">Refresh</button>
+          </div>
+          <div class="card-body">
+            <div class="session-list" id="sessionsList">
+              <div class="form-hint">Loading sessions...</div>
+            </div>
+            <div class="btn-row" style="margin-top:14px">
+              <button class="btn btn-light" type="button" id="revokeOtherSessionsBtn">Sign out other sessions</button>
+              <span class="inline-message" id="sessionsMsg"></span>
+            </div>
           </div>
         </div>
         <div class="portal-card">
@@ -894,6 +926,7 @@
       renderRecentOrders('recentOrders', orders.slice(0, 4));
       renderQuotes();
       renderHelp();
+      loadCustomerSessions().catch(() => {});
       setTab((location.hash || '#overview').slice(1), false);
     }
 
@@ -938,6 +971,50 @@
       } catch (err) {
         setQuotesMessage(err.message || 'Could not save the pending quote.', 'error');
       }
+    }
+
+    function sessionLabel(session) {
+      if (session.is_current) return 'This browser';
+      return session.user_agent ? 'Signed-in browser' : 'Customer portal session';
+    }
+
+    function renderCustomerSessions(list) {
+      const target = document.getElementById('sessionsList');
+      if (!target) return;
+      if (!Array.isArray(list) || !list.length) {
+        target.innerHTML = '<div class="form-hint">No active sessions were found.</div>';
+        return;
+      }
+      target.innerHTML = list.map(session => `
+        <div class="session-row">
+          <div>
+            <div class="session-title">${esc(sessionLabel(session))}${session.is_current ? ' <span class="session-current">Current</span>' : ''}</div>
+            <div class="session-meta">
+              ${esc(session.ip_address || 'IP not recorded')} · Last active ${esc(fmtDate(session.last_seen_at || session.created_at))}<br>
+              Expires ${esc(fmtDate(session.expires_at))}
+            </div>
+          </div>
+          ${session.is_current ? '<span class="badge badge-sage">Current</span>' : `<button class="btn btn-light" type="button" data-revoke-session="${esc(session.id)}">Revoke</button>`}
+        </div>
+      `).join('');
+    }
+
+    async function loadCustomerSessions() {
+      const target = document.getElementById('sessionsList');
+      if (!target) return;
+      const res = await fetch('/api/customer/sessions');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not load sessions.');
+      renderCustomerSessions(data.sessions || []);
+    }
+
+    async function revokeCustomerSession(id) {
+      setMessage('sessionsMsg', 'Revoking...');
+      const res = await fetch(`/api/customer/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not revoke session.');
+      setMessage('sessionsMsg', 'Session revoked.', 'success');
+      await loadCustomerSessions();
     }
 
     document.querySelectorAll('[data-tab]').forEach(btn => {
@@ -1025,9 +1102,49 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Could not change password.');
         document.getElementById('passwordForm').reset();
-        setMessage('passwordMsg', 'Password changed.', 'success');
+        setMessage('passwordMsg', 'Password changed. Sign in again to continue.', 'success');
+        setTimeout(() => { window.location.href = loginUrl(); }, 900);
       } catch (err) {
         setMessage('passwordMsg', err.message || 'Could not change password.', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('refreshSessionsBtn').addEventListener('click', async () => {
+      setMessage('sessionsMsg', 'Refreshing...');
+      try {
+        await loadCustomerSessions();
+        setMessage('sessionsMsg', 'Sessions refreshed.', 'success');
+      } catch (err) {
+        setMessage('sessionsMsg', err.message || 'Could not refresh sessions.', 'error');
+      }
+    });
+
+    document.getElementById('sessionsList').addEventListener('click', async e => {
+      const btn = e.target.closest('[data-revoke-session]');
+      if (!btn) return;
+      btn.disabled = true;
+      try {
+        await revokeCustomerSession(btn.dataset.revokeSession);
+      } catch (err) {
+        setMessage('sessionsMsg', err.message || 'Could not revoke session.', 'error');
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('revokeOtherSessionsBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('revokeOtherSessionsBtn');
+      btn.disabled = true;
+      setMessage('sessionsMsg', 'Signing out other sessions...');
+      try {
+        const res = await fetch('/api/customer/sessions/revoke-all', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not revoke sessions.');
+        setMessage('sessionsMsg', 'Other sessions signed out.', 'success');
+        await loadCustomerSessions();
+      } catch (err) {
+        setMessage('sessionsMsg', err.message || 'Could not revoke sessions.', 'error');
       } finally {
         btn.disabled = false;
       }

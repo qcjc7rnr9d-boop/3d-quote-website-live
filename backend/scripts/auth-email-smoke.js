@@ -59,9 +59,10 @@ try {
     }),
   }, 201);
 
-  const account = db.prepare('SELECT email, name FROM customer_accounts WHERE shop_id = ?').get(shopId);
+  const account = db.prepare('SELECT id, email, name, email_verified FROM customer_accounts WHERE shop_id = ?').get(shopId);
   assert(account.email === 'qa+smoke@sub.example.com', `Customer email was not normalized: ${account.email}`);
   assert(account.name === 'Plus Alias Customer', `Customer name was not trimmed: ${account.name}`);
+  assert(account.email_verified === 0, 'New customer accounts must require email verification');
 
   await api('/api/customer/register', {
     method: 'POST',
@@ -72,6 +73,27 @@ try {
       password: 'CustomerSmoke!2026',
     }),
   }, 400);
+
+  await api('/api/customer/login', {
+    method: 'POST',
+    body: JSON.stringify({
+      shopSlug: slug,
+      email: ' QA+SMOKE@SUB.EXAMPLE.COM ',
+      password: 'CustomerSmoke!2026',
+    }),
+  }, 403);
+
+  const tokenRow = db.prepare(`
+    SELECT token
+    FROM customer_email_verification_tokens
+    WHERE customer_account_id = ? AND used = 0
+    ORDER BY id DESC
+  `).get(account.id);
+  assert(tokenRow?.token, 'Customer registration must create an email verification token');
+  await api('/api/customer/verify-email', {
+    method: 'POST',
+    body: JSON.stringify({ token: tokenRow.token }),
+  });
 
   await api('/api/customer/login', {
     method: 'POST',

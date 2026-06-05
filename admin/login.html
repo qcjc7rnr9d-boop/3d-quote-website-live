@@ -35,7 +35,7 @@
 <body class="admin-body">
 
   <div class="auth-page">
-    <a href="../quote.html?shop=trennen" class="auth-wordmark">Trennen</a>
+    <a href="../index.html?shop=trennen" class="auth-wordmark">Trennen</a>
 
     <div class="auth-card fade-up" role="main">
 
@@ -81,6 +81,19 @@
           >
         </div>
 
+        <div class="form-group" id="mfaGroup" style="display:none">
+          <label class="form-label" for="mfaCode">Authenticator code</label>
+          <input
+            class="form-input"
+            type="text"
+            id="mfaCode"
+            name="mfaCode"
+            placeholder="6-digit code"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+          >
+        </div>
+
         <button type="button" class="btn btn-primary full" style="margin-top:8px;" onclick="doLogin()">
           Sign in
         </button>
@@ -120,6 +133,7 @@
           body: JSON.stringify({
             email:    document.getElementById('email').value,
             password: document.getElementById('password').value,
+            mfaCode:  document.getElementById('mfaCode').value,
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -130,6 +144,7 @@
             window.location.href = 'dashboard.html';
           }
         } else {
+          if (data.mfa_required) document.getElementById('mfaGroup').style.display = '';
           errEl.textContent = res.status === 429
             ? 'Too many login attempts. Wait 15 minutes or ask the platform owner to reset the login window.'
             : (data.error || 'Incorrect email or password');

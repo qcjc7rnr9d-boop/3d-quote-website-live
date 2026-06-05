@@ -123,6 +123,13 @@
     .price-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
     .price-row.total { font-weight: 500; font-size: 14px; padding-top: 8px; border-top: 1px solid var(--stone); }
     .stripe-id-code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--muted); }
+    .refund-panel {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid rgba(192,57,43,0.25);
+      border-radius: var(--radius);
+      background: rgba(192,57,43,0.04);
+    }
     .modal-section-gap { margin-top: 18px; }
   </style>
   <script src="../assets/brand.js" defer></script>
@@ -309,6 +316,13 @@
           <div class="order-detail-section-title">Stripe payment</div>
           <code class="stripe-id-code" id="detStripeId">—</code>
         </div>
+        <div class="refund-panel" id="refundPanel" style="display:none">
+          <div class="order-detail-section-title">Refund</div>
+          <div class="price-row"><span>Refunded</span><span id="detRefunded">—</span></div>
+          <button class="btn btn-outline" id="refundOrderBtn" type="button" style="height:34px;font-size:12px;padding:0 14px;color:#C0392B;border-color:rgba(192,57,43,0.4);margin-top:8px">
+            Refund remaining payment
+          </button>
+        </div>
       </div>
     </div>
 
@@ -385,6 +399,7 @@
   let currentPage = 1;
   let totalPages = 1;
   let currentOrderId = null;
+  let currentOrder = null;
   let updating = false;
 
   const LIMIT = 20;
@@ -513,6 +528,7 @@
   // ── Order detail modal ────────────────────────────────────────
   async function openOrderModal(orderId) {
     currentOrderId = orderId;
+    currentOrder = null;
     document.getElementById('orderModalTitle').textContent = `Order #${orderId}`;
     document.getElementById('orderModal').classList.remove('hidden');
     document.getElementById('modalError').style.display = 'none';
@@ -528,6 +544,7 @@
       const r = await fetch(`/api/orders/${orderId}`);
       if (!r.ok) throw new Error('Not found');
       const o = await r.json();
+      currentOrder = o;
 
       document.getElementById('orderModalTitle').textContent = `Order #${o.id}`;
       document.getElementById('detCustomerName').textContent = o.customer_name || '—';
@@ -551,6 +568,14 @@
       document.getElementById('detTax').textContent          = fmtCurrency(o.tax);
       document.getElementById('detTotal').textContent        = fmtCurrency(o.total);
       document.getElementById('detStripeId').textContent     = o.stripe_payment_id || '—';
+      const refundedCents = Number(o.refunded_cents || 0);
+      const refundPanel = document.getElementById('refundPanel');
+      const refundBtn = document.getElementById('refundOrderBtn');
+      document.getElementById('detRefunded').textContent = fmtCurrency(refundedCents / 100);
+      const refundable = !!o.stripe_payment_id && ['paid', 'partially_refunded'].includes(o.payment_status) && refundedCents < Math.round(Number(o.customer_total_cents || o.total * 100 || 0));
+      refundPanel.style.display = o.stripe_payment_id ? '' : 'none';
+      refundBtn.disabled = !refundable;
+      refundBtn.textContent = refundable ? 'Refund remaining payment' : 'No refundable balance';
       document.getElementById('orderNotes').value     = o.notes || '';
       document.getElementById('trackingNumber').value  = o.tracking_number || '';
       document.getElementById('trackingUrl').value     = o.tracking_url || '';
@@ -683,6 +708,38 @@
     } finally {
       btn.disabled = false;
       updating = false;
+    }
+  });
+
+  document.getElementById('refundOrderBtn').addEventListener('click', async () => {
+    if (!currentOrderId || updating || !currentOrder) return;
+    if (!confirm('Refund the remaining Stripe payment for this order? This will also reverse the connected transfer where Stripe allows it.')) return;
+    updating = true;
+    const btn = document.getElementById('refundOrderBtn');
+    const errEl = document.getElementById('modalError');
+    const succEl = document.getElementById('modalSuccess');
+    btn.disabled = true;
+    btn.textContent = 'Refunding…';
+    errEl.style.display = 'none';
+    succEl.style.display = 'none';
+    try {
+      const r = await fetch(`/api/stripe/orders/${currentOrderId}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Refund failed');
+      succEl.textContent = 'Refund started in Stripe.';
+      succEl.style.display = 'block';
+      await openOrderModal(currentOrderId);
+      loadOrders(currentPage);
+    } catch (err) {
+      errEl.textContent = err.message || 'Refund failed. Check Stripe and try again.';
+      errEl.style.display = 'block';
+    } finally {
+      updating = false;
+      btn.disabled = false;
     }
   });
 

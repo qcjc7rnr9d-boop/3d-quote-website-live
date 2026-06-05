@@ -7,7 +7,7 @@ export const SESSION_DAYS         = 7;          // session cookie lifetime
 export const RESET_TOKEN_HOURS    = 1;          // password-reset token expiry
 export const LOGIN_MAX_ATTEMPTS   = 5;          // rate-limit: max login tries
 export const LOGIN_WINDOW_MINUTES = 15;         // rate-limit: rolling window
-export const MIN_PASSWORD_LENGTH  = 8;          // enforced on change-password route
+export const MIN_PASSWORD_LENGTH  = 12;         // enforced on admin/customer password routes
 export const UPLOAD_MAX_MB        = 250;        // STL file upload limit
 
 // Pricing defaults (applied when a shop hasn't configured their own)

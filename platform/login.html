@@ -54,6 +54,17 @@
             required
           >
         </div>
+        <div class="form-group" id="mfaGroup" style="display:none">
+          <label class="form-label" for="mfaCode">Authenticator code</label>
+          <input
+            class="form-input"
+            type="text"
+            id="mfaCode"
+            placeholder="6-digit code"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+          >
+        </div>
 
         <button type="button" class="btn btn-primary full" style="margin-top:8px" onclick="doLogin()">
           Sign in
@@ -90,13 +101,16 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: document.getElementById('email').value,
-            password: document.getElementById('password').value
+            password: document.getElementById('password').value,
+            mfaCode: document.getElementById('mfaCode').value
           })
         });
         const data = await r.json();
         if (r.ok && data.ok) {
           window.location.href = '/platform/admin.html';
         } else {
+          if (data.mfa_required) document.getElementById('mfaGroup').style.display = '';
+          errEl.textContent = data.error || 'Incorrect email or password';
           errEl.classList.add('visible');
           btn.disabled = false;
           btn.textContent = 'Sign in';

@@ -619,8 +619,10 @@ function upsertStoreSettings(db, shopId) {
 
 function insertDemoCustomer(db, shopId, passwordHash) {
   db.prepare(`
-    INSERT INTO customer_accounts (shop_id, email, name, password_hash, created_at)
-    VALUES (?, ?, ?, ?, datetime('now'))
+    INSERT INTO customer_accounts (
+      shop_id, email, name, password_hash, email_verified, email_verified_at, created_at
+    )
+    VALUES (?, ?, ?, ?, 1, datetime('now'), datetime('now'))
   `).run(shopId, DEMO_CUSTOMER_EMAIL, DEMO_CUSTOMER_NAME, passwordHash);
 
   db.prepare(`

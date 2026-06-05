@@ -1,12 +1,19 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
 import rateLimit from 'express-rate-limit';
 import { db, requireShopAuth } from '../middleware/auth.js';
 import { sendMail } from '../lib/mailer.js';
 import { renderTemplate } from '../lib/email-templates/index.js';
 import { buildEmailIdempotencyKey } from '../lib/email-delivery.js';
+import {
+  generateTotpSecret,
+  protectMfaSecret,
+  revealMfaSecret,
+  totpUri,
+  verifyTotpCode,
+} from '../lib/mfa.js';
+import { ensureSecurityHardeningSchema } from '../lib/security-hardening.js';
 import {
   getMerchantLegalStatus,
   recordMerchantLegalAcceptance,
@@ -20,13 +27,16 @@ import {
 } from '../config.js';
 
 const router = Router();
+ensureSecurityHardeningSchema(db);
+const smokeRateLimitSkip = req => process.env.NODE_ENV !== 'production' && req.get('x-smoke-test') === '1';
 
 const loginLimiter = rateLimit({
   windowMs: LOGIN_WINDOW_MINUTES * 60 * 1000,
   max: LOGIN_MAX_ATTEMPTS,
   message: { error: 'Too many login attempts, please try again later' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: smokeRateLimitSkip,
 });
 
 const resetLimiter = rateLimit({
@@ -34,7 +44,8 @@ const resetLimiter = rateLimit({
   max: 5,
   message: { ok: true, message: "If that email is registered, you'll receive a reset link shortly." },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: smokeRateLimitSkip,
 });
 
 function validatePasswordStrength(password) {
@@ -56,7 +67,7 @@ function validatePasswordStrength(password) {
 // POST /api/auth/login
 router.post('/login', loginLimiter, async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, mfaCode } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
@@ -69,6 +80,19 @@ router.post('/login', loginLimiter, async (req, res) => {
     const valid = await bcrypt.compare(password, shop.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'Incorrect email or password' });
+    }
+
+    if (shop.mfa_enabled) {
+      if (!mfaCode) {
+        return res.status(202).json({
+          ok: false,
+          mfa_required: true,
+          error: 'Enter your authenticator code.',
+        });
+      }
+      if (!verifyTotpCode(revealMfaSecret(shop.mfa_secret), mfaCode)) {
+        return res.status(401).json({ error: 'Incorrect authenticator code' });
+      }
     }
 
     req.session.shopId = shop.id;
@@ -111,7 +135,7 @@ router.get('/me', requireShopAuth, (req, res) => {
     id, name, slug, email, plan, is_temp_password, stripe_account_id,
     stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted,
     billing_status, billing_current_period_end,
-    created_at
+    created_at, mfa_enabled
   } = req.shop;
   // Pull branding so admin pages can render the shop's tagline/logo
   const s = db.prepare(
@@ -124,11 +148,81 @@ router.get('/me', requireShopAuth, (req, res) => {
     stripe_details_submitted: !!stripe_details_submitted,
     billing_status: billing_status || 'pending_subscription',
     billing_current_period_end: billing_current_period_end || null,
+    mfa_enabled: !!mfa_enabled,
     tagline:  s.tagline  || null,
     logo_url: s.logo_url || null,
     phone:    s.phone    || null,
     address:  s.address  || null,
   });
+});
+
+// POST /api/auth/mfa/setup
+router.post('/mfa/setup', requireShopAuth, (req, res) => {
+  try {
+    const secret = generateTotpSecret();
+    req.session.pendingShopMfaSecret = secret;
+    res.json({
+      ok: true,
+      secret,
+      otpauth_url: totpUri({
+        secret,
+        accountName: req.shop.email || req.shop.slug,
+        issuer: 'Trennen Shop Admin',
+      }),
+    });
+  } catch (err) {
+    console.error('Shop MFA setup error:', err);
+    res.status(500).json({ error: 'Could not start MFA setup.' });
+  }
+});
+
+// POST /api/auth/mfa/enable
+router.post('/mfa/enable', requireShopAuth, (req, res) => {
+  try {
+    const secret = req.session.pendingShopMfaSecret;
+    const code = String(req.body?.code || req.body?.mfaCode || '');
+    if (!secret) return res.status(400).json({ error: 'Start MFA setup first.' });
+    if (!verifyTotpCode(secret, code)) return res.status(400).json({ error: 'Incorrect authenticator code.' });
+    db.prepare(`
+      UPDATE shops
+      SET mfa_enabled = 1,
+          mfa_secret = ?,
+          mfa_enabled_at = datetime('now'),
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).run(protectMfaSecret(secret), req.shop.id);
+    req.session.pendingShopMfaSecret = null;
+    res.json({ ok: true, mfa_enabled: true });
+  } catch (err) {
+    console.error('Shop MFA enable error:', err);
+    res.status(500).json({ error: 'Could not enable MFA.' });
+  }
+});
+
+// POST /api/auth/mfa/disable
+router.post('/mfa/disable', requireShopAuth, async (req, res) => {
+  try {
+    const password = String(req.body?.password || '');
+    const code = String(req.body?.code || req.body?.mfaCode || '');
+    if (!password || !code) return res.status(400).json({ error: 'Password and authenticator code are required.' });
+    const validPassword = await bcrypt.compare(password, req.shop.password_hash);
+    if (!validPassword) return res.status(401).json({ error: 'Current password is incorrect.' });
+    if (!verifyTotpCode(revealMfaSecret(req.shop.mfa_secret), code)) {
+      return res.status(401).json({ error: 'Incorrect authenticator code.' });
+    }
+    db.prepare(`
+      UPDATE shops
+      SET mfa_enabled = 0,
+          mfa_secret = NULL,
+          mfa_enabled_at = NULL,
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).run(req.shop.id);
+    res.json({ ok: true, mfa_enabled: false });
+  } catch (err) {
+    console.error('Shop MFA disable error:', err);
+    res.status(500).json({ error: 'Could not disable MFA.' });
+  }
 });
 
 // GET /api/auth/legal/status
