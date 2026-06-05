@@ -20,8 +20,20 @@ import {
 } from '../lib/customer-privacy.js';
 import { getShopBySlug, normaliseShopSlug } from '../lib/shop-lookup.js';
 import { resolveShopForEmbed } from '../lib/embed.js';
+import {
+  deleteCustomerSessionByToken,
+  ensureSecurityHardeningSchema,
+  issueCustomerEmailVerificationToken,
+  listCustomerSessions,
+  markCustomerEmailVerified,
+  recordCustomerSession,
+  revokeCustomerSession,
+  revokeCustomerSessions,
+} from '../lib/security-hardening.js';
+import { SESSION_DAYS } from '../config.js';
 
 const router = Router();
+ensureSecurityHardeningSchema(db);
 const smokeRateLimitSkip = req => process.env.NODE_ENV !== 'production' && req.get('x-smoke-test') === '1';
 const customerLoginLimiter = rateLimit({
   windowMs: LOGIN_WINDOW_MINUTES * 60 * 1000,
@@ -144,6 +156,7 @@ function paymentLabel(status) {
     paid: 'Paid',
     failed: 'Failed',
     refunded: 'Refunded',
+    partially_refunded: 'Partially refunded',
   }[status] || status || 'Pending';
 }
 
@@ -369,10 +382,62 @@ function customerResetMessage() {
 }
 
 function validateCustomerPassword(password) {
-  if (!password || String(password).length < MIN_PASSWORD_LENGTH) {
+  const value = String(password || '');
+  if (value.length < MIN_PASSWORD_LENGTH) {
     return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
   }
+  if (!/[A-Z]/.test(value)) return 'Password must contain at least one uppercase letter.';
+  if (!/[0-9]/.test(value)) return 'Password must contain at least one digit.';
+  if (!/[^A-Za-z0-9]/.test(value)) return 'Password must contain at least one special character.';
   return null;
+}
+
+function customerSessionExpiresAt() {
+  return new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .replace('T', ' ')
+    .replace(/\.\d+Z$/, '');
+}
+
+function setCustomerSession(req, account, shop) {
+  req.session.customerId = account.id;
+  req.session.customerShopId = shop.id;
+  recordCustomerSession(db, {
+    accountId: account.id,
+    shopId: shop.id,
+    token: req.sessionID,
+    ip: req.ip,
+    userAgent: req.get('user-agent') || null,
+    expiresAt: customerSessionExpiresAt(),
+  });
+}
+
+function clearCustomerSession(req) {
+  const token = req.sessionID;
+  deleteCustomerSessionByToken(db, token);
+  db.prepare('DELETE FROM app_sessions WHERE sid = ?').run(token);
+  req.session.customerId = null;
+  req.session.customerShopId = null;
+}
+
+async function sendCustomerVerificationEmail({ shop, account, token }) {
+  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+  const verifyLink = `${baseUrl}/customer/verify-email.html?shop=${encodeURIComponent(shop.slug)}&token=${encodeURIComponent(token)}`;
+  await sendMail({
+    shopId: shop.id,
+    shopSlug: shop.slug,
+    templateId: 'customer_email_verification',
+    category: 'account',
+    idempotencyKey: buildEmailIdempotencyKey('customer-email-verify', account.id, token),
+    to: account.email,
+    subject: `Verify your ${shop.name} customer account`,
+    text: `Verify your customer account using this link. It expires in 24 hours:\n\n${verifyLink}\n\nIf you did not create this account, you can ignore this email.`,
+    html: `
+      <p>Verify your customer account using the link below.</p>
+      <p><a href="${verifyLink}">Verify email address</a></p>
+      <p>This link expires in 24 hours. If you did not create this account, you can ignore this email.</p>
+    `,
+  });
 }
 
 // ── Auth middleware for customer portal ───────────────────────
@@ -576,8 +641,9 @@ router.post('/register', customerRegisterLimiter, async (req, res) => {
     if (!isValidCustomerEmail(normalisedEmail)) {
       return res.status(400).json({ error: 'Enter a valid email address' });
     }
-    if (password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    const strengthError = validateCustomerPassword(password);
+    if (strengthError) {
+      return res.status(400).json({ error: strengthError });
     }
 
     const shop = getPublicShopFromBody(req.body || {});
@@ -587,13 +653,21 @@ router.post('/register', customerRegisterLimiter, async (req, res) => {
 
     try {
       const result = db.prepare(`
-        INSERT INTO customer_accounts (shop_id, email, name, password_hash)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO customer_accounts (shop_id, email, name, password_hash, email_verified)
+        VALUES (?, ?, ?, ?, 0)
       `).run(shop.id, normalisedEmail, name.trim(), hash);
+      const account = db.prepare('SELECT * FROM customer_accounts WHERE id = ?').get(result.lastInsertRowid);
+      const token = issueCustomerEmailVerificationToken(db, {
+        shopId: shop.id,
+        customerAccountId: account.id,
+      });
+      await sendCustomerVerificationEmail({ shop, account, token });
 
-      req.session.customerId  = result.lastInsertRowid;
-      req.session.customerShopId = shop.id;
-      res.status(201).json({ ok: true });
+      res.status(201).json({
+        ok: true,
+        email_verification_required: true,
+        message: 'Check your email to verify your account before signing in.',
+      });
     } catch (err) {
       if (err.message && err.message.includes('UNIQUE')) {
         return res.status(400).json({ error: 'An account with this email already exists' });
@@ -630,12 +704,58 @@ router.post('/login', customerLoginLimiter, async (req, res) => {
     const valid = await bcrypt.compare(password, account.password_hash);
     if (!valid) return res.status(401).json({ error: 'Incorrect email or password' });
 
-    req.session.customerId = account.id;
-    req.session.customerShopId = shop.id;
+    if (!account.email_verified) {
+      return res.status(403).json({
+        error: 'Verify your email address before signing in.',
+        code: 'EMAIL_VERIFICATION_REQUIRED',
+      });
+    }
+
+    setCustomerSession(req, account, shop);
     res.json({ ok: true });
   } catch (err) {
     console.error('Customer login error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── POST /api/customer/verify-email ─────────────────────────
+router.post('/verify-email', customerPasswordLimiter, (req, res) => {
+  try {
+    const token = String(req.body?.token || req.query?.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'Verification token is required.' });
+    const row = markCustomerEmailVerified(db, token);
+    if (!row) return res.status(400).json({ error: 'Verification link expired or invalid.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Customer verify email error:', err);
+    res.status(500).json({ error: 'Could not verify email address.' });
+  }
+});
+
+// ── POST /api/customer/resend-verification ─────────────────
+router.post('/resend-verification', customerResetLimiter, async (req, res) => {
+  const message = 'If that account needs verification, a new email has been sent.';
+  try {
+    const email = normaliseCustomerEmail(req.body?.email);
+    const shop = getPublicShopFromBody(req.body || {});
+    if (!shop || !email || !isValidCustomerEmail(email)) return res.json({ ok: true, message });
+    const account = db.prepare(`
+      SELECT *
+      FROM customer_accounts
+      WHERE shop_id = ? AND email = ? AND email_verified = 0
+    `).get(shop.id, email);
+    if (account) {
+      const token = issueCustomerEmailVerificationToken(db, {
+        shopId: shop.id,
+        customerAccountId: account.id,
+      });
+      await sendCustomerVerificationEmail({ shop, account, token });
+    }
+    res.json({ ok: true, message });
+  } catch (err) {
+    console.error('Customer resend verification error:', err);
+    res.json({ ok: true, message });
   }
 });
 
@@ -772,6 +892,7 @@ router.post('/reset-password', customerPasswordLimiter, async (req, res) => {
       WHERE id = ? AND shop_id = ?
     `).run(hash, row.customer_account_id, row.shop_id);
     db.prepare('UPDATE customer_reset_tokens SET used = 1 WHERE token = ?').run(token);
+    revokeCustomerSessions(db, { accountId: row.customer_account_id });
 
     if (req.session && Number(req.session.customerId) === Number(row.customer_account_id)) {
       req.session.customerId = null;
@@ -787,6 +908,7 @@ router.post('/reset-password', customerPasswordLimiter, async (req, res) => {
 
 // ── POST /api/customer/logout ─────────────────────────────────
 router.post('/logout', (req, res) => {
+  deleteCustomerSessionByToken(db, req.sessionID);
   req.session.customerId = null;
   req.session.customerShopId = null;
   res.json({ ok: true });
@@ -901,11 +1023,54 @@ router.post('/change-password', customerPasswordLimiter, requireCustomerAuth, as
       SET password_hash = ?
       WHERE id = ?
     `).run(hash, req.customerAccount.id);
+    revokeCustomerSessions(db, { accountId: req.customerAccount.id });
+    clearCustomerSession(req);
 
-    res.json({ ok: true });
+    res.json({ ok: true, reauth_required: true });
   } catch (err) {
     console.error('Customer password change error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── GET /api/customer/sessions ─────────────────────────────
+router.get('/sessions', requireCustomerAuth, (req, res) => {
+  try {
+    res.json({
+      sessions: listCustomerSessions(db, req.customerAccount.id, req.sessionID),
+    });
+  } catch (err) {
+    console.error('Customer sessions error:', err);
+    res.status(500).json({ error: 'Could not load sessions.' });
+  }
+});
+
+// ── DELETE /api/customer/sessions/:id ──────────────────────
+router.delete('/sessions/:id', requireCustomerAuth, (req, res) => {
+  try {
+    const ok = revokeCustomerSession(db, {
+      accountId: req.customerAccount.id,
+      sessionId: req.params.id,
+    });
+    if (!ok) return res.status(404).json({ error: 'Session not found.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Customer session revoke error:', err);
+    res.status(500).json({ error: 'Could not revoke session.' });
+  }
+});
+
+// ── POST /api/customer/sessions/revoke-all ──────────────────
+router.post('/sessions/revoke-all', requireCustomerAuth, (req, res) => {
+  try {
+    const revoked = revokeCustomerSessions(db, {
+      accountId: req.customerAccount.id,
+      exceptToken: req.sessionID,
+    });
+    res.json({ ok: true, revoked });
+  } catch (err) {
+    console.error('Customer sessions revoke-all error:', err);
+    res.status(500).json({ error: 'Could not revoke sessions.' });
   }
 });
 

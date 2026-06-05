@@ -180,6 +180,9 @@ export function ensureBillingSchema(db) {
   addColumnIfMissing(db, 'billing_adjustments', 'billing_period_start', 'TEXT');
   addColumnIfMissing(db, 'billing_adjustments', 'billing_period_end', 'TEXT');
   addColumnIfMissing(db, 'billing_adjustments', 'created_at', "TEXT NOT NULL DEFAULT (datetime('now'))");
+  addColumnIfMissing(db, 'checkout_fee_ledger', 'stripe_application_fee_id', 'TEXT');
+  addColumnIfMissing(db, 'checkout_fee_ledger', 'stripe_application_fee_amount_cents', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(db, 'checkout_fee_ledger', 'stripe_application_fee_refunded_cents', 'INTEGER NOT NULL DEFAULT 0');
 }
 
 export function seedBillingPlans(db, { overwriteExisting = false } = {}) {
@@ -621,6 +624,53 @@ export async function recordStripePaymentFeeFromIntent(db, stripe, paymentIntent
     payment_fee_mode: getPaymentFeeMode(db, order.shop_id),
     passed_to_customer_amount_cents: order.payment_processing_fee_cents || 0,
   });
+}
+
+export async function reconcileCheckoutApplicationFeeFromIntent(db, stripe, paymentIntentId) {
+  if (!stripe || !paymentIntentId) return null;
+  ensureBillingReady(db);
+  const order = db.prepare('SELECT * FROM orders WHERE stripe_payment_id = ?').get(paymentIntentId);
+  if (!order) return null;
+
+  let applicationFeeId = null;
+  let applicationFeeAmountCents = cents(order.checkout_platform_fee_cents || 0);
+  let applicationFeeRefundedCents = 0;
+
+  try {
+    let intent = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ['latest_charge.application_fee'] });
+    let charge = intent.latest_charge;
+    if (typeof charge === 'string') {
+      charge = await stripe.charges.retrieve(charge, { expand: ['application_fee'] });
+    }
+    let applicationFee = charge?.application_fee || null;
+    if (typeof applicationFee === 'string') {
+      applicationFee = await stripe.applicationFees.retrieve(applicationFee);
+    }
+    if (applicationFee && typeof applicationFee === 'object') {
+      applicationFeeId = applicationFee.id || null;
+      applicationFeeAmountCents = cents(applicationFee.amount, applicationFeeAmountCents);
+      applicationFeeRefundedCents = cents(applicationFee.amount_refunded, 0);
+    } else if (charge?.application_fee_amount != null) {
+      applicationFeeAmountCents = cents(charge.application_fee_amount, applicationFeeAmountCents);
+    }
+  } catch (err) {
+    return null;
+  }
+
+  db.prepare(`
+    UPDATE checkout_fee_ledger
+    SET stripe_application_fee_id = ?,
+        stripe_application_fee_amount_cents = ?,
+        stripe_application_fee_refunded_cents = ?
+    WHERE order_id = ?
+  `).run(applicationFeeId, applicationFeeAmountCents, applicationFeeRefundedCents, order.id);
+
+  return {
+    order_id: order.id,
+    stripe_application_fee_id: applicationFeeId,
+    stripe_application_fee_amount_cents: applicationFeeAmountCents,
+    stripe_application_fee_refunded_cents: applicationFeeRefundedCents,
+  };
 }
 
 export function createBillingAdjustment(db, { shopId, adjustmentType = 'credit', amountCents = 0, reason = '' } = {}) {

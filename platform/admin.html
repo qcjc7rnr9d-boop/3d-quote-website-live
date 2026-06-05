@@ -529,8 +529,25 @@
           <div class="detail-grid" style="margin-top:18px">
             <div class="detail-item"><div class="detail-label">Owner email</div><div class="detail-value" id="ownerEmailStatus">-</div></div>
             <div class="detail-item"><div class="detail-label">Password source</div><div class="detail-value" id="ownerPasswordStatus">-</div></div>
+            <div class="detail-item"><div class="detail-label">Multi-factor authentication</div><div class="detail-value" id="platformMfaStatus">-</div></div>
             <div class="detail-item"><div class="detail-label">Email provider</div><div class="detail-value" id="mailProviderStatus">-</div></div>
             <div class="detail-item"><div class="detail-label">From address</div><div class="detail-value" id="mailFromStatus">-</div></div>
+          </div>
+          <div class="soft-panel" style="margin-top:18px; box-shadow:none">
+            <div class="soft-panel-header"><h3 class="soft-panel-title">Authenticator app</h3></div>
+            <div class="soft-panel-body">
+              <div class="mini-text">Require a six-digit authenticator code after the platform owner password. Save the setup secret in a password manager before enabling.</div>
+              <div class="error-box" id="platformMfaError"></div>
+              <div class="success-box" id="platformMfaSuccess">Multi-factor authentication updated.</div>
+              <div id="platformMfaSetupPanel" style="display:none; margin-top:14px">
+                <div class="form-group"><label class="form-label" for="platformMfaSecret">Setup secret</label><input class="form-input" id="platformMfaSecret" readonly></div>
+                <div class="form-group"><label class="form-label" for="platformMfaCode">Authenticator code</label><input class="form-input" id="platformMfaCode" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></div>
+              </div>
+              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px">
+                <button class="btn btn-outline" type="button" id="startPlatformMfaBtn">Set up MFA</button>
+                <button class="btn btn-primary" type="button" id="enablePlatformMfaBtn" style="display:none">Enable MFA</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -870,8 +887,14 @@
     document.getElementById('ownerEmail').value = data.owner_email || '';
     document.getElementById('ownerEmailStatus').textContent = data.owner_email || 'Not set';
     document.getElementById('ownerPasswordStatus').innerHTML = data.has_password ? badge('Hashed password', 'sage') : badge('Using .env fallback', 'warm');
+    renderPlatformMfaStatus(data.mfa_enabled);
     document.getElementById('mailProviderStatus').textContent = data.mail_provider === 'dev' ? 'Dev preview' : String(data.mail_provider || '-').toUpperCase();
     document.getElementById('mailFromStatus').textContent = (data.mail_from || '-') + (data.mail_using_resend_test_sender ? ' (Resend test sender)' : '');
+  }
+
+  function renderPlatformMfaStatus(enabled) {
+    document.getElementById('platformMfaStatus').innerHTML = enabled ? badge('Enabled', 'sage') : badge('Not enabled', 'warm');
+    document.getElementById('startPlatformMfaBtn').textContent = enabled ? 'Reset MFA setup' : 'Set up MFA';
   }
   async function loadPayments() {
     const data = await api('/api/platform/payments');
@@ -1117,6 +1140,38 @@
       await Promise.all([loadAccount(), loadAudit()]);
     } catch (err) {
       showBox('accountError', err.message || 'Failed to save security settings.');
+    }
+  });
+
+  document.getElementById('startPlatformMfaBtn').addEventListener('click', async () => {
+    hideBox('platformMfaError');
+    hideBox('platformMfaSuccess');
+    try {
+      const data = await api('/api/platform/mfa/setup', { method: 'POST' });
+      document.getElementById('platformMfaSecret').value = data.secret || '';
+      document.getElementById('platformMfaCode').value = '';
+      document.getElementById('platformMfaSetupPanel').style.display = '';
+      document.getElementById('enablePlatformMfaBtn').style.display = '';
+    } catch (err) {
+      showBox('platformMfaError', err.message || 'Could not start MFA setup.');
+    }
+  });
+
+  document.getElementById('enablePlatformMfaBtn').addEventListener('click', async () => {
+    hideBox('platformMfaError');
+    hideBox('platformMfaSuccess');
+    try {
+      await api('/api/platform/mfa/enable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: document.getElementById('platformMfaCode').value.trim() })
+      });
+      document.getElementById('platformMfaSetupPanel').style.display = 'none';
+      document.getElementById('enablePlatformMfaBtn').style.display = 'none';
+      showBox('platformMfaSuccess');
+      await Promise.all([loadAccount(), loadAudit()]);
+    } catch (err) {
+      showBox('platformMfaError', err.message || 'Could not enable MFA.');
     }
   });
 

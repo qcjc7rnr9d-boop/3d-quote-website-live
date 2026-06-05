@@ -207,7 +207,7 @@
               </div>
               <div class="strength-label" id="strengthLabel"></div>
               <ul class="pw-requirements" id="pwRequirements">
-                <li class="pw-req" id="req-length">At least 8 characters</li>
+                <li class="pw-req" id="req-length">At least 12 characters</li>
                 <li class="pw-req" id="req-upper">One uppercase letter</li>
                 <li class="pw-req" id="req-number">One number</li>
                 <li class="pw-req" id="req-special">One special character</li>
@@ -225,6 +225,36 @@
             <button class="btn btn-primary" id="savePasswordBtn">Save password</button>
             <div class="inline-success" id="passwordSuccess" style="margin-top:0;"></div>
             <div class="inline-error"   id="passwordError"   style="margin-top:0;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-factor authentication -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Multi-factor authentication</span>
+        </div>
+        <div class="section-card-body">
+          <p style="font-size:13px;line-height:1.6;color:var(--muted);max-width:680px;margin-bottom:16px;">
+            Add an authenticator app code to protect this shop admin account.
+          </p>
+          <div id="mfaStatus" style="font-size:13px;color:var(--muted);margin-bottom:12px;">Loading MFA status...</div>
+          <div id="mfaSetupPanel" style="display:none;max-width:560px;border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
+            <div class="form-label">Authenticator setup key</div>
+            <code id="mfaSecret" style="display:block;word-break:break-all;font-size:12px;margin:8px 0 12px;color:var(--ink);"></code>
+            <p style="font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:12px;">
+              Add this key to 1Password, Google Authenticator, Microsoft Authenticator, or another TOTP app, then enter the 6-digit code.
+            </p>
+            <div class="form-group" style="max-width:240px;">
+              <label class="form-label" for="mfaCode">Authenticator code</label>
+              <input class="form-input" id="mfaCode" inputmode="numeric" autocomplete="one-time-code" placeholder="123456">
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <button class="btn btn-outline" id="startMfaBtn" type="button">Set up MFA</button>
+            <button class="btn btn-primary" id="enableMfaBtn" type="button" style="display:none">Enable MFA</button>
+            <div class="inline-success" id="mfaSuccess" style="margin-top:0;"></div>
+            <div class="inline-error" id="mfaError" style="margin-top:0;"></div>
           </div>
         </div>
       </div>
@@ -273,17 +303,21 @@
 </div><!-- /admin-layout -->
 
 <script>
+  let currentShop = null;
+
   // ── Auth guard ─────────────────────────────────────────────
   (async () => {
     try {
       const r = await fetch('/api/auth/me');
       if (!r.ok) { window.location.href = 'login.html'; return; }
       const shop = await r.json();
+      currentShop = shop;
       document.getElementById('sidebarStoreName').textContent = shop.name;
       document.getElementById('sidebarPlan').textContent = shop.plan.charAt(0).toUpperCase() + shop.plan.slice(1);
       document.getElementById('profileEmail').value = shop.email || '';
       document.getElementById('profileName').value  = shop.owner_name || shop.name || '';
       document.getElementById('merchantTermsLink').href = `../terms.html?shop=${encodeURIComponent(shop.slug || 'mahi3d')}`;
+      renderMfaStatus(shop.mfa_enabled);
       if (shop.is_temp_password) { window.location.href = 'change-password.html'; return; }
     } catch { window.location.href = 'login.html'; }
   })();
@@ -327,7 +361,7 @@
   // ── Password strength ──────────────────────────────────────
   function scorePassword(pw) {
     let s = 0;
-    if (pw.length >= 8)        s++;
+    if (pw.length >= 12)       s++;
     if (/[A-Z]/.test(pw))      s++;
     if (/[0-9]/.test(pw))      s++;
     if (/[^A-Za-z0-9]/.test(pw)) s++;
@@ -350,7 +384,7 @@
     document.getElementById('strengthLabel').textContent = pw.length > 0 ? labels[score] : '';
 
     // Requirements
-    toggle('req-length',  pw.length >= 8);
+    toggle('req-length',  pw.length >= 12);
     toggle('req-upper',   /[A-Z]/.test(pw));
     toggle('req-number',  /[0-9]/.test(pw));
     toggle('req-special', /[^A-Za-z0-9]/.test(pw));
@@ -438,6 +472,55 @@
     } finally {
       btn.disabled = false;
       btn.textContent = 'Save password';
+    }
+  });
+
+  function renderMfaStatus(enabled) {
+    document.getElementById('mfaStatus').textContent = enabled
+      ? 'MFA is enabled for this shop admin account.'
+      : 'MFA is not enabled yet.';
+    document.getElementById('startMfaBtn').style.display = enabled ? 'none' : '';
+  }
+
+  document.getElementById('startMfaBtn').addEventListener('click', async () => {
+    const errorEl = document.getElementById('mfaError');
+    const successEl = document.getElementById('mfaSuccess');
+    errorEl.style.display = 'none';
+    successEl.style.display = 'none';
+    try {
+      const r = await fetch('/api/auth/mfa/setup', { method: 'POST' });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Could not start MFA setup.');
+      document.getElementById('mfaSecret').textContent = data.secret;
+      document.getElementById('mfaSetupPanel').style.display = '';
+      document.getElementById('enableMfaBtn').style.display = '';
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
+    }
+  });
+
+  document.getElementById('enableMfaBtn').addEventListener('click', async () => {
+    const errorEl = document.getElementById('mfaError');
+    const successEl = document.getElementById('mfaSuccess');
+    errorEl.style.display = 'none';
+    successEl.style.display = 'none';
+    try {
+      const r = await fetch('/api/auth/mfa/enable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: document.getElementById('mfaCode').value }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Could not enable MFA.');
+      document.getElementById('mfaSetupPanel').style.display = 'none';
+      document.getElementById('enableMfaBtn').style.display = 'none';
+      renderMfaStatus(true);
+      successEl.textContent = 'MFA enabled.';
+      successEl.style.display = 'block';
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
     }
   });
 

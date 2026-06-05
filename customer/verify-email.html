@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Verify email — Trennen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/shared.css">
+  <style>
+    body { min-height: 100vh; display: grid; place-items: center; background: var(--warm); padding: 24px; }
+    .card { width: min(480px, 100%); background: var(--white); border: 1.5px solid var(--border); border-radius: 8px; padding: 30px; box-shadow: var(--shadow); }
+    .brand { font-family: var(--font-brand); font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 24px; }
+    h1 { margin: 0 0 10px; font-size: 30px; }
+    p { color: var(--muted); line-height: 1.55; }
+    a { color: var(--sage-dark); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand">Trennen</div>
+    <h1 id="title">Verifying email</h1>
+    <p id="message">Please wait while we confirm your customer account.</p>
+    <p><a id="loginLink" href="login.html?shop=trennen">Continue to sign in</a></p>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token') || '';
+    const shop = params.get('shop') || 'trennen';
+    const title = document.getElementById('title');
+    const message = document.getElementById('message');
+    const loginLink = document.getElementById('loginLink');
+    loginLink.href = `login.html?shop=${encodeURIComponent(shop)}`;
+
+    (async () => {
+      if (!token) {
+        title.textContent = 'Verification link missing';
+        message.textContent = 'Open the latest verification email and try again.';
+        return;
+      }
+      try {
+        const res = await fetch('/api/customer/verify-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Verification failed');
+        title.textContent = 'Email verified';
+        message.textContent = 'Your customer account is ready. You can now sign in.';
+      } catch (err) {
+        title.textContent = 'Verification link expired';
+        message.textContent = err.message || 'Request a new verification email and try again.';
+      }
+    })();
+  </script>
+</body>
+</html>

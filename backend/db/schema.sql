@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS shops (
   public_tenant_id TEXT    UNIQUE,
   email            TEXT    UNIQUE NOT NULL COLLATE NOCASE,
   password_hash    TEXT    NOT NULL,
+  mfa_enabled      INTEGER NOT NULL DEFAULT 0,
+  mfa_secret       TEXT,
+  mfa_enabled_at   TEXT,
   is_temp_password INTEGER NOT NULL DEFAULT 1,
   plan             TEXT    NOT NULL DEFAULT 'starter',
   stripe_account_id  TEXT,
@@ -52,6 +55,9 @@ CREATE TABLE IF NOT EXISTS platform_admins (
   id                   INTEGER PRIMARY KEY CHECK (id = 1),
   owner_email          TEXT UNIQUE COLLATE NOCASE,
   password_hash        TEXT,
+  mfa_enabled          INTEGER NOT NULL DEFAULT 0,
+  mfa_secret           TEXT,
+  mfa_enabled_at       TEXT,
   created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
   updated_at           TEXT    NOT NULL DEFAULT (datetime('now'))
 );
@@ -131,6 +137,7 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_processing_fee_cents INTEGER NOT NULL DEFAULT 0,
   checkout_platform_fee_cents INTEGER NOT NULL DEFAULT 0,
   customer_total_cents INTEGER NOT NULL DEFAULT 0,
+  refunded_cents    INTEGER NOT NULL DEFAULT 0,
   fulfilment_status   TEXT    NOT NULL DEFAULT 'pending',
   payment_status      TEXT    NOT NULL DEFAULT 'pending',
   notes               TEXT,
@@ -196,6 +203,8 @@ CREATE TABLE IF NOT EXISTS customer_accounts (
   email         TEXT    NOT NULL COLLATE NOCASE,
   name          TEXT    NOT NULL,
   password_hash TEXT    NOT NULL,
+  email_verified INTEGER NOT NULL DEFAULT 0,
+  email_verified_at TEXT,
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
   UNIQUE (shop_id, email),
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
@@ -209,6 +218,31 @@ CREATE TABLE IF NOT EXISTS customer_reset_tokens (
   used                INTEGER NOT NULL DEFAULT 0,
   expires_at          TEXT    NOT NULL,
   created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+  FOREIGN KEY (customer_account_id) REFERENCES customer_accounts(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS customer_email_verification_tokens (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id             INTEGER NOT NULL,
+  customer_account_id INTEGER NOT NULL,
+  token               TEXT    UNIQUE NOT NULL,
+  used                INTEGER NOT NULL DEFAULT 0,
+  expires_at          TEXT    NOT NULL,
+  created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+  FOREIGN KEY (customer_account_id) REFERENCES customer_accounts(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS customer_sessions (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id             INTEGER NOT NULL,
+  customer_account_id INTEGER NOT NULL,
+  token               TEXT    UNIQUE NOT NULL,
+  ip                  TEXT,
+  user_agent          TEXT,
+  created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+  expires_at          TEXT    NOT NULL,
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
   FOREIGN KEY (customer_account_id) REFERENCES customer_accounts(id) ON DELETE CASCADE
 );
@@ -420,6 +454,9 @@ CREATE TABLE IF NOT EXISTS checkout_fee_ledger (
   final_platform_fee_cents INTEGER NOT NULL DEFAULT 0,
   cap_remaining_before_cents INTEGER NOT NULL DEFAULT 0,
   cap_remaining_after_cents INTEGER NOT NULL DEFAULT 0,
+  stripe_application_fee_id TEXT,
+  stripe_application_fee_amount_cents INTEGER NOT NULL DEFAULT 0,
+  stripe_application_fee_refunded_cents INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'pending',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
@@ -441,6 +478,22 @@ CREATE TABLE IF NOT EXISTS payment_fee_records (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS order_refunds (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id INTEGER NOT NULL,
+  order_id INTEGER NOT NULL,
+  stripe_refund_id TEXT UNIQUE,
+  stripe_payment_intent_id TEXT,
+  amount_cents INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending',
+  reason TEXT,
+  raw_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS billing_adjustments (
@@ -536,8 +589,13 @@ CREATE INDEX IF NOT EXISTS idx_customers_shop  ON customers(shop_id);
 CREATE INDEX IF NOT EXISTS idx_customer_accounts_email ON customer_accounts(shop_id, email);
 CREATE INDEX IF NOT EXISTS idx_customer_reset_token ON customer_reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_customer_reset_account ON customer_reset_tokens(customer_account_id, used, expires_at);
+CREATE INDEX IF NOT EXISTS idx_customer_email_verify_token ON customer_email_verification_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_customer_email_verify_account ON customer_email_verification_tokens(customer_account_id, used, expires_at);
+CREATE INDEX IF NOT EXISTS idx_customer_sessions_token ON customer_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_customer_sessions_account ON customer_sessions(customer_account_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_customer_saved_quotes_account ON customer_saved_quotes(customer_account_id, shop_id, status, created_at);
 CREATE INDEX IF NOT EXISTS idx_customer_saved_quotes_shop ON customer_saved_quotes(shop_id);
+CREATE INDEX IF NOT EXISTS idx_order_refunds_order ON order_refunds(order_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_sessions_token  ON sessions(token);
 CREATE INDEX IF NOT EXISTS idx_reset_token     ON reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_platform_reset_token ON platform_reset_tokens(token);

@@ -72,7 +72,7 @@
           <input class="form-input" type="email" id="regEmail" placeholder="your@email.com" autocomplete="email">
         </div>
         <div class="form-group">
-          <label class="form-label" for="regPassword">Password <span style="font-weight: 400;color:var(--muted)">(min 8 characters)</span></label>
+          <label class="form-label" for="regPassword">Password <span style="font-weight: 400;color:var(--muted)">(12+ characters, with a number and symbol)</span></label>
           <input class="form-input" type="password" id="regPassword" placeholder="Choose a password" autocomplete="new-password">
         </div>
         <button type="button" class="btn btn-primary full" style="margin-top:8px" onclick="doRegister()">Create account</button>
@@ -158,7 +158,8 @@
         });
         const d = await r.json();
         if (r.ok) {
-          window.location.href = dashboardTarget(slug);
+          showError(d.message || 'Check your email to verify your account before signing in.');
+          switchTab('login');
         } else {
           showError(d.error || 'Incorrect email or password');
         }
