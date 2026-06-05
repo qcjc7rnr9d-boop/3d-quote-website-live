@@ -22,15 +22,10 @@ import {
   getPaymentFeeMode,
   markCheckoutLedgerStatus,
   previewQuoteUsage,
-  reconcileCheckoutApplicationFeeFromIntent,
   recordCheckoutFeeLedger,
   recordQuoteUsageEvent,
   recordStripePaymentFeeFromIntent,
 } from '../lib/billing-service.js';
-import {
-  ensureSecurityHardeningSchema,
-  updateOrderRefundState,
-} from '../lib/security-hardening.js';
 import {
   LIVE_PRICING_SCHEME,
   PricingError,
@@ -43,7 +38,6 @@ import { assertMerchantCheckoutAllowed } from '../lib/legal-policy.js';
 import { getShopBySlug } from '../lib/shop-lookup.js';
 
 const router = Router();
-ensureSecurityHardeningSchema(db);
 const paymentIntentLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 20,
@@ -197,16 +191,6 @@ function newPublicOrderToken() {
   return randomBytes(24).toString('base64url');
 }
 
-function cents(value, fallback = 0) {
-  const n = Number(value);
-  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : fallback;
-}
-
-function refundableCents(order) {
-  const paid = cents(order.customer_total_cents) || Math.round(Number(order.total || 0) * 100);
-  return Math.max(0, paid - cents(order.refunded_cents));
-}
-
 async function sendPaidOrderConfirmation(orderId) {
   const order = db.prepare(`
     SELECT o.*, m.name AS material_name
@@ -257,7 +241,6 @@ export async function stripeWebhookHandler(req, res) {
       const order = db.prepare('SELECT id FROM orders WHERE stripe_payment_id = ?').get(event.data.object.id);
       if (order) {
         markCheckoutLedgerStatus(db, order.id, 'charged');
-        await reconcileCheckoutApplicationFeeFromIntent(db, getPlatformStripe(), event.data.object.id);
         await recordStripePaymentFeeFromIntent(db, getPlatformStripe(), event.data.object.id);
         await sendPaidOrderConfirmation(order.id);
       }
@@ -268,23 +251,6 @@ export async function stripeWebhookHandler(req, res) {
         .run(event.data.object.id);
       const order = db.prepare('SELECT id FROM orders WHERE stripe_payment_id = ?').get(event.data.object.id);
       if (order) markCheckoutLedgerStatus(db, order.id, 'failed');
-    }
-
-    if (event.type === 'charge.refunded') {
-      const charge = event.data.object;
-      const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
-      const order = paymentIntentId
-        ? db.prepare('SELECT id FROM orders WHERE stripe_payment_id = ?').get(paymentIntentId)
-        : null;
-      if (order) {
-        updateOrderRefundState(db, {
-          orderId: order.id,
-          refundedCents: charge.amount_refunded || 0,
-          status: charge.refunded ? 'refunded' : 'partially_refunded',
-        });
-        await reconcileCheckoutApplicationFeeFromIntent(db, getPlatformStripe(), paymentIntentId);
-        markCheckoutLedgerStatus(db, order.id, charge.refunded ? 'refunded' : 'partially_refunded');
-      }
     }
 
     if (event.type === 'account.updated') {
@@ -521,7 +487,6 @@ router.post('/create-payment-intent', paymentIntentLimiter, async (req, res) => 
       status: intent.status === 'succeeded' ? 'charged' : 'pending',
     });
     if (intent.status === 'succeeded') {
-      await reconcileCheckoutApplicationFeeFromIntent(db, stripe, intent.id);
       await recordStripePaymentFeeFromIntent(db, stripe, intent.id);
       await sendPaidOrderConfirmation(order.lastInsertRowid);
     }
@@ -556,92 +521,6 @@ router.post('/create-bank-transfer-order', paymentIntentLimiter, (req, res) => {
     error: 'Offline checkout is no longer available. Please use Stripe card checkout.',
     code: 'BANK_TRANSFER_DISABLED',
   });
-});
-
-router.post('/orders/:id/refund', requireShopAuth, async (req, res) => {
-  try {
-    const order = db.prepare('SELECT * FROM orders WHERE id = ? AND shop_id = ?')
-      .get(req.params.id, req.shop.id);
-    if (!order) return res.status(404).json({ error: 'Order not found' });
-    if (!order.stripe_payment_id) {
-      return res.status(400).json({ error: 'This order does not have a Stripe payment to refund.', code: 'NO_STRIPE_PAYMENT' });
-    }
-    if (!['paid', 'partially_refunded'].includes(order.payment_status)) {
-      return res.status(400).json({ error: 'Only paid Stripe orders can be refunded.', code: 'ORDER_NOT_REFUNDABLE' });
-    }
-
-    const remaining = refundableCents(order);
-    if (remaining <= 0) {
-      return res.status(400).json({ error: 'This order has already been fully refunded.', code: 'ALREADY_REFUNDED' });
-    }
-    const requestedAmount = req.body?.amount_cents == null || req.body.amount_cents === ''
-      ? remaining
-      : cents(req.body.amount_cents);
-    const amountCents = Math.min(requestedAmount, remaining);
-    if (!amountCents) return res.status(400).json({ error: 'Refund amount must be greater than zero.' });
-
-    const stripe = ensurePlatformStripe();
-    const refund = await stripe.refunds.create({
-      payment_intent: order.stripe_payment_id,
-      amount: amountCents,
-      reason: req.body?.reason || undefined,
-      refund_application_fee: true,
-      reverse_transfer: true,
-      metadata: {
-        orderId: String(order.id),
-        shopId: String(req.shop.id),
-        shopSlug: req.shop.slug,
-      },
-    });
-
-    db.prepare(`
-      INSERT INTO order_refunds (
-        shop_id, order_id, stripe_refund_id, stripe_payment_intent_id,
-        amount_cents, status, reason, raw_json
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(stripe_refund_id) DO UPDATE SET
-        status = excluded.status,
-        raw_json = excluded.raw_json,
-        updated_at = datetime('now')
-    `).run(
-      req.shop.id,
-      order.id,
-      refund.id,
-      order.stripe_payment_id,
-      amountCents,
-      refund.status || 'pending',
-      req.body?.reason || null,
-      JSON.stringify(refund),
-    );
-
-    const updatedOrder = updateOrderRefundState(db, {
-      orderId: order.id,
-      amountCents,
-    });
-    await reconcileCheckoutApplicationFeeFromIntent(db, stripe, order.stripe_payment_id);
-    if (updatedOrder?.payment_status === 'refunded') markCheckoutLedgerStatus(db, order.id, 'refunded');
-
-    res.json({
-      ok: true,
-      refund: {
-        id: refund.id,
-        amount_cents: amountCents,
-        status: refund.status,
-      },
-      order: {
-        id: updatedOrder.id,
-        payment_status: updatedOrder.payment_status,
-        refunded_cents: updatedOrder.refunded_cents,
-      },
-    });
-  } catch (err) {
-    logRouteError('Stripe refund error:', err);
-    res.status(err.statusCode || err.status || 500).json({
-      error: err.message || 'Refund failed.',
-      code: err.code || 'REFUND_FAILED',
-    });
-  }
 });
 
 router.get('/dashboard-link', requireShopAuth, async (req, res) => {

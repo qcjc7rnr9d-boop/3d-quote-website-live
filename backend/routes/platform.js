@@ -35,14 +35,6 @@ import {
   verifyPlatformPassword,
   verifyPlatformResetToken,
 } from '../lib/platform-auth.js';
-import {
-  generateTotpSecret,
-  protectMfaSecret,
-  revealMfaSecret,
-  totpUri,
-  verifyTotpCode,
-} from '../lib/mfa.js';
-import { ensureSecurityHardeningSchema } from '../lib/security-hardening.js';
 import { attachOrderFiles, attachOrderFilesList } from '../lib/order-files.js';
 import {
   buildEmailIdempotencyKey,
@@ -62,16 +54,13 @@ import {
 import { ensureShopTenantId } from '../lib/embed.js';
 
 const router = Router();
-ensureSecurityHardeningSchema(db);
-const smokeRateLimitSkip = req => process.env.NODE_ENV !== 'production' && req.get('x-smoke-test') === '1';
 
 const platformLoginLimiter = rateLimit({
   windowMs: LOGIN_WINDOW_MINUTES * 60 * 1000,
   max: LOGIN_MAX_ATTEMPTS,
   message: { error: 'Too many login attempts, please try again later' },
   standardHeaders: true,
-  legacyHeaders: false,
-  skip: smokeRateLimitSkip,
+  legacyHeaders: false
 });
 
 const platformForgotLimiter = rateLimit({
@@ -79,8 +68,7 @@ const platformForgotLimiter = rateLimit({
   max: 3,
   message: { ok: true, message: 'If the owner email is configured, a reset link will be sent shortly.' },
   standardHeaders: true,
-  legacyHeaders: false,
-  skip: smokeRateLimitSkip,
+  legacyHeaders: false
 });
 
 function publicPlatformAccount(admin = getPlatformAdmin()) {
@@ -89,7 +77,6 @@ function publicPlatformAccount(admin = getPlatformAdmin()) {
     owner_email: admin?.owner_email || null,
     has_owner_email: !!admin?.owner_email,
     has_password: !!admin?.password_hash,
-    mfa_enabled: !!admin?.mfa_enabled,
     mail_provider: mail.provider,
     mail_from: mail.from,
     mail_has_custom_from: mail.has_custom_from,
@@ -202,7 +189,7 @@ async function createBillingActivationForShop(shop) {
 // ── POST /api/platform/login ──────────────────────────────────
 router.post('/login', platformLoginLimiter, async (req, res) => {
   try {
-    const { email, password, mfaCode } = req.body;
+    const { email, password } = req.body;
     const ownerEmail = normaliseEmail(email);
     const admin = ensurePlatformAdmin();
 
@@ -214,19 +201,6 @@ router.post('/login', platformLoginLimiter, async (req, res) => {
     const passwordOk = await verifyPlatformPassword(password);
     if (!emailMatches || !passwordOk) {
       return res.status(401).json({ error: 'Incorrect email or password' });
-    }
-
-    if (admin.mfa_enabled) {
-      if (!mfaCode) {
-        return res.status(202).json({
-          ok: false,
-          mfa_required: true,
-          error: 'Enter your authenticator code.',
-        });
-      }
-      if (!verifyTotpCode(revealMfaSecret(admin.mfa_secret), mfaCode)) {
-        return res.status(401).json({ error: 'Incorrect authenticator code' });
-      }
     }
 
     let nextAdmin = admin;
@@ -259,73 +233,6 @@ router.get('/me', requirePlatformAuth, (req, res) => {
 
 router.get('/account', requirePlatformAuth, (req, res) => {
   res.json(publicPlatformAccount());
-});
-
-router.post('/mfa/setup', requirePlatformAuth, (req, res) => {
-  try {
-    const admin = ensurePlatformAdmin();
-    const secret = generateTotpSecret();
-    req.session.pendingPlatformMfaSecret = secret;
-    res.json({
-      ok: true,
-      secret,
-      otpauth_url: totpUri({
-        secret,
-        accountName: admin?.owner_email || 'platform-owner',
-        issuer: 'Trennen Platform',
-      }),
-    });
-  } catch (err) {
-    console.error('Platform MFA setup error:', err);
-    res.status(500).json({ error: 'Could not start MFA setup.' });
-  }
-});
-
-router.post('/mfa/enable', requirePlatformAuth, (req, res) => {
-  try {
-    const secret = req.session.pendingPlatformMfaSecret;
-    const code = String(req.body?.code || req.body?.mfaCode || '');
-    if (!secret) return res.status(400).json({ error: 'Start MFA setup first.' });
-    if (!verifyTotpCode(secret, code)) return res.status(400).json({ error: 'Incorrect authenticator code.' });
-    db.prepare(`
-      UPDATE platform_admins
-      SET mfa_enabled = 1,
-          mfa_secret = ?,
-          mfa_enabled_at = datetime('now'),
-          updated_at = datetime('now')
-      WHERE id = 1
-    `).run(protectMfaSecret(secret));
-    req.session.pendingPlatformMfaSecret = null;
-    res.json({ ok: true, mfa_enabled: true });
-  } catch (err) {
-    console.error('Platform MFA enable error:', err);
-    res.status(500).json({ error: 'Could not enable MFA.' });
-  }
-});
-
-router.post('/mfa/disable', requirePlatformAuth, async (req, res) => {
-  try {
-    const admin = ensurePlatformAdmin();
-    const password = String(req.body?.password || '');
-    const code = String(req.body?.code || req.body?.mfaCode || '');
-    if (!password || !code) return res.status(400).json({ error: 'Password and authenticator code are required.' });
-    if (!await verifyPlatformPassword(password)) return res.status(401).json({ error: 'Current password is incorrect.' });
-    if (!verifyTotpCode(revealMfaSecret(admin.mfa_secret), code)) {
-      return res.status(401).json({ error: 'Incorrect authenticator code.' });
-    }
-    db.prepare(`
-      UPDATE platform_admins
-      SET mfa_enabled = 0,
-          mfa_secret = NULL,
-          mfa_enabled_at = NULL,
-          updated_at = datetime('now')
-      WHERE id = 1
-    `).run();
-    res.json({ ok: true, mfa_enabled: false });
-  } catch (err) {
-    console.error('Platform MFA disable error:', err);
-    res.status(500).json({ error: 'Could not disable MFA.' });
-  }
 });
 
 router.put('/account', requirePlatformAuth, async (req, res) => {
