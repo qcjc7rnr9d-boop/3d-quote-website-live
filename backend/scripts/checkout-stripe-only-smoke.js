@@ -118,9 +118,20 @@ assert(
   checkoutHtml.includes('id="restrictedItemsCertification"'),
   'Checkout is missing the restricted-items certification checkbox'
 );
+{
+  const certificationIdCount = (checkoutHtml.match(/id="restrictedItemsCertification"/g) || []).length;
+  assert(
+    certificationIdCount === 1,
+    `Checkout must render exactly one restricted-items certification checkbox, found ${certificationIdCount}`
+  );
+}
 assert(
   checkoutHtml.includes('I certify this order does not include restricted or unlawful items') && checkoutHtml.includes('I certify that the files, notes, and order I submit do not include'),
   'Checkout is missing the compact and full restricted-items certification wording'
+);
+assert(
+  !checkoutHtml.includes('<label class="legal-certification" for="restrictedItemsCertification">\n          <input type="checkbox" id="restrictedItemsCertification"'),
+  'Checkout must not render the old full-length legal certification before payment fields'
 );
 assert(
   checkoutJs.includes('Material group') && checkoutJs.includes('Group total') && checkoutJs.includes('modelVolumeText'),

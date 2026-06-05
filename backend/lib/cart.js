@@ -3,9 +3,7 @@ import {
   calculateQuoteForShop,
   buildQuoteRequestFromCart,
   fromCents,
-  grossUpForIncludedPlatformFee,
   normaliseShippingZones,
-  normaliseTaxRate,
   toCents,
 } from './pricing-engine.js';
 
@@ -239,12 +237,6 @@ function selectedShippingFromOptions(options = [], requested = null) {
   return options.find(option => String(option.id) === String(id) || String(option.methodId) === String(id)) || null;
 }
 
-function taxForAmount(amount, taxRate, taxInclusive) {
-  const n = money(amount);
-  if (taxRate <= 0 || n <= 0) return 0;
-  return money(taxInclusive ? n - (n / (1 + taxRate)) : n * taxRate);
-}
-
 export function previewCartForShop(db, shop, cartInput = {}, options = {}) {
   const cart = normaliseCart(cartInput, shop?.slug);
   const requireShipping = options.requireShipping === true;
@@ -301,15 +293,10 @@ export function previewCartForShop(db, shop, cartInput = {}, options = {}) {
     || cart.shipping
     || null;
   let shipping = selectedShippingFromOptions(shippingOptions, requestedShipping);
-  const cfg = db.prepare('SELECT tax_rate, tax_inclusive, free_shipping_above FROM pricing_config WHERE shop_id = ?').get(shop.id) || {};
+  const cfg = db.prepare('SELECT tax_rate, tax_inclusive FROM pricing_config WHERE shop_id = ?').get(shop.id) || {};
   const itemSubtotal = money(items.reduce((sum, item) => sum + safeNumber(item.itemsNzd), 0));
   if (shipping) {
     shipping = { ...shipping };
-    const freeAbove = Math.max(0, safeNumber(cfg.free_shipping_above, 0));
-    if (freeAbove > 0 && itemSubtotal >= freeAbove) {
-      shipping.freeApplied = true;
-      shipping.price = 0;
-    }
   } else if (requestedShipping?.id && requireShipping) {
     throw new PricingError(
       'Selected shipping option is not available for this order size or weight.',
@@ -331,17 +318,13 @@ export function previewCartForShop(db, shop, cartInput = {}, options = {}) {
     );
   }
 
-  const taxRate = normaliseTaxRate(cfg.tax_rate);
-  const taxInclusive = !!cfg.tax_inclusive;
   const shippingAmount = money(shipping?.price || 0);
-  const shippingTax = taxForAmount(shippingAmount, taxRate, taxInclusive);
+  const shippingTax = 0;
   const itemTax = money(items.reduce((sum, item) => sum + safeNumber(item.taxNzd), 0));
   const tax = money(itemTax + shippingTax);
   const itemTotalCents = items.reduce((sum, item) => sum + safeNumber(item.totalCents, Math.round(safeNumber(item.totalNzd) * 100)), 0);
-  const platformFeePercent = items.find(item => item.quoteSnapshot?.lineItems)?.quoteSnapshot?.lineItems?.platformFeePercent || 0;
-  const shippingSellerNetCents = toCents(taxInclusive ? shippingAmount : shippingAmount + shippingTax);
-  const shippingGross = grossUpForIncludedPlatformFee(shippingSellerNetCents, platformFeePercent);
-  const totalCents = itemTotalCents + (shipping ? shippingGross.customerTotalCents : 0);
+  const shippingCents = toCents(shippingAmount);
+  const totalCents = itemTotalCents + (shipping ? shippingCents : 0);
   const selectedShipping = shipping ? {
     id: shipping.id,
     methodId: shipping.methodId || shipping.id,
@@ -350,9 +333,9 @@ export function previewCartForShop(db, shop, cartInput = {}, options = {}) {
     label: shipping.label,
     carrier: shipping.carrier,
     service: shipping.service,
-    price: fromCents(shippingGross.customerTotalCents),
+    price: shippingAmount,
     basePrice: shippingAmount,
-    finalPrice: fromCents(shippingGross.customerTotalCents),
+    finalPrice: shippingAmount,
     tax: shippingTax,
     freeApplied: !!shipping.freeApplied,
     package: pkg,

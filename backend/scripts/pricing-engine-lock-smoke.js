@@ -100,7 +100,7 @@ function makeDb() {
       (shop_id, currency, tax_rate, tax_inclusive, min_order_value, free_shipping_above,
        quote_rounding, max_model_quantity, surcharges, pricing_mode, mat_include_support,
        time_rate_per_hour, time_rate_per_gram, time_include_support, infill_tiers)
-    VALUES (1, 'NZD', 0.15, 0, 0, 0, 0.05, 10, '[{"label":"Ignored","amount":999}]',
+    VALUES (1, 'NZD', 0.15, 0, 0, 50, 0.05, 10, '[{"label":"Ignored","amount":999}]',
             'time_material', 1, 999, 999, 1, ?)
   `).run(infill);
   db.prepare('INSERT INTO store_settings (shop_id, shipping_zones) VALUES (1, ?)').run(shipping);
@@ -152,6 +152,10 @@ try {
   assert.equal(single.lineItems.tax, 10.8);
   assert.equal(single.lineItems.sellerNetTotalCents, 8280);
   assert.equal(single.totalCents, customerCentsFromSellerNet(82.8));
+
+  const paidShippingQuote = calculateQuoteForShopSlug(db, 'pricing-test', quotePayload({ shippingId: 'courier' }));
+  assert.equal(paidShippingQuote.selected.shipping?.freeApplied, false, 'legacy quote pricing must not silently apply free shipping thresholds');
+  assert.equal(paidShippingQuote.lineItems.shipping, 10, 'legacy quote pricing must charge the selected shipping rate exactly');
 
   for (let i = 0; i < 5; i += 1) {
     const repeated = calculateQuoteForShopSlug(db, 'pricing-test', quotePayload());
@@ -226,8 +230,9 @@ try {
   const cartWithShipping = validateCartForShop(db, shop, { ...cartPreview, shipping: { id: 'courier' } });
   assert.equal(cartWithShipping.checkoutReady, true);
   assert.equal(cartWithShipping.shipping?.id, 'courier');
-  assert.equal(cartWithShipping.shippingNzd, customerCentsFromSellerNet(11.5) / 100);
-  assert.equal(cartWithShipping.totalCents, cartPreview.totalCents + customerCentsFromSellerNet(11.5));
+  assert.equal(cartWithShipping.shipping?.freeApplied, false, 'checkout must not silently apply free shipping thresholds');
+  assert.equal(cartWithShipping.shippingNzd, 10);
+  assert.equal(cartWithShipping.totalCents, cartPreview.totalCents + 1000);
 
   console.log('Pricing engine lock smoke checks passed.');
 } finally {
