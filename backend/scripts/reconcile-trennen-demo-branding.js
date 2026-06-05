@@ -15,6 +15,39 @@ const DEMO_TAGLINE = 'Instant quotes for practical 3D printed parts.';
 const DEMO_ABOUT = 'Trennen is configured as a demo store for showing the quoting, checkout, order tracking, and customer portal flow.';
 const DEMO_SUPPORT_EMAIL = 'support@trennen.co.nz';
 
+function replaceLegacyBrand(value) {
+  return typeof value === 'string' ? value.replace(/Mahi3D/g, DEMO_NAME).replace(/MAHI3D/g, DEMO_NAME) : value;
+}
+
+function parseJsonSetting(value, fallback) {
+  try {
+    const parsed = JSON.parse(value || '');
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function reconcileShippingZones(raw) {
+  const zones = parseJsonSetting(raw, []);
+  if (!Array.isArray(zones)) return raw || '[]';
+  return JSON.stringify(zones.map(zone => {
+    if (!zone || typeof zone !== 'object') return zone;
+    return {
+      ...zone,
+      courier: replaceLegacyBrand(zone.courier),
+      name: replaceLegacyBrand(zone.name),
+      service: replaceLegacyBrand(zone.service),
+      label: replaceLegacyBrand(zone.label),
+      bands: Array.isArray(zone.bands)
+        ? zone.bands.map(band => band && typeof band === 'object'
+          ? { ...band, label: replaceLegacyBrand(band.label), name: replaceLegacyBrand(band.name) }
+          : band)
+        : zone.bands,
+    };
+  }));
+}
+
 function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, '-');
 }
@@ -57,8 +90,8 @@ function loadDemoRows(db) {
   `).all(DEMO_SHOP_SLUG, LEGACY_DEMO_SHOP_SLUG, DEMO_SHOP_SLUG);
 }
 
-function reconcileTrennenDemoBranding({ dbPath = defaultDbPath } = {}) {
-  const backupPath = backupDatabase(dbPath);
+function reconcileTrennenDemoBranding({ dbPath = defaultDbPath, backup = true } = {}) {
+  const backupPath = backup ? backupDatabase(dbPath) : null;
   const db = new DatabaseSync(dbPath);
   db.exec('PRAGMA foreign_keys = ON');
 
@@ -96,6 +129,7 @@ function reconcileTrennenDemoBranding({ dbPath = defaultDbPath } = {}) {
       `).run(DEMO_NAME, DEMO_SHOP_SLUG, DEMO_OWNER_EMAIL, target.id);
 
       db.prepare('INSERT OR IGNORE INTO store_settings (shop_id) VALUES (?)').run(target.id);
+      const existingSettings = db.prepare('SELECT shipping_zones FROM store_settings WHERE shop_id = ?').get(target.id) || {};
       db.prepare(`
         UPDATE store_settings
         SET tagline = ?,
@@ -103,9 +137,17 @@ function reconcileTrennenDemoBranding({ dbPath = defaultDbPath } = {}) {
             support_email_mode = 'custom',
             support_email = ?,
             logo_url = NULL,
+            shipping_zones = ?,
             updated_at = datetime('now')
         WHERE shop_id = ?
-      `).run(DEMO_TAGLINE, DEMO_ABOUT, DEMO_SUPPORT_EMAIL, target.id);
+      `).run(DEMO_TAGLINE, DEMO_ABOUT, DEMO_SUPPORT_EMAIL, reconcileShippingZones(existingSettings.shipping_zones), target.id);
+
+      db.prepare(`
+        UPDATE pricing_config
+        SET free_shipping_above = 0,
+            updated_at = datetime('now')
+        WHERE shop_id = ?
+      `).run(target.id);
 
       db.exec('COMMIT');
     } catch (err) {

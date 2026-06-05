@@ -452,11 +452,6 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="pFreeShipping">Free shipping above ($)</label>
-                <input class="form-input" type="number" id="pFreeShipping" name="free_shipping_above" min="0" step="0.01" placeholder="150.00">
-              </div>
-
-              <div class="form-group">
                 <label class="form-label" for="pRounding">Quote rounding ($)</label>
                 <select class="form-input" id="pRounding" name="quote_rounding">
                   <option value="0.01">$0.01 — exact</option>
@@ -1063,7 +1058,6 @@
       if (p.tax_rate != null)    document.getElementById('pTaxRate').value = p.tax_rate;
       document.getElementById('pTaxInclusive').checked = !!p.tax_inclusive;
       if (p.min_order_value != null) document.getElementById('pMinOrder').value = p.min_order_value;
-      if (p.free_shipping_above != null) document.getElementById('pFreeShipping').value = p.free_shipping_above;
       if (p.quote_rounding)      document.getElementById('pRounding').value = p.quote_rounding;
       if (p.quote_valid_hours)   document.getElementById('pQuoteHours').value = p.quote_valid_hours;
       if (p.max_model_quantity) document.getElementById('pMaxModelQty').value = p.max_model_quantity;
@@ -1113,7 +1107,7 @@
       tax_rate:            parseFloat(document.getElementById('pTaxRate').value) || 0,
       tax_inclusive:       document.getElementById('pTaxInclusive').checked,
       min_order_value:     parseFloat(document.getElementById('pMinOrder').value) || 0,
-      free_shipping_above: parseFloat(document.getElementById('pFreeShipping').value) || null,
+      free_shipping_above: 0,
       quote_rounding:      document.getElementById('pRounding').value,
       quote_valid_hours:   parseInt(document.getElementById('pQuoteHours').value) || 72,
       max_model_quantity:  parseInt(document.getElementById('pMaxModelQty').value) || null,

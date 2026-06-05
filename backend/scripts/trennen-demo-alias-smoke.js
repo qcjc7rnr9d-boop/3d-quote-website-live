@@ -2,7 +2,12 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { DEMO_LEGACY_SHOP_SLUG, DEMO_SHOP_SLUG } from './seed-mahi3d-demo.js';
+import { reconcileTrennenDemoBranding } from './reconcile-trennen-demo-branding.js';
 import { getShopBySlug, normaliseShopSlug } from '../lib/shop-lookup.js';
+
+if (process.env.NODE_ENV !== 'production') {
+  reconcileTrennenDemoBranding({ backup: false });
+}
 
 const db = new DatabaseSync(join(import.meta.dirname, '..', 'data', 'rfdewi.db'));
 const legacyOnlyDb = new DatabaseSync(':memory:');
@@ -50,7 +55,7 @@ try {
 
   if (canonical) {
     const settings = db.prepare(`
-      SELECT support_email_mode, support_email, logo_url, about
+      SELECT support_email_mode, support_email, logo_url, about, shipping_zones
       FROM store_settings
       WHERE shop_id = ?
     `).get(canonical.id) || {};
@@ -58,6 +63,9 @@ try {
     expect(settings.support_email === 'support@trennen.co.nz', 'Trennen demo uses Trennen support email');
     expect(!String(settings.logo_url || '').toLowerCase().includes('mahi3d'), 'Trennen demo does not use a Mahi3D logo URL');
     expect(!String(settings.about || '').includes('Mahi3D'), 'Trennen demo about copy does not mention Mahi3D');
+    expect(!String(settings.shipping_zones || '').includes('Mahi3D'), 'Trennen demo shipping labels do not mention Mahi3D');
+    const pricing = db.prepare('SELECT free_shipping_above FROM pricing_config WHERE shop_id = ?').get(canonical.id) || {};
+    expect(Number(pricing.free_shipping_above || 0) === 0, 'Trennen demo has no silent free-shipping threshold');
   }
 
   const quoteHtml = readFileSync(join(root, 'quote.html'), 'utf8');

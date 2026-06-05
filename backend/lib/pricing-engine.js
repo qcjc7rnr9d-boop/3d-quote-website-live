@@ -559,11 +559,6 @@ export function calculateQuote({ shop, material, cfg = {}, shippingZones = [], i
       throw new PricingError('Selected shipping option is not available.', 400, 'SHIPPING_UNAVAILABLE');
     }
     shipping = { ...shipping };
-    const freeAbove = Math.max(0, toNumber(cfg.free_shipping_above, 0));
-    if (freeAbove > 0 && itemSubtotal >= freeAbove) {
-      shipping.freeApplied = true;
-      shipping.price = 0;
-    }
     shippingAmount = money(shipping.price);
   } else if (toNumber(input.shipping, 0) > 0) {
     throw new PricingError('Shipping option must be selected from this store.', 400, 'SHIPPING_REQUIRED');

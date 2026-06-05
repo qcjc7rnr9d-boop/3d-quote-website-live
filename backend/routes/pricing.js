@@ -51,7 +51,7 @@ router.put('/', requireShopAuth, (req, res) => {
   try {
     const {
       currency, tax_rate, tax_inclusive, min_order_value,
-      free_shipping_above, quote_rounding, quote_valid_hours, max_model_quantity,
+      quote_rounding, quote_valid_hours, max_model_quantity,
       show_breakdown,
       // Infill tier config (optional — falls back to existing value if absent)
       infill_tiers
@@ -80,7 +80,7 @@ router.put('/', requireShopAuth, (req, res) => {
       tax_rate ?? DEFAULT_GST,
       tax_inclusive ? 1 : 0,
       min_order_value ?? 0,
-      free_shipping_above ?? 50,
+      0,
       quote_rounding ?? 0.10,
       quote_valid_hours ?? 24,
       Number.isFinite(Number(max_model_quantity)) && Number(max_model_quantity) > 0 ? Math.floor(Number(max_model_quantity)) : null,
