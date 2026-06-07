@@ -55,6 +55,7 @@ try {
   const platformRoutes = readFileSync('routes/platform.js', 'utf8');
   const customerRoutes = readFileSync('routes/customer-portal.js', 'utf8');
   const hardeningLib = readFileSync('lib/security-hardening.js', 'utf8');
+  const refundsLib = readFileSync('lib/refunds.js', 'utf8');
   const stripeRoutes = readFileSync('routes/stripe.js', 'utf8');
   const ordersAdmin = readFileSync('../admin/orders.html', 'utf8');
 
@@ -64,7 +65,7 @@ try {
   assert(customerRoutes.includes('/verify-email'), 'customer email verification routes are required');
   assert(customerRoutes.includes('/sessions') && hardeningLib.includes('customer_sessions'), 'customer session management routes/table are required');
   assert(stripeRoutes.includes("router.post('/orders/:id/refund'"), 'Stripe refund endpoint is required');
-  assert(stripeRoutes.includes('refund_application_fee') && stripeRoutes.includes('reverse_transfer'), 'Stripe refund must reverse transfer and application fee where possible');
+  assert(refundsLib.includes('refund_application_fee') && refundsLib.includes('reverse_transfer'), 'Stripe refund must reverse transfer and application fee where possible');
   assert(ordersAdmin.includes('refundOrderBtn') && ordersAdmin.includes('/api/stripe/orders/'), 'admin orders UI must expose refund action');
 
   const hash = await bcrypt.hash('OwnerHardening!2026', 4);
