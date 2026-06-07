@@ -34,7 +34,12 @@ function cleanup() {
   } catch {}
   try {
     if (sessionId) db.prepare('DELETE FROM app_sessions WHERE sid = ?').run(sessionId);
-    if (shopId) db.prepare('DELETE FROM shops WHERE id = ?').run(shopId);
+    if (shopId) {
+      db.prepare('DELETE FROM materials WHERE shop_id = ?').run(shopId);
+      db.prepare('DELETE FROM pricing_config WHERE shop_id = ?').run(shopId);
+      db.prepare('DELETE FROM store_settings WHERE shop_id = ?').run(shopId);
+      db.prepare('DELETE FROM shops WHERE id = ?').run(shopId);
+    }
     db.close();
   } catch {}
 }
@@ -56,6 +61,26 @@ function seedShop() {
     INSERT INTO store_settings (shop_id, embed_allowed_origins)
     VALUES (?, ?)
   `).run(shopId, JSON.stringify([parentBase]));
+  db.prepare(`
+    INSERT INTO materials
+      (shop_id, name, description_short, description_long, category, colours, finishes,
+       tags, best_for, specs, properties, active, stock_status, sort_order, base_price, min_charge)
+    VALUES (?, ?, ?, ?, 'FDM', ?, ?, ?, ?, ?, ?, 1, 'in_stock', 1, 0.22, 5.00)
+  `).run(
+    shopId,
+    'Embed Smoke PLA',
+    'Self-contained material for embed layout checks.',
+    'A stable FDM material used only by the embed smoke test.',
+    JSON.stringify([{ id: 'grey', name: 'Grey', hex: '#9aa09a', enabled: true, default: true }]),
+    JSON.stringify([
+      { id: 'standard', name: 'Standard', layerHeight: '0.20 mm', modifier: 1, enabled: true, default: true, sortOrder: 1 },
+      { id: 'draft', name: 'Draft', layerHeight: '0.28 mm', modifier: 0.9, enabled: true, default: false, sortOrder: 2 },
+    ]),
+    JSON.stringify(['FDM']),
+    JSON.stringify(['Embedded quoting']),
+    JSON.stringify([{ label: 'Process', value: 'FDM' }]),
+    JSON.stringify({ strength: 60, flexibility: 20, heat: 35, idealFor: ['Layout smoke tests'], notFor: [] }),
+  );
 }
 
 function makeShopCookie() {
@@ -105,16 +130,18 @@ function startParentServer() {
 </html>`);
       return;
     }
-    if (!['/', '/placeholder', '/invalid', '/load-only'].includes(requestUrl.pathname)) {
+    if (!['/', '/cms', '/missing', '/placeholder', '/invalid', '/load-only'].includes(requestUrl.pathname)) {
       res.writeHead(404).end('Not found');
       return;
     }
     const scriptAttrs = (() => {
+      if (requestUrl.pathname === '/missing') return '';
       if (requestUrl.pathname === '/placeholder') return 'data-tenant-id="YOUR_TENANT_ID"';
       if (requestUrl.pathname === '/invalid') return 'data-tenant-id="ten_missing_embed_smoke"';
       if (requestUrl.pathname === '/load-only') return `data-shop="${slug}" data-quote-base-url="${parentBase}/plain"`;
       return `data-tenant-id="${tenantId}"`;
     })();
+    const isCms = requestUrl.pathname === '/cms';
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(`<!doctype html>
 <html>
@@ -124,18 +151,21 @@ function startParentServer() {
     <style>
       body { margin: 0; padding: 24px; font-family: system-ui, sans-serif; }
       #mount { width: min(100%, 720px); margin: 0 auto; border: 1px solid #ddd; }
+      .cms-page { max-width: 430px; margin: 0 auto; padding: 12px; border: 1px solid #ece8df; background: #faf8f3; }
+      .cms-section { padding: 10px; border: 1px solid #ddd8cd; overflow: hidden; }
+      .cms-copy { font-size: 13px; color: #555; margin: 0 0 14px; }
     </style>
   </head>
   <body>
-    <div id="mount"></div>
+    ${isCms ? '<main class="cms-page"><section class="cms-section"><p class="cms-copy">CMS wrapper around the quote widget.</p><div id="mount"></div></section></main>' : '<div id="mount"></div>'}
     <script
       src="${base}/embed/v1/widget.js"
       ${scriptAttrs}
       data-mount="#mount"
       data-min-height="320"
       data-max-height="1800"
-      data-theme-primary="#5f8b62"
-      data-theme-font="Inter"
+      data-theme-primary="#0077c8"
+      data-theme-font="Arial"
       data-title="Smoke quote">
     </script>
   </body>
@@ -260,6 +290,8 @@ async function run() {
       const continueLink = document.querySelector('#continueBtn')?.getAttribute('href') || '';
       const navRect = document.querySelector('.nav')?.getBoundingClientRect();
       const heroRect = document.querySelector('.hero')?.getBoundingClientRect();
+      const rootStyle = getComputedStyle(document.documentElement);
+      const bodyStyle = getComputedStyle(document.body);
       return {
         embeddedClass: document.documentElement.classList.contains('is-embedded') || document.body.classList.contains('is-embedded'),
         uploadText: uploadZone?.textContent || '',
@@ -269,6 +301,11 @@ async function run() {
         heroTop: heroRect?.top ?? 9999,
         scrollWidth: document.documentElement.scrollWidth,
         clientWidth: document.documentElement.clientWidth,
+        themePrimary: rootStyle.getPropertyValue('--sage').trim(),
+        themePrimaryHover: rootStyle.getPropertyValue('--sage-dark').trim(),
+        themePrimarySoft: rootStyle.getPropertyValue('--sage-soft').trim(),
+        fontUi: rootStyle.getPropertyValue('--font-ui').trim(),
+        bodyFontFamily: bodyStyle.fontFamily,
       };
     });
     assert(childState.embeddedClass, 'embedded quote page should expose an embedded-mode class');
@@ -278,7 +315,43 @@ async function run() {
     assert(childState.navHeight >= 44, `embedded first screen should keep the top navigation visible, got ${childState.navHeight}px`);
     assert(childState.heroTop < 120, `embedded first screen should start with the homepage hero/top area, got hero top ${childState.heroTop}`);
     assert(childState.scrollWidth <= childState.clientWidth + 1, `embedded child should not horizontally overflow (${childState.scrollWidth} > ${childState.clientWidth})`);
+    assert.equal(childState.themePrimary.toLowerCase(), '#0077c8', 'embedded page should apply data-theme-primary to the app primary color');
+    assert.notEqual(childState.themePrimaryHover.toLowerCase(), childState.themePrimary.toLowerCase(), 'embedded page should derive a hover color from data-theme-primary');
+    assert.notEqual(childState.themePrimarySoft.toLowerCase(), childState.themePrimary.toLowerCase(), 'embedded page should derive a soft color from data-theme-primary');
+    assert.match(childState.fontUi, /Arial/i, 'embedded page should apply data-theme-font to UI font tokens');
+    assert.match(childState.bodyFontFamily, /Arial/i, 'embedded page should use data-theme-font for body UI text');
     assert.equal(errors.length, 0, `embed parent runtime errors: ${errors.join('; ')}`);
+
+    const cmsPage = await context.newPage();
+    await cmsPage.goto(`${parentBase}/cms`, { waitUntil: 'domcontentloaded' });
+    await cmsPage.locator('iframe[title="Smoke quote"]').waitFor({ state: 'attached', timeout: 7000 });
+    const cmsChild = cmsPage.frame({ url: /\/index\.html/ });
+    assert(cmsChild, 'CMS-style widget frame should navigate to the upload homepage');
+    await cmsChild.getByText(/Drop your STL or OBJ files here/i).first().waitFor({ state: 'visible', timeout: 7000 });
+    const cmsState = await cmsPage.evaluate(() => {
+      const frame = document.querySelector('iframe');
+      const host = document.querySelector('.cms-page');
+      return {
+        frameWidth: frame?.getBoundingClientRect().width || 0,
+        hostWidth: host?.getBoundingClientRect().width || 0,
+        docWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+        frameHeight: frame?.getBoundingClientRect().height || 0,
+      };
+    });
+    assert(cmsState.frameWidth <= cmsState.hostWidth + 1, `CMS embed iframe should fit its container (${cmsState.frameWidth} > ${cmsState.hostWidth})`);
+    assert(cmsState.docWidth <= cmsState.viewportWidth + 1, `CMS embed parent should not horizontally overflow (${cmsState.docWidth} > ${cmsState.viewportWidth})`);
+    assert(cmsState.frameHeight > 320, `CMS embed iframe should auto-size above fallback height, got ${cmsState.frameHeight}`);
+
+    const missingPage = await context.newPage();
+    await missingPage.goto(`${parentBase}/missing`, { waitUntil: 'domcontentloaded' });
+    await missingPage.getByText(/Quote widget is not configured/i).waitFor({ state: 'visible', timeout: 4000 });
+    const missingState = await missingPage.evaluate(() => ({
+      iframeCount: document.querySelectorAll('iframe').length,
+      statusText: document.querySelector('[data-trennen-quote-status]')?.textContent || '',
+    }));
+    assert.equal(missingState.iframeCount, 0, 'missing tenant/shop should not render a blank iframe');
+    assert.match(missingState.statusText, /tenant ID from Trennen admin/i, 'missing tenant/shop should show a specific setup message');
 
     const materialPage = await context.newPage();
     await materialPage.addInitScript(() => {
@@ -297,7 +370,7 @@ async function run() {
         }],
       }));
     });
-    await materialPage.goto(`${base}/materials.html?shop=trennen&embed=1`, { waitUntil: 'networkidle' });
+    await materialPage.goto(`${base}/materials.html?shop=${slug}&embed=1`, { waitUntil: 'networkidle' });
     await materialPage.locator('.material-card').first().waitFor({ state: 'visible', timeout: 7000 });
     const materialLayout = await materialPage.evaluate(() => {
       const card = document.querySelector('.material-card');
@@ -322,11 +395,11 @@ async function run() {
       `embedded material detail columns should span the card instead of auto-placing into a cramped grid, got ${materialLayout.columnPlacements.join(', ')}`
     );
 
-    const demoCatalogRes = await fetch(`${base}/api/customer/catalog?shop=trennen`);
-    assert.equal(demoCatalogRes.status, 200, 'demo catalog should load for embedded options layout check');
-    const demoCatalog = await demoCatalogRes.json();
-    const firstDemoMaterial = (demoCatalog.materials || []).find(material => String(material.category || '').toLowerCase() === 'fdm');
-    assert(firstDemoMaterial?.id, 'demo catalog should expose an FDM material for embedded options layout check');
+    const smokeCatalogRes = await fetch(`${base}/api/customer/catalog?shop=${slug}`);
+    assert.equal(smokeCatalogRes.status, 200, 'smoke catalog should load for embedded options layout check');
+    const smokeCatalog = await smokeCatalogRes.json();
+    const firstSmokeMaterial = (smokeCatalog.materials || []).find(material => String(material.category || '').toLowerCase() === 'fdm');
+    assert(firstSmokeMaterial?.id, 'smoke catalog should expose an FDM material for embedded options layout check');
 
     const optionPage = await context.newPage();
     await optionPage.addInitScript(({ materialId, materialName }) => {
@@ -349,8 +422,8 @@ async function run() {
         materialName,
         requiredSelections: { material: true },
       }));
-    }, { materialId: firstDemoMaterial.id, materialName: firstDemoMaterial.name });
-    await optionPage.goto(`${base}/options.html?shop=trennen&embed=1`, { waitUntil: 'networkidle' });
+    }, { materialId: firstSmokeMaterial.id, materialName: firstSmokeMaterial.name });
+    await optionPage.goto(`${base}/options.html?shop=${slug}&embed=1`, { waitUntil: 'networkidle' });
     await optionPage.locator('.option-card').first().waitFor({ state: 'visible', timeout: 7000 });
     const optionLayout = await optionPage.evaluate(() => {
       const cards = [...document.querySelectorAll('.option-card')].map(card => {
