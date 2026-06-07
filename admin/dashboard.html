@@ -321,6 +321,27 @@
     return 'NZ$' + (Number(cents || 0) / 100).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function firstFinite(...values) {
+    for (const value of values) {
+      if (value === null || value === undefined || value === '') continue;
+      const numeric = Number(value);
+      if (Number.isFinite(numeric)) return numeric;
+    }
+    return null;
+  }
+
+  function displayCount(value) {
+    const numeric = firstFinite(value);
+    return numeric == null ? '—' : String(Math.trunc(numeric));
+  }
+
+  function displayMoney(value) {
+    const numeric = firstFinite(value);
+    return numeric == null
+      ? '—'
+      : new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD' }).format(numeric);
+  }
+
   function timeAgo(dateStr) {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
@@ -350,29 +371,35 @@
       const r = await fetch('/api/dashboard/stats');
       if (!r.ok) throw new Error('Failed');
       const s = await r.json();
+      const totalOrders = firstFinite(s.totalOrders, s.total_orders);
+      const thisWeek = firstFinite(s.thisWeek, s.orders_this_week);
+      const monthRevenue = firstFinite(s.monthRevenue, s.revenue_this_month);
+      const revenueLastMonth = firstFinite(s.revenueLastMonth, s.revenue_last_month);
+      const materialCount = firstFinite(s.materialCount, s.active_materials);
+      const customerCount = firstFinite(s.customerCount, s.customers);
+      const newCustomersThisWeek = firstFinite(s.newCustomersThisWeek, s.new_customers_this_week);
 
-      document.getElementById('statTotalOrders').textContent = s.total_orders ?? '—';
-      if (s.orders_this_week != null) {
+      document.getElementById('statTotalOrders').textContent = displayCount(totalOrders);
+      if (thisWeek != null) {
         const el = document.getElementById('statOrdersDelta');
-        el.textContent = `+${s.orders_this_week} this week`;
+        el.textContent = `+${displayCount(thisWeek)} this week`;
         el.className = 'stat-delta up';
       }
 
-      document.getElementById('statRevenue').textContent =
-        s.revenue_this_month != null ? fmtMoney(s.revenue_this_month) : '—';
-      if (s.revenue_last_month != null && s.revenue_this_month != null) {
-        const delta = s.revenue_this_month - s.revenue_last_month;
-        const pct = s.revenue_last_month > 0 ? Math.round((delta / s.revenue_last_month) * 100) : 0;
+      document.getElementById('statRevenue').textContent = displayMoney(monthRevenue);
+      if (revenueLastMonth != null && monthRevenue != null) {
+        const delta = monthRevenue - revenueLastMonth;
+        const pct = revenueLastMonth > 0 ? Math.round((delta / revenueLastMonth) * 100) : 0;
         const el = document.getElementById('statRevenueDelta');
         el.textContent = (pct >= 0 ? '+' : '') + pct + '% vs last month';
         el.className = 'stat-delta ' + (pct >= 0 ? 'up' : 'down');
       }
 
-      document.getElementById('statMaterials').textContent = s.active_materials ?? '—';
-      document.getElementById('statCustomers').textContent = s.customers ?? '—';
-      if (s.new_customers_this_week != null) {
+      document.getElementById('statMaterials').textContent = displayCount(materialCount);
+      document.getElementById('statCustomers').textContent = displayCount(customerCount);
+      if (newCustomersThisWeek != null) {
         const el = document.getElementById('statCustomersDelta');
-        el.textContent = `+${s.new_customers_this_week} this week`;
+        el.textContent = `+${displayCount(newCustomersThisWeek)} this week`;
         el.className = 'stat-delta up';
       }
     } catch {
@@ -415,13 +442,15 @@
     try {
       const r = await fetch('/api/orders?limit=5');
       if (!r.ok) throw new Error('Could not load orders.');
-      const orders = await r.json();
+      const data = await r.json();
+      const orders = Array.isArray(data.orders) ? data.orders : [];
 
       if (!orders.length) {
         body.innerHTML = `<div class="empty-state">
           <h3>No orders yet</h3>
-          <p>When customers place orders they will appear here.</p>
+          <p>Orders will appear here once customers checkout.</p>
         </div>`;
+        loadActivity([]);
         return;
       }
 
@@ -440,7 +469,7 @@
           <td>${escHtml(o.customer_name || o.customer?.name || '—')}</td>
           <td>${escHtml(o.material || o.material_name || '—')}</td>
           <td>${o.total != null ? fmtMoney(o.total) : '—'}</td>
-          <td>${statusBadge(o.status || 'pending')}</td>
+          <td>${statusBadge(o.fulfilment_status || o.status || 'pending')}</td>
           <td style="white-space:nowrap;color:var(--muted)">${formatDate(o.created_at)}</td>`;
         tbody.appendChild(tr);
       });
@@ -461,7 +490,7 @@
     const actBody = document.getElementById('activityBody');
     if (!orders.length) {
       actBody.innerHTML = `<div class="empty-state">
-        <p>No recent activity.</p>
+        <p>No recent store activity.</p>
       </div>`;
       return;
     }
