@@ -489,6 +489,7 @@ CREATE TABLE IF NOT EXISTS order_refunds (
   amount_cents INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'pending',
   reason TEXT,
+  idempotency_key TEXT,
   raw_json TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -517,6 +518,9 @@ CREATE INDEX IF NOT EXISTS idx_checkout_fee_shop_period
   ON checkout_fee_ledger(shop_id, billing_period_start, billing_period_end);
 CREATE INDEX IF NOT EXISTS idx_payment_fee_order
   ON payment_fee_records(order_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_order_refunds_idempotency_key
+  ON order_refunds(idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS email_delivery_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

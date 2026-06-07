@@ -71,6 +71,12 @@ export function ensureSecurityHardeningSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_order_refunds_order
       ON order_refunds(order_id, created_at);
   `);
+  addColumnIfMissing(db, 'order_refunds', 'idempotency_key', 'TEXT');
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_order_refunds_idempotency_key
+      ON order_refunds(idempotency_key)
+      WHERE idempotency_key IS NOT NULL
+  `);
 
   db.prepare(`
     UPDATE customer_accounts
@@ -179,12 +185,17 @@ export function updateOrderRefundState(db, { orderId, amountCents, refundedCents
   ensureSecurityHardeningSchema(db);
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
   if (!order) return null;
-  const nextRefunded = refundedCents == null
+  const requestedRefunded = refundedCents == null
     ? Math.max(0, Number(order.refunded_cents || 0) + Math.max(0, Number(amountCents || 0)))
     : Math.max(0, Number(refundedCents || 0));
   const paidTotal = Number(order.customer_total_cents || 0) || Math.round(Number(order.total || 0) * 100);
+  const nextRefunded = paidTotal > 0 ? Math.min(requestedRefunded, paidTotal) : requestedRefunded;
   const paymentStatus = status
-    || (nextRefunded >= paidTotal && paidTotal > 0 ? 'refunded' : 'partially_refunded');
+    || (nextRefunded >= paidTotal && paidTotal > 0
+      ? 'refunded'
+      : nextRefunded > 0
+        ? 'partially_refunded'
+        : 'paid');
   db.prepare(`
     UPDATE orders
     SET refunded_cents = ?,

@@ -130,6 +130,36 @@
       border-radius: var(--radius);
       background: rgba(192,57,43,0.04);
     }
+    .refund-balance {
+      border: 1px solid rgba(192,57,43,0.16);
+      border-radius: calc(var(--radius) - 2px);
+      background: rgba(255,255,255,0.7);
+      padding: 8px 10px;
+      margin-bottom: 10px;
+    }
+    .refund-field-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+    }
+    .refund-currency-prefix {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .refund-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .refund-note {
+      min-height: 54px;
+      resize: vertical;
+      font-size: 12px;
+    }
     .modal-section-gap { margin-top: 18px; }
   </style>
   <script src="../assets/brand.js" defer></script>
@@ -318,10 +348,25 @@
         </div>
         <div class="refund-panel" id="refundPanel" style="display:none">
           <div class="order-detail-section-title">Refund</div>
-          <div class="price-row"><span>Refunded</span><span id="detRefunded">—</span></div>
-          <button class="btn btn-outline" id="refundOrderBtn" type="button" style="height:34px;font-size:12px;padding:0 14px;color:#C0392B;border-color:rgba(192,57,43,0.4);margin-top:8px">
-            Refund remaining payment
-          </button>
+          <div class="refund-balance">
+            <div class="price-row"><span>Paid amount</span><span id="detRefundPaid">—</span></div>
+            <div class="price-row"><span>Already refunded</span><span id="detRefunded">—</span></div>
+            <div class="price-row total"><span>Remaining refundable</span><span id="detRefundRemaining">—</span></div>
+          </div>
+          <label class="form-label" for="refundPartialAmount">Partial refund amount</label>
+          <div class="refund-field-row">
+            <span class="refund-currency-prefix">NZ$</span>
+            <input class="form-input" id="refundPartialAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00">
+          </div>
+          <textarea class="form-textarea refund-note" id="refundNote" rows="2" placeholder="Optional internal refund note"></textarea>
+          <div class="refund-actions">
+            <button class="btn btn-outline" id="refundPartialBtn" type="button" style="height:34px;font-size:12px;padding:0 14px;color:#C0392B;border-color:rgba(192,57,43,0.4)">
+              Issue partial refund
+            </button>
+            <button class="btn btn-outline" id="refundOrderBtn" type="button" style="height:34px;font-size:12px;padding:0 14px;color:#C0392B;border-color:rgba(192,57,43,0.4)">
+              Refund remaining
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -412,6 +457,15 @@
     if (val == null) return '—';
     return nzdFormatter.format(Number(val));
   }
+  function fmtCents(cents) {
+    return nzdFormatter.format(Number(cents || 0) / 100);
+  }
+  function paymentTotalCents(order) {
+    return Math.max(0, Math.round(Number(order?.customer_total_cents || 0) || Number(order?.total || 0) * 100));
+  }
+  function remainingRefundCents(order) {
+    return Math.max(0, paymentTotalCents(order) - Math.max(0, Math.round(Number(order?.refunded_cents || 0))));
+  }
   function fmtDate(val) {
     if (!val) return '—';
     return new Date(val).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -423,9 +477,10 @@
     return `<span class="badge ${cls}">${status || 'unknown'}</span>`;
   }
   function paymentBadge(status) {
-    const map = { pending: 'badge-stone', paid: 'badge-sage', failed: 'badge-red' };
+    const map = { pending: 'badge-stone', paid: 'badge-sage', partially_refunded: 'badge-amber', refunded: 'badge-stone', failed: 'badge-red' };
+    const labels = { partially_refunded: 'Partially refunded', refunded: 'Refunded' };
     const cls = map[status] || 'badge-stone';
-    return `<span class="badge ${cls}">${status || 'unknown'}</span>`;
+    return `<span class="badge ${cls}">${labels[status] || status || 'unknown'}</span>`;
   }
 
   // ── Load stats ────────────────────────────────────────────────
@@ -569,13 +624,22 @@
       document.getElementById('detTotal').textContent        = fmtCurrency(o.total);
       document.getElementById('detStripeId').textContent     = o.stripe_payment_id || '—';
       const refundedCents = Number(o.refunded_cents || 0);
+      const paidCents = paymentTotalCents(o);
+      const remainingCents = remainingRefundCents(o);
       const refundPanel = document.getElementById('refundPanel');
       const refundBtn = document.getElementById('refundOrderBtn');
-      document.getElementById('detRefunded').textContent = fmtCurrency(refundedCents / 100);
-      const refundable = !!o.stripe_payment_id && ['paid', 'partially_refunded'].includes(o.payment_status) && refundedCents < Math.round(Number(o.customer_total_cents || o.total * 100 || 0));
+      const refundPartialBtn = document.getElementById('refundPartialBtn');
+      document.getElementById('detRefundPaid').textContent = fmtCents(paidCents);
+      document.getElementById('detRefunded').textContent = fmtCents(refundedCents);
+      document.getElementById('detRefundRemaining').textContent = fmtCents(remainingCents);
+      document.getElementById('refundPartialAmount').value = '';
+      document.getElementById('refundPartialAmount').max = (remainingCents / 100).toFixed(2);
+      document.getElementById('refundNote').value = '';
+      const refundable = !!o.stripe_payment_id && ['paid', 'partially_refunded'].includes(o.payment_status) && remainingCents > 0;
       refundPanel.style.display = o.stripe_payment_id ? '' : 'none';
       refundBtn.disabled = !refundable;
-      refundBtn.textContent = refundable ? 'Refund remaining payment' : 'No refundable balance';
+      refundPartialBtn.disabled = !refundable;
+      refundBtn.textContent = refundable ? 'Refund remaining' : 'No refundable balance';
       document.getElementById('orderNotes').value     = o.notes || '';
       document.getElementById('trackingNumber').value  = o.tracking_number || '';
       document.getElementById('trackingUrl').value     = o.tracking_url || '';
@@ -711,26 +775,63 @@
     }
   });
 
-  document.getElementById('refundOrderBtn').addEventListener('click', async () => {
+  function newRefundIdempotencyKey(refundType, amountCents) {
+    const suffix = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    return `${refundType}-${currentOrderId}-${amountCents}-${suffix}`;
+  }
+
+  function partialRefundInputCents() {
+    const value = Number(document.getElementById('refundPartialAmount').value);
+    if (!Number.isFinite(value)) return 0;
+    return Math.round(value * 100);
+  }
+
+  async function issueRefund(refundType) {
     if (!currentOrderId || updating || !currentOrder) return;
-    if (!confirm('Refund the remaining Stripe payment for this order? This will also reverse the connected transfer where Stripe allows it.')) return;
+    const remainingCents = remainingRefundCents(currentOrder);
+    const amountCents = refundType === 'partial' ? partialRefundInputCents() : remainingCents;
+    if (amountCents <= 0) {
+      document.getElementById('modalError').textContent = refundType === 'partial'
+        ? 'Enter a partial refund amount greater than zero.'
+        : 'There is no refundable balance remaining.';
+      document.getElementById('modalError').style.display = 'block';
+      return;
+    }
+    if (amountCents > remainingCents) {
+      document.getElementById('modalError').textContent = `Refund amount cannot exceed ${fmtCents(remainingCents)}.`;
+      document.getElementById('modalError').style.display = 'block';
+      return;
+    }
+    if (!confirm(`You are about to refund ${fmtCents(amountCents)}. This action sends the refund to the customer's original payment method.`)) return;
     updating = true;
-    const btn = document.getElementById('refundOrderBtn');
+    const btn = refundType === 'partial'
+      ? document.getElementById('refundPartialBtn')
+      : document.getElementById('refundOrderBtn');
+    const otherBtn = refundType === 'partial'
+      ? document.getElementById('refundOrderBtn')
+      : document.getElementById('refundPartialBtn');
     const errEl = document.getElementById('modalError');
     const succEl = document.getElementById('modalSuccess');
     btn.disabled = true;
-    btn.textContent = 'Refunding…';
+    otherBtn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = 'Refunding...';
     errEl.style.display = 'none';
     succEl.style.display = 'none';
     try {
       const r = await fetch(`/api/stripe/orders/${currentOrderId}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          refund_type: refundType,
+          amount_cents: refundType === 'partial' ? amountCents : undefined,
+          note: document.getElementById('refundNote').value,
+          idempotency_key: newRefundIdempotencyKey(refundType, amountCents),
+        }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || 'Refund failed');
-      succEl.textContent = 'Refund started in Stripe.';
+      succEl.textContent = `Refund created. ${fmtCents(data.refund?.amount_cents || amountCents)} refunded.`;
       succEl.style.display = 'block';
       await openOrderModal(currentOrderId);
       loadOrders(currentPage);
@@ -740,8 +841,13 @@
     } finally {
       updating = false;
       btn.disabled = false;
+      otherBtn.disabled = false;
+      btn.textContent = originalText;
     }
-  });
+  }
+
+  document.getElementById('refundOrderBtn').addEventListener('click', () => issueRefund('remaining'));
+  document.getElementById('refundPartialBtn').addEventListener('click', () => issueRefund('partial'));
 
   // Keyboard close
   document.addEventListener('keydown', e => {
