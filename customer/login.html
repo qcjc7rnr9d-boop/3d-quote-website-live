@@ -158,8 +158,7 @@
         });
         const d = await r.json();
         if (r.ok) {
-          showError(d.message || 'Check your email to verify your account before signing in.');
-          switchTab('login');
+          window.location.href = dashboardTarget(slug);
         } else {
           showError(d.error || 'Incorrect email or password');
         }

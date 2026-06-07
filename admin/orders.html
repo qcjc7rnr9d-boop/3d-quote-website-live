@@ -511,7 +511,7 @@
       if (!r.ok) throw new Error('Server error');
       const data = await r.json();
       const orders = data.orders || [];
-      totalPages = data.total_pages || 1;
+      totalPages = data.pages || data.total_pages || 1;
       currentPage = page;
 
       if (orders.length === 0) {

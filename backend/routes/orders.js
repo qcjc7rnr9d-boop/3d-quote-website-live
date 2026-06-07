@@ -167,6 +167,31 @@ router.get('/', requireShopAuth, (req, res) => {
   });
 });
 
+// GET /api/orders/stats
+router.get('/stats', requireShopAuth, (req, res) => {
+  const stats = db.prepare(`
+    SELECT
+      COUNT(CASE WHEN date(created_at) = date('now') THEN 1 END) AS today_count,
+      COALESCE(SUM(
+        CASE
+          WHEN payment_status = 'paid'
+            AND created_at >= datetime('now', 'start of month')
+          THEN total
+          ELSE 0
+        END
+      ), 0) AS month_revenue,
+      COUNT(CASE WHEN fulfilment_status = 'pending' THEN 1 END) AS pending_count
+    FROM orders
+    WHERE shop_id = ?
+  `).get(req.shop.id);
+
+  res.json({
+    today_count: Number(stats?.today_count || 0),
+    month_revenue: Number(stats?.month_revenue || 0),
+    pending_count: Number(stats?.pending_count || 0),
+  });
+});
+
 // GET /api/orders/:id
 router.get('/:id', requireShopAuth, (req, res) => {
   const order = db.prepare(
